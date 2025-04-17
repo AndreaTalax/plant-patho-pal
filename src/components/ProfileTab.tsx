@@ -1,7 +1,8 @@
+
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Settings, Mail, Phone, MapPin, Shield, LogOut, History, ShoppingBag, Plant } from "lucide-react";
+import { Settings, Mail, Phone, MapPin, Shield, LogOut, History, ShoppingBag, Flower2 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const ProfileTab = () => {
@@ -56,7 +57,7 @@ const ProfileTab = () => {
             <TabsContent value="saved" className="space-y-4 mt-4">
               <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                 <div className="flex items-center gap-3">
-                  <Plant className="h-5 w-5 text-drplant-blue" />
+                  <Flower2 className="h-5 w-5 text-drplant-blue" />
                   <div>
                     <h4 className="font-medium">Tomato Plant Care</h4>
                     <p className="text-sm text-gray-500">Saved on April 14, 2025</p>
