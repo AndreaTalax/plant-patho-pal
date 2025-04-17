@@ -5,9 +5,10 @@ import DiagnoseTab from '@/components/DiagnoseTab';
 import ChatTab from '@/components/ChatTab';
 import ShopTab from '@/components/ShopTab';
 import LibraryTab from '@/components/LibraryTab';
+import ProfileTab from '@/components/ProfileTab';
 import BottomNavigation from '@/components/BottomNavigation';
 
-type TabName = 'diagnose' | 'chat' | 'shop' | 'library';
+type TabName = 'diagnose' | 'chat' | 'shop' | 'library' | 'profile';
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState<TabName>('diagnose');
@@ -40,6 +41,7 @@ const Index = () => {
           {activeTab === 'chat' && <ChatTab />}
           {activeTab === 'shop' && <ShopTab />}
           {activeTab === 'library' && <LibraryTab />}
+          {activeTab === 'profile' && <ProfileTab />}
         </div>
       </div>
 
