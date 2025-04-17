@@ -1,0 +1,44 @@
+
+import { useState } from 'react';
+import { Camera, MessageCircle, ShoppingBag, Leaf } from 'lucide-react';
+
+type TabName = 'diagnose' | 'chat' | 'shop' | 'library';
+
+interface BottomNavigationProps {
+  activeTab: TabName;
+  setActiveTab: (tab: TabName) => void;
+}
+
+const BottomNavigation = ({ activeTab, setActiveTab }: BottomNavigationProps) => {
+  const tabs = [
+    { name: 'diagnose' as TabName, icon: Camera, label: 'Diagnose' },
+    { name: 'chat' as TabName, icon: MessageCircle, label: 'Chat' },
+    { name: 'shop' as TabName, icon: ShoppingBag, label: 'Shop' },
+    { name: 'library' as TabName, icon: Leaf, label: 'Library' }
+  ];
+
+  return (
+    <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50 pb-safe">
+      <div className="grid grid-cols-4">
+        {tabs.map((tab) => (
+          <button
+            key={tab.name}
+            className={`flex flex-col items-center justify-center py-2 px-1 ${
+              activeTab === tab.name
+                ? 'text-drplant-blue'
+                : 'text-gray-500'
+            }`}
+            onClick={() => setActiveTab(tab.name)}
+          >
+            <tab.icon className={`w-6 h-6 ${
+              activeTab === tab.name ? 'text-drplant-blue' : 'text-gray-500'
+            }`} />
+            <span className="text-xs mt-1">{tab.label}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+export default BottomNavigation;

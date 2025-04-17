@@ -24,6 +24,14 @@ export default {
 				ring: 'hsl(var(--ring))',
 				background: 'hsl(var(--background))',
 				foreground: 'hsl(var(--foreground))',
+				drplant: {
+					blue: '#3EB5FF',
+					'blue-light': '#A9DBFF',
+					'blue-dark': '#0089D9',
+					green: '#8AB83E',
+					'green-dark': '#5A7A28',
+					brown: '#7E5F44',
+				},
 				primary: {
 					DEFAULT: 'hsl(var(--primary))',
 					foreground: 'hsl(var(--primary-foreground))'
