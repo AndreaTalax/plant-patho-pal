@@ -170,7 +170,10 @@ const DiagnoseTab = () => {
     }, 100);
   };
 
-  const navigateToShop = (productId?: string) => {
+  const navigateToShop = (event?: React.MouseEvent<HTMLButtonElement> | string) => {
+    // Handle both direct calls with productId as string and event handler calls
+    const productId = typeof event === 'string' ? event : undefined;
+    
     // Navigate to shop tab, optionally with a product ID
     navigate('/');
     setTimeout(() => {
@@ -181,7 +184,10 @@ const DiagnoseTab = () => {
     }, 100);
   };
 
-  const navigateToLibrary = (resourceId?: string) => {
+  const navigateToLibrary = (event?: React.MouseEvent<HTMLButtonElement> | string) => {
+    // Handle both direct calls with resourceId as string and event handler calls
+    const resourceId = typeof event === 'string' ? event : undefined;
+    
     // Navigate to library tab, optionally with a resource ID
     navigate('/');
     setTimeout(() => {
