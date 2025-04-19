@@ -1,12 +1,12 @@
-
-import { Camera, Upload, Loader2, MessageCircle, Check, AlertTriangle, ShoppingBag, Book } from 'lucide-react';
-import { useState } from 'react';
+import { Camera, Upload, Loader2, MessageCircle, Check, AlertTriangle, ShoppingBag, Book, X } from 'lucide-react';
+import { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useNavigate } from 'react-router-dom';
+import { toast } from '@/components/ui/sonner';
 import { pipeline, env } from '@huggingface/transformers';
 
 // Configure transformers.js
@@ -69,6 +69,10 @@ const DiagnoseTab = () => {
   const [diagnosedDisease, setDiagnosedDisease] = useState<typeof PLANT_DISEASES[0] | null>(null);
   const [activeResultTab, setActiveResultTab] = useState('overview');
   const [analysisProgress, setAnalysisProgress] = useState(0);
+  const [showCamera, setShowCamera] = useState(false);
+  
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   const navigate = useNavigate();
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -84,9 +88,67 @@ const DiagnoseTab = () => {
   };
 
   const takePicture = () => {
-    // Mock camera functionality
-    // In a real app, this would access the device camera
-    alert("Camera functionality would open here. For demo purposes, please use the upload option.");
+    setShowCamera(true);
+    
+    // Start camera stream
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+      navigator.mediaDevices.getUserMedia({ 
+        video: { facingMode: 'environment' } // Use back camera if available
+      })
+      .then(stream => {
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          toast.success("Camera activated successfully");
+        }
+      })
+      .catch(err => {
+        console.error("Error accessing camera:", err);
+        toast.error("Could not access camera. Please check permissions.");
+        setShowCamera(false);
+      });
+    } else {
+      toast.error("Camera not supported in your browser or device");
+      setShowCamera(false);
+    }
+  };
+
+  const captureImage = () => {
+    if (videoRef.current && canvasRef.current) {
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      
+      // Set canvas dimensions to match video
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      
+      // Draw the current video frame to canvas
+      const context = canvas.getContext('2d');
+      if (context) {
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+        
+        // Convert to data URL
+        const imageDataUrl = canvas.toDataURL('image/jpeg');
+        setUploadedImage(imageDataUrl);
+        
+        // Stop camera stream
+        stopCameraStream();
+        
+        // Analyze the captured image
+        analyzeImage();
+      }
+    }
+  };
+
+  const stopCameraStream = () => {
+    if (videoRef.current && videoRef.current.srcObject) {
+      const stream = videoRef.current.srcObject as MediaStream;
+      const tracks = stream.getTracks();
+      
+      tracks.forEach(track => track.stop());
+      videoRef.current.srcObject = null;
+    }
+    
+    setShowCamera(false);
   };
 
   const analyzeImage = async () => {
@@ -157,10 +219,10 @@ const DiagnoseTab = () => {
     setDiagnosedDisease(null);
     setAnalysisProgress(0);
     setActiveResultTab('overview');
+    stopCameraStream();
   };
 
   const navigateToChat = () => {
-    // Navigate to chat tab
     navigate('/');
     setTimeout(() => {
       const chatTabButton = document.querySelector('[data-tab="chat"]');
@@ -171,10 +233,8 @@ const DiagnoseTab = () => {
   };
 
   const navigateToShop = (event?: React.MouseEvent<HTMLButtonElement> | string) => {
-    // Handle both direct calls with productId as string and event handler calls
     const productId = typeof event === 'string' ? event : undefined;
     
-    // Navigate to shop tab, optionally with a product ID
     navigate('/');
     setTimeout(() => {
       const shopTabButton = document.querySelector('[data-tab="shop"]');
@@ -185,10 +245,8 @@ const DiagnoseTab = () => {
   };
 
   const navigateToLibrary = (event?: React.MouseEvent<HTMLButtonElement> | string) => {
-    // Handle both direct calls with resourceId as string and event handler calls
     const resourceId = typeof event === 'string' ? event : undefined;
     
-    // Navigate to library tab, optionally with a resource ID
     navigate('/');
     setTimeout(() => {
       const libraryTabButton = document.querySelector('[data-tab="library"]');
@@ -201,6 +259,50 @@ const DiagnoseTab = () => {
   return (
     <div className="flex flex-col items-center justify-start px-4 pt-6 pb-24 min-h-full">
       <h2 className="text-2xl font-bold mb-6 text-drplant-green">Plant Diagnosis</h2>
+      
+      {showCamera && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 z-50 flex flex-col items-center justify-center p-4">
+          <div className="bg-white rounded-2xl overflow-hidden max-w-md w-full">
+            <div className="p-4 bg-drplant-green text-white flex justify-between items-center">
+              <h3 className="font-semibold">Take a Photo</h3>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="text-white hover:bg-drplant-green-dark" 
+                onClick={stopCameraStream}
+              >
+                <X className="h-5 w-5" />
+              </Button>
+            </div>
+            
+            <div className="relative aspect-square bg-black w-full">
+              <video 
+                ref={videoRef} 
+                autoPlay 
+                playsInline 
+                className="absolute inset-0 w-full h-full object-cover"
+              ></video>
+            </div>
+            
+            <div className="p-4 flex gap-4">
+              <Button 
+                variant="outline" 
+                className="flex-1" 
+                onClick={stopCameraStream}
+              >
+                Cancel
+              </Button>
+              <Button 
+                className="flex-1 bg-drplant-green hover:bg-drplant-green-dark" 
+                onClick={captureImage}
+              >
+                <Camera className="mr-2 h-5 w-5" /> Capture
+              </Button>
+            </div>
+          </div>
+          <canvas ref={canvasRef} className="hidden"></canvas>
+        </div>
+      )}
       
       {!uploadedImage ? (
         <div className="space-y-6 w-full max-w-md">
