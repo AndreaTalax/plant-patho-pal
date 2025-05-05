@@ -2,10 +2,46 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Settings, Mail, Phone, MapPin, Shield, LogOut, History, ShoppingBag, Flower2 } from "lucide-react";
+import { 
+  Settings, 
+  Mail, 
+  Phone, 
+  MapPin, 
+  Shield, 
+  LogOut, 
+  History, 
+  ShoppingBag, 
+  Flower2,
+  User,
+  Globe,
+  Key
+} from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/context/AuthContext";
+import { useToast } from "@/components/ui/use-toast";
+import PrivacyPolicyModal from "./PrivacyPolicyModal";
+import SettingsModal from "./SettingsModal";
+import ChangeCredentialsModal from "./ChangeCredentialsModal";
 
 const ProfileTab = () => {
+  const [privacyPolicyOpen, setPrivacyPolicyOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [credentialsOpen, setCredentialsOpen] = useState(false);
+  const navigate = useNavigate();
+  const { logout } = useAuth();
+  const { toast } = useToast();
+
+  const handleSignOut = () => {
+    logout();
+    toast({
+      title: "Signed out successfully",
+      description: "You have been logged out of your account",
+    });
+    navigate("/login");
+  };
+
   return (
     <div className="space-y-6">
       {/* Profile Header */}
@@ -93,19 +129,33 @@ const ProfileTab = () => {
 
       {/* Actions */}
       <div className="space-y-3">
-        <Button variant="outline" className="w-full justify-start" size="lg">
+        <Button variant="outline" className="w-full justify-start" size="lg" onClick={() => setSettingsOpen(true)}>
           <Settings className="mr-2" />
           Settings
         </Button>
-        <Button variant="outline" className="w-full justify-start" size="lg">
+        <Button variant="outline" className="w-full justify-start" size="lg" onClick={() => setPrivacyPolicyOpen(true)}>
           <Shield className="mr-2" />
           Privacy Policy
         </Button>
-        <Button variant="outline" className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50" size="lg">
+        <Button variant="outline" className="w-full justify-start" size="lg" onClick={() => setCredentialsOpen(true)}>
+          <User className="mr-2" />
+          Change Username & Password
+        </Button>
+        <Button 
+          variant="outline" 
+          className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50" 
+          size="lg"
+          onClick={handleSignOut}
+        >
           <LogOut className="mr-2" />
           Sign Out
         </Button>
       </div>
+
+      {/* Modals */}
+      <PrivacyPolicyModal open={privacyPolicyOpen} onOpenChange={setPrivacyPolicyOpen} />
+      <SettingsModal open={settingsOpen} onOpenChange={setSettingsOpen} />
+      <ChangeCredentialsModal open={credentialsOpen} onOpenChange={setCredentialsOpen} />
     </div>
   );
 };
