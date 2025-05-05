@@ -1,5 +1,6 @@
+
 import { Camera, Upload, Loader2, MessageCircle, Check, AlertTriangle, ShoppingBag, Book, X } from 'lucide-react';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -7,11 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useNavigate } from 'react-router-dom';
 import { toast } from '@/components/ui/sonner';
-import { pipeline, env } from '@huggingface/transformers';
-
-// Configure transformers.js
-env.allowLocalModels = false;
-env.useBrowserCache = false;
+import { analyzeImage, diseaseDetails, diseaseSymptoms } from '@/utils/aiDiagnosisUtils';
 
 // Mock database of plant diseases
 const PLANT_DISEASES = [
@@ -59,6 +56,38 @@ const PLANT_DISEASES = [
     products: ['4'],
     confidence: 0.95,
     resources: ['pest-control']
+  },
+  {
+    id: 'root-rot',
+    name: 'Root Rot',
+    description: 'A soil-borne disease that causes roots to decay, leading to poor growth, wilting, and eventual plant death.',
+    causes: 'Overwatering and poor drainage creating anaerobic conditions that foster pathogenic fungi like Pythium and Phytophthora.',
+    treatments: [
+      'Improve soil drainage',
+      'Remove affected plants and surrounding soil',
+      'Avoid overwatering',
+      'Apply fungicides labeled for root rot',
+      'For container plants, repot with fresh sterile soil'
+    ],
+    products: ['5'],
+    confidence: 0.87,
+    resources: ['fungal-diseases']
+  },
+  {
+    id: 'spider-mites',
+    name: 'Spider Mite Infestation',
+    description: 'Tiny arachnids that feed on plant sap, causing stippling on leaves and fine webbing between leaves and stems.',
+    causes: 'Hot, dry conditions favor mite populations. Often thrive in indoor environments or during drought conditions.',
+    treatments: [
+      'Increase humidity around plants',
+      'Spray plants with strong jets of water',
+      'Apply insecticidal soap or horticultural oil',
+      'In severe cases, use miticides',
+      'Introduce predatory mites'
+    ],
+    products: ['4'],
+    confidence: 0.91,
+    resources: ['pest-control']
   }
 ];
 
@@ -70,10 +99,12 @@ const DiagnoseTab = () => {
   const [activeResultTab, setActiveResultTab] = useState('overview');
   const [analysisProgress, setAnalysisProgress] = useState(0);
   const [showCamera, setShowCamera] = useState(false);
+  const [analysisDetails, setAnalysisDetails] = useState<any>(null);
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const navigate = useNavigate();
+  const streamRef = useRef<MediaStream | null>(null);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -81,11 +112,18 @@ const DiagnoseTab = () => {
       const reader = new FileReader();
       reader.onload = (event) => {
         setUploadedImage(event.target?.result as string);
-        analyzeImage();
+        analyzeUploadedImage();
       };
       reader.readAsDataURL(file);
     }
   };
+
+  // Cleanup function for camera stream when component unmounts
+  useEffect(() => {
+    return () => {
+      stopCameraStream();
+    };
+  }, []);
 
   const takePicture = () => {
     setShowCamera(true);
@@ -98,6 +136,7 @@ const DiagnoseTab = () => {
       .then(stream => {
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
+          streamRef.current = stream;
           toast.success("Camera activated successfully");
         }
       })
@@ -134,28 +173,31 @@ const DiagnoseTab = () => {
         stopCameraStream();
         
         // Analyze the captured image
-        analyzeImage();
+        analyzeUploadedImage();
       }
     }
   };
 
   const stopCameraStream = () => {
-    if (videoRef.current && videoRef.current.srcObject) {
-      const stream = videoRef.current.srcObject as MediaStream;
-      const tracks = stream.getTracks();
-      
+    if (streamRef.current) {
+      const tracks = streamRef.current.getTracks();
       tracks.forEach(track => track.stop());
+      streamRef.current = null;
+    }
+    
+    if (videoRef.current && videoRef.current.srcObject) {
       videoRef.current.srcObject = null;
     }
     
     setShowCamera(false);
   };
 
-  const analyzeImage = async () => {
+  const analyzeUploadedImage = async () => {
     setIsAnalyzing(true);
     setDiagnosisResult(null);
     setDiagnosedDisease(null);
     setAnalysisProgress(0);
+    setAnalysisDetails(null);
     
     try {
       // Progress simulation
@@ -166,50 +208,37 @@ const DiagnoseTab = () => {
         });
       }, 300);
 
-      // Simulate AI processing time
-      setTimeout(() => {
-        clearInterval(progressInterval);
-        setAnalysisProgress(100);
-        
-        // In a real implementation, we would use the HuggingFace transformers library here
-        // For demo purposes, we're using a mock result
-        const mockAnalysis = async () => {
-          console.log("Starting plant disease analysis with transformers.js...");
-          
-          // This would be real model inference in production
-          // const classifier = await pipeline(
-          //   'image-classification',
-          //   'google/vit-base-patch16-224',
-          //   { quantized: true }
-          // );
-          // const result = await classifier(uploadedImage);
-          
-          // Mock result - in production this would come from the model
-          return { 
-            diseaseId: 'powdery-mildew',
-            confidence: 0.92
-          };
+      // Perform advanced AI analysis
+      const result = await analyzeImage(uploadedImage!);
+      clearInterval(progressInterval);
+      setAnalysisProgress(100);
+      
+      console.log("AI Diagnosis Result:", result);
+      
+      // Find the disease in our database
+      const disease = PLANT_DISEASES.find(d => d.id === result.diseaseId);
+      
+      if (disease) {
+        // Update confidence with the one from analysis
+        const diseaseWithUpdatedConfidence = {
+          ...disease,
+          confidence: result.confidence
         };
         
-        mockAnalysis().then(result => {
-          // Find the disease in our database
-          const disease = PLANT_DISEASES.find(d => d.id === result.diseaseId);
-          
-          if (disease) {
-            setDiagnosedDisease(disease);
-            setDiagnosisResult(`Detected ${disease.name} with ${Math.round(disease.confidence * 100)}% confidence.`);
-          } else {
-            setDiagnosisResult("Unable to identify the disease with confidence. Please consult with an expert.");
-          }
-          
-          setIsAnalyzing(false);
-        });
-      }, 3000);
+        setDiagnosedDisease(diseaseWithUpdatedConfidence);
+        setDiagnosisResult(`Detected ${disease.name} with ${Math.round(result.confidence * 100)}% confidence.`);
+        setAnalysisDetails(result.analysisDetails);
+      } else {
+        setDiagnosisResult("Unable to identify the disease with confidence. Please consult with an expert.");
+      }
+      
+      setIsAnalyzing(false);
     } catch (error) {
       console.error("Error during image analysis:", error);
       setDiagnosisResult("An error occurred during analysis. Please try again.");
       setIsAnalyzing(false);
       setAnalysisProgress(0);
+      toast.error("Analysis failed. Please try again with a clearer image.");
     }
   };
 
@@ -219,6 +248,7 @@ const DiagnoseTab = () => {
     setDiagnosedDisease(null);
     setAnalysisProgress(0);
     setActiveResultTab('overview');
+    setAnalysisDetails(null);
     stopCameraStream();
   };
 
@@ -233,7 +263,11 @@ const DiagnoseTab = () => {
   };
 
   const navigateToShop = (event?: React.MouseEvent<HTMLButtonElement> | string) => {
-    const productId = typeof event === 'string' ? event : undefined;
+    let productId: string | undefined;
+    
+    if (typeof event === 'string') {
+      productId = event;
+    }
     
     navigate('/');
     setTimeout(() => {
@@ -245,7 +279,11 @@ const DiagnoseTab = () => {
   };
 
   const navigateToLibrary = (event?: React.MouseEvent<HTMLButtonElement> | string) => {
-    const resourceId = typeof event === 'string' ? event : undefined;
+    let resourceId: string | undefined;
+    
+    if (typeof event === 'string') {
+      resourceId = event;
+    }
     
     navigate('/');
     setTimeout(() => {
@@ -411,8 +449,9 @@ const DiagnoseTab = () => {
                   </div>
                 
                   <Tabs defaultValue="overview" value={activeResultTab} onValueChange={setActiveResultTab} className="w-full">
-                    <TabsList className="grid grid-cols-3 mb-4">
+                    <TabsList className="grid grid-cols-4 mb-4">
                       <TabsTrigger value="overview">Overview</TabsTrigger>
+                      <TabsTrigger value="details">Details</TabsTrigger>
                       <TabsTrigger value="treatment">Treatment</TabsTrigger>
                       <TabsTrigger value="products">Products</TabsTrigger>
                     </TabsList>
@@ -424,9 +463,23 @@ const DiagnoseTab = () => {
                       <h4 className="font-semibold text-gray-900 mb-2">Causes:</h4>
                       <p className="text-gray-700 mb-4">{diagnosedDisease.causes}</p>
                       
+                      {analysisDetails && (
+                        <div className="mt-4 bg-blue-50 p-3 rounded-lg">
+                          <h4 className="font-semibold text-drplant-blue mb-2">Identified Symptoms:</h4>
+                          <ul className="space-y-1 text-sm text-gray-700">
+                            {analysisDetails.identifiedFeatures.map((feature: string, index: number) => (
+                              <li key={index} className="flex items-start gap-2">
+                                <span className="text-green-500">•</span>
+                                <span>{feature}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                      
                       <div className="flex justify-between mt-4">
-                        <Button variant="outline" size="sm" onClick={() => setActiveResultTab('treatment')}>
-                          View Treatment
+                        <Button variant="outline" size="sm" onClick={() => setActiveResultTab('details')}>
+                          View Details
                         </Button>
                         <Button 
                           size="sm"
@@ -434,6 +487,89 @@ const DiagnoseTab = () => {
                           onClick={() => navigateToLibrary(diagnosedDisease?.resources?.[0])}
                         >
                           <Book className="mr-2 h-4 w-4" /> Learn More
+                        </Button>
+                      </div>
+                    </TabsContent>
+                    
+                    <TabsContent value="details">
+                      <h3 className="text-xl font-bold text-drplant-blue mb-4">Disease Details</h3>
+                      
+                      {diagnosedDisease.id in diseaseDetails && (
+                        <div className="space-y-4">
+                          <div>
+                            <h4 className="font-semibold text-gray-900 mb-1">Scientific Name:</h4>
+                            <p className="text-gray-700 italic">
+                              {diseaseDetails[diagnosedDisease.id as keyof typeof diseaseDetails].scientificName}
+                            </p>
+                          </div>
+                          
+                          <div>
+                            <h4 className="font-semibold text-gray-900 mb-1">Common Host Plants:</h4>
+                            <div className="flex flex-wrap gap-2">
+                              {diseaseDetails[diagnosedDisease.id as keyof typeof diseaseDetails].hostPlants.map((plant, index) => (
+                                <Badge key={index} variant="outline" className="bg-gray-100">
+                                  {plant}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                          
+                          <div>
+                            <h4 className="font-semibold text-gray-900 mb-1">Environmental Conditions:</h4>
+                            <p className="text-gray-700">
+                              {diseaseDetails[diagnosedDisease.id as keyof typeof diseaseDetails].environmentalConditions}
+                            </p>
+                          </div>
+                          
+                          <div>
+                            <h4 className="font-semibold text-gray-900 mb-1">How It Spreads:</h4>
+                            <p className="text-gray-700">
+                              {diseaseDetails[diagnosedDisease.id as keyof typeof diseaseDetails].spreadMechanism}
+                            </p>
+                          </div>
+                          
+                          {analysisDetails && analysisDetails.alternativeDiagnoses.length > 0 && (
+                            <div>
+                              <h4 className="font-semibold text-gray-900 mb-1">Alternative Diagnoses:</h4>
+                              <ul className="space-y-2">
+                                {analysisDetails.alternativeDiagnoses.map((alt: any, index: number) => (
+                                  <li key={index} className="text-gray-700">
+                                    {PLANT_DISEASES.find(d => d.id === alt.disease)?.name || alt.disease} 
+                                    <span className="text-gray-500 ml-2">
+                                      ({Math.round(alt.probability * 100)}% confidence)
+                                    </span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                          
+                          {analysisDetails && analysisDetails.recommendedAdditionalTests && (
+                            <div className="bg-yellow-50 p-3 rounded-lg">
+                              <h4 className="font-semibold text-amber-700 mb-1">Recommended Additional Tests:</h4>
+                              <ul className="space-y-1 text-sm text-amber-800">
+                                {analysisDetails.recommendedAdditionalTests.map((test: string, index: number) => (
+                                  <li key={index} className="flex items-start gap-2">
+                                    <span>•</span>
+                                    <span>{test}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      
+                      <div className="flex justify-between mt-6">
+                        <Button variant="outline" size="sm" onClick={() => setActiveResultTab('overview')}>
+                          Back to Overview
+                        </Button>
+                        <Button 
+                          size="sm"
+                          className="bg-drplant-blue hover:bg-drplant-blue-dark"
+                          onClick={() => setActiveResultTab('treatment')}
+                        >
+                          View Treatment
                         </Button>
                       </div>
                     </TabsContent>
@@ -449,6 +585,20 @@ const DiagnoseTab = () => {
                         ))}
                       </ul>
                       
+                      {diagnosedDisease.id in diseaseDetails && (
+                        <div className="mt-6">
+                          <h4 className="font-semibold text-gray-900 mb-2">Prevention Tips:</h4>
+                          <ul className="space-y-2">
+                            {diseaseDetails[diagnosedDisease.id as keyof typeof diseaseDetails].preventionTips.map((tip, index) => (
+                              <li key={index} className="flex items-start gap-2">
+                                <span className="text-blue-500">✓</span> 
+                                <span className="text-gray-700">{tip}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                      
                       {diagnosedDisease.confidence < 0.85 && (
                         <div className="flex items-start gap-2 mt-6 p-3 bg-amber-50 border border-amber-200 rounded-lg">
                           <AlertTriangle className="h-5 w-5 text-amber-500 flex-shrink-0" />
@@ -459,8 +609,8 @@ const DiagnoseTab = () => {
                       )}
                       
                       <div className="flex justify-between mt-6">
-                        <Button variant="outline" size="sm" onClick={() => setActiveResultTab('overview')}>
-                          Back to Overview
+                        <Button variant="outline" size="sm" onClick={() => setActiveResultTab('details')}>
+                          Back to Details
                         </Button>
                         <Button 
                           size="sm"
@@ -538,6 +688,52 @@ const DiagnoseTab = () => {
                                 size="sm" 
                                 className="bg-drplant-green hover:bg-drplant-green-dark"
                                 onClick={() => navigateToShop('3')}
+                              >
+                                <ShoppingBag className="mr-1 h-3 w-3" /> View in Shop
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+                        
+                        {diagnosedDisease.products.includes('4') && (
+                          <div className="border rounded-lg p-3 flex gap-3">
+                            <div className="w-16 h-16 bg-gray-100 rounded-md flex-shrink-0 overflow-hidden">
+                              <img 
+                                src="https://images.unsplash.com/photo-1588196749597-9ff075ee6b5b?q=80&w=100&h=100&auto=format&fit=crop" 
+                                alt="Insecticidal Soap" 
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                            <div className="flex-1">
+                              <h4 className="font-medium">Insecticidal Soap</h4>
+                              <p className="text-sm text-gray-500 mb-1">Controls aphids and mites</p>
+                              <Button 
+                                size="sm" 
+                                className="bg-drplant-green hover:bg-drplant-green-dark"
+                                onClick={() => navigateToShop('4')}
+                              >
+                                <ShoppingBag className="mr-1 h-3 w-3" /> View in Shop
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+                        
+                        {diagnosedDisease.products.includes('5') && (
+                          <div className="border rounded-lg p-3 flex gap-3">
+                            <div className="w-16 h-16 bg-gray-100 rounded-md flex-shrink-0 overflow-hidden">
+                              <img 
+                                src="https://images.unsplash.com/photo-1603912699214-92627f304eb6?q=80&w=100&h=100&auto=format&fit=crop" 
+                                alt="Soil pH Tester Kit" 
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                            <div className="flex-1">
+                              <h4 className="font-medium">Soil pH Tester Kit</h4>
+                              <p className="text-sm text-gray-500 mb-1">Essential for diagnosing root issues</p>
+                              <Button 
+                                size="sm" 
+                                className="bg-drplant-green hover:bg-drplant-green-dark"
+                                onClick={() => navigateToShop('5')}
                               >
                                 <ShoppingBag className="mr-1 h-3 w-3" /> View in Shop
                               </Button>
