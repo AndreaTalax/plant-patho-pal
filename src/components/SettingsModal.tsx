@@ -6,7 +6,7 @@ import { Switch } from "@/components/ui/switch";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useTheme } from "@/context/ThemeContext";
 import { useState } from "react";
-import { Sun, Moon, Globe } from "lucide-react";
+import { Sun, Moon, Globe, Settings } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 
 type SettingsModalProps = {
@@ -113,5 +113,3 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
 };
 
 export default SettingsModal;
-
-import { Settings } from "lucide-react";

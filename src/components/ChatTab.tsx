@@ -1,20 +1,23 @@
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Avatar } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Send, ChevronRight } from 'lucide-react';
 import { toast } from '@/components/ui/sonner';
+import { useTheme } from '@/context/ThemeContext';
 
 const ChatTab = () => {
+  const { t } = useTheme();
   const [activeChat, setActiveChat] = useState<string | null>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   
   // Mock data
   const experts = [
-    { id: '1', name: 'Dr. Sarah Johnson', specialty: 'Fungal Diseases', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=256&h=256&auto=format&fit=crop', email: 'sarah.johnson@drplant.com' },
-    { id: '2', name: 'Prof. Michael Chen', specialty: 'Insect Pests', avatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?q=80&w=256&h=256&auto=format&fit=crop', email: 'michael.chen@drplant.com' },
-    { id: '3', name: 'Dr. Aisha Patel', specialty: 'Nutrient Deficiencies', avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?q=80&w=256&h=256&auto=format&fit=crop', email: 'aisha.patel@drplant.com' },
+    { id: '1', name: 'Dr. Sarah Johnson', specialty: 'Fungal Diseases', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=256&h=256&auto=format&fit=crop', email: 'agrotecnicomarconigro@gmail.com' },
+    { id: '2', name: 'Prof. Michael Chen', specialty: 'Insect Pests', avatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?q=80&w=256&h=256&auto=format&fit=crop', email: 'agrotecnicomarconigro@gmail.com' },
+    { id: '3', name: 'Dr. Aisha Patel', specialty: 'Nutrient Deficiencies', avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?q=80&w=256&h=256&auto=format&fit=crop', email: 'agrotecnicomarconigro@gmail.com' },
   ];
   
   const [messages, setMessages] = useState<Array<{id: string, sender: string, text: string, time: string}>>([
@@ -23,6 +26,13 @@ const ChatTab = () => {
   
   const [newMessage, setNewMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
+  
+  // Scroll to bottom when messages change
+  useEffect(() => {
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+    }
+  }, [messages]);
   
   const sendMessage = async () => {
     if (newMessage.trim() === '') return;
@@ -45,14 +55,16 @@ const ChatTab = () => {
       const activeExpert = experts.find(e => e.id === activeChat);
       
       if (activeExpert) {
-        // In a real app, this would be a backend API call
+        // In a real app, this would be a backend API call to send an email
         console.log(`Sending email notification to: ${activeExpert.email}`);
+        console.log(`From: Chat System`);
+        console.log(`Subject: New chat message from user`);
         console.log(`Message content: ${newMessage}`);
         
         // Simulate API call to send email notification
         await new Promise(resolve => setTimeout(resolve, 1000));
         
-        toast.success(`Notification sent to ${activeExpert.name}`);
+        toast.success(t("notificationSent", { name: activeExpert.name }));
       }
       
       // Clear input after sending
@@ -63,13 +75,13 @@ const ChatTab = () => {
         setMessages(curr => [...curr, {
           id: (Date.now() + 1).toString(),
           sender: 'expert',
-          text: "Thanks for the additional details. Based on the symptoms you've described, it sounds like we're dealing with a fungal infection. I'd recommend a treatment with neem oil or a potassium bicarbonate solution. Would you like me to recommend some specific products from our shop?",
+          text: t("expertResponse"),
           time: (new Date().getHours() + ':' + new Date().getMinutes().toString().padStart(2, '0'))
         }]);
       }, 2000);
     } catch (error) {
       console.error("Error sending message:", error);
-      toast.error("Failed to send message. Please try again.");
+      toast.error(t("messageSendError"));
     } finally {
       setIsSending(false);
     }
@@ -79,10 +91,10 @@ const ChatTab = () => {
     <div className="flex flex-col min-h-full pt-6 pb-24">
       {!activeChat ? (
         <div className="px-4">
-          <h2 className="text-2xl font-bold mb-6 text-drplant-green">Expert Consultation</h2>
+          <h2 className="text-2xl font-bold mb-6 text-drplant-green">{t("expertConsultation")}</h2>
           
           <div className="space-y-4">
-            <p className="text-gray-600">Connect with plant pathologists and agronomists for expert advice on your plant health issues.</p>
+            <p className="text-gray-600">{t("connectWithExperts")}</p>
             
             {experts.map(expert => (
               <Card 
@@ -104,7 +116,7 @@ const ChatTab = () => {
             ))}
             
             <div className="mt-6 text-center text-gray-500 text-sm">
-              <p>Response time: typically within 1-2 hours</p>
+              <p>{t("responseTime")}</p>
             </div>
           </div>
         </div>
@@ -130,12 +142,12 @@ const ChatTab = () => {
               <h3 className="font-medium text-sm">
                 {experts.find(e => e.id === activeChat)?.name}
               </h3>
-              <p className="text-xs text-green-600">Online</p>
+              <p className="text-xs text-green-600">{t("online")}</p>
             </div>
           </div>
           
           {/* Chat messages */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          <div className="flex-1 overflow-y-auto p-4 space-y-4" ref={messagesContainerRef}>
             {messages.map(message => (
               <div 
                 key={message.id} 
@@ -165,7 +177,7 @@ const ChatTab = () => {
               <Input
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
-                placeholder="Type your message..."
+                placeholder={t("typeYourMessage")}
                 className="flex-1"
                 onKeyPress={(e) => e.key === 'Enter' && !isSending && sendMessage()}
                 disabled={isSending}

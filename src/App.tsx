@@ -9,6 +9,9 @@ import { ThemeProvider } from "./context/ThemeContext";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
+import AboutUs from "./pages/AboutUs";
+import Services from "./pages/Services";
+import Contact from "./pages/Contact";
 
 const queryClient = new QueryClient();
 
@@ -30,6 +33,21 @@ const AppRoutes = () => {
       <Route path="/" element={
         <ProtectedRoute>
           <Index />
+        </ProtectedRoute>
+      } />
+      <Route path="/about" element={
+        <ProtectedRoute>
+          <AboutUs />
+        </ProtectedRoute>
+      } />
+      <Route path="/services" element={
+        <ProtectedRoute>
+          <Services />
+        </ProtectedRoute>
+      } />
+      <Route path="/contact" element={
+        <ProtectedRoute>
+          <Contact />
         </ProtectedRoute>
       } />
       {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
