@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Header from '@/components/Header';
 import DiagnoseTab from '@/components/DiagnoseTab';
 import ChatTab from '@/components/ChatTab';
@@ -12,6 +12,22 @@ type TabName = 'diagnose' | 'chat' | 'shop' | 'library' | 'profile';
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState<TabName>('diagnose');
+
+  // Add event listener for tab switching
+  useEffect(() => {
+    const handleTabSwitch = (event: CustomEvent) => {
+      const tabName = event.detail as TabName;
+      if (tabName) {
+        setActiveTab(tabName);
+      }
+    };
+
+    window.addEventListener('switchTab', handleTabSwitch as EventListener);
+    
+    return () => {
+      window.removeEventListener('switchTab', handleTabSwitch as EventListener);
+    };
+  }, []);
 
   return (
     <div className="bg-gradient-to-b from-sky-50 to-white min-h-screen pb-safe">

@@ -1,4 +1,3 @@
-
 import { Camera, Upload, Loader2, MessageCircle, Check, AlertTriangle, ShoppingBag, Book, X } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
@@ -254,11 +253,10 @@ const DiagnoseTab = () => {
 
   const navigateToChat = () => {
     navigate('/');
+    // Using a slight timeout to ensure navigation completes before tab selection
     setTimeout(() => {
-      const chatTabButton = document.querySelector('[data-tab="chat"]');
-      if (chatTabButton) {
-        (chatTabButton as HTMLElement).click();
-      }
+      const event = new CustomEvent('switchTab', { detail: 'chat' });
+      window.dispatchEvent(event);
     }, 100);
   };
 
@@ -271,10 +269,8 @@ const DiagnoseTab = () => {
     
     navigate('/');
     setTimeout(() => {
-      const shopTabButton = document.querySelector('[data-tab="shop"]');
-      if (shopTabButton) {
-        (shopTabButton as HTMLElement).click();
-      }
+      const event = new CustomEvent('switchTab', { detail: 'shop' });
+      window.dispatchEvent(event);
     }, 100);
   };
 
@@ -287,10 +283,8 @@ const DiagnoseTab = () => {
     
     navigate('/');
     setTimeout(() => {
-      const libraryTabButton = document.querySelector('[data-tab="library"]');
-      if (libraryTabButton) {
-        (libraryTabButton as HTMLElement).click();
-      }
+      const event = new CustomEvent('switchTab', { detail: 'library' });
+      window.dispatchEvent(event);
     }, 100);
   };
 
