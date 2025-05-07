@@ -7,6 +7,7 @@ import ShopTab from '@/components/ShopTab';
 import LibraryTab from '@/components/LibraryTab';
 import ProfileTab from '@/components/ProfileTab';
 import BottomNavigation from '@/components/BottomNavigation';
+import { Leaf } from 'lucide-react';
 
 type TabName = 'diagnose' | 'chat' | 'shop' | 'library' | 'profile';
 
@@ -36,6 +37,10 @@ const Index = () => {
       <div className="relative pt-24 pb-20 md:pt-32 md:pb-28 px-4 overflow-hidden">
         <div className="container mx-auto">
           <div className="max-w-3xl mx-auto text-center">
+            <div className="flex items-center justify-center gap-2 mb-3">
+              <Leaf className="h-6 w-6 text-drplant-green" />
+              <span className="text-sm font-medium text-drplant-green">Powered by Plantix AI</span>
+            </div>
             <h1 className="text-4xl md:text-5xl font-bold text-drplant-blue mb-6">
               Smart Plant Disease Diagnosis
             </h1>

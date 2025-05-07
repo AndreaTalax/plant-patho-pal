@@ -1,5 +1,4 @@
-
-// Advanced plant disease detection utilities
+// Advanced plant disease detection utilities - Plantix AI simulation
 
 // Collection of realistic plant disease symptoms
 export const diseaseSymptoms = {
@@ -114,7 +113,7 @@ export const diseaseDetails = {
   }
 };
 
-// Advanced image analysis simulation
+// Advanced image analysis simulation (Plantix-like)
 export const analyzeImage = async (imageUrl: string): Promise<{
   diseaseId: string;
   confidence: number;
@@ -122,12 +121,20 @@ export const analyzeImage = async (imageUrl: string): Promise<{
     identifiedFeatures: string[];
     alternativeDiagnoses: Array<{disease: string, probability: number}>;
     recommendedAdditionalTests?: string[];
+    plantixInsights?: {
+      plantType?: string;
+      severity: 'mild' | 'moderate' | 'severe';
+      progressStage: 'early' | 'developing' | 'advanced';
+      spreadRisk: 'low' | 'medium' | 'high';
+      environmentalFactors: string[];
+      estimatedOnsetTime?: string;
+    }
   }
 }> => {
-  // In a real application, this would call a machine learning model
+  // In a real application, this would call the Plantix API
   // For demo purposes, we'll simulate a realistic plant disease analysis
   
-  // Simulate processing time
+  // Simulate processing time (Plantix-like response time)
   await new Promise(resolve => setTimeout(resolve, 3000));
   
   // Randomly select a disease for demonstration
@@ -176,13 +183,141 @@ export const analyzeImage = async (imageUrl: string): Promise<{
     ];
   }
   
+  // Plantix-specific insights
+  const plantixInsights = {
+    plantType: ['Tomato', 'Rose', 'Apple Tree', 'Cucumber', 'Potato', 'Pepper'][Math.floor(Math.random() * 6)],
+    severity: ['mild', 'moderate', 'severe'][Math.floor(Math.random() * 3)] as 'mild' | 'moderate' | 'severe',
+    progressStage: ['early', 'developing', 'advanced'][Math.floor(Math.random() * 3)] as 'early' | 'developing' | 'advanced',
+    spreadRisk: ['low', 'medium', 'high'][Math.floor(Math.random() * 3)] as 'low' | 'medium' | 'high',
+    environmentalFactors: [
+      'High humidity',
+      'Poor air circulation',
+      'Overcrowded planting',
+      'Recent rainfall',
+      'Temperature fluctuations'
+    ].sort(() => 0.5 - Math.random()).slice(0, 2 + Math.floor(Math.random() * 3)),
+    estimatedOnsetTime: ['1-3 days ago', '4-7 days ago', '1-2 weeks ago', '2+ weeks ago'][Math.floor(Math.random() * 4)]
+  };
+  
   return {
     diseaseId: detectedDisease,
     confidence: confidence,
     analysisDetails: {
       identifiedFeatures,
       alternativeDiagnoses,
-      recommendedAdditionalTests
+      recommendedAdditionalTests,
+      plantixInsights
     }
   };
+};
+
+// Plantix-like recommendations based on disease and severity
+export const getPlantixRecommendations = (diseaseId: string, severity: string): string[] => {
+  const generalRecommendations = [
+    'Monitor the plant regularly for changes in symptoms',
+    'Ensure proper watering practices (avoid overhead watering)',
+    'Improve air circulation around affected plants'
+  ];
+  
+  const diseaseSpecificRecommendations: Record<string, Record<string, string[]>> = {
+    'powdery-mildew': {
+      'mild': [
+        'Apply neem oil spray to affected areas',
+        'Remove a few most affected leaves',
+        'Increase spacing between plants to improve airflow'
+      ],
+      'moderate': [
+        'Apply fungicide labeled for powdery mildew',
+        'Remove all affected leaves and dispose of properly',
+        'Avoid overhead watering completely'
+      ],
+      'severe': [
+        'Apply systemic fungicide according to label instructions',
+        'Consider removing heavily infected plants',
+        'Sanitize gardening tools before using on healthy plants',
+        'Plan for resistant varieties in future plantings'
+      ]
+    },
+    'leaf-spot': {
+      'mild': [
+        'Remove affected leaves',
+        'Apply copper-based fungicide as preventative',
+        'Keep foliage dry when watering'
+      ],
+      'moderate': [
+        'Apply broad-spectrum fungicide',
+        'Remove and destroy all fallen leaves',
+        'Improve drainage around plants'
+      ],
+      'severe': [
+        'Apply systemic fungicide treatment',
+        'Prune plant to improve air circulation',
+        'Rotate crops next season (for vegetables)',
+        'Consider copper treatments for long-term prevention'
+      ]
+    },
+    'aphid-infestation': {
+      'mild': [
+        'Spray plants with strong jet of water to dislodge aphids',
+        'Introduce beneficial insects like ladybugs',
+        'Apply insecticidal soap to affected areas'
+      ],
+      'moderate': [
+        'Apply neem oil or insecticidal soap thoroughly',
+        'Remove heavily infested shoots and leaves',
+        'Check for and control ants that may be farming aphids'
+      ],
+      'severe': [
+        'Apply systemic insecticide for season-long control',
+        'Treat surrounding plants as preventative measure',
+        'Consider biological controls like parasitic wasps',
+        'Apply sticky traps for winged aphids'
+      ]
+    },
+    'root-rot': {
+      'mild': [
+        'Reduce watering frequency',
+        'Improve soil drainage',
+        'Apply hydrogen peroxide solution (1 part 3% H₂O₂ to 3 parts water)'
+      ],
+      'moderate': [
+        'Repot plant with fresh sterile potting mix',
+        'Trim affected roots before repotting',
+        'Apply fungicide as soil drench'
+      ],
+      'severe': [
+        'Take cuttings from healthy portions to propagate new plants',
+        'Discard severely affected plants and soil',
+        'Sterilize pots before reusing',
+        'Test soil pH and adjust if necessary'
+      ]
+    },
+    'spider-mites': {
+      'mild': [
+        'Increase humidity around plants',
+        'Spray plants with water regularly to discourage mites',
+        'Apply insecticidal soap focusing on leaf undersides'
+      ],
+      'moderate': [
+        'Apply miticide specifically labeled for spider mites',
+        'Remove heavily infested leaves',
+        'Isolate affected plants to prevent spread'
+      ],
+      'severe': [
+        'Apply systemic miticide treatment',
+        'Repeat applications per product instructions',
+        'Consider introducing predatory mites',
+        'For indoor plants, wash thoroughly with soapy water before treatment'
+      ]
+    }
+  };
+  
+  // Get disease-specific recommendations based on severity
+  const specificRecommendations = 
+    diseaseSpecificRecommendations[diseaseId]?.[severity.toLowerCase()] || 
+    diseaseSpecificRecommendations[diseaseId]?.['moderate'] || 
+    [];
+  
+  // Combine general and specific recommendations
+  return [...specificRecommendations, ...generalRecommendations];
 };

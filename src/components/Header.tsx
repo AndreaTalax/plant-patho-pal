@@ -4,7 +4,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { useTheme } from '@/context/ThemeContext';
-import { Menu, X } from 'lucide-react';
+import { Menu, X, Leaf } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { 
   Drawer,
@@ -47,12 +47,16 @@ const Header = () => {
       scrolled ? 'bg-white/90 shadow-md backdrop-blur-md' : 'bg-gradient-to-b from-drplant-blue/20 to-transparent'
     }`}>
       <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-        <Link to="/" className="flex items-center">
+        <Link to="/" className="flex items-center space-x-2">
           <img 
             src="/lovable-uploads/1cb629ef-f7f2-4b66-a48a-5f22564bb3fa.png" 
             alt="DR PLANT Logo" 
             className="h-14 md:h-16"
           />
+          <div className="hidden md:flex flex-col">
+            <span className="font-bold text-drplant-blue text-xl">DR PLANT</span>
+            <span className="text-xs text-drplant-blue-dark">powered by Plantix AI</span>
+          </div>
         </Link>
         
         {/* Desktop navigation */}
@@ -81,8 +85,9 @@ const Header = () => {
             </DrawerTrigger>
             <DrawerContent className="px-4 py-6 h-[60vh] flex flex-col">
               <div className="flex justify-between items-center mb-6">
-                <h2 className="text-lg font-semibold text-drplant-blue">
-                  {t("menu")}
+                <h2 className="text-lg font-semibold text-drplant-blue flex items-center gap-2">
+                  <Leaf className="h-5 w-5 text-drplant-green" />
+                  <span>{t("menu")}</span>
                 </h2>
                 <DrawerClose asChild>
                   <Button variant="ghost" size="icon">

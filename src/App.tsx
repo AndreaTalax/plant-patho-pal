@@ -30,26 +30,10 @@ const AppRoutes = () => {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
-      <Route path="/" element={
-        <ProtectedRoute>
-          <Index />
-        </ProtectedRoute>
-      } />
-      <Route path="/about" element={
-        <ProtectedRoute>
-          <AboutUs />
-        </ProtectedRoute>
-      } />
-      <Route path="/services" element={
-        <ProtectedRoute>
-          <Services />
-        </ProtectedRoute>
-      } />
-      <Route path="/contact" element={
-        <ProtectedRoute>
-          <Contact />
-        </ProtectedRoute>
-      } />
+      <Route path="/" element={<Index />} />
+      <Route path="/about" element={<AboutUs />} />
+      <Route path="/services" element={<Services />} />
+      <Route path="/contact" element={<Contact />} />
       {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
       <Route path="*" element={<NotFound />} />
     </Routes>
