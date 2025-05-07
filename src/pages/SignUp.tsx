@@ -1,12 +1,10 @@
-
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
-import { Leaf, LockKeyhole, Mail, AlertCircle } from "lucide-react";
+import { Leaf, LockKeyhole, Mail } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { 
   Form,
@@ -57,11 +55,11 @@ const SignUp = () => {
         title: "Registrazione completata",
         description: "Ti abbiamo inviato un'email di conferma. Controlla la tua casella di posta.",
       });
-    } catch (error) {
+    } catch (error: any) {
       toast({
         variant: "destructive",
         title: "Errore durante la registrazione",
-        description: "Si è verificato un problema durante la registrazione. Riprova più tardi.",
+        description: error.message || "Si è verificato un problema durante la registrazione. Riprova più tardi.",
       });
     } finally {
       setIsLoading(false);

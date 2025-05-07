@@ -7,9 +7,17 @@ import { Input } from '@/components/ui/input';
 import { Send, ChevronRight } from 'lucide-react';
 import { toast } from '@/components/ui/sonner';
 import { useTheme } from '@/context/ThemeContext';
+import { useAuth } from '@/context/AuthContext';
+import { createClient } from '@supabase/supabase-js';
+
+// Initialize Supabase client
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
+const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 const ChatTab = () => {
   const { t } = useTheme();
+  const { userProfile } = useAuth();
   const [activeChat, setActiveChat] = useState<string | null>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   
@@ -33,51 +41,127 @@ const ChatTab = () => {
       messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
     }
   }, [messages]);
+
+  // Load chat messages from Supabase
+  useEffect(() => {
+    const loadMessages = async () => {
+      if (!activeChat) return;
+      
+      try {
+        const { data: chatMessages, error } = await supabase
+          .from('chat_messages')
+          .select('*')
+          .eq('chat_id', activeChat)
+          .order('created_at', { ascending: true });
+          
+        if (error) throw error;
+        
+        if (chatMessages && chatMessages.length > 0) {
+          const formattedMessages = chatMessages.map(msg => ({
+            id: msg.id,
+            sender: msg.sender_type,
+            text: msg.message,
+            time: new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          }));
+          
+          setMessages(formattedMessages);
+        } else {
+          // If no messages, set the default welcome message
+          setMessages([{ 
+            id: '1', 
+            sender: 'expert', 
+            text: 'Hello! How can I help with your plant today?', 
+            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) 
+          }]);
+        }
+      } catch (error) {
+        console.error('Error loading messages:', error);
+        toast.error('Failed to load messages');
+      }
+    };
+    
+    loadMessages();
+  }, [activeChat]);
   
   const sendMessage = async () => {
     if (newMessage.trim() === '') return;
     
     const now = new Date();
-    const timeStr = now.getHours() + ':' + now.getMinutes().toString().padStart(2, '0');
+    const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const messageId = Date.now().toString();
     
     // Add user message to chat
-    setMessages([...messages, {
-      id: Date.now().toString(),
+    const userMessage = {
+      id: messageId,
       sender: 'user',
       text: newMessage,
       time: timeStr
-    }]);
+    };
     
+    setMessages(prevMessages => [...prevMessages, userMessage]);
     setIsSending(true);
     
     try {
       // Get the expert who's being messaged
       const activeExpert = experts.find(e => e.id === activeChat);
       
-      if (activeExpert) {
-        // In a real app, this would be a backend API call to send an email
-        console.log(`Sending email notification to: ${activeExpert.email}`);
-        console.log(`From: Chat System`);
-        console.log(`Subject: New chat message from user`);
-        console.log(`Message content: ${newMessage}`);
-        
-        // Simulate API call to send email notification
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        toast.success(t("notificationSent", { name: activeExpert.name }));
+      if (!activeExpert) {
+        throw new Error('Expert not found');
       }
+
+      // Store message in Supabase
+      const { error: insertError } = await supabase
+        .from('chat_messages')
+        .insert({
+          chat_id: activeChat,
+          sender_id: 'current_user', // Would be the actual user ID in production
+          sender_type: 'user',
+          receiver_id: activeExpert.id,
+          message: newMessage
+        });
+        
+      if (insertError) throw insertError;
+      
+      // Call Supabase Edge Function to send email notification to expert
+      const { error: functionError } = await supabase.functions.invoke('send-specialist-notification', {
+        body: {
+          expertEmail: activeExpert.email,
+          expertName: activeExpert.name,
+          userEmail: userProfile.email,
+          userName: `${userProfile.firstName} ${userProfile.lastName}`,
+          message: newMessage
+        }
+      });
+      
+      if (functionError) throw functionError;
+      
+      toast.success(t("notificationSent", { name: activeExpert.name }));
       
       // Clear input after sending
       setNewMessage('');
       
       // Simulate expert response after a delay
-      setTimeout(() => {
-        setMessages(curr => [...curr, {
+      setTimeout(async () => {
+        const expertResponse = {
           id: (Date.now() + 1).toString(),
           sender: 'expert',
           text: t("expertResponse"),
-          time: (new Date().getHours() + ':' + new Date().getMinutes().toString().padStart(2, '0'))
-        }]);
+          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        };
+        
+        setMessages(curr => [...curr, expertResponse]);
+        
+        // Store expert response in Supabase
+        await supabase
+          .from('chat_messages')
+          .insert({
+            chat_id: activeChat,
+            sender_id: activeExpert.id,
+            sender_type: 'expert',
+            receiver_id: 'current_user', // Would be the actual user ID in production
+            message: expertResponse.text
+          });
+          
       }, 2000);
     } catch (error) {
       console.error("Error sending message:", error);
