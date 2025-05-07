@@ -1,57 +1,53 @@
 
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
-import { Leaf, LockKeyhole, User } from "lucide-react";
+import { Leaf, LockKeyhole, User, Mail } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 
 const Login = () => {
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
   const { login } = useAuth();
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
     // Simple validation
-    if (!username || !password) {
+    if (!email || !password) {
       toast({
         variant: "destructive",
-        title: "Error",
-        description: "Please enter both username and password",
+        title: "Errore",
+        description: "Inserisci sia email che password",
       });
       setIsLoading(false);
       return;
     }
 
-    // Check for test credentials
-    setTimeout(() => {
-      if (username === "test" && password === "test") {
-        toast({
-          title: "Login successful",
-          description: "Welcome back to Plant Patho Pal!",
-        });
-        // Set authenticated in context
-        login();
-        // Navigate to main app
-        navigate("/");
-      } else {
-        toast({
-          variant: "destructive",
-          title: "Login failed",
-          description: "Invalid credentials. Try username: test, password: test",
-        });
-      }
+    try {
+      await login(email, password);
+      toast({
+        title: "Login effettuato con successo",
+        description: "Bentornato su Plant Patho Pal!",
+      });
+      navigate("/");
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Login fallito",
+        description: "Credenziali non valide. Prova email: test@test.com, password: test123",
+      });
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
   return (
@@ -65,28 +61,29 @@ const Login = () => {
             <Leaf className="h-12 w-12 text-drplant-green" />
           </div>
           <h1 className="text-3xl font-bold text-drplant-blue-dark">Plant Patho Pal</h1>
-          <p className="text-gray-600 mt-2">Sign in to access your plant healthcare system</p>
+          <p className="text-gray-600 mt-2">Accedi al tuo sistema di assistenza per piante</p>
         </div>
 
         <Card className="border-none shadow-xl bg-white/80 backdrop-blur-sm">
           <CardHeader>
-            <CardTitle className="text-2xl text-drplant-blue-dark text-center">Welcome Back</CardTitle>
+            <CardTitle className="text-2xl text-drplant-blue-dark text-center">Benvenuto</CardTitle>
             <CardDescription className="text-center">
-              Enter your credentials to continue
+              Inserisci le tue credenziali per continuare
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleLogin} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="username" className="text-gray-700">Username</Label>
+                <Label htmlFor="email" className="text-gray-700">Email</Label>
                 <div className="relative">
-                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
                   <Input 
-                    id="username" 
-                    placeholder="Enter username (test)" 
+                    id="email" 
+                    placeholder="Inserisci email (test@test.com)" 
                     className="pl-10"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    type="email"
                   />
                 </div>
               </div>
@@ -97,7 +94,7 @@ const Login = () => {
                   <Input 
                     id="password" 
                     type="password" 
-                    placeholder="Enter password (test)" 
+                    placeholder="Inserisci password (test123)" 
                     className="pl-10"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
@@ -109,13 +106,16 @@ const Login = () => {
                 className="w-full bg-gradient-to-r from-drplant-blue to-drplant-blue-dark hover:from-drplant-blue-dark hover:to-drplant-blue-dark transition-all duration-300"
                 disabled={isLoading}
               >
-                {isLoading ? "Logging in..." : "Sign In"}
+                {isLoading ? "Accesso in corso..." : "Accedi"}
               </Button>
             </form>
           </CardContent>
-          <CardFooter className="flex justify-center text-sm text-gray-500">
-            <div className="text-center">
-              <p>Demo credentials: Username: <span className="font-semibold">test</span>, Password: <span className="font-semibold">test</span></p>
+          <CardFooter className="flex flex-col space-y-4">
+            <div className="text-center w-full text-sm text-gray-500">
+              Non hai un account? <Link to="/signup" className="text-drplant-blue font-medium hover:underline">Registrati</Link>
+            </div>
+            <div className="text-center text-sm text-gray-500">
+              <p>Credenziali demo: Email: <span className="font-semibold">test@test.com</span>, Password: <span className="font-semibold">test123</span></p>
             </div>
           </CardFooter>
         </Card>

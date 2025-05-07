@@ -1,7 +1,9 @@
 
+import { useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { 
   Settings, 
   Mail, 
@@ -13,11 +15,10 @@ import {
   ShoppingBag, 
   Flower2,
   User,
-  Globe,
-  Key
+  Save,
+  Edit
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/components/ui/use-toast";
@@ -29,17 +30,52 @@ const ProfileTab = () => {
   const [privacyPolicyOpen, setPrivacyPolicyOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [credentialsOpen, setCredentialsOpen] = useState(false);
+  const [editingPhone, setEditingPhone] = useState(false);
+  const [editingAddress, setEditingAddress] = useState(false);
+  const [phoneValue, setPhoneValue] = useState("");
+  const [addressValue, setAddressValue] = useState("");
+  
   const navigate = useNavigate();
-  const { logout } = useAuth();
+  const { logout, userProfile, updateProfile } = useAuth();
   const { toast } = useToast();
+
+  // Initialize state with user profile data
+  useState(() => {
+    setPhoneValue(userProfile.phone || "");
+    setAddressValue(userProfile.address || "");
+  });
 
   const handleSignOut = () => {
     logout();
     toast({
-      title: "Signed out successfully",
-      description: "You have been logged out of your account",
+      title: "Disconnesso con successo",
+      description: "Sei stato disconnesso dal tuo account",
     });
     navigate("/login");
+  };
+
+  const handleSavePhone = () => {
+    updateProfile("phone", phoneValue);
+    setEditingPhone(false);
+    toast({
+      title: "Numero di telefono aggiornato",
+      description: "Il tuo numero di telefono è stato salvato con successo",
+    });
+  };
+
+  const handleSaveAddress = () => {
+    updateProfile("address", addressValue);
+    setEditingAddress(false);
+    toast({
+      title: "Indirizzo aggiornato",
+      description: "Il tuo indirizzo è stato salvato con successo",
+    });
+  };
+
+  const getInitials = () => {
+    const firstName = userProfile.firstName || "";
+    const lastName = userProfile.lastName || "";
+    return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
   };
 
   return (
@@ -48,10 +84,12 @@ const ProfileTab = () => {
       <div className="flex flex-col items-center pt-8 pb-6">
         <Avatar className="h-24 w-24 mb-4">
           <AvatarImage src="/placeholder.svg" alt="User avatar" />
-          <AvatarFallback>GP</AvatarFallback>
+          <AvatarFallback>{getInitials()}</AvatarFallback>
         </Avatar>
-        <h2 className="text-2xl font-bold text-gray-900">Guest Profile</h2>
-        <p className="text-gray-500">Plant enthusiast</p>
+        <h2 className="text-2xl font-bold text-gray-900">
+          {userProfile.firstName} {userProfile.lastName}
+        </h2>
+        <p className="text-gray-500">{userProfile.email}</p>
       </div>
 
       {/* Activity Section */}
@@ -109,20 +147,60 @@ const ProfileTab = () => {
       {/* Personal Info Card */}
       <Card>
         <CardHeader className="pb-3">
-          <h3 className="text-lg font-semibold">Personal Information</h3>
+          <h3 className="text-lg font-semibold">Informazioni Personali</h3>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center gap-3 text-gray-600">
-            <Mail className="h-5 w-5" />
-            <span>guest@example.com</span>
+            <Mail className="h-5 w-5 flex-shrink-0" />
+            <span className="flex-grow">{userProfile.email}</span>
           </div>
+          
           <div className="flex items-center gap-3 text-gray-600">
-            <Phone className="h-5 w-5" />
-            <span>Not provided</span>
+            <Phone className="h-5 w-5 flex-shrink-0" />
+            {editingPhone ? (
+              <div className="flex-grow flex gap-2">
+                <Input 
+                  value={phoneValue} 
+                  onChange={(e) => setPhoneValue(e.target.value)}
+                  placeholder="Inserisci numero di telefono"
+                  className="flex-grow"
+                />
+                <Button size="icon" onClick={handleSavePhone}>
+                  <Save className="h-4 w-4" />
+                </Button>
+              </div>
+            ) : (
+              <>
+                <span className="flex-grow">{userProfile.phone || "Non specificato"}</span>
+                <Button variant="ghost" size="icon" onClick={() => setEditingPhone(true)}>
+                  <Edit className="h-4 w-4" />
+                </Button>
+              </>
+            )}
           </div>
+          
           <div className="flex items-center gap-3 text-gray-600">
-            <MapPin className="h-5 w-5" />
-            <span>Not provided</span>
+            <MapPin className="h-5 w-5 flex-shrink-0" />
+            {editingAddress ? (
+              <div className="flex-grow flex gap-2">
+                <Input 
+                  value={addressValue} 
+                  onChange={(e) => setAddressValue(e.target.value)}
+                  placeholder="Inserisci indirizzo"
+                  className="flex-grow"
+                />
+                <Button size="icon" onClick={handleSaveAddress}>
+                  <Save className="h-4 w-4" />
+                </Button>
+              </div>
+            ) : (
+              <>
+                <span className="flex-grow">{userProfile.address || "Non specificato"}</span>
+                <Button variant="ghost" size="icon" onClick={() => setEditingAddress(true)}>
+                  <Edit className="h-4 w-4" />
+                </Button>
+              </>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -131,7 +209,7 @@ const ProfileTab = () => {
       <div className="space-y-3">
         <Button variant="outline" className="w-full justify-start" size="lg" onClick={() => setSettingsOpen(true)}>
           <Settings className="mr-2" />
-          Settings
+          Impostazioni
         </Button>
         <Button variant="outline" className="w-full justify-start" size="lg" onClick={() => setPrivacyPolicyOpen(true)}>
           <Shield className="mr-2" />
@@ -139,7 +217,7 @@ const ProfileTab = () => {
         </Button>
         <Button variant="outline" className="w-full justify-start" size="lg" onClick={() => setCredentialsOpen(true)}>
           <User className="mr-2" />
-          Change Username & Password
+          Cambia Username & Password
         </Button>
         <Button 
           variant="outline" 
@@ -148,7 +226,7 @@ const ProfileTab = () => {
           onClick={handleSignOut}
         >
           <LogOut className="mr-2" />
-          Sign Out
+          Esci
         </Button>
       </div>
 
