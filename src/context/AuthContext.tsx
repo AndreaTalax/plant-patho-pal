@@ -1,16 +1,12 @@
 import { createContext, useContext, useState, ReactNode, useEffect } from "react";
 import { createClient } from '@supabase/supabase-js';
 
-// Initialize Supabase client
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+// Hard-code Supabase URL and key - replace these with your actual values from the Supabase dashboard
+const supabaseUrl = "https://YOUR_SUPABASE_PROJECT_URL.supabase.co";  // Replace with your Supabase project URL
+const supabaseKey = "YOUR_SUPABASE_ANON_KEY";  // Replace with your Supabase anon key
 
-// Verify that we have the required environment variables
-if (!supabaseUrl || !supabaseKey) {
-  console.error('Missing Supabase environment variables. Please check your .env file or Supabase configuration.');
-}
-
-const supabase = createClient(supabaseUrl || '', supabaseKey || '');
+// Create client only if we have both URL and key
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 type UserProfile = {
   username: string;

@@ -9,6 +9,14 @@ import { SmtpClient } from "https://deno.land/x/smtp@v0.7.0/mod.ts";
 
 console.log("Hello from send-specialist-notification");
 
+// Hard-code email settings - you'll need to replace these with actual values
+const SMTP_HOSTNAME = "smtp.example.com";  // Replace with your SMTP server
+const SMTP_PORT = 587;  // Replace with your SMTP port
+const SMTP_USERNAME = "username";  // Replace with your SMTP username
+const SMTP_PASSWORD = "password";  // Replace with your SMTP password
+const EMAIL_FROM = "no-reply@plantpathopal.com";  // Replace with your sender email
+const APP_URL = "https://plantpathopal.app";  // Replace with your app URL
+
 serve(async (req) => {
   // Handle CORS
   if (req.method === "OPTIONS") {
@@ -18,22 +26,22 @@ serve(async (req) => {
   try {
     const { expertEmail, expertName, userEmail, userName, message } = await req.json();
     
-    // Connect to SMTP server - you'll need to set these up in Supabase Secrets
+    // Connect to SMTP server with hardcoded values
     const client = new SmtpClient({
       connection: {
-        hostname: Deno.env.get("SMTP_HOSTNAME") || "",
-        port: Number(Deno.env.get("SMTP_PORT")) || 587,
+        hostname: SMTP_HOSTNAME,
+        port: SMTP_PORT,
         tls: true,
         auth: {
-          username: Deno.env.get("SMTP_USERNAME") || "",
-          password: Deno.env.get("SMTP_PASSWORD") || "",
+          username: SMTP_USERNAME,
+          password: SMTP_PASSWORD,
         },
       },
     });
     
     // Send email to expert
     await client.send({
-      from: Deno.env.get("EMAIL_FROM") || "no-reply@plantpathopal.com",
+      from: EMAIL_FROM,
       to: expertEmail,
       subject: `Plant Patho Pal: Nuovo messaggio da ${userName}`,
       html: `
@@ -54,7 +62,7 @@ serve(async (req) => {
           <p>Per rispondere, accedi alla piattaforma Plant Patho Pal e vai alla sezione chat.</p>
           
           <div style="text-align: center; margin-top: 30px;">
-            <a href="${Deno.env.get("APP_URL") || "https://plantpathopal.app"}/login" style="background-color: #2e7d32; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Accedi alla chat</a>
+            <a href="${APP_URL}/login" style="background-color: #2e7d32; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Accedi alla chat</a>
           </div>
           
           <p style="margin-top: 30px; color: #777; font-size: 12px;">

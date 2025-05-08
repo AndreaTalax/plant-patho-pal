@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from 'react';
 import { Avatar } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -10,9 +9,9 @@ import { useTheme } from '@/context/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
 import { createClient } from '@supabase/supabase-js';
 
-// Initialize Supabase client
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
-const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+// Hard-code Supabase URL and key - replace these with your actual values
+const supabaseUrl = "https://YOUR_SUPABASE_PROJECT_URL.supabase.co";  // Replace with your Supabase project URL
+const supabaseKey = "YOUR_SUPABASE_ANON_KEY";  // Replace with your Supabase anon key
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 const ChatTab = () => {

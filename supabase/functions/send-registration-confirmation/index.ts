@@ -9,6 +9,10 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.23.0';
 
 console.log("Hello from send-registration-confirmation");
 
+// Hard-code the Supabase credentials - replace with your actual values
+const SUPABASE_URL = "https://YOUR_SUPABASE_PROJECT_URL.supabase.co";  // Replace with your Supabase URL
+const SUPABASE_SERVICE_ROLE_KEY = "YOUR_SERVICE_ROLE_KEY";  // Replace with your service role key
+
 serve(async (req) => {
   // This Edge Function is automatically triggered by Supabase Auth when a user signs up
   // It's configured in the Supabase Dashboard > Authentication > Email Templates
@@ -24,16 +28,8 @@ serve(async (req) => {
       throw new Error("Missing user or email_token");
     }
     
-    // Get environment variables with error handling
-    const supabaseUrl = Deno.env.get('SUPABASE_URL');
-    const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-    
-    if (!supabaseUrl || !supabaseServiceRoleKey) {
-      throw new Error('Missing required environment variables: SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY');
-    }
-    
     // Initialize Supabase client with service role to access auth admin functions
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey);
+    const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     
     // Create user profile in the database
     const { error: profileError } = await supabaseAdmin
