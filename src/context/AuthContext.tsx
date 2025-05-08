@@ -9,7 +9,7 @@ type UserProfile = {
   email: string;
   phone: string;
   address: string;
-  role: "user" | "master"; // Added role field
+  role: "user" | "master"; // Limited to these specific values
 };
 
 type AuthContextType = {
@@ -33,17 +33,17 @@ const MOCK_USERS = [
   {
     email: "test@test.com",
     password: "test123",
-    role: "user"
+    role: "user" as const
   },
   {
     email: "talaiaandrea@gmail.com",
     password: "ciao5",
-    role: "user"
+    role: "user" as const
   },
   {
-    email: "agrotecnicomarconigro@gmail.com", // Added master account
+    email: "agrotecnicomarconigro@gmail.com",
     password: "marconigro93",
-    role: "master"
+    role: "master" as const
   }
 ];
 
@@ -65,7 +65,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       email: localStorage.getItem("email") || "",
       phone: "",
       address: "",
-      role: "user" // Default role
+      role: "user" as const // Explicitly typed as "user"
     };
   });
   
@@ -136,17 +136,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const usernameFromEmail = email.split('@')[0];
       setUsername(usernameFromEmail);
       
-      // Set user profile with role
-      setUserProfile(prev => ({
-        ...prev,
+      // Set user profile with role - fix type issue by explicitly using "user" | "master"
+      setUserProfile({
         username: usernameFromEmail,
         email: email,
         firstName: '',
         lastName: '',
         phone: '',
         address: '',
-        role: user.role // Set the role from the mock user
-      }));
+        role: user.role  // This is now properly typed
+      });
       
       // Store email for future use
       localStorage.setItem("email", email);
@@ -158,66 +157,66 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const logout = () => {
+    setIsAuthenticated(false);
+    setUsername("");
+    localStorage.removeItem("auth-status");
+    localStorage.removeItem("username");
+    localStorage.removeItem("email");
+  };
+  
   const register = async (email: string, password: string) => {
     try {
-      // Add the new user to mock users (in a real app would be saved to database)
-      console.log("Registering new user:", email);
+      // Set authenticated state
+      setIsAuthenticated(true);
       
-      // In a real app, we would verify the email is not already in use
-      const userExists = MOCK_USERS.some(user => user.email === email);
+      // Create a basic profile
+      const usernameFromEmail = email.split('@')[0];
+      setUsername(usernameFromEmail);
       
-      if (userExists) {
-        throw new Error("Email already in use");
-      }
+      // Initialize user profile with default data
+      setUserProfile({
+        username: usernameFromEmail,
+        email: email,
+        firstName: '',
+        lastName: '',
+        phone: '',
+        address: '',
+        role: "user" as const  // Explicitly set as "user"
+      });
       
-      // Registration successful
+      // Store email for future use
+      localStorage.setItem("email", email);
+      
       return Promise.resolve();
     } catch (error) {
       console.error('Registration error:', error);
       throw error;
     }
   };
-
-  const logout = () => {
-    setIsAuthenticated(false);
-    setUsername('');
-    setUserProfile({
-      username: '',
-      firstName: '',
-      lastName: '',
-      email: '',
-      phone: '',
-      address: ''
-    });
-    localStorage.removeItem("auth-status");
-    localStorage.removeItem("username");
-    localStorage.removeItem("user-profile");
-    localStorage.removeItem("email");
-    localStorage.removeItem("profile-complete");
-  };
   
   const updateUsername = (newUsername: string) => {
-    setUsername(newUsername);
-    setUserProfile(prev => ({
-      ...prev,
-      username: newUsername
-    }));
+    if (newUsername) {
+      setUsername(newUsername);
+      setUserProfile(prev => ({ ...prev, username: newUsername }));
+    }
   };
   
   const updatePassword = (newPassword: string) => {
-    console.log("Password updated to:", newPassword);
-    // In a real app this would update the password in the database
+    console.log("Password updated:", newPassword);
+    // Since we're using mock data, we just log this
   };
   
   const updateProfile = (field: keyof UserProfile, value: string) => {
-    setUserProfile(prev => ({
-      ...prev,
-      [field]: value
-    }));
-    
-    if (field === 'firstName' || field === 'lastName') {
-      setIsProfileComplete(!!userProfile.firstName && !!userProfile.lastName);
+    if (field === 'role' && value !== 'user' && value !== 'master') {
+      console.error('Invalid role value. Must be "user" or "master"');
+      return;
     }
+    
+    setUserProfile(prev => ({ 
+      ...prev, 
+      [field]: field === 'role' ? (value as "user" | "master") : value 
+    }));
   };
 
   return (
