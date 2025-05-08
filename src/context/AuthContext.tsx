@@ -9,6 +9,7 @@ type UserProfile = {
   email: string;
   phone: string;
   address: string;
+  role: "user" | "master"; // Added role field
 };
 
 type AuthContextType = {
@@ -22,6 +23,7 @@ type AuthContextType = {
   updatePassword: (newPassword: string) => void;
   updateProfile: (field: keyof UserProfile, value: string) => void;
   isProfileComplete: boolean;
+  isMasterAccount: boolean; // Added master account check
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -31,10 +33,17 @@ const MOCK_USERS = [
   {
     email: "test@test.com",
     password: "test123",
+    role: "user"
   },
   {
     email: "talaiaandrea@gmail.com",
     password: "ciao5",
+    role: "user"
+  },
+  {
+    email: "agrotecnicomarconigro@gmail.com", // Added master account
+    password: "marconigro93",
+    role: "master"
   }
 ];
 
@@ -56,11 +65,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       email: localStorage.getItem("email") || "",
       phone: "",
       address: "",
+      role: "user" // Default role
     };
   });
   
   const [isProfileComplete, setIsProfileComplete] = useState(() => {
     return localStorage.getItem("profile-complete") === "true";
+  });
+  
+  // Added check for master account
+  const [isMasterAccount, setIsMasterAccount] = useState(() => {
+    return userProfile.role === "master";
   });
   
   useEffect(() => {
@@ -81,7 +96,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   
   useEffect(() => {
     setIsProfileComplete(!!userProfile.firstName && !!userProfile.lastName);
-  }, [userProfile.firstName, userProfile.lastName]);
+    setIsMasterAccount(userProfile.role === "master");
+  }, [userProfile.firstName, userProfile.lastName, userProfile.role]);
 
   // Check for active session on load
   useEffect(() => {
@@ -94,6 +110,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           const profile = JSON.parse(savedProfile);
           setUsername(profile.username || profile.email.split('@')[0] || '');
           setUserProfile(profile);
+          setIsMasterAccount(profile.role === "master");
         }
       }
     };
@@ -119,7 +136,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const usernameFromEmail = email.split('@')[0];
       setUsername(usernameFromEmail);
       
-      // Set user profile
+      // Set user profile with role
       setUserProfile(prev => ({
         ...prev,
         username: usernameFromEmail,
@@ -127,7 +144,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         firstName: '',
         lastName: '',
         phone: '',
-        address: ''
+        address: '',
+        role: user.role // Set the role from the mock user
       }));
       
       // Store email for future use
@@ -214,7 +232,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         updateUsername, 
         updatePassword,
         updateProfile,
-        isProfileComplete
+        isProfileComplete,
+        isMasterAccount
       }}
     >
       {children}

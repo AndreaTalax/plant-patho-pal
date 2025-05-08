@@ -4,10 +4,11 @@ import { Avatar } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Send, ChevronRight } from 'lucide-react';
+import { Send, ChevronRight, User, MessageSquare } from 'lucide-react';
 import { toast } from '@/components/ui/sonner';
 import { useTheme } from '@/context/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 // Rimosso il client Supabase che causava l'errore
 const mockSupabase = {
@@ -34,17 +35,58 @@ const mockSupabase = {
   })
 };
 
+// Mock data for chat conversations
+const MOCK_CONVERSATIONS = [
+  {
+    id: 'conv1',
+    username: 'Maria Rossi',
+    lastMessage: 'Ho un problema con la mia pianta di basilico, le foglie sono macchiate.',
+    unread: true,
+    messages: [
+      { id: '1', sender: 'user', text: 'Buongiorno, ho un problema con la mia pianta di basilico.', time: '10:30 AM' },
+      { id: '2', sender: 'user', text: 'Le foglie hanno delle macchie marroni e sembrano seccarsi. Cosa potrebbe essere?', time: '10:31 AM' },
+    ]
+  },
+  {
+    id: 'conv2',
+    username: 'Luca Bianchi',
+    lastMessage: 'Quale fertilizzante consigliate per le piante di pomodoro?',
+    unread: false,
+    messages: [
+      { id: '1', sender: 'user', text: 'Ciao, sto coltivando pomodori nel mio orto.', time: '09:15 AM' },
+      { id: '2', sender: 'user', text: 'Quale fertilizzante mi consigliate per avere una buona produzione?', time: '09:16 AM' },
+      { id: '3', sender: 'expert', text: 'Buongiorno! Per i pomodori consiglio un fertilizzante ricco di potassio e fosforo durante la fase di fioritura e fruttificazione.', time: '09:45 AM' },
+    ]
+  },
+  {
+    id: 'conv3',
+    username: 'Giuseppe Verdi',
+    lastMessage: 'La mia orchidea non fiorisce più, cosa posso fare?',
+    unread: true,
+    messages: [
+      { id: '1', sender: 'user', text: 'La mia orchidea non fiorisce più da mesi.', time: '14:22 PM' },
+      { id: '2', sender: 'user', text: 'È in un posto luminoso ma senza sole diretto, la annaffio una volta alla settimana. Cosa sto sbagliando?', time: '14:23 PM' },
+    ]
+  }
+];
+
 const ChatTab = () => {
   const { t } = useTheme();
-  const { userProfile } = useAuth();
+  const { userProfile, isMasterAccount } = useAuth();
   const [activeChat, setActiveChat] = useState<string | null>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const [activeTab, setActiveTab] = useState<'users' | 'experts'>('users');
   
-  // Mock data
+  // Master account view states
+  const [conversations, setConversations] = useState(MOCK_CONVERSATIONS);
+  const [currentConversation, setCurrentConversation] = useState<typeof MOCK_CONVERSATIONS[0] | null>(null);
+  
+  // Regular user view
+  // Mock data for experts
   const experts = [
-    { id: '1', name: 'Dr. Sarah Johnson', specialty: 'Fungal Diseases', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=256&h=256&auto=format&fit=crop', email: 'faby.v8@gmail.com' }, // Email aggiornata
-    { id: '2', name: 'Prof. Michael Chen', specialty: 'Insect Pests', avatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?q=80&w=256&h=256&auto=format&fit=crop', email: 'faby.v8@gmail.com' }, // Email aggiornata
-    { id: '3', name: 'Dr. Aisha Patel', specialty: 'Nutrient Deficiencies', avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?q=80&w=256&h=256&auto=format&fit=crop', email: 'faby.v8@gmail.com' }, // Email aggiornata
+    { id: '1', name: 'Dr. Sarah Johnson', specialty: 'Fungal Diseases', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=256&h=256&auto=format&fit=crop', email: 'faby.v8@gmail.com' },
+    { id: '2', name: 'Prof. Michael Chen', specialty: 'Insect Pests', avatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?q=80&w=256&h=256&auto=format&fit=crop', email: 'faby.v8@gmail.com' },
+    { id: '3', name: 'Dr. Aisha Patel', specialty: 'Nutrient Deficiencies', avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?q=80&w=256&h=256&auto=format&fit=crop', email: 'faby.v8@gmail.com' },
   ];
   
   const [messages, setMessages] = useState<Array<{id: string, sender: string, text: string, time: string}>>([
@@ -59,11 +101,11 @@ const ChatTab = () => {
     if (messagesContainerRef.current) {
       messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
     }
-  }, [messages]);
+  }, [messages, currentConversation]);
 
-  // Load chat messages from mock database
+  // Load chat messages for regular users
   useEffect(() => {
-    if (!activeChat) return;
+    if (!activeChat || isMasterAccount) return;
     
     // Simulazione di caricamento messaggi senza accesso a Supabase
     const loadDefaultMessages = () => {
@@ -77,7 +119,22 @@ const ChatTab = () => {
     };
     
     loadDefaultMessages();
-  }, [activeChat]);
+  }, [activeChat, isMasterAccount]);
+  
+  // Handle chat selection in master account view
+  const handleChatSelection = (conversationId: string) => {
+    const selected = conversations.find(conv => conv.id === conversationId);
+    if (selected) {
+      setCurrentConversation(selected);
+      
+      // Mark as read
+      setConversations(prev => 
+        prev.map(conv => 
+          conv.id === conversationId ? {...conv, unread: false} : conv
+        )
+      );
+    }
+  };
   
   const sendMessage = async () => {
     if (newMessage.trim() === '') return;
@@ -86,7 +143,45 @@ const ChatTab = () => {
     const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     const messageId = Date.now().toString();
     
-    // Add user message to chat
+    // Different behavior based on user role
+    if (isMasterAccount) {
+      // Master account sending message
+      if (!currentConversation) return;
+      
+      const expertMessage = {
+        id: messageId,
+        sender: 'expert',
+        text: newMessage,
+        time: timeStr
+      };
+      
+      // Add message to current conversation
+      setConversations(prev => 
+        prev.map(conv => 
+          conv.id === currentConversation.id ? {
+            ...conv, 
+            messages: [...conv.messages, expertMessage],
+            lastMessage: `Agrotecnico: ${newMessage}`
+          } : conv
+        )
+      );
+      
+      // Update current conversation view
+      setCurrentConversation(prev => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          messages: [...prev.messages, expertMessage],
+          lastMessage: `Agrotecnico: ${newMessage}`
+        };
+      });
+      
+      toast.success("Risposta inviata con successo!");
+      setNewMessage('');
+      return;
+    }
+    
+    // Regular user sending message
     const userMessage = {
       id: messageId,
       sender: 'user',
@@ -135,6 +230,116 @@ const ChatTab = () => {
     }
   };
 
+  // Render master account view
+  if (isMasterAccount) {
+    return (
+      <div className="flex flex-col min-h-full pt-6 pb-24">
+        <h2 className="text-2xl font-bold mb-4 px-4 text-drplant-green">Pannello Agrotecnico</h2>
+        
+        <div className="flex-1 flex">
+          {/* Conversations sidebar */}
+          <div className="w-1/3 border-r min-h-full overflow-auto">
+            <div className="p-4">
+              <h3 className="font-semibold text-lg mb-2">Conversazioni</h3>
+              <div className="space-y-2">
+                {conversations.map(conversation => (
+                  <div 
+                    key={conversation.id}
+                    className={`p-3 rounded-lg cursor-pointer flex items-center ${
+                      currentConversation?.id === conversation.id 
+                        ? 'bg-drplant-green/10 border border-drplant-green/30' 
+                        : 'hover:bg-gray-100'
+                    }`}
+                    onClick={() => handleChatSelection(conversation.id)}
+                  >
+                    <Avatar className="h-10 w-10 mr-3">
+                      <User className="h-6 w-6" />
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex justify-between items-center">
+                        <span className="font-medium">{conversation.username}</span>
+                        {conversation.unread && (
+                          <span className="bg-drplant-green text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                            •
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-sm text-gray-600 truncate">{conversation.lastMessage}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+          
+          {/* Chat area */}
+          <div className="w-2/3 flex flex-col">
+            {currentConversation ? (
+              <>
+                <div className="bg-white p-4 shadow-sm flex items-center gap-3 border-b">
+                  <Avatar className="h-8 w-8">
+                    <User className="h-5 w-5" />
+                  </Avatar>
+                  <div>
+                    <h3 className="font-medium text-sm">{currentConversation.username}</h3>
+                  </div>
+                </div>
+                
+                <div className="flex-1 overflow-y-auto p-4 space-y-4" ref={messagesContainerRef}>
+                  {currentConversation.messages.map(message => (
+                    <div 
+                      key={message.id} 
+                      className={`flex ${message.sender === 'expert' ? 'justify-end' : 'justify-start'}`}
+                    >
+                      <div 
+                        className={`max-w-[80%] rounded-2xl p-3 ${
+                          message.sender === 'expert' 
+                            ? 'bg-drplant-green text-white rounded-tr-none' 
+                            : 'bg-gray-100 text-gray-800 rounded-tl-none'
+                        }`}
+                      >
+                        <p>{message.text}</p>
+                        <div className={`text-xs mt-1 ${
+                          message.sender === 'expert' ? 'text-green-100' : 'text-gray-500'
+                        }`}>
+                          {message.time}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                
+                <div className="p-4 border-t bg-white">
+                  <div className="flex gap-2">
+                    <Input
+                      value={newMessage}
+                      onChange={(e) => setNewMessage(e.target.value)}
+                      placeholder="Scrivi la tua risposta..."
+                      className="flex-1"
+                      onKeyPress={(e) => e.key === 'Enter' && !isSending && sendMessage()}
+                    />
+                    <Button 
+                      className="bg-drplant-green hover:bg-drplant-green-dark"
+                      onClick={sendMessage}
+                    >
+                      <Send className="h-5 w-5" />
+                    </Button>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="flex-1 flex flex-col items-center justify-center text-gray-500">
+                <MessageSquare className="h-12 w-12 mb-4 text-gray-300" />
+                <p>Seleziona una conversazione per iniziare</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Regular user view
   return (
     <div className="flex flex-col min-h-full pt-6 pb-24">
       {!activeChat ? (

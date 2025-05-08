@@ -10,8 +10,8 @@ import { Leaf, LockKeyhole, User, Mail } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 
 const Login = () => {
-  const [email, setEmail] = useState("test@test.com"); // Modificato l'email predefinita
-  const [password, setPassword] = useState("test123"); // Modificata la password predefinita
+  const [email, setEmail] = useState("test@test.com");
+  const [password, setPassword] = useState("test123");
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -43,7 +43,7 @@ const Login = () => {
       toast({
         variant: "destructive",
         title: "Login fallito",
-        description: "Credenziali non valide. Prova email: test@test.com, password: test123 o talaiaandrea@gmail.com, password: ciao5",
+        description: "Credenziali non valide. Prova con uno degli account di test.",
       });
     } finally {
       setIsLoading(false);
@@ -79,7 +79,7 @@ const Login = () => {
                   <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
                   <Input 
                     id="email" 
-                    placeholder="Inserisci email (test@test.com)" 
+                    placeholder="Inserisci email" 
                     className="pl-10"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
@@ -94,7 +94,7 @@ const Login = () => {
                   <Input 
                     id="password" 
                     type="password" 
-                    placeholder="Inserisci password (test123)" 
+                    placeholder="Inserisci password" 
                     className="pl-10"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
@@ -114,8 +114,10 @@ const Login = () => {
             <div className="text-center w-full text-sm text-gray-500">
               Non hai un account? <Link to="/signup" className="text-drplant-blue font-medium hover:underline">Registrati</Link>
             </div>
-            <div className="text-center text-sm text-gray-500">
-              <p>Credenziali demo: Email: <span className="font-semibold">test@test.com</span>, Password: <span className="font-semibold">test123</span></p>
+            <div className="text-center text-sm text-gray-500 space-y-2">
+              <p className="font-medium">Credenziali demo:</p>
+              <p><span className="font-medium">Account utente:</span> Email: test@test.com, Password: test123</p>
+              <p><span className="font-medium">Account master:</span> Email: agrotecnicomarconigro@gmail.com, Password: marconigro93</p>
             </div>
           </CardFooter>
         </Card>

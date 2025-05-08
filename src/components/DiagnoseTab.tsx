@@ -1,3 +1,4 @@
+
 import { Camera, Upload, Loader2, MessageCircle, Check, AlertTriangle, ShoppingBag, Book, X } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
@@ -8,6 +9,22 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useNavigate } from 'react-router-dom';
 import { toast } from '@/components/ui/sonner';
 import { analyzeImage, diseaseDetails, diseaseSymptoms } from '@/utils/aiDiagnosisUtils';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { useForm } from 'react-hook-form';
+import * as z from 'zod';
+import { zodResolver } from '@hookform/resolvers/zod';
+
+// Form schema for plant information
+const plantInfoSchema = z.object({
+  isIndoor: z.boolean().default(false),
+  inSunlight: z.boolean().default(false),
+  wateringFrequency: z.string().min(1, { message: "Inserisci quante volte innaffi la pianta a settimana" }),
+});
+
+type PlantInfoFormValues = z.infer<typeof plantInfoSchema>;
 
 // Mock database of plant diseases
 const PLANT_DISEASES = [
@@ -99,6 +116,16 @@ const DiagnoseTab = () => {
   const [analysisProgress, setAnalysisProgress] = useState(0);
   const [showCamera, setShowCamera] = useState(false);
   const [analysisDetails, setAnalysisDetails] = useState<any>(null);
+  const [plantInfoComplete, setPlantInfoComplete] = useState(false);
+  
+  const form = useForm<PlantInfoFormValues>({
+    resolver: zodResolver(plantInfoSchema),
+    defaultValues: {
+      isIndoor: false,
+      inSunlight: false,
+      wateringFrequency: "",
+    },
+  });
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -106,6 +133,11 @@ const DiagnoseTab = () => {
   const streamRef = useRef<MediaStream | null>(null);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!plantInfoComplete) {
+      toast.error("Prima di continuare, inserisci le informazioni sulla pianta");
+      return;
+    }
+    
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
@@ -125,6 +157,11 @@ const DiagnoseTab = () => {
   }, []);
 
   const takePicture = () => {
+    if (!plantInfoComplete) {
+      toast.error("Prima di continuare, inserisci le informazioni sulla pianta");
+      return;
+    }
+    
     setShowCamera(true);
     
     // Start camera stream
@@ -251,6 +288,12 @@ const DiagnoseTab = () => {
     stopCameraStream();
   };
 
+  const onSubmitPlantInfo = (data: PlantInfoFormValues) => {
+    console.log("Plant information submitted:", data);
+    setPlantInfoComplete(true);
+    toast.success("Informazioni sulla pianta salvate con successo!");
+  };
+
   const navigateToChat = () => {
     navigate('/');
     // Using a slight timeout to ensure navigation completes before tab selection
@@ -336,8 +379,108 @@ const DiagnoseTab = () => {
         </div>
       )}
       
-      {!uploadedImage ? (
+      {!plantInfoComplete ? (
         <div className="space-y-6 w-full max-w-md">
+          <Card className="bg-white p-6 shadow-md rounded-2xl">
+            <h3 className="text-xl font-semibold mb-4 text-center">Informazioni sulla Pianta</h3>
+            <p className="text-gray-600 mb-6 text-center">
+              Prima di procedere con la diagnosi, fornisci alcune informazioni essenziali sulla tua pianta
+            </p>
+            
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmitPlantInfo)} className="space-y-6">
+                <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                  <FormControl>
+                    <Checkbox 
+                      checked={form.watch("isIndoor")} 
+                      onCheckedChange={(checked) => form.setValue("isIndoor", !!checked)}
+                    />
+                  </FormControl>
+                  <div className="space-y-1 leading-none">
+                    <FormLabel>La pianta si trova all'interno dell'abitazione</FormLabel>
+                    <FormDescription>
+                      Indica se la pianta è coltivata in ambiente interno
+                    </FormDescription>
+                  </div>
+                </FormItem>
+                
+                <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                  <FormControl>
+                    <Checkbox 
+                      checked={form.watch("inSunlight")} 
+                      onCheckedChange={(checked) => form.setValue("inSunlight", !!checked)}
+                    />
+                  </FormControl>
+                  <div className="space-y-1 leading-none">
+                    <FormLabel>La pianta è esposta alla luce del sole</FormLabel>
+                    <FormDescription>
+                      Indica se la pianta riceve luce solare diretta
+                    </FormDescription>
+                  </div>
+                </FormItem>
+                
+                <FormField
+                  control={form.control}
+                  name="wateringFrequency"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Frequenza di irrigazione (volte a settimana)</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Es. 2"
+                          type="number"
+                          min="0"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Indica quante volte a settimana innaffi la pianta
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <Button 
+                  type="submit" 
+                  className="w-full bg-drplant-green hover:bg-drplant-green-dark"
+                >
+                  Salva Informazioni
+                </Button>
+              </form>
+            </Form>
+          </Card>
+        </div>
+      ) : !uploadedImage ? (
+        <div className="space-y-6 w-full max-w-md">
+          <Card className="bg-white p-4 shadow-md rounded-2xl mb-6">
+            <div className="bg-drplant-green/10 p-4 rounded-lg">
+              <h4 className="font-medium mb-2">Informazioni sulla pianta</h4>
+              <div className="text-sm space-y-2">
+                <div className="flex items-center gap-2">
+                  <Checkbox checked={form.getValues("isIndoor")} disabled />
+                  <span>All'interno dell'abitazione</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Checkbox checked={form.getValues("inSunlight")} disabled />
+                  <span>Esposta alla luce del sole</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="font-medium">Irrigazione: </span>
+                  <span>{form.getValues("wateringFrequency")} volte a settimana</span>
+                </div>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-3"
+                onClick={() => setPlantInfoComplete(false)}
+              >
+                Modifica
+              </Button>
+            </div>
+          </Card>
+
           <Card className="bg-white p-6 shadow-md rounded-2xl text-center">
             <div className="bg-drplant-blue/10 rounded-full p-6 inline-flex mx-auto mb-4">
               <Camera size={48} className="text-drplant-blue" />
@@ -396,6 +539,24 @@ const DiagnoseTab = () => {
                   alt="Uploaded plant" 
                   className="w-full h-full object-cover"
                 />
+              </div>
+              
+              <div className="bg-drplant-green/10 p-3 rounded-lg mb-4">
+                <h4 className="font-medium mb-1">Informazioni sulla pianta</h4>
+                <div className="text-sm space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-600">Ambiente: </span>
+                    <span>{form.getValues("isIndoor") ? "Interno" : "Esterno"}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-600">Esposizione: </span>
+                    <span>{form.getValues("inSunlight") ? "Soleggiata" : "Ombreggiata"}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-600">Irrigazione: </span>
+                    <span>{form.getValues("wateringFrequency")} volte/settimana</span>
+                  </div>
+                </div>
               </div>
               
               <div className="flex gap-2 mt-4">
