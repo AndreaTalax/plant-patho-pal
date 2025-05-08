@@ -1,11 +1,16 @@
-
 import { createContext, useContext, useState, ReactNode, useEffect } from "react";
 import { createClient } from '@supabase/supabase-js';
 
 // Initialize Supabase client
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
-const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
-const supabase = createClient(supabaseUrl, supabaseKey);
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+// Verify that we have the required environment variables
+if (!supabaseUrl || !supabaseKey) {
+  console.error('Missing Supabase environment variables. Please check your .env file or Supabase configuration.');
+}
+
+const supabase = createClient(supabaseUrl || '', supabaseKey || '');
 
 type UserProfile = {
   username: string;
@@ -79,24 +84,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // Check for active session on load
   useEffect(() => {
     const checkSession = async () => {
-      const { data } = await supabase.auth.getSession();
-      if (data.session) {
-        setIsAuthenticated(true);
-        // Get user profile
-        const { data: userData } = await supabase.from('profiles').select('*').eq('id', data.session.user.id).single();
-        if (userData) {
-          setUsername(userData.username || data.session.user.email?.split('@')[0] || '');
-          setUserProfile(prev => ({
-            ...prev,
-            username: userData.username || data.session.user.email?.split('@')[0] || '',
-            email: data.session.user.email || '',
-            firstName: userData.first_name || '',
-            lastName: userData.last_name || '',
-            phone: userData.phone || '',
-            address: userData.address || ''
-          }));
-          setIsProfileComplete(!!userData.first_name && !!userData.last_name);
+      try {
+        const { data } = await supabase.auth.getSession();
+        if (data.session) {
+          setIsAuthenticated(true);
+          // Get user profile
+          const { data: userData } = await supabase.from('profiles').select('*').eq('id', data.session.user.id).single();
+          if (userData) {
+            setUsername(userData.username || data.session.user.email?.split('@')[0] || '');
+            setUserProfile(prev => ({
+              ...prev,
+              username: userData.username || data.session.user.email?.split('@')[0] || '',
+              email: data.session.user.email || '',
+              firstName: userData.first_name || '',
+              lastName: userData.last_name || '',
+              phone: userData.phone || '',
+              address: userData.address || ''
+            }));
+            setIsProfileComplete(!!userData.first_name && !!userData.last_name);
+          }
         }
+      } catch (error) {
+        console.error('Error checking session:', error);
       }
     };
     

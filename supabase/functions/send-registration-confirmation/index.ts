@@ -24,11 +24,16 @@ serve(async (req) => {
       throw new Error("Missing user or email_token");
     }
     
+    // Get environment variables with error handling
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    
+    if (!supabaseUrl || !supabaseServiceRoleKey) {
+      throw new Error('Missing required environment variables: SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY');
+    }
+    
     // Initialize Supabase client with service role to access auth admin functions
-    const supabaseAdmin = createClient(
-      Deno.env.get('SUPABASE_URL') || '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || ''
-    );
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey);
     
     // Create user profile in the database
     const { error: profileError } = await supabaseAdmin
