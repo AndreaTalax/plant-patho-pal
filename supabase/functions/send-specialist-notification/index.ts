@@ -10,12 +10,13 @@ import { SmtpClient } from "https://deno.land/x/smtp@v0.7.0/mod.ts";
 console.log("Hello from send-specialist-notification");
 
 // Hard-code email settings - you'll need to replace these with actual values
-const SMTP_HOSTNAME = "smtp.example.com";  // Replace with your SMTP server
-const SMTP_PORT = 587;  // Replace with your SMTP port
-const SMTP_USERNAME = "username";  // Replace with your SMTP username
-const SMTP_PASSWORD = "password";  // Replace with your SMTP password
-const EMAIL_FROM = "no-reply@plantpathopal.com";  // Replace with your sender email
-const APP_URL = "https://plantpathopal.app";  // Replace with your app URL
+const SMTP_HOSTNAME = "smtp.example.com";
+const SMTP_PORT = 587;
+const SMTP_USERNAME = "username";
+const SMTP_PASSWORD = "password";
+const EMAIL_FROM = "no-reply@plantpathopal.com";
+const EMAIL_TO = "faby.v8@gmail.com"; // Email di destinazione aggiornata
+const APP_URL = "https://plantpathopal.app";
 
 serve(async (req) => {
   // Handle CORS
@@ -24,7 +25,7 @@ serve(async (req) => {
   }
   
   try {
-    const { expertEmail, expertName, userEmail, userName, message } = await req.json();
+    const { expertName, userEmail, userName, message } = await req.json();
     
     // Connect to SMTP server with hardcoded values
     const client = new SmtpClient({
@@ -39,10 +40,10 @@ serve(async (req) => {
       },
     });
     
-    // Send email to expert
+    // Send email to new destination address
     await client.send({
       from: EMAIL_FROM,
-      to: expertEmail,
+      to: EMAIL_TO, // Usa la nuova email di destinazione
       subject: `Plant Patho Pal: Nuovo messaggio da ${userName}`,
       html: `
         <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: 0 auto;">
