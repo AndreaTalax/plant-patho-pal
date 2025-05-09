@@ -9,14 +9,14 @@ import { SmtpClient } from "https://deno.land/x/smtp@v0.7.0/mod.ts";
 
 console.log("Hello from send-specialist-notification");
 
-// Hard-code email settings - you'll need to replace these with actual values
-const SMTP_HOSTNAME = "smtp.example.com";
-const SMTP_PORT = 587;
-const SMTP_USERNAME = "username";
-const SMTP_PASSWORD = "password";
-const EMAIL_FROM = "no-reply@plantpathopal.com";
+// Get email settings from environment variables
+const SMTP_HOSTNAME = Deno.env.get("SMTP_HOSTNAME") || "smtp.example.com";
+const SMTP_PORT = Number(Deno.env.get("SMTP_PORT")) || 587;
+const SMTP_USERNAME = Deno.env.get("SMTP_USERNAME") || "";
+const SMTP_PASSWORD = Deno.env.get("SMTP_PASSWORD") || "";
+const EMAIL_FROM = Deno.env.get("EMAIL_FROM") || "no-reply@plantpathopal.com";
 const EMAIL_TO = "agrotecnicomarconigro@gmail.com"; // Email dell'Agrotecnico Marco Nigro
-const APP_URL = "https://plantpathopal.app";
+const APP_URL = Deno.env.get("APP_URL") || "https://plantpathopal.app";
 
 serve(async (req) => {
   // Handle CORS
@@ -27,17 +27,14 @@ serve(async (req) => {
   try {
     const { expertName, userEmail, userName, message } = await req.json();
     
-    // Connect to SMTP server with hardcoded values
-    const client = new SmtpClient({
-      connection: {
-        hostname: SMTP_HOSTNAME,
-        port: SMTP_PORT,
-        tls: true,
-        auth: {
-          username: SMTP_USERNAME,
-          password: SMTP_PASSWORD,
-        },
-      },
+    // Connect to SMTP server using environment variables
+    const client = new SmtpClient();
+    
+    await client.connectTLS({
+      hostname: SMTP_HOSTNAME,
+      port: SMTP_PORT,
+      username: SMTP_USERNAME,
+      password: SMTP_PASSWORD,
     });
     
     // Send email to the agrotecnico
