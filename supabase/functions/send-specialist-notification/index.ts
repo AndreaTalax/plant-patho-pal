@@ -15,7 +15,7 @@ const SMTP_PORT = 587;
 const SMTP_USERNAME = "username";
 const SMTP_PASSWORD = "password";
 const EMAIL_FROM = "no-reply@plantpathopal.com";
-const EMAIL_TO = "faby.v8@gmail.com"; // Email di destinazione aggiornata
+const EMAIL_TO = "agrotecnicomarconigro@gmail.com"; // Email dell'Agrotecnico Marco Nigro
 const APP_URL = "https://plantpathopal.app";
 
 serve(async (req) => {
@@ -40,10 +40,10 @@ serve(async (req) => {
       },
     });
     
-    // Send email to new destination address
+    // Send email to the agrotecnico
     await client.send({
       from: EMAIL_FROM,
-      to: EMAIL_TO, // Usa la nuova email di destinazione
+      to: EMAIL_TO, // L'email dell'Agrotecnico Marco Nigro
       subject: `Plant Patho Pal: Nuovo messaggio da ${userName}`,
       html: `
         <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: 0 auto;">

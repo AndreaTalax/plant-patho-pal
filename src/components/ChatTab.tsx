@@ -1,6 +1,6 @@
 
 import { useState, useEffect, useRef } from 'react';
-import { Avatar } from '@/components/ui/avatar';
+import { Avatar, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -8,7 +8,6 @@ import { Send, ChevronRight, User, MessageSquare } from 'lucide-react';
 import { toast } from '@/components/ui/sonner';
 import { useTheme } from '@/context/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 // Rimosso il client Supabase che causava l'errore
 const mockSupabase = {
@@ -35,7 +34,7 @@ const mockSupabase = {
   })
 };
 
-// Mock data for chat conversations
+// Mock data for chat conversations (for master account only)
 const MOCK_CONVERSATIONS = [
   {
     id: 'conv1',
@@ -75,22 +74,23 @@ const ChatTab = () => {
   const { userProfile, isMasterAccount } = useAuth();
   const [activeChat, setActiveChat] = useState<string | null>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
-  const [activeTab, setActiveTab] = useState<'users' | 'experts'>('users');
   
   // Master account view states
   const [conversations, setConversations] = useState(MOCK_CONVERSATIONS);
   const [currentConversation, setCurrentConversation] = useState<typeof MOCK_CONVERSATIONS[0] | null>(null);
   
   // Regular user view
-  // Mock data for experts
-  const experts = [
-    { id: '1', name: 'Dr. Sarah Johnson', specialty: 'Fungal Diseases', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=256&h=256&auto=format&fit=crop', email: 'faby.v8@gmail.com' },
-    { id: '2', name: 'Prof. Michael Chen', specialty: 'Insect Pests', avatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?q=80&w=256&h=256&auto=format&fit=crop', email: 'faby.v8@gmail.com' },
-    { id: '3', name: 'Dr. Aisha Patel', specialty: 'Nutrient Deficiencies', avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?q=80&w=256&h=256&auto=format&fit=crop', email: 'faby.v8@gmail.com' },
-  ];
+  // Real expert data - only Marco Nigro
+  const expert = {
+    id: 'marco-nigro', 
+    name: 'Agrotecnico Marco Nigro', 
+    specialty: 'Diagnosi e Cura delle Piante', 
+    avatar: '/lovable-uploads/c8ba9199-f82d-4a4f-a6ae-1c8e340ed1b5.png',
+    email: 'agrotecnicomarconigro@gmail.com'
+  };
   
   const [messages, setMessages] = useState<Array<{id: string, sender: string, text: string, time: string}>>([
-    { id: '1', sender: 'expert', text: 'Hello! I see you may have a case of powdery mildew. Could you provide more details about your plant?', time: '10:30 AM' },
+    { id: '1', sender: 'expert', text: 'Buongiorno! Sono Marco Nigro, agrotecnico specializzato nella diagnosi e cura delle piante. Come posso aiutarti oggi?', time: '10:30 AM' },
   ]);
   
   const [newMessage, setNewMessage] = useState('');
@@ -113,7 +113,7 @@ const ChatTab = () => {
       setMessages([{ 
         id: '1', 
         sender: 'expert', 
-        text: 'Ciao! Come posso aiutarti con la tua pianta oggi?', 
+        text: 'Buongiorno! Sono Marco Nigro, agrotecnico specializzato nella diagnosi e cura delle piante. Come posso aiutarti oggi?', 
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) 
       }]);
     };
@@ -193,20 +193,21 @@ const ChatTab = () => {
     setIsSending(true);
     
     try {
-      // Get the expert who's being messaged
-      const activeExpert = experts.find(e => e.id === activeChat);
+      // Invio notifica all'esperto tramite edge function
+      const result = await mockSupabase.functions.invoke("send-specialist-notification", {
+        body: {
+          expertName: expert.name,
+          userEmail: userProfile?.email || 'utente@esempio.com',
+          userName: userProfile?.username || 'Utente',
+          message: newMessage
+        }
+      });
       
-      if (!activeExpert) {
-        throw new Error('Expert not found');
+      if (result.error) {
+        throw new Error("Errore nell'invio della notifica");
       }
-
-      // Simuliamo l'invio del messaggio senza errori
-      console.log(`Simulazione invio messaggio a ${activeExpert.name} all'email ${activeExpert.email}`);
       
-      // Simulazione notifica all'esperto
-      console.log(`Simulazione invio email di notifica a ${activeExpert.email}`);
-      
-      toast.success(t("notificationSent", { name: activeExpert.name }));
+      toast.success(t("notificationSent", { name: expert.name }) || `Notifica inviata a ${expert.name}`);
       
       // Clear input after sending
       setNewMessage('');
@@ -221,11 +222,11 @@ const ChatTab = () => {
         };
         
         setMessages(curr => [...curr, expertResponse]);
+        setIsSending(false);
       }, 2000);
     } catch (error) {
       console.error("Error sending message:", error);
       toast.error(t("messageSendError") || "Errore nell'invio del messaggio");
-    } finally {
       setIsSending(false);
     }
   };
@@ -349,24 +350,22 @@ const ChatTab = () => {
           <div className="space-y-4">
             <p className="text-gray-600">{t("connectWithExperts") || "Connettiti con i nostri esperti per ricevere consigli sulle tue piante"}</p>
             
-            {experts.map(expert => (
-              <Card 
-                key={expert.id} 
-                className="p-4 flex items-center justify-between cursor-pointer hover:bg-gray-50"
-                onClick={() => setActiveChat(expert.id)}
-              >
-                <div className="flex items-center gap-3">
-                  <Avatar>
-                    <img src={expert.avatar} alt={expert.name} />
-                  </Avatar>
-                  <div>
-                    <h3 className="font-medium">{expert.name}</h3>
-                    <p className="text-sm text-gray-500">{expert.specialty}</p>
-                  </div>
+            <Card 
+              key={expert.id} 
+              className="p-4 flex items-center justify-between cursor-pointer hover:bg-gray-50"
+              onClick={() => setActiveChat(expert.id)}
+            >
+              <div className="flex items-center gap-3">
+                <Avatar className="h-12 w-12">
+                  <AvatarImage src={expert.avatar} alt={expert.name} />
+                </Avatar>
+                <div>
+                  <h3 className="font-medium">{expert.name}</h3>
+                  <p className="text-sm text-gray-500">{expert.specialty}</p>
                 </div>
-                <ChevronRight className="text-gray-400" />
-              </Card>
-            ))}
+              </div>
+              <ChevronRight className="text-gray-400" />
+            </Card>
             
             <div className="mt-6 text-center text-gray-500 text-sm">
               <p>{t("responseTime") || "I nostri esperti risponderanno entro 24 ore"}</p>
@@ -385,16 +384,11 @@ const ChatTab = () => {
             >
               <ChevronRight className="rotate-180" />
             </Button>
-            <Avatar className="h-8 w-8">
-              <img 
-                src={experts.find(e => e.id === activeChat)?.avatar} 
-                alt={experts.find(e => e.id === activeChat)?.name}
-              />
+            <Avatar className="h-10 w-10">
+              <AvatarImage src={expert.avatar} alt={expert.name} />
             </Avatar>
             <div>
-              <h3 className="font-medium text-sm">
-                {experts.find(e => e.id === activeChat)?.name}
-              </h3>
+              <h3 className="font-medium text-sm">{expert.name}</h3>
               <p className="text-xs text-green-600">{t("online") || "Online"}</p>
             </div>
           </div>
