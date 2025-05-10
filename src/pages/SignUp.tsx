@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -55,7 +54,7 @@ const SignUp = () => {
       setEmailSent(true);
       toast({
         title: "Registrazione completata",
-        description: "Ti abbiamo inviato un'email di conferma. Controlla la tua casella di posta.",
+        description: "Ti abbiamo inviato un'email di conferma. Se non la vedi nella casella principale, controlla nella cartella spam o promozioni.",
       });
     } catch (error: any) {
       let errorMessage = "Si è verificato un problema durante la registrazione";
@@ -71,7 +70,7 @@ const SignUp = () => {
         errorMessage = "Registrazione completata, ma non è stato possibile inviare l'email di conferma. Prova ad accedere.";
         registrationSuccessful = true;
       } else if (error.code === "over_email_send_rate_limit" || error.message?.includes("rate limit exceeded")) {
-        errorMessage = "Registrazione completata, ma hai superato il limite di email. Prova ad accedere dopo aver atteso qualche minuto.";
+        errorMessage = "Registrazione completata, ma hai superato il limite di email. Controlla nella cartella spam o promozioni, oppure prova ad accedere dopo aver atteso qualche minuto.";
         registrationSuccessful = true;
       }
       
@@ -116,7 +115,7 @@ const SignUp = () => {
               <h3 className="text-xl font-medium text-drplant-blue-dark">Controlla la tua email</h3>
               <p className="text-gray-600">
                 Abbiamo inviato un'email di conferma a <span className="font-medium">{form.getValues().email}</span>.
-                Per favore, clicca sul link nella email per completare la registrazione.
+                Per favore, clicca sul link nella email per completare la registrazione. Se non la vedi nella casella principale, controlla nella cartella spam o promozioni.
               </p>
               <Button 
                 variant="outline" 
