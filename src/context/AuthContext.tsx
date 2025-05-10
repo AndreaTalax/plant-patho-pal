@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useState, ReactNode, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Session, User } from "@supabase/supabase-js";
@@ -209,7 +208,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   
   const register = async (email: string, password: string) => {
     try {
-      const { error } = await supabase.auth.signUp({
+      // First check if password meets Supabase minimum requirement
+      if (password.length < 6) {
+        throw new Error("weak_password: Password should be at least 6 characters.");
+      }
+      
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -221,9 +225,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         throw error;
       }
       
-      // Non impostiamo isAuthenticated = true qui perché l'utente deve verificare l'email
-      return Promise.resolve();
-    } catch (error) {
+      console.log("Registration response:", data);
+      
+      // Even if there was an error sending the email, registration might have succeeded
+      if (data.user) {
+        return Promise.resolve();
+      } else {
+        throw new Error("Registration failed");
+      }
+    } catch (error: any) {
       console.error('Registration error:', error);
       throw error;
     }

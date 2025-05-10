@@ -18,11 +18,10 @@ import {
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
-import { supabase } from "@/integrations/supabase/client";
 
 const signUpSchema = z.object({
   email: z.string().email({ message: "Inserisci un indirizzo email valido" }),
-  password: z.string().min(5, { message: "La password deve contenere almeno 5 caratteri" }),
+  password: z.string().min(6, { message: "La password deve contenere almeno 6 caratteri" }), // Changed from min(5) to min(6)
   confirmPassword: z.string(),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Le password non corrispondono",
@@ -51,18 +50,7 @@ const SignUp = () => {
     setIsLoading(true);
 
     try {
-      // Utilizzo di Supabase direttamente per la registrazione
-      const { data, error } = await supabase.auth.signUp({
-        email: values.email,
-        password: values.password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/login`,
-        }
-      });
-      
-      if (error) {
-        throw error;
-      }
+      await register(values.email, values.password);
       
       setEmailSent(true);
       toast({
@@ -70,10 +58,22 @@ const SignUp = () => {
         description: "Ti abbiamo inviato un'email di conferma. Controlla la tua casella di posta.",
       });
     } catch (error: any) {
+      let errorMessage = "Si è verificato un problema durante la registrazione";
+      
+      // Provide more specific error messages
+      if (error.message?.includes("weak_password")) {
+        errorMessage = "Password troppo debole. Deve contenere almeno 6 caratteri.";
+      } else if (error.message?.includes("already registered")) {
+        errorMessage = "Questo indirizzo email è già registrato. Prova ad accedere.";
+      } else if (error.message?.includes("email sending failed")) {
+        errorMessage = "Registrazione completata, ma non è stato possibile inviare l'email di conferma. Prova ad accedere.";
+        setEmailSent(true);
+      }
+      
       toast({
         variant: "destructive",
         title: "Errore durante la registrazione",
-        description: error.message || "Si è verificato un problema durante la registrazione. Riprova più tardi.",
+        description: errorMessage,
       });
     } finally {
       setIsLoading(false);
