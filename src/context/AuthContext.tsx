@@ -147,7 +147,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           email: data.email || user?.email || '',
           phone: data.phone || '',
           address: data.address || '',
-          role: data.role || 'user'
+          role: (data.role as "user" | "master") || 'user'
         });
         setIsProfileComplete(!!data.first_name && !!data.last_name);
         setIsMasterAccount(data.role === "master");
@@ -230,21 +230,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
   
   const updateUsername = (newUsername: string) => {
-    if (newUsername) {
+    if (newUsername && user) {
       setUsername(newUsername);
       setUserProfile(prev => ({ ...prev, username: newUsername }));
       
-      if (user) {
-        supabase
-          .from('profiles')
-          .update({ username: newUsername })
-          .eq('id', user.id)
-          .then(({ error }) => {
-            if (error) {
-              console.error('Error updating username:', error);
-            }
-          });
-      }
+      supabase
+        .from('profiles')
+        .update({ username: newUsername })
+        .eq('id', user.id)
+        .then(({ error }) => {
+          if (error) {
+            console.error('Error updating username:', error);
+          }
+        });
     }
   };
   
@@ -279,13 +277,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // If user is authenticated, update the profile in the database
     if (user) {
       try {
-        const updates = {};
+        const updates: Record<string, any> = {};
         
         // Map UserProfile fields to database fields
         if (field === 'firstName') updates['first_name'] = value;
         else if (field === 'lastName') updates['last_name'] = value;
         else if (field === 'username') updates['username'] = value;
-        else updates[field] = value;
+        else if (field === 'email') updates['email'] = value;
+        else if (field === 'phone') updates['phone'] = value;
+        else if (field === 'address') updates['address'] = value;
+        else if (field === 'role') updates['role'] = value;
         
         const { error } = await supabase
           .from('profiles')
