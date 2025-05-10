@@ -21,7 +21,7 @@ import * as z from "zod";
 
 const signUpSchema = z.object({
   email: z.string().email({ message: "Inserisci un indirizzo email valido" }),
-  password: z.string().min(6, { message: "La password deve contenere almeno 6 caratteri" }), // Changed from min(5) to min(6)
+  password: z.string().min(6, { message: "La password deve contenere almeno 6 caratteri" }),
   confirmPassword: z.string(),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Le password non corrispondono",
@@ -59,22 +59,35 @@ const SignUp = () => {
       });
     } catch (error: any) {
       let errorMessage = "Si è verificato un problema durante la registrazione";
+      let registrationSuccessful = false;
       
       // Provide more specific error messages
       if (error.message?.includes("weak_password")) {
         errorMessage = "Password troppo debole. Deve contenere almeno 6 caratteri.";
       } else if (error.message?.includes("already registered")) {
         errorMessage = "Questo indirizzo email è già registrato. Prova ad accedere.";
+        registrationSuccessful = true; // Considerare l'utente già registrato come successo
       } else if (error.message?.includes("email sending failed")) {
         errorMessage = "Registrazione completata, ma non è stato possibile inviare l'email di conferma. Prova ad accedere.";
-        setEmailSent(true);
+        registrationSuccessful = true;
+      } else if (error.code === "over_email_send_rate_limit" || error.message?.includes("rate limit exceeded")) {
+        errorMessage = "Registrazione completata, ma hai superato il limite di email. Prova ad accedere dopo aver atteso qualche minuto.";
+        registrationSuccessful = true;
       }
       
-      toast({
-        variant: "destructive",
-        title: "Errore durante la registrazione",
-        description: errorMessage,
-      });
+      if (registrationSuccessful) {
+        setEmailSent(true);
+        toast({
+          title: "Registrazione completata",
+          description: errorMessage,
+        });
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Errore durante la registrazione",
+          description: errorMessage,
+        });
+      }
     } finally {
       setIsLoading(false);
     }
@@ -157,7 +170,7 @@ const SignUp = () => {
                             <FormControl>
                               <Input 
                                 {...field}
-                                placeholder="Minimo 5 caratteri" 
+                                placeholder="Minimo 6 caratteri" 
                                 className="pl-10" 
                                 type="password" 
                                 autoComplete="new-password"

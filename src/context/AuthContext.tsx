@@ -221,18 +221,32 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
       });
       
-      if (error) {
+      // Se c'è un errore diverso dal limite di email, lo lanciamo
+      if (error && error.status !== 429) {
         throw error;
+      }
+      
+      // Se è un errore di limite email, stampiamo il messaggio ma consideriamolo un successo
+      if (error && error.status === 429) {
+        console.log("Email rate limit error, but continuing registration process:", error);
+        // Possiamo continuare come se la registrazione fosse riuscita, l'utente dovrà solo aspettare
+        return Promise.resolve();
       }
       
       console.log("Registration response:", data);
       
       // Even if there was an error sending the email, registration might have succeeded
-      if (data.user) {
+      if (data?.user) {
         return Promise.resolve();
-      } else {
+      } else if (error?.message?.includes("already registered")) {
+        // L'utente è già registrato, consideriamolo un successo
+        return Promise.resolve();
+      } else if (!data?.user) {
         throw new Error("Registration failed");
       }
+      
+      return Promise.resolve();
+      
     } catch (error: any) {
       console.error('Registration error:', error);
       throw error;
