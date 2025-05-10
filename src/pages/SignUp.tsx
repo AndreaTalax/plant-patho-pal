@@ -18,6 +18,7 @@ import {
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
+import { supabase } from "@/integrations/supabase/client";
 
 const signUpSchema = z.object({
   email: z.string().email({ message: "Inserisci un indirizzo email valido" }),
@@ -50,7 +51,19 @@ const SignUp = () => {
     setIsLoading(true);
 
     try {
-      await register(values.email, values.password);
+      // Utilizzo di Supabase direttamente per la registrazione
+      const { data, error } = await supabase.auth.signUp({
+        email: values.email,
+        password: values.password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/login`,
+        }
+      });
+      
+      if (error) {
+        throw error;
+      }
+      
       setEmailSent(true);
       toast({
         title: "Registrazione completata",
