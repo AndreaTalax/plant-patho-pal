@@ -1,3 +1,4 @@
+
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 
 type ThemeMode = "light" | "dark";
@@ -643,7 +644,7 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
   
   const [language, setLanguage] = useState<Language>(() => {
     const savedLanguage = localStorage.getItem("app-language");
-    return (savedLanguage as Language) || "en";
+    return (savedLanguage as Language) || "en"; // Ensure English is the default
   });
 
   useEffect(() => {

@@ -19,8 +19,8 @@ const EMAIL_HOST = Deno.env.get("EMAIL_HOST") || "smtp.sendgrid.net";
 const EMAIL_PORT = Number(Deno.env.get("EMAIL_PORT")) || 465;
 const EMAIL_USERNAME = Deno.env.get("EMAIL_USERNAME") || "";
 const EMAIL_PASSWORD = Deno.env.get("EMAIL_PASSWORD") || "";
-const EMAIL_FROM = Deno.env.get("EMAIL_FROM") || "Plant Patho Pal <noreply@plantpathopal.app>";
-const APP_URL = Deno.env.get("APP_URL") || "https://plantpathopal.app";
+const EMAIL_FROM = Deno.env.get("EMAIL_FROM") || "Dr.Plant <noreply@drplant.app>";
+const APP_URL = Deno.env.get("APP_URL") || "https://drplant.app";
 
 // Send registration confirmation email
 async function sendConfirmationEmail(email: string, username: string) {
@@ -48,24 +48,24 @@ async function sendConfirmationEmail(email: string, username: string) {
         <body>
           <div class="container">
             <div class="header">
-              <h1>Benvenuto su Plant Patho Pal!</h1>
+              <h1>Welcome to Dr.Plant!</h1>
             </div>
             <div class="content">
-              <p>Ciao ${username},</p>
-              <p>Grazie per esserti registrato a Plant Patho Pal! La tua registrazione è stata confermata con successo.</p>
-              <p>Con Plant Patho Pal, puoi:</p>
+              <p>Hello ${username},</p>
+              <p>Thank you for registering with Dr.Plant! Your registration has been successfully confirmed.</p>
+              <p>With Dr.Plant, you can:</p>
               <ul>
-                <li>Diagnosticare problemi delle tue piante</li>
-                <li>Ricevere consigli personalizzati da esperti</li>
-                <li>Accedere alla nostra libreria di risorse e informazioni</li>
+                <li>Diagnose your plant problems</li>
+                <li>Receive personalized advice from experts</li>
+                <li>Access our library of resources and information</li>
               </ul>
-              <p>Puoi accedere al tuo account utilizzando la tua email: <strong>${email}</strong></p>
-              <p>Se hai domande o hai bisogno di assistenza, non esitare a contattarci.</p>
-              <p>Cordiali saluti,<br>Il team di Plant Patho Pal</p>
+              <p>You can access your account using your email: <strong>${email}</strong></p>
+              <p>If you have any questions or need assistance, please don't hesitate to contact us.</p>
+              <p>Best regards,<br>The Dr.Plant Team</p>
             </div>
             <div class="footer">
-              <p>© 2025 Plant Patho Pal. Tutti i diritti riservati.</p>
-              <p>Questa email è stata inviata a ${email} perché ti sei registrato sul nostro sito.</p>
+              <p>© 2025 Dr.Plant. All rights reserved.</p>
+              <p>This email was sent to ${email} because you registered on our site.</p>
             </div>
           </div>
         </body>
@@ -75,15 +75,15 @@ async function sendConfirmationEmail(email: string, username: string) {
     await client.send({
       from: EMAIL_FROM,
       to: email,
-      subject: "Benvenuto su Plant Patho Pal!",
+      subject: "Welcome to Dr.Plant!",
       content: message,
       html: message,
     });
 
-    console.log(`Email di conferma inviata a ${email} con successo`);
+    console.log(`Confirmation email sent to ${email} successfully`);
     await client.close();
   } catch (error) {
-    console.error(`Errore nell'invio dell'email a ${email}:`, error);
+    console.error(`Error sending email to ${email}:`, error);
     await client.close();
     throw error;
   }
@@ -119,21 +119,21 @@ serve(async (req) => {
       });
       
     if (profileError) {
-      console.error("Errore nella creazione del profilo:", profileError);
+      console.error("Error creating profile:", profileError);
       throw profileError;
     }
     
     // Send confirmation email
     try {
       await sendConfirmationEmail(user.email, username);
-      console.log(`Email di conferma inviata a ${user.email}`);
+      console.log(`Confirmation email sent to ${user.email}`);
     } catch (emailError) {
-      console.error("Errore nell'invio dell'email di conferma:", emailError);
-      // Continuiamo anche se l'invio dell'email fallisce, l'utente è comunque registrato
+      console.error("Error sending confirmation email:", emailError);
+      // Continue even if email sending fails, the user is still registered
       return new Response(
         JSON.stringify({ 
           success: true, 
-          message: "Utente registrato, ma si è verificato un errore nell'invio dell'email" 
+          message: "User registered, but an error occurred sending the email" 
         }),
         {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -150,7 +150,7 @@ serve(async (req) => {
       },
     );
   } catch (error) {
-    console.error("Errore durante la registrazione:", error);
+    console.error("Error during registration:", error);
     
     return new Response(
       JSON.stringify({ error: error.message }),

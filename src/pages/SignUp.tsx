@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -19,11 +20,11 @@ import { useForm } from "react-hook-form";
 import * as z from "zod";
 
 const signUpSchema = z.object({
-  email: z.string().email({ message: "Inserisci un indirizzo email valido" }),
-  password: z.string().min(6, { message: "La password deve contenere almeno 6 caratteri" }),
+  email: z.string().email({ message: "Please enter a valid email address" }),
+  password: z.string().min(6, { message: "Password must contain at least 6 characters" }),
   confirmPassword: z.string(),
 }).refine((data) => data.password === data.confirmPassword, {
-  message: "Le password non corrispondono",
+  message: "Passwords do not match",
   path: ["confirmPassword"],
 });
 
@@ -53,37 +54,37 @@ const SignUp = () => {
       
       setEmailSent(true);
       toast({
-        title: "Registrazione completata",
-        description: "Ti abbiamo inviato un'email di conferma. Se non la vedi nella casella principale, controlla nella cartella spam o promozioni.",
+        title: "Registration completed",
+        description: "We have sent you a confirmation email. If you don't see it in your inbox, please check your spam or promotions folder.",
       });
     } catch (error: any) {
-      let errorMessage = "Si è verificato un problema durante la registrazione";
+      let errorMessage = "A problem occurred during registration";
       let registrationSuccessful = false;
       
       // Provide more specific error messages
       if (error.message?.includes("weak_password")) {
-        errorMessage = "Password troppo debole. Deve contenere almeno 6 caratteri.";
+        errorMessage = "Password is too weak. It must contain at least 6 characters.";
       } else if (error.message?.includes("already registered")) {
-        errorMessage = "Questo indirizzo email è già registrato. Prova ad accedere.";
-        registrationSuccessful = true; // Considerare l'utente già registrato come successo
+        errorMessage = "This email address is already registered. Please try logging in.";
+        registrationSuccessful = true; // Consider already registered user as success
       } else if (error.message?.includes("email sending failed")) {
-        errorMessage = "Registrazione completata, ma non è stato possibile inviare l'email di conferma. Prova ad accedere.";
+        errorMessage = "Registration completed, but we couldn't send the confirmation email. Please try logging in.";
         registrationSuccessful = true;
       } else if (error.code === "over_email_send_rate_limit" || error.message?.includes("rate limit exceeded")) {
-        errorMessage = "Registrazione completata, ma hai superato il limite di email. Controlla nella cartella spam o promozioni, oppure prova ad accedere dopo aver atteso qualche minuto.";
+        errorMessage = "Registration completed, but you have exceeded the email limit. Check your spam or promotions folder, or try logging in after waiting a few minutes.";
         registrationSuccessful = true;
       }
       
       if (registrationSuccessful) {
         setEmailSent(true);
         toast({
-          title: "Registrazione completata",
+          title: "Registration completed",
           description: errorMessage,
         });
       } else {
         toast({
           variant: "destructive",
-          title: "Errore durante la registrazione",
+          title: "Registration error",
           description: errorMessage,
         });
       }
@@ -102,8 +103,8 @@ const SignUp = () => {
           <div className="inline-flex items-center justify-center p-4 bg-white/80 backdrop-blur-sm rounded-full shadow-lg mb-4">
             <Leaf className="h-12 w-12 text-drplant-green" />
           </div>
-          <h1 className="text-3xl font-bold text-drplant-blue-dark">Plant Patho Pal</h1>
-          <p className="text-gray-600 mt-2">Registrati per iniziare</p>
+          <h1 className="text-3xl font-bold text-drplant-blue-dark">Dr.Plant</h1>
+          <p className="text-gray-600 mt-2">Register to get started</p>
         </div>
 
         <Card className="border-none shadow-xl bg-white/80 backdrop-blur-sm">
@@ -112,25 +113,25 @@ const SignUp = () => {
               <div className="inline-flex items-center justify-center p-4 bg-drplant-green/20 rounded-full">
                 <Mail className="h-8 w-8 text-drplant-green" />
               </div>
-              <h3 className="text-xl font-medium text-drplant-blue-dark">Controlla la tua email</h3>
+              <h3 className="text-xl font-medium text-drplant-blue-dark">Check your email</h3>
               <p className="text-gray-600">
-                Abbiamo inviato un'email di conferma a <span className="font-medium">{form.getValues().email}</span>.
-                Per favore, clicca sul link nella email per completare la registrazione. Se non la vedi nella casella principale, controlla nella cartella spam o promozioni.
+                We've sent a confirmation email to <span className="font-medium">{form.getValues().email}</span>.
+                Please click the link in the email to complete your registration. If you don't see it in your inbox, please check your spam or promotions folder.
               </p>
               <Button 
                 variant="outline" 
                 className="mt-4 w-full"
                 onClick={() => navigate('/login')}
               >
-                Torna al login
+                Back to login
               </Button>
             </div>
           ) : (
             <>
               <CardHeader>
-                <CardTitle className="text-2xl text-drplant-blue-dark text-center">Crea un account</CardTitle>
+                <CardTitle className="text-2xl text-drplant-blue-dark text-center">Create an account</CardTitle>
                 <CardDescription className="text-center">
-                  Inserisci i tuoi dati per registrarti
+                  Enter your details to register
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -147,7 +148,7 @@ const SignUp = () => {
                             <FormControl>
                               <Input 
                                 {...field}
-                                placeholder="nome@esempio.it" 
+                                placeholder="name@example.com" 
                                 className="pl-10" 
                                 type="email" 
                                 autoComplete="email"
@@ -169,7 +170,7 @@ const SignUp = () => {
                             <FormControl>
                               <Input 
                                 {...field}
-                                placeholder="Minimo 6 caratteri" 
+                                placeholder="Minimum 6 characters" 
                                 className="pl-10" 
                                 type="password" 
                                 autoComplete="new-password"
@@ -185,13 +186,13 @@ const SignUp = () => {
                       name="confirmPassword"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Conferma password</FormLabel>
+                          <FormLabel>Confirm password</FormLabel>
                           <div className="relative">
                             <LockKeyhole className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
                             <FormControl>
                               <Input 
                                 {...field}
-                                placeholder="Ripeti la password" 
+                                placeholder="Repeat password" 
                                 className="pl-10" 
                                 type="password" 
                                 autoComplete="new-password"
@@ -208,7 +209,7 @@ const SignUp = () => {
                         className="w-full bg-gradient-to-r from-drplant-blue to-drplant-blue-dark hover:from-drplant-blue-dark hover:to-drplant-blue-dark transition-all duration-300"
                         disabled={isLoading}
                       >
-                        {isLoading ? "Registrazione in corso..." : "Registrati"}
+                        {isLoading ? "Registering..." : "Register"}
                       </Button>
                     </div>
                   </form>
@@ -216,10 +217,10 @@ const SignUp = () => {
               </CardContent>
               <CardFooter className="flex flex-col space-y-4 text-sm text-gray-500">
                 <div className="text-center w-full">
-                  Hai già un account? <Link to="/login" className="text-drplant-blue font-medium hover:underline">Accedi</Link>
+                  Already have an account? <Link to="/login" className="text-drplant-blue font-medium hover:underline">Login</Link>
                 </div>
                 <p className="text-xs text-gray-500 text-center">
-                  Registrandoti, accetti i nostri termini di servizio e la nostra politica sulla privacy.
+                  By registering, you agree to our terms of service and privacy policy.
                 </p>
               </CardFooter>
             </>
@@ -227,7 +228,7 @@ const SignUp = () => {
         </Card>
 
         <div className="mt-8 text-center text-gray-600 text-sm">
-          <p>© 2025 Plant Patho Pal. All rights reserved.</p>
+          <p>© 2025 Dr.Plant. All rights reserved.</p>
         </div>
       </div>
     </div>
