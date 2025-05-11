@@ -33,6 +33,23 @@ const Login = () => {
     }
 
     try {
+      // Special case for test user
+      if (email === "test@gmail.com" && password === "test123") {
+        // Handle test user login directly
+        console.log("Using test account login");
+        
+        // Call the login function from AuthContext
+        await login(email, password);
+        
+        toast({
+          title: "Login successful",
+          description: "Welcome back to Dr.Plant!",
+        });
+        navigate("/");
+        return;
+      }
+
+      // Normal login for other users
       await login(email, password);
       toast({
         title: "Login successful",

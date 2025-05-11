@@ -1,3 +1,4 @@
+
 import { createContext, useContext, useState, ReactNode, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Session, User } from "@supabase/supabase-js";
@@ -33,6 +34,11 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 const MOCK_USERS = [
   {
     email: "test@test.com",
+    password: "test123",
+    role: "user" as const
+  },
+  {
+    email: "test@gmail.com", // Added test user
     password: "test123",
     role: "user" as const
   },
@@ -165,6 +171,39 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       console.log("Attempting login with:", email, password);
       
+      // Special case for the test user
+      if (email === "test@gmail.com" && password === "test123") {
+        console.log("Using test account mock login");
+        
+        // Set authenticated state for the test user
+        setIsAuthenticated(true);
+        
+        // Create a mock user object
+        const mockUser = {
+          id: "test-user-id",
+          email: "test@gmail.com",
+        };
+        
+        // @ts-ignore - We're creating a mock user object
+        setUser(mockUser);
+        
+        // Set up user profile for test user
+        setUsername("testuser");
+        setUserProfile({
+          username: "testuser",
+          firstName: "Test",
+          lastName: "User",
+          email: "test@gmail.com",
+          phone: "",
+          address: "",
+          role: "user"
+        });
+        
+        setIsProfileComplete(true);
+        return Promise.resolve();
+      }
+      
+      // Regular Supabase login for other users
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password
