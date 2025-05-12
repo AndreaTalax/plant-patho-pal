@@ -43,6 +43,7 @@ async function sendConfirmationEmail(email: string, username: string) {
             .header { background-color: #3b82f6; color: white; padding: 20px; text-align: center; }
             .content { padding: 20px; background-color: #f9fafb; }
             .footer { text-align: center; padding: 20px; font-size: 12px; color: #6b7280; }
+            .security-notice { margin-top: 20px; padding: 10px; background-color: #fef3c7; border-left: 4px solid #f59e0b; }
           </style>
         </head>
         <body>
@@ -60,6 +61,13 @@ async function sendConfirmationEmail(email: string, username: string) {
                 <li>Access our library of resources and information</li>
               </ul>
               <p>You can access your account using your email: <strong>${email}</strong></p>
+              
+              <div class="security-notice">
+                <h3>Important Security Information:</h3>
+                <p>For your security, any verification codes (OTPs) sent to you will expire after 15 minutes.</p>
+                <p>Always use verification codes immediately after receiving them and never share them with anyone.</p>
+              </div>
+              
               <p>If you have any questions or need assistance, please don't hesitate to contact us.</p>
               <p>Best regards,<br>The Dr.Plant Team</p>
             </div>

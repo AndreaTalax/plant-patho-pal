@@ -7,7 +7,6 @@ import ShopTab from '@/components/ShopTab';
 import LibraryTab from '@/components/LibraryTab';
 import ProfileTab from '@/components/ProfileTab';
 import BottomNavigation from '@/components/BottomNavigation';
-import { Leaf } from 'lucide-react';
 
 type TabName = 'diagnose' | 'chat' | 'shop' | 'library' | 'profile';
 

@@ -1,3 +1,4 @@
+
 import * as React from "react"
 import { OTPInput, OTPInputContext } from "input-otp"
 import { Dot } from "lucide-react"
@@ -66,4 +67,14 @@ const InputOTPSeparator = React.forwardRef<
 ))
 InputOTPSeparator.displayName = "InputOTPSeparator"
 
-export { InputOTP, InputOTPGroup, InputOTPSlot, InputOTPSeparator }
+// Add information about OTP expiry
+const InputOTPInfo = () => {
+  return (
+    <div className="text-xs text-muted-foreground mt-2">
+      Verification code will expire in 15 minutes for security purposes.
+    </div>
+  )
+}
+InputOTPInfo.displayName = "InputOTPInfo"
+
+export { InputOTP, InputOTPGroup, InputOTPSlot, InputOTPSeparator, InputOTPInfo }
