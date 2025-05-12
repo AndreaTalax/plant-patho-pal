@@ -80,21 +80,22 @@ const ChatTab = () => {
   const [currentConversation, setCurrentConversation] = useState<typeof MOCK_CONVERSATIONS[0] | null>(null);
   
   // Regular user view
-  // Real expert data - only Marco Nigro
+  // Real expert data - cambio da Agrotecnico a Fitopatologo Marco Nigro
   const expert = {
     id: 'marco-nigro', 
-    name: 'Agrotecnico Marco Nigro', 
+    name: 'Fitopatologo Marco Nigro', 
     specialty: 'Diagnosi e Cura delle Piante', 
     avatar: '/lovable-uploads/c8ba9199-f82d-4a4f-a6ae-1c8e340ed1b5.png',
     email: 'agrotecnicomarconigro@gmail.com'
   };
   
   const [messages, setMessages] = useState<Array<{id: string, sender: string, text: string, time: string}>>([
-    { id: '1', sender: 'expert', text: 'Buongiorno! Sono Marco Nigro, agrotecnico specializzato nella diagnosi e cura delle piante. Come posso aiutarti oggi?', time: '10:30 AM' },
+    { id: '1', sender: 'expert', text: 'Buongiorno! Sono Marco Nigro, fitopatologo specializzato nella diagnosi e cura delle piante. Come posso aiutarti oggi?', time: '10:30 AM' },
   ]);
   
   const [newMessage, setNewMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const [hasUserSentMessage, setHasUserSentMessage] = useState(false);
   
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -113,9 +114,12 @@ const ChatTab = () => {
       setMessages([{ 
         id: '1', 
         sender: 'expert', 
-        text: 'Buongiorno! Sono Marco Nigro, agrotecnico specializzato nella diagnosi e cura delle piante. Come posso aiutarti oggi?', 
+        text: 'Buongiorno! Sono Marco Nigro, fitopatologo specializzato nella diagnosi e cura delle piante. Come posso aiutarti oggi?', 
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) 
       }]);
+      
+      // Reset user message status
+      setHasUserSentMessage(false);
     };
     
     loadDefaultMessages();
@@ -161,7 +165,7 @@ const ChatTab = () => {
           conv.id === currentConversation.id ? {
             ...conv, 
             messages: [...conv.messages, expertMessage],
-            lastMessage: `Agrotecnico: ${newMessage}`
+            lastMessage: `Fitopatologo: ${newMessage}`
           } : conv
         )
       );
@@ -172,7 +176,7 @@ const ChatTab = () => {
         return {
           ...prev,
           messages: [...prev.messages, expertMessage],
-          lastMessage: `Agrotecnico: ${newMessage}`
+          lastMessage: `Fitopatologo: ${newMessage}`
         };
       });
       
@@ -212,18 +216,24 @@ const ChatTab = () => {
       // Clear input after sending
       setNewMessage('');
       
-      // Simulate expert response after a delay
-      setTimeout(() => {
-        const expertResponse = {
-          id: (Date.now() + 1).toString(),
-          sender: 'expert',
-          text: t("expertResponse") || "Grazie per il tuo messaggio. Ti risponderò al più presto possibile.",
-          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        };
-        
-        setMessages(curr => [...curr, expertResponse]);
+      // Invia una sola risposta standard se è il primo messaggio dell'utente
+      if (!hasUserSentMessage) {
+        setTimeout(() => {
+          const expertResponse = {
+            id: (Date.now() + 1).toString(),
+            sender: 'expert',
+            text: "Fitopatologo Marco Nigro le risponderà appena possibile",
+            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          };
+          
+          setMessages(curr => [...curr, expertResponse]);
+          setHasUserSentMessage(true);
+          setIsSending(false);
+        }, 1000);
+      } else {
+        // Se l'utente ha già inviato un messaggio, non inviare alcuna risposta automatica
         setIsSending(false);
-      }, 2000);
+      }
     } catch (error) {
       console.error("Error sending message:", error);
       toast.error(t("messageSendError") || "Errore nell'invio del messaggio");
@@ -235,7 +245,7 @@ const ChatTab = () => {
   if (isMasterAccount) {
     return (
       <div className="flex flex-col min-h-full pt-6 pb-24">
-        <h2 className="text-2xl font-bold mb-4 px-4 text-drplant-green">Pannello Agrotecnico</h2>
+        <h2 className="text-2xl font-bold mb-4 px-4 text-drplant-green">Pannello Fitopatologo</h2>
         
         <div className="flex-1 flex">
           {/* Conversations sidebar */}
