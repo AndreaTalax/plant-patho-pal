@@ -17,4 +17,19 @@ export interface AnalysisDetails {
     probability: number;
   }[];
   recommendedAdditionalTests?: string[];
+  thermalMap?: string;
+  leafVerification?: {
+    isLeaf: boolean;
+    leafPercentage?: number;
+    boundingBox?: {x: number, y: number, width: number, height: number};
+  };
+  plantixInsights?: {
+    plantType?: string;
+    severity: 'mild' | 'moderate' | 'severe' | 'unknown';
+    progressStage: 'early' | 'developing' | 'advanced' | 'unknown';
+    spreadRisk: 'low' | 'medium' | 'high';
+    environmentalFactors: string[];
+    estimatedOnsetTime?: string;
+    reliability?: string;
+  };
 }
