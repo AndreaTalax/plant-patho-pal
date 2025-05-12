@@ -16,6 +16,32 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
+// Type definitions for messages and products
+interface Product {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  image: string;
+}
+
+interface Message {
+  id: string;
+  sender: string;
+  text: string;
+  time: string;
+  products?: Product[];
+}
+
+interface Conversation {
+  id: string;
+  username: string;
+  lastMessage: string;
+  unread: boolean;
+  blocked: boolean;
+  messages: Message[];
+}
+
 // Removed the Supabase client that caused the error
 const mockSupabase = {
   functions: {
@@ -42,7 +68,7 @@ const mockSupabase = {
 };
 
 // Mock data for available products
-const MOCK_PRODUCTS = [
+const MOCK_PRODUCTS: Product[] = [
   { 
     id: 'prod1', 
     name: 'Organic Fungicide', 
@@ -67,7 +93,7 @@ const MOCK_PRODUCTS = [
 ];
 
 // Mock data for chat conversations (for master account only)
-const MOCK_CONVERSATIONS = [
+const MOCK_CONVERSATIONS: Conversation[] = [
   {
     id: 'conv1',
     username: 'Maria Ross',
@@ -111,12 +137,12 @@ const ChatTab = () => {
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   
   // Master account view states
-  const [conversations, setConversations] = useState(MOCK_CONVERSATIONS);
-  const [currentConversation, setCurrentConversation] = useState<typeof MOCK_CONVERSATIONS[0] | null>(null);
+  const [conversations, setConversations] = useState<Conversation[]>(MOCK_CONVERSATIONS);
+  const [currentConversation, setCurrentConversation] = useState<Conversation | null>(null);
   
   // Product recommendation dialog state
   const [isProductDialogOpen, setIsProductDialogOpen] = useState(false);
-  const [selectedProducts, setSelectedProducts] = useState<typeof MOCK_PRODUCTS>([]);
+  const [selectedProducts, setSelectedProducts] = useState<Product[]>([]);
   
   // Regular user view
   // Real expert data - changed from Agrotecnico to Plant Pathologist Marco Nigro
@@ -128,7 +154,7 @@ const ChatTab = () => {
     email: 'agrotecnicomarconigro@gmail.com'
   };
   
-  const [messages, setMessages] = useState<Array<{id: string, sender: string, text: string, time: string, products?: typeof MOCK_PRODUCTS}>([
+  const [messages, setMessages] = useState<Message[]>([
     { id: '1', sender: 'expert', text: 'Good morning! I am Marco Nigro, a plant pathologist specialized in plant diagnosis and treatment. How can I help you today?', time: '10:30 AM' },
   ]);
   
@@ -216,7 +242,7 @@ const ChatTab = () => {
   };
   
   // Toggle product selection
-  const toggleProductSelection = (product: typeof MOCK_PRODUCTS[0]) => {
+  const toggleProductSelection = (product: Product) => {
     setSelectedProducts(prev => {
       const isAlreadySelected = prev.some(p => p.id === product.id);
       
@@ -239,7 +265,7 @@ const ChatTab = () => {
     const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     const messageId = Date.now().toString();
     
-    const productMessage = {
+    const productMessage: Message = {
       id: messageId,
       sender: 'expert',
       text: 'I recommend the following products for your plant:',
@@ -290,7 +316,7 @@ const ChatTab = () => {
         return;
       }
       
-      const expertMessage = {
+      const expertMessage: Message = {
         id: messageId,
         sender: 'expert',
         text: newMessage,
@@ -324,7 +350,7 @@ const ChatTab = () => {
     }
     
     // Regular user sending message
-    const userMessage = {
+    const userMessage: Message = {
       id: messageId,
       sender: 'user',
       text: newMessage,
@@ -357,7 +383,7 @@ const ChatTab = () => {
       // Send only one standard response if it's the user's first message
       if (!hasUserSentMessage) {
         setTimeout(() => {
-          const expertResponse = {
+          const expertResponse: Message = {
             id: (Date.now() + 1).toString(),
             sender: 'expert',
             text: "Plant Pathologist Marco Nigro will respond as soon as possible",
@@ -773,3 +799,4 @@ const ChatTab = () => {
 };
 
 export default ChatTab;
+
