@@ -203,6 +203,39 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return Promise.resolve();
       }
       
+      // Special case for premium user (Plant Pathologist)
+      if (email === "agrotecnicomarconigro@gmail.com" && password === "marconigro93") {
+        console.log("Using premium account mock login");
+        
+        // Set authenticated state for the premium user
+        setIsAuthenticated(true);
+        
+        // Create a mock user object
+        const mockUser = {
+          id: "premium-user-id",
+          email: "agrotecnicomarconigro@gmail.com",
+        };
+        
+        // @ts-ignore - We're creating a mock user object
+        setUser(mockUser);
+        
+        // Set up user profile for premium user
+        setUsername("marconigro");
+        setUserProfile({
+          username: "marconigro",
+          firstName: "Marco",
+          lastName: "Nigro",
+          email: "agrotecnicomarconigro@gmail.com",
+          phone: "+39 123 456 7890",
+          address: "Via Roma 123, Milan, Italy",
+          role: "master"
+        });
+        
+        setIsProfileComplete(true);
+        setIsMasterAccount(true);
+        return Promise.resolve();
+      }
+      
       // Regular Supabase login for other users
       const { data, error } = await supabase.auth.signInWithPassword({
         email,

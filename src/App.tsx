@@ -20,13 +20,14 @@ const queryClient = new QueryClient();
 
 // Protected route component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { isAuthenticated, isProfileComplete } = useAuth();
+  const { isAuthenticated, isProfileComplete, isMasterAccount } = useAuth();
   
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
   
-  if (!isProfileComplete) {
+  // Skip profile completion check for master accounts
+  if (!isProfileComplete && !isMasterAccount) {
     return <Navigate to="/complete-profile" replace />;
   }
   
@@ -35,13 +36,14 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
 // Profile completion route - only accessible when authenticated but profile not complete
 const ProfileCompletionRoute = ({ children }: { children: React.ReactNode }) => {
-  const { isAuthenticated, isProfileComplete } = useAuth();
+  const { isAuthenticated, isProfileComplete, isMasterAccount } = useAuth();
   
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
   
-  if (isProfileComplete) {
+  // Skip profile completion for master accounts
+  if (isProfileComplete || isMasterAccount) {
     return <Navigate to="/" replace />;
   }
   

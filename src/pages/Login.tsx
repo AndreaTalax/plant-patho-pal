@@ -48,6 +48,21 @@ const Login = () => {
         navigate("/");
         return;
       }
+      
+      // Special case for premium user (Plant Pathologist)
+      if (email === "agrotecnicomarconigro@gmail.com" && password === "marconigro93") {
+        console.log("Using premium account login");
+        
+        // Call the login function from AuthContext
+        await login(email, password);
+        
+        toast({
+          title: "Login successful",
+          description: "Welcome back, Plant Pathologist!",
+        });
+        navigate("/");
+        return;
+      }
 
       // Normal login for other users
       await login(email, password);
@@ -130,6 +145,11 @@ const Login = () => {
           <CardFooter className="flex flex-col space-y-4">
             <div className="text-center w-full text-sm text-gray-500">
               Don't have an account? <Link to="/signup" className="text-drplant-blue font-medium hover:underline">Sign Up</Link>
+            </div>
+            <div className="text-center w-full text-xs text-gray-400">
+              <p>Demo accounts:</p>
+              <p>Regular user: test@gmail.com / test123</p>
+              <p>Plant pathologist: agrotecnicomarconigro@gmail.com / marconigro93</p>
             </div>
           </CardFooter>
         </Card>

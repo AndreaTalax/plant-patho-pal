@@ -4,10 +4,17 @@ import { Avatar, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Send, ChevronRight, User, MessageSquare } from 'lucide-react';
+import { Send, ChevronRight, User, MessageSquare, Trash2, Ban, ShoppingBag } from 'lucide-react';
 import { toast } from '@/components/ui/sonner';
 import { useTheme } from '@/context/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 // Removed the Supabase client that caused the error
 const mockSupabase = {
@@ -34,6 +41,31 @@ const mockSupabase = {
   })
 };
 
+// Mock data for available products
+const MOCK_PRODUCTS = [
+  { 
+    id: 'prod1', 
+    name: 'Organic Fungicide', 
+    description: 'Natural fungicide for treating various plant diseases', 
+    price: 19.99,
+    image: '/lovable-uploads/1cb629ef-f7f2-4b66-a48a-5f22564bb3fa.png'
+  },
+  { 
+    id: 'prod2', 
+    name: 'Plant Nutrient Solution', 
+    description: 'Complete nutrient mix for healthy plant growth', 
+    price: 24.99,
+    image: '/lovable-uploads/c8ba9199-f82d-4a4f-a6ae-1c8e340ed1b5.png'
+  },
+  { 
+    id: 'prod3', 
+    name: 'Pest Control Spray', 
+    description: 'Effective against common garden pests', 
+    price: 15.99,
+    image: '/placeholder.svg'
+  }
+];
+
 // Mock data for chat conversations (for master account only)
 const MOCK_CONVERSATIONS = [
   {
@@ -41,6 +73,7 @@ const MOCK_CONVERSATIONS = [
     username: 'Maria Ross',
     lastMessage: 'I have a problem with my basil plant, the leaves are spotted.',
     unread: true,
+    blocked: false,
     messages: [
       { id: '1', sender: 'user', text: 'Good morning, I have a problem with my basil plant.', time: '10:30 AM' },
       { id: '2', sender: 'user', text: 'The leaves have brown spots and seem to be drying out. What could it be?', time: '10:31 AM' },
@@ -51,6 +84,7 @@ const MOCK_CONVERSATIONS = [
     username: 'Luke White',
     lastMessage: 'What fertilizer do you recommend for tomato plants?',
     unread: false,
+    blocked: false,
     messages: [
       { id: '1', sender: 'user', text: 'Hello, I am growing tomatoes in my garden.', time: '09:15 AM' },
       { id: '2', sender: 'user', text: 'What fertilizer would you recommend for good production?', time: '09:16 AM' },
@@ -62,6 +96,7 @@ const MOCK_CONVERSATIONS = [
     username: 'Joseph Green',
     lastMessage: 'My orchid is not flowering anymore, what can I do?',
     unread: true,
+    blocked: false,
     messages: [
       { id: '1', sender: 'user', text: 'My orchid hasn\'t flowered for months.', time: '14:22 PM' },
       { id: '2', sender: 'user', text: 'It\'s in a bright spot but without direct sunlight, I water it once a week. What am I doing wrong?', time: '14:23 PM' },
@@ -79,6 +114,10 @@ const ChatTab = () => {
   const [conversations, setConversations] = useState(MOCK_CONVERSATIONS);
   const [currentConversation, setCurrentConversation] = useState<typeof MOCK_CONVERSATIONS[0] | null>(null);
   
+  // Product recommendation dialog state
+  const [isProductDialogOpen, setIsProductDialogOpen] = useState(false);
+  const [selectedProducts, setSelectedProducts] = useState<typeof MOCK_PRODUCTS>([]);
+  
   // Regular user view
   // Real expert data - changed from Agrotecnico to Plant Pathologist Marco Nigro
   const expert = {
@@ -89,7 +128,7 @@ const ChatTab = () => {
     email: 'agrotecnicomarconigro@gmail.com'
   };
   
-  const [messages, setMessages] = useState<Array<{id: string, sender: string, text: string, time: string}>>([
+  const [messages, setMessages] = useState<Array<{id: string, sender: string, text: string, time: string, products?: typeof MOCK_PRODUCTS}>([
     { id: '1', sender: 'expert', text: 'Good morning! I am Marco Nigro, a plant pathologist specialized in plant diagnosis and treatment. How can I help you today?', time: '10:30 AM' },
   ]);
   
@@ -140,6 +179,99 @@ const ChatTab = () => {
     }
   };
   
+  // Delete conversation (Master account only)
+  const handleDeleteConversation = (conversationId: string) => {
+    setConversations(prev => prev.filter(conv => conv.id !== conversationId));
+    if (currentConversation?.id === conversationId) {
+      setCurrentConversation(null);
+    }
+    toast.success("Conversation deleted successfully");
+  };
+  
+  // Block/Unblock user (Master account only)
+  const handleToggleBlockUser = (conversationId: string) => {
+    setConversations(prev => 
+      prev.map(conv => 
+        conv.id === conversationId ? {...conv, blocked: !conv.blocked} : conv
+      )
+    );
+    
+    if (currentConversation?.id === conversationId) {
+      setCurrentConversation(prev => 
+        prev ? {...prev, blocked: !prev.blocked} : null
+      );
+    }
+    
+    const isBlocked = conversations.find(c => c.id === conversationId)?.blocked;
+    toast.success(isBlocked 
+      ? "User has been unblocked" 
+      : "User has been blocked"
+    );
+  };
+  
+  // Open product recommendation dialog
+  const openProductDialog = () => {
+    setSelectedProducts([]);
+    setIsProductDialogOpen(true);
+  };
+  
+  // Toggle product selection
+  const toggleProductSelection = (product: typeof MOCK_PRODUCTS[0]) => {
+    setSelectedProducts(prev => {
+      const isAlreadySelected = prev.some(p => p.id === product.id);
+      
+      if (isAlreadySelected) {
+        return prev.filter(p => p.id !== product.id);
+      } else {
+        return [...prev, product];
+      }
+    });
+  };
+  
+  // Send selected products as recommendations
+  const sendProductRecommendations = () => {
+    if (!currentConversation || selectedProducts.length === 0) {
+      setIsProductDialogOpen(false);
+      return;
+    }
+    
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const messageId = Date.now().toString();
+    
+    const productMessage = {
+      id: messageId,
+      sender: 'expert',
+      text: 'I recommend the following products for your plant:',
+      time: timeStr,
+      products: selectedProducts
+    };
+    
+    // Add message to current conversation
+    setConversations(prev => 
+      prev.map(conv => 
+        conv.id === currentConversation.id ? {
+          ...conv, 
+          messages: [...conv.messages, productMessage],
+          lastMessage: 'Product recommendations sent'
+        } : conv
+      )
+    );
+    
+    // Update current conversation view
+    setCurrentConversation(prev => {
+      if (!prev) return null;
+      return {
+        ...prev,
+        messages: [...prev.messages, productMessage],
+        lastMessage: 'Product recommendations sent'
+      };
+    });
+    
+    toast.success("Product recommendations sent!");
+    setIsProductDialogOpen(false);
+  };
+  
   const sendMessage = async () => {
     if (newMessage.trim() === '') return;
     
@@ -151,6 +283,12 @@ const ChatTab = () => {
     if (isMasterAccount) {
       // Master account sending message
       if (!currentConversation) return;
+      
+      // Check if conversation is blocked
+      if (currentConversation.blocked) {
+        toast.error("Cannot send message to blocked user");
+        return;
+      }
       
       const expertMessage = {
         id: messageId,
@@ -260,7 +398,7 @@ const ChatTab = () => {
                       currentConversation?.id === conversation.id 
                         ? 'bg-drplant-green/10 border border-drplant-green/30' 
                         : 'hover:bg-gray-100'
-                    }`}
+                    } ${conversation.blocked ? 'opacity-50' : ''}`}
                     onClick={() => handleChatSelection(conversation.id)}
                   >
                     <Avatar className="h-10 w-10 mr-3">
@@ -268,7 +406,10 @@ const ChatTab = () => {
                     </Avatar>
                     <div className="flex-1 min-w-0">
                       <div className="flex justify-between items-center">
-                        <span className="font-medium">{conversation.username}</span>
+                        <span className="font-medium">
+                          {conversation.username}
+                          {conversation.blocked && <span className="ml-2 text-xs bg-red-100 text-red-600 px-1 rounded">Blocked</span>}
+                        </span>
                         {conversation.unread && (
                           <span className="bg-drplant-green text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
                             •
@@ -276,6 +417,32 @@ const ChatTab = () => {
                         )}
                       </div>
                       <p className="text-sm text-gray-600 truncate">{conversation.lastMessage}</p>
+                    </div>
+                    <div className="flex space-x-1 ml-2">
+                      <Button 
+                        variant="ghost" 
+                        size="icon"
+                        className="h-7 w-7 text-red-500 hover:text-red-700 hover:bg-red-50"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteConversation(conversation.id);
+                        }}
+                        title="Delete conversation"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="icon"
+                        className={`h-7 w-7 ${conversation.blocked ? 'text-green-500 hover:text-green-700 hover:bg-green-50' : 'text-red-500 hover:text-red-700 hover:bg-red-50'}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleToggleBlockUser(conversation.id);
+                        }}
+                        title={conversation.blocked ? "Unblock user" : "Block user"}
+                      >
+                        <Ban className="h-4 w-4" />
+                      </Button>
                     </div>
                   </div>
                 ))}
@@ -287,12 +454,50 @@ const ChatTab = () => {
           <div className="w-2/3 flex flex-col">
             {currentConversation ? (
               <>
-                <div className="bg-white p-4 shadow-sm flex items-center gap-3 border-b">
-                  <Avatar className="h-8 w-8">
-                    <User className="h-5 w-5" />
-                  </Avatar>
-                  <div>
-                    <h3 className="font-medium text-sm">{currentConversation.username}</h3>
+                <div className="bg-white p-4 shadow-sm flex items-center justify-between border-b">
+                  <div className="flex items-center gap-3">
+                    <Avatar className="h-8 w-8">
+                      <User className="h-5 w-5" />
+                    </Avatar>
+                    <div>
+                      <h3 className="font-medium text-sm">
+                        {currentConversation.username}
+                        {currentConversation.blocked && <span className="ml-2 text-xs bg-red-100 text-red-600 px-1 rounded">Blocked</span>}
+                      </h3>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      className="gap-1 text-sm"
+                      onClick={openProductDialog}
+                      disabled={currentConversation.blocked}
+                    >
+                      <ShoppingBag className="h-4 w-4" />
+                      Recommend Products
+                    </Button>
+                    
+                    <Button 
+                      variant="ghost" 
+                      size="icon"
+                      className="h-8 w-8 text-red-500 hover:bg-red-50"
+                      onClick={() => handleToggleBlockUser(currentConversation.id)}
+                      title={currentConversation.blocked ? "Unblock user" : "Block user"}
+                    >
+                      <Ban className="h-4 w-4" />
+                    </Button>
+                    
+                    <Button 
+                      variant="ghost" 
+                      size="icon"
+                      className="h-8 w-8 text-red-500 hover:bg-red-50"
+                      onClick={() => handleDeleteConversation(currentConversation.id)}
+                      title="Delete conversation"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
                 </div>
                 
@@ -310,6 +515,25 @@ const ChatTab = () => {
                         }`}
                       >
                         <p>{message.text}</p>
+                        {message.products && (
+                          <div className="mt-3 space-y-2">
+                            {message.products.map(product => (
+                              <div key={product.id} className="bg-white rounded-lg p-2 flex items-center gap-2 text-gray-800">
+                                <div className="w-10 h-10 bg-gray-100 rounded overflow-hidden flex items-center justify-center">
+                                  {product.image ? (
+                                    <img src={product.image} alt={product.name} className="object-cover w-full h-full" />
+                                  ) : (
+                                    <ShoppingBag className="w-5 h-5 text-gray-400" />
+                                  )}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="font-medium text-sm">{product.name}</p>
+                                  <p className="text-xs text-gray-500 truncate">{product.price.toFixed(2)} €</p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                         <div className={`text-xs mt-1 ${
                           message.sender === 'expert' ? 'text-green-100' : 'text-gray-500'
                         }`}>
@@ -321,21 +545,27 @@ const ChatTab = () => {
                 </div>
                 
                 <div className="p-4 border-t bg-white">
-                  <div className="flex gap-2">
-                    <Input
-                      value={newMessage}
-                      onChange={(e) => setNewMessage(e.target.value)}
-                      placeholder="Type your response..."
-                      className="flex-1"
-                      onKeyPress={(e) => e.key === 'Enter' && !isSending && sendMessage()}
-                    />
-                    <Button 
-                      className="bg-drplant-green hover:bg-drplant-green-dark"
-                      onClick={sendMessage}
-                    >
-                      <Send className="h-5 w-5" />
-                    </Button>
-                  </div>
+                  {currentConversation.blocked ? (
+                    <div className="p-3 bg-red-50 text-red-600 rounded-md text-center">
+                      This user is blocked. Unblock to continue the conversation.
+                    </div>
+                  ) : (
+                    <div className="flex gap-2">
+                      <Input
+                        value={newMessage}
+                        onChange={(e) => setNewMessage(e.target.value)}
+                        placeholder="Type your response..."
+                        className="flex-1"
+                        onKeyPress={(e) => e.key === 'Enter' && !isSending && sendMessage()}
+                      />
+                      <Button 
+                        className="bg-drplant-green hover:bg-drplant-green-dark"
+                        onClick={sendMessage}
+                      >
+                        <Send className="h-5 w-5" />
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </>
             ) : (
@@ -346,6 +576,71 @@ const ChatTab = () => {
             )}
           </div>
         </div>
+        
+        {/* Product recommendation dialog */}
+        <Dialog open={isProductDialogOpen} onOpenChange={setIsProductDialogOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Recommend Products</DialogTitle>
+              <DialogDescription>
+                Select products to recommend to {currentConversation?.username}
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="mt-4 space-y-3 max-h-80 overflow-y-auto">
+              {MOCK_PRODUCTS.map(product => (
+                <div 
+                  key={product.id}
+                  className={`
+                    border rounded-lg p-3 flex items-center gap-3 cursor-pointer
+                    ${selectedProducts.some(p => p.id === product.id) ? 'border-drplant-green bg-drplant-green/5' : 'border-gray-200'}
+                  `}
+                  onClick={() => toggleProductSelection(product)}
+                >
+                  <div className="w-16 h-16 bg-gray-100 rounded overflow-hidden flex items-center justify-center">
+                    {product.image ? (
+                      <img src={product.image} alt={product.name} className="object-cover w-full h-full" />
+                    ) : (
+                      <ShoppingBag className="w-6 h-6 text-gray-400" />
+                    )}
+                  </div>
+                  
+                  <div className="flex-1">
+                    <h4 className="font-medium">{product.name}</h4>
+                    <p className="text-sm text-gray-500 line-clamp-2">{product.description}</p>
+                    <p className="text-sm font-semibold mt-1">{product.price.toFixed(2)} €</p>
+                  </div>
+                  
+                  <div className={`w-5 h-5 rounded-full border ${
+                    selectedProducts.some(p => p.id === product.id) ? 'bg-drplant-green border-drplant-green' : 'border-gray-300'
+                  }`}>
+                    {selectedProducts.some(p => p.id === product.id) && (
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white" className="w-5 h-5">
+                        <path fillRule="evenodd" d="M19.916 4.626a.75.75 0 01.208 1.04l-9 13.5a.75.75 0 01-1.154.114l-6-6a.75.75 0 011.06-1.06l5.353 5.353 8.493-12.739a.75.75 0 011.04-.208z" clipRule="evenodd" />
+                      </svg>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+            
+            <div className="flex justify-end gap-3 mt-4">
+              <Button 
+                variant="outline" 
+                onClick={() => setIsProductDialogOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button 
+                onClick={sendProductRecommendations}
+                disabled={selectedProducts.length === 0}
+                className="bg-drplant-green hover:bg-drplant-green-dark"
+              >
+                Send Recommendations
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     );
   }
@@ -418,6 +713,25 @@ const ChatTab = () => {
                   }`}
                 >
                   <p>{message.text}</p>
+                  {message.products && (
+                    <div className="mt-3 space-y-2">
+                      {message.products.map(product => (
+                        <div key={product.id} className="bg-white rounded-lg p-2 flex items-center gap-2 text-gray-800">
+                          <div className="w-10 h-10 bg-gray-100 rounded overflow-hidden flex items-center justify-center">
+                            {product.image ? (
+                              <img src={product.image} alt={product.name} className="object-cover w-full h-full" />
+                            ) : (
+                              <ShoppingBag className="w-5 h-5 text-gray-400" />
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-sm">{product.name}</p>
+                            <p className="text-xs text-gray-500 truncate">{product.price.toFixed(2)} €</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                   <div className={`text-xs mt-1 ${
                     message.sender === 'user' ? 'text-blue-100' : 'text-gray-500'
                   }`}>
