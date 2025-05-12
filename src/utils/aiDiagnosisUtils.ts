@@ -21,7 +21,12 @@ export const modelInfo = {
     precision: 0.943,
     recall: 0.928,
     f1Score: 0.935
-  }
+  },
+  // Additional fields needed by ModelInfoPanel
+  baseModel: "ResNet50",
+  datasetSize: "50,000+ images",
+  dataAugmentation: ["Rotation", "Flipping", "Color jittering", "Random cropping"],
+  trainTime: "72 hours on 4x NVIDIA A100 GPUs"
 };
 
 // Plant disease categories for predictive analysis
@@ -32,6 +37,194 @@ const diseaseCategories = [
   'root-rot',
   'spider-mites'
 ];
+
+// Add disease details export that DiagnosisTabs.tsx is expecting
+export const diseaseDetails: {
+  [key: string]: {
+    scientificName: string;
+    hostPlants: string[];
+    environmentalConditions: string;
+    spreadMechanism: string;
+    preventionTips: string[];
+  }
+} = {
+  'powdery-mildew': {
+    scientificName: 'Erysiphales spp.',
+    hostPlants: ['Roses', 'Cucurbits', 'Grapes', 'Apples', 'Ornamentals'],
+    environmentalConditions: 'Moderate temperatures (60-80°F) with high humidity but dry leaf surfaces. Common in crowded plantings with poor air circulation.',
+    spreadMechanism: 'Wind-dispersed spores that can survive without free water. Can overwinter on plant debris.',
+    preventionTips: [
+      'Plant resistant varieties',
+      'Ensure proper spacing for air circulation',
+      'Avoid overhead watering',
+      'Apply preventative fungicides during susceptible periods',
+      'Remove and destroy infected plant material'
+    ]
+  },
+  'leaf-spot': {
+    scientificName: 'Various (Septoria, Cercospora, Alternaria spp.)',
+    hostPlants: ['Tomatoes', 'Peppers', 'Strawberries', 'Hydrangeas', 'Maple trees'],
+    environmentalConditions: 'Warm, wet conditions with extended leaf wetness. Especially prevalent in rainy seasons.',
+    spreadMechanism: 'Water splash from rain or irrigation. Spores can survive on plant debris in soil.',
+    preventionTips: [
+      'Practice crop rotation',
+      'Use drip irrigation instead of sprinklers',
+      'Apply mulch to prevent soil splash',
+      'Remove infected leaves promptly',
+      'Apply copper-based fungicides preventatively'
+    ]
+  },
+  'aphid-infestation': {
+    scientificName: 'Aphididae family (various species)',
+    hostPlants: ['Roses', 'Vegetables', 'Fruit trees', 'Ornamentals', 'Herbs'],
+    environmentalConditions: 'Warm weather, especially spring and early summer. Often found on new, tender growth.',
+    spreadMechanism: 'Winged adults fly to new plants. Reproduce rapidly with live birth. Often spread by ants.',
+    preventionTips: [
+      'Encourage beneficial insects like ladybugs and lacewings',
+      'Use reflective mulch to confuse aphids',
+      'Apply insecticidal soaps for early infestations',
+      'Prune and destroy heavily infested plant parts',
+      'Control ant populations which protect and farm aphids'
+    ]
+  },
+  'root-rot': {
+    scientificName: 'Phytophthora, Pythium, Fusarium spp.',
+    hostPlants: ['Houseplants', 'Shrubs', 'Trees', 'Vegetables', 'Ornamentals'],
+    environmentalConditions: 'Overwatered soil, poor drainage, high humidity. Can be exacerbated by cool temperatures.',
+    spreadMechanism: 'Fungal spores spread through water in soil. Can persist in soil for years.',
+    preventionTips: [
+      'Ensure proper drainage in containers and garden beds',
+      'Avoid overwatering, especially in cool weather',
+      'Use sterile potting mix for houseplants',
+      'Allow soil to dry between waterings',
+      'Apply fungicides containing phosphorous acid as preventatives for valuable plants'
+    ]
+  },
+  'spider-mites': {
+    scientificName: 'Tetranychidae family (primarily Tetranychus spp.)',
+    hostPlants: ['Houseplants', 'Vegetables', 'Fruit trees', 'Ornamentals', 'Herbs'],
+    environmentalConditions: 'Hot, dry conditions. Especially problematic in indoor environments with low humidity.',
+    spreadMechanism: 'Wind dispersal. Can "balloon" on silk threads. Also spread by movement of infested plants.',
+    preventionTips: [
+      'Maintain adequate humidity around plants',
+      'Regularly spray plants with water to discourage colonization',
+      'Introduce predatory mites as biological control',
+      'Apply horticultural oils or insecticidal soaps',
+      'Isolate new plants before introducing to collections'
+    ]
+  }
+};
+
+// Add disease symptoms export that DiagnosisTabs.tsx is expecting
+export const diseaseSymptoms: {
+  [key: string]: {
+    primary: string[];
+    secondary: string[];
+    progression: string[];
+  }
+} = {
+  'powdery-mildew': {
+    primary: [
+      'White to gray powdery coating on leaves and stems',
+      'Distorted leaf growth',
+      'Yellowing of affected leaves'
+    ],
+    secondary: [
+      'Premature leaf drop',
+      'Reduced vigor',
+      'Stunted growth',
+      'Reduced fruit quality'
+    ],
+    progression: [
+      'Initial small white spots on upper leaf surfaces',
+      'Powdery patches expand to cover leaves and stems',
+      'Leaves may curl, pucker, or become distorted',
+      'In severe cases, plants may defoliate and buds may not open'
+    ]
+  },
+  'leaf-spot': {
+    primary: [
+      'Circular to irregular dark spots on leaves',
+      'Spots with tan to gray centers and dark margins',
+      'Yellow halos around lesions'
+    ],
+    secondary: [
+      'Leaf yellowing',
+      'Premature defoliation',
+      'Reduced plant vigor',
+      'Sunscald of fruits due to lack of leaf coverage'
+    ],
+    progression: [
+      'Small water-soaked spots appear',
+      'Spots enlarge and develop distinct margins',
+      'Centers of spots may dry out and tear',
+      'Multiple spots can merge causing large blighted areas',
+      'Severely affected leaves turn yellow and drop'
+    ]
+  },
+  'aphid-infestation': {
+    primary: [
+      'Clusters of small soft-bodied insects on stems and leaf undersides',
+      'Curled, distorted, or stunted leaves',
+      'Sticky honeydew on leaves and surfaces below plants'
+    ],
+    secondary: [
+      'Sooty mold growing on honeydew',
+      'Yellowing leaves',
+      'Transmitted viral diseases',
+      'Reduced growth and vigor'
+    ],
+    progression: [
+      'Few individual aphids appear on tender new growth',
+      'Rapid population increase leads to colonies forming',
+      'Leaves begin to curl and protect the growing colonies',
+      'Honeydew accumulates and attracts ants',
+      'Plants become weakened and secondary infections may occur'
+    ]
+  },
+  'root-rot': {
+    primary: [
+      'Wilting despite adequate soil moisture',
+      'Yellowing of lower leaves',
+      'Stunted growth',
+      'Brown, soft, decaying roots'
+    ],
+    secondary: [
+      'Leaf drop',
+      'Discolored stems near soil line',
+      'Reduced flowering and fruiting',
+      'Plant collapse in severe cases'
+    ],
+    progression: [
+      'Initial symptoms include slight wilting during warmest part of day',
+      'Plants fail to recover when watered',
+      'Lower leaves yellow and drop',
+      'Root system becomes increasingly damaged and unable to support plant',
+      'Plant eventually collapses and dies'
+    ]
+  },
+  'spider-mites': {
+    primary: [
+      'Fine stippling or speckling on upper leaf surfaces',
+      'Yellowing or bronzing of leaves',
+      'Fine webbing between leaves and stems',
+      'Visible tiny mites under magnification'
+    ],
+    secondary: [
+      'Leaf drop',
+      'Reduced vigor',
+      'Stunted growth',
+      'Plant death in severe infestations'
+    ],
+    progression: [
+      'Initial light stippling appears on leaves',
+      'Affected areas expand and leaves develop yellow or bronze appearance',
+      'Webbing appears between leaves and on leaf undersides',
+      'Leaves dry out, curl, and drop',
+      'Plants become severely weakened or die if infestation continues'
+    ]
+  }
+};
 
 // Simulated plant verification function 
 const verifyPlantImage = (image: string): { isPlant: boolean, confidence: number } => {
