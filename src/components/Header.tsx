@@ -55,7 +55,6 @@ const Header = () => {
           />
           <div className="hidden md:flex flex-col">
             <span className="font-bold text-drplant-blue text-xl">DR PLANT</span>
-            <span className="text-xs text-drplant-blue-dark">powered by Plantix AI</span>
           </div>
         </Link>
         
