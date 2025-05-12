@@ -260,13 +260,9 @@ export const analyzeImage = async (
         'Recent rainfall',
         'Temperature fluctuations'
       ].sort(() => 0.5 - Math.random()).slice(0, 2 + Math.floor(Math.random() * 3)),
-      estimatedOnsetTime: ['1-3 days ago', '4-7 days ago', '1-2 weeks ago', '2+ weeks ago'][Math.floor(Math.random() * 4)]
+      estimatedOnsetTime: ['1-3 days ago', '4-7 days ago', '1-2 weeks ago', '2+ weeks ago'][Math.floor(Math.random() * 4)],
+      reliability: lowQualityMode ? 'limited' : undefined
     };
-    
-    // For low quality mode, add a reliability indicator
-    if (lowQualityMode) {
-      plantixInsights.reliability = 'limited';
-    }
     
     const result = {
       diseaseId: detectedDisease,
@@ -420,7 +416,6 @@ const generateThermalHeatmap = (imageUrl: string, diseaseId: string): string => 
 
 // Plantix-like recommendations based on disease and severity
 export const getPlantixRecommendations = (diseaseId: string, severity: string): string[] => {
-  // ... keep existing code (plantix recommendations)
   const generalRecommendations = [
     'Monitor the plant regularly for changes in symptoms',
     'Ensure proper watering practices (avoid overhead watering)',
