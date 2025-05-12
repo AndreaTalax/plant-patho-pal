@@ -27,12 +27,17 @@ async function sendConfirmationEmail(email: string, username: string) {
   const client = new SmtpClient();
   
   try {
+    console.log(`Connecting to SMTP server: ${EMAIL_HOST}:${EMAIL_PORT}`);
+    console.log(`Using credentials: ${EMAIL_USERNAME} / [password hidden]`);
+    
     await client.connectTLS({
       hostname: EMAIL_HOST,
       port: EMAIL_PORT,
       username: EMAIL_USERNAME,
       password: EMAIL_PASSWORD,
     });
+
+    console.log("Connected to SMTP server successfully");
 
     const message = `
       <html>
@@ -80,6 +85,8 @@ async function sendConfirmationEmail(email: string, username: string) {
       </html>
     `;
 
+    console.log(`Sending email to: ${email}`);
+    
     await client.send({
       from: EMAIL_FROM,
       to: email,
@@ -99,6 +106,7 @@ async function sendConfirmationEmail(email: string, username: string) {
 
 serve(async (req) => {
   // This Edge Function is automatically triggered by Supabase Auth when a user signs up
+  console.log("Registration confirmation request received");
   
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -108,8 +116,11 @@ serve(async (req) => {
     const { user, email_token } = await req.json();
     
     if (!user || !email_token) {
+      console.error("Missing user or email_token in request");
       throw new Error("Missing user or email_token");
     }
+    
+    console.log(`Processing registration for user: ${user.email}`);
     
     // Initialize Supabase client with service role to access auth admin functions
     const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
@@ -130,6 +141,8 @@ serve(async (req) => {
       console.error("Error creating profile:", profileError);
       throw profileError;
     }
+    
+    console.log(`Profile created successfully for: ${user.email}`);
     
     // Send confirmation email
     try {
