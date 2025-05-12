@@ -120,7 +120,10 @@ export const diseaseDetails = {
 const predictionCache = new Map<string, any>();
 
 // Simulated PyTorch model response based on PlantVillage dataset
-export const analyzeImage = async (imageUrl: string): Promise<{
+export const analyzeImage = async (
+  imageUrl: string, 
+  lowQualityMode: boolean = false
+): Promise<{
   diseaseId: string;
   confidence: number;
   analysisDetails: {
@@ -135,11 +138,12 @@ export const analyzeImage = async (imageUrl: string): Promise<{
     };
     plantixInsights?: {
       plantType?: string;
-      severity: 'mild' | 'moderate' | 'severe';
-      progressStage: 'early' | 'developing' | 'advanced';
+      severity: 'mild' | 'moderate' | 'severe' | 'unknown';
+      progressStage: 'early' | 'developing' | 'advanced' | 'unknown';
       spreadRisk: 'low' | 'medium' | 'high';
       environmentalFactors: string[];
       estimatedOnsetTime?: string;
+      reliability?: string;
     }
   }
 }> => {
@@ -155,15 +159,18 @@ export const analyzeImage = async (imageUrl: string): Promise<{
   
   try {
     // Simulate leaf verification (in real app would be a separate ML model)
-    const leafVerificationResult = simulateLeafVerification(imageUrl);
+    // If in lowQualityMode, use a much lower threshold for detection
+    const leafVerificationResult = simulateLeafVerification(imageUrl, lowQualityMode);
     
     // Only proceed with disease analysis if we're confident this is a leaf
-    if (!leafVerificationResult.isLeaf) {
+    // In lowQualityMode, we're more lenient about what constitutes a leaf
+    if (!leafVerificationResult.isLeaf && !lowQualityMode) {
+      // In normal mode, if not a leaf, return unknown
       return {
         diseaseId: 'unknown',
         confidence: 0.1,
         analysisDetails: {
-          identifiedFeatures: ['Not a plant leaf'],
+          identifiedFeatures: ['Not a plant leaf or image too unclear'],
           alternativeDiagnoses: [],
           leafVerification: leafVerificationResult,
         }
@@ -176,7 +183,9 @@ export const analyzeImage = async (imageUrl: string): Promise<{
     const detectedDisease = diseases[randomIndex];
     
     // Generate a realistic confidence level (usually not 100%)
-    const baseConfidence = 0.75 + (Math.random() * 0.2);
+    // If in lowQualityMode, reduce the confidence level
+    const confidenceModifier = lowQualityMode ? 0.6 : 1.0;
+    const baseConfidence = (0.75 + (Math.random() * 0.2)) * confidenceModifier;
     const confidence = Math.round(baseConfidence * 100) / 100;
     
     // Generate realistic identified features from the disease
@@ -190,6 +199,11 @@ export const analyzeImage = async (imageUrl: string): Promise<{
       identifiedFeatures.push(shuffledSymptoms[i]);
     }
     
+    // If using low quality mode, add some uncertainty notes
+    if (lowQualityMode) {
+      identifiedFeatures.unshift("Partial visibility - analysis based on limited data");
+    }
+    
     // Generate alternative diagnoses with lower confidence
     const alternativeDiagnoses = [];
     const otherDiseases = diseases.filter(d => d !== detectedDisease);
@@ -198,7 +212,7 @@ export const analyzeImage = async (imageUrl: string): Promise<{
     for (let i = 0; i < numAlternatives; i++) {
       if (i < otherDiseases.length) {
         // Make alternative diagnoses have significantly lower confidence
-        const altConfidence = 0.15 + (Math.random() * 0.25);
+        const altConfidence = (0.15 + (Math.random() * 0.25)) * confidenceModifier;
         alternativeDiagnoses.push({
           disease: otherDiseases[i],
           probability: Math.round(altConfidence * 100) / 100
@@ -207,23 +221,37 @@ export const analyzeImage = async (imageUrl: string): Promise<{
     }
     
     // Sometimes recommend additional tests for more accurate diagnosis
+    // Always recommend additional tests in low quality mode
     let recommendedAdditionalTests: string[] | undefined = undefined;
-    if (confidence < 0.85) {
+    if (confidence < 0.85 || lowQualityMode) {
       recommendedAdditionalTests = [
-        'Close-up photos of affected areas',
+        'Take clearer photos with better lighting',
+        'Capture close-ups of affected areas',
         'Soil pH testing',
         'Laboratory culture of affected tissue'
       ];
+      
+      if (lowQualityMode) {
+        recommendedAdditionalTests.unshift('Improve image quality for better diagnosis');
+      }
     }
     
     // Generate simulated thermal heatmap (base64 encoded data URL)
     const thermalMap = generateThermalHeatmap(imageUrl, detectedDisease);
     
     // Plantix-specific insights
+    const severityOptions = lowQualityMode 
+      ? ['mild', 'moderate', 'severe', 'unknown'] 
+      : ['mild', 'moderate', 'severe'];
+    
+    const stageOptions = lowQualityMode
+      ? ['early', 'developing', 'advanced', 'unknown']
+      : ['early', 'developing', 'advanced'];
+    
     const plantixInsights = {
       plantType: ['Tomato', 'Rose', 'Apple Tree', 'Cucumber', 'Potato', 'Pepper'][Math.floor(Math.random() * 6)],
-      severity: ['mild', 'moderate', 'severe'][Math.floor(Math.random() * 3)] as 'mild' | 'moderate' | 'severe',
-      progressStage: ['early', 'developing', 'advanced'][Math.floor(Math.random() * 3)] as 'early' | 'developing' | 'advanced',
+      severity: severityOptions[Math.floor(Math.random() * severityOptions.length)] as 'mild' | 'moderate' | 'severe' | 'unknown',
+      progressStage: stageOptions[Math.floor(Math.random() * stageOptions.length)] as 'early' | 'developing' | 'advanced' | 'unknown',
       spreadRisk: ['low', 'medium', 'high'][Math.floor(Math.random() * 3)] as 'low' | 'medium' | 'high',
       environmentalFactors: [
         'High humidity',
@@ -234,6 +262,11 @@ export const analyzeImage = async (imageUrl: string): Promise<{
       ].sort(() => 0.5 - Math.random()).slice(0, 2 + Math.floor(Math.random() * 3)),
       estimatedOnsetTime: ['1-3 days ago', '4-7 days ago', '1-2 weeks ago', '2+ weeks ago'][Math.floor(Math.random() * 4)]
     };
+    
+    // For low quality mode, add a reliability indicator
+    if (lowQualityMode) {
+      plantixInsights.reliability = 'limited';
+    }
     
     const result = {
       diseaseId: detectedDisease,
@@ -254,27 +287,56 @@ export const analyzeImage = async (imageUrl: string): Promise<{
     return result;
   } catch (error) {
     console.error("Error in PyTorch model inference:", error);
-    toast.error("Error analyzing image with PyTorch model");
+    
+    // In case of error, provide a fallback result that still gives some information
+    if (lowQualityMode) {
+      // If already in low quality mode and still failing, provide emergency response
+      const emergencyDisease = Object.keys(diseaseSymptoms)[0];
+      
+      return {
+        diseaseId: emergencyDisease,
+        confidence: 0.3, // Very low confidence
+        analysisDetails: {
+          identifiedFeatures: ['Emergency analysis - limited data available'],
+          alternativeDiagnoses: [],
+          recommendedAdditionalTests: ['Take clearer photos', 'Consult with plant expert'],
+          leafVerification: { isLeaf: true, leafPercentage: 50 }, // Assume it's a leaf with low confidence
+          plantixInsights: {
+            severity: 'unknown',
+            progressStage: 'unknown',
+            spreadRisk: 'medium',
+            environmentalFactors: ['Unknown due to image quality'],
+            reliability: 'very low'
+          }
+        }
+      };
+    }
+    
+    toast.error("Error analyzing image with PyTorch model, trying again with lower quality threshold");
     throw error;
   }
 };
 
-// Simulated leaf verification system
-const simulateLeafVerification = (imageUrl: string) => {
+// Simulated leaf verification system with tolerance option for low-quality images
+const simulateLeafVerification = (imageUrl: string, lowQualityMode: boolean = false) => {
   // In a real implementation, this would use a separate ML model
   // to verify that the image contains a plant leaf
   
-  // For demo purposes, 95% chance of being a leaf
-  const isLeaf = Math.random() > 0.05;
+  // For demo purposes, default 95% chance of being a leaf
+  // If in low quality mode, we're much more lenient, 99.9% chance
+  const leafThreshold = lowQualityMode ? 0.001 : 0.05;
+  const isLeaf = Math.random() > leafThreshold;
   
   if (!isLeaf) {
     return { isLeaf: false };
   }
   
   // If it is a leaf, provide additional details
+  // In low quality mode, we still show lower leaf percentage
+  const leafPercentageBase = lowQualityMode ? 50 : 65;
   return {
     isLeaf: true,
-    leafPercentage: 65 + Math.floor(Math.random() * 30), // 65-95%
+    leafPercentage: leafPercentageBase + Math.floor(Math.random() * 30), // 50-95% or 65-95%
     boundingBox: {
       x: Math.floor(Math.random() * 20),
       y: Math.floor(Math.random() * 20),
@@ -356,8 +418,9 @@ const generateThermalHeatmap = (imageUrl: string, diseaseId: string): string => 
   return `data:image/svg+xml;base64,${btoa(svgPattern)}`;
 };
 
-// Plantix-like recommendations based on disease and severity (same as before)
+// Plantix-like recommendations based on disease and severity
 export const getPlantixRecommendations = (diseaseId: string, severity: string): string[] => {
+  // ... keep existing code (plantix recommendations)
   const generalRecommendations = [
     'Monitor the plant regularly for changes in symptoms',
     'Ensure proper watering practices (avoid overhead watering)',
@@ -381,6 +444,11 @@ export const getPlantixRecommendations = (diseaseId: string, severity: string): 
         'Consider removing heavily infected plants',
         'Sanitize gardening tools before using on healthy plants',
         'Plan for resistant varieties in future plantings'
+      ],
+      'unknown': [
+        'Apply fungicide as preventative measure',
+        'Improve plant spacing for better air circulation',
+        'Monitor for progression of symptoms'
       ]
     },
     'leaf-spot': {
@@ -399,6 +467,11 @@ export const getPlantixRecommendations = (diseaseId: string, severity: string): 
         'Prune plant to improve air circulation',
         'Rotate crops next season (for vegetables)',
         'Consider copper treatments for long-term prevention'
+      ],
+      'unknown': [
+        'Apply copper-based fungicide as preventative',
+        'Remove potentially infected leaves',
+        'Improve air circulation around plants'
       ]
     },
     'aphid-infestation': {
@@ -417,6 +490,11 @@ export const getPlantixRecommendations = (diseaseId: string, severity: string): 
         'Treat surrounding plants as preventative measure',
         'Consider biological controls like parasitic wasps',
         'Apply sticky traps for winged aphids'
+      ],
+      'unknown': [
+        'Apply insecticidal soap as preventative',
+        'Monitor for pest activity',
+        'Introduce beneficial insects as precaution'
       ]
     },
     'root-rot': {
@@ -435,6 +513,11 @@ export const getPlantixRecommendations = (diseaseId: string, severity: string): 
         'Discard severely affected plants and soil',
         'Sterilize pots before reusing',
         'Test soil pH and adjust if necessary'
+      ],
+      'unknown': [
+        'Improve drainage',
+        'Check watering practices',
+        'Consider preventative fungicide application'
       ]
     },
     'spider-mites': {
@@ -453,6 +536,11 @@ export const getPlantixRecommendations = (diseaseId: string, severity: string): 
         'Repeat applications per product instructions',
         'Consider introducing predatory mites',
         'For indoor plants, wash thoroughly with soapy water before treatment'
+      ],
+      'unknown': [
+        'Increase humidity',
+        'Apply miticide preventatively',
+        'Monitor closely for pest development'
       ]
     }
   };
@@ -461,6 +549,7 @@ export const getPlantixRecommendations = (diseaseId: string, severity: string): 
   const specificRecommendations = 
     diseaseSpecificRecommendations[diseaseId]?.[severity.toLowerCase()] || 
     diseaseSpecificRecommendations[diseaseId]?.['moderate'] || 
+    diseaseSpecificRecommendations[diseaseId]?.['unknown'] ||
     [];
   
   // Combine general and specific recommendations
