@@ -1,10 +1,11 @@
+
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
-import { Leaf, LockKeyhole, Mail } from "lucide-react";
+import { Leaf, LockKeyhole, Mail, AlertCircle } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { 
   Form,
@@ -32,6 +33,7 @@ type SignUpFormValues = z.infer<typeof signUpSchema>;
 const SignUp = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
+  const [isRateLimited, setIsRateLimited] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
   const { register } = useAuth();
@@ -47,6 +49,7 @@ const SignUp = () => {
 
   const onSubmit = async (values: SignUpFormValues) => {
     setIsLoading(true);
+    setIsRateLimited(false);
 
     try {
       await register(values.email, values.password);
@@ -60,17 +63,20 @@ const SignUp = () => {
       let errorMessage = "A problem occurred during registration";
       let registrationSuccessful = false;
       
-      // Provide more specific error messages
-      if (error.message?.includes("weak_password")) {
+      // Check for rate limit error specifically
+      if (error.status === 429 || error.code === "over_email_send_rate_limit" || error.message?.includes("rate limit exceeded")) {
+        setIsRateLimited(true);
+        errorMessage = "You've reached the email sending limit. Your account has been created, but we couldn't send another confirmation email.";
+        registrationSuccessful = true;
+      }
+      // Provide more specific error messages for other cases
+      else if (error.message?.includes("weak_password")) {
         errorMessage = "Password is too weak. It must contain at least 6 characters.";
       } else if (error.message?.includes("already registered")) {
         errorMessage = "This email address is already registered. Please try logging in.";
         registrationSuccessful = true; // Consider already registered user as success
       } else if (error.message?.includes("email sending failed")) {
         errorMessage = "Registration completed, but we couldn't send the confirmation email. Please try logging in.";
-        registrationSuccessful = true;
-      } else if (error.code === "over_email_send_rate_limit" || error.message?.includes("rate limit exceeded")) {
-        errorMessage = "Registration completed, but you have exceeded the email limit. Check your spam or promotions folder, or try logging in after waiting a few minutes.";
         registrationSuccessful = true;
       }
       
@@ -113,10 +119,29 @@ const SignUp = () => {
                 <Mail className="h-8 w-8 text-drplant-green" />
               </div>
               <h3 className="text-xl font-medium text-drplant-blue-dark">Check your email</h3>
-              <p className="text-gray-600">
-                We've sent a confirmation email to <span className="font-medium">{form.getValues().email}</span>.
-                Please click the link in the email to complete your registration. If you don't see it in your inbox, please check your spam or promotions folder.
-              </p>
+              {isRateLimited ? (
+                <>
+                  <div className="inline-flex items-center justify-center p-3 bg-amber-50 rounded-full mt-2">
+                    <AlertCircle className="h-6 w-6 text-amber-500" />
+                  </div>
+                  <div className="bg-amber-50 p-4 rounded-lg border border-amber-200">
+                    <p className="text-amber-800">
+                      <strong>Email rate limit reached</strong>
+                    </p>
+                    <p className="text-gray-700 text-sm mt-1">
+                      You've tried to register multiple times with the same email. Your account has been created, but we couldn't send another confirmation email due to rate limiting.
+                    </p>
+                    <p className="text-gray-700 text-sm mt-2">
+                      Please check your spam or promotions folder for previous confirmation emails, or try logging in directly.
+                    </p>
+                  </div>
+                </>
+              ) : (
+                <p className="text-gray-600">
+                  We've sent a confirmation email to <span className="font-medium">{form.getValues().email}</span>.
+                  Please click the link in the email to complete your registration. If you don't see it in your inbox, please check your spam or promotions folder.
+                </p>
+              )}
               <Button 
                 variant="outline" 
                 className="mt-4 w-full"
