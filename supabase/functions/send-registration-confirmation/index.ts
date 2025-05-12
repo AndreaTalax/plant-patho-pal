@@ -15,6 +15,7 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 
 // Email configuration - reading from environment variables
+// Changed from "smtp.sendgrid.com" to "smtp.sendgrid.net" to match certificate
 const EMAIL_HOST = Deno.env.get("EMAIL_HOST") || "smtp.sendgrid.net"; 
 const EMAIL_PORT = Number(Deno.env.get("EMAIL_PORT")) || 465;
 const EMAIL_USERNAME = Deno.env.get("EMAIL_USERNAME") || "";

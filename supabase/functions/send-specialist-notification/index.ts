@@ -10,8 +10,9 @@ import { SmtpClient } from "https://deno.land/x/smtp@v0.7.0/mod.ts";
 console.log("Hello from send-specialist-notification");
 
 // Get email settings from environment variables - using consistent naming with send-registration-confirmation
-const EMAIL_HOST = Deno.env.get("EMAIL_HOST") || "smtp.example.com";
-const EMAIL_PORT = Number(Deno.env.get("EMAIL_PORT")) || 587;
+// Changed from "smtp.example.com" to use the same environment variable as registration confirmation
+const EMAIL_HOST = Deno.env.get("EMAIL_HOST") || "smtp.sendgrid.net";
+const EMAIL_PORT = Number(Deno.env.get("EMAIL_PORT")) || 465;
 const EMAIL_USERNAME = Deno.env.get("EMAIL_USERNAME") || "";
 const EMAIL_PASSWORD = Deno.env.get("EMAIL_PASSWORD") || "";
 const EMAIL_FROM = Deno.env.get("EMAIL_FROM") || "no-reply@drplant.app";
