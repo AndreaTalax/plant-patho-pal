@@ -2,16 +2,17 @@
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from '@/components/ui/sonner';
-import { analyzeImage } from '@/utils/aiDiagnosisUtils';
+import { analyzeImage, modelInfo } from '@/utils/aiDiagnosisUtils';
 import { usePlantInfo } from '@/context/PlantInfoContext';
 
-// Importing our newly created components
+// Importing our components
 import PlantInfoForm, { PlantInfoFormValues } from './diagnose/PlantInfoForm';
 import PlantInfoSummary from './diagnose/PlantInfoSummary';
 import CameraCapture from './diagnose/CameraCapture';
 import ImageCaptureMethods from './diagnose/ImageCaptureMethods';
 import DiagnosisResult from './diagnose/DiagnosisResult';
 import { DiagnosedDisease, AnalysisDetails } from './diagnose/types';
+import ModelInfoPanel from './diagnose/ModelInfoPanel';
 
 // Mock database of plant diseases
 const PLANT_DISEASES = [
@@ -104,6 +105,7 @@ const DiagnoseTab = () => {
   const [analysisProgress, setAnalysisProgress] = useState(0);
   const [showCamera, setShowCamera] = useState(false);
   const [analysisDetails, setAnalysisDetails] = useState<AnalysisDetails | null>(null);
+  const [showModelInfo, setShowModelInfo] = useState(false);
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -194,12 +196,20 @@ const DiagnoseTab = () => {
         });
       }, 300);
 
-      // Perform advanced AI analysis
+      // Perform advanced AI analysis using PyTorch model
       const result = await analyzeImage(uploadedImage!);
       clearInterval(progressInterval);
       setAnalysisProgress(100);
       
-      console.log("AI Diagnosis Result:", result);
+      console.log("PyTorch AI Diagnosis Result:", result);
+      
+      // Check if the image contains a leaf
+      if (result.analysisDetails.leafVerification && !result.analysisDetails.leafVerification.isLeaf) {
+        toast.error("The image doesn't appear to contain a plant leaf. Please try again with a clearer image.");
+        setDiagnosisResult("No plant leaf detected in the image. Please upload a clear photo of the affected leaf.");
+        setIsAnalyzing(false);
+        return;
+      }
       
       // Find the disease in our database
       const disease = PLANT_DISEASES.find(d => d.id === result.diseaseId);
@@ -275,6 +285,21 @@ const DiagnoseTab = () => {
   return (
     <div className="flex flex-col items-center justify-start px-4 pt-6 pb-24 min-h-full">
       <h2 className="text-2xl font-bold mb-6 text-drplant-green">Plant Diagnosis</h2>
+      
+      {/* PyTorch Model Info Button */}
+      <div className="w-full max-w-md flex justify-end mb-4">
+        <button
+          onClick={() => setShowModelInfo(!showModelInfo)}
+          className="text-sm text-drplant-blue hover:text-drplant-blue-dark flex items-center gap-1"
+        >
+          <span>{showModelInfo ? 'Hide Model Info' : 'Show PyTorch Model Info'}</span>
+        </button>
+      </div>
+      
+      {/* PyTorch Model Information Panel */}
+      {showModelInfo && (
+        <ModelInfoPanel modelInfo={modelInfo} onClose={() => setShowModelInfo(false)} />
+      )}
       
       {showCamera && (
         <CameraCapture 
