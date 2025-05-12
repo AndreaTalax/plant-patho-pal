@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -41,10 +40,7 @@ const Login = () => {
         // Call the login function from AuthContext
         await login(email, password);
         
-        toast({
-          title: "Login successful",
-          description: "Welcome back to Dr.Plant!",
-        });
+        // Navigate directly without toast
         navigate("/");
         return;
       }
@@ -56,20 +52,13 @@ const Login = () => {
         // Call the login function from AuthContext
         await login(email, password);
         
-        toast({
-          title: "Login successful",
-          description: "Welcome back, Plant Pathologist!",
-        });
+        // Navigate directly without toast
         navigate("/");
         return;
       }
 
       // Normal login for other users
       await login(email, password);
-      toast({
-        title: "Login successful",
-        description: "Welcome back to Dr.Plant!",
-      });
       navigate("/");
     } catch (error) {
       toast({
