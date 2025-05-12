@@ -107,6 +107,7 @@ const DiagnoseTab = () => {
   const [analysisDetails, setAnalysisDetails] = useState<AnalysisDetails | null>(null);
   const [showModelInfo, setShowModelInfo] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
+  const [plantVerificationFailed, setPlantVerificationFailed] = useState(false);
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -124,6 +125,7 @@ const DiagnoseTab = () => {
       const reader = new FileReader();
       reader.onload = (event) => {
         setUploadedImage(event.target?.result as string);
+        setPlantVerificationFailed(false); // Reset plant verification status
         analyzeUploadedImage();
       };
       reader.readAsDataURL(file);
@@ -164,6 +166,7 @@ const DiagnoseTab = () => {
   const captureImage = (imageDataUrl: string) => {
     setUploadedImage(imageDataUrl);
     stopCameraStream();
+    setPlantVerificationFailed(false); // Reset plant verification status
     analyzeUploadedImage();
   };
 
@@ -181,15 +184,55 @@ const DiagnoseTab = () => {
     setShowCamera(false);
   };
 
+  const verifyImageContainsPlant = async (imageData: string): Promise<boolean> => {
+    try {
+      // First check - use basic plant detection
+      const result = await analyzeImage(imageData, false, true);
+      
+      if (result?.analysisDetails?.plantVerification) {
+        return result.analysisDetails.plantVerification.isPlant;
+      }
+      
+      // If no specific plant verification data, default to true
+      return true;
+    } catch (error) {
+      console.error("Error during plant verification:", error);
+      return false; // Assume verification failed on error
+    }
+  };
+
   const analyzeUploadedImage = async () => {
     setIsAnalyzing(true);
     setDiagnosisResult(null);
     setDiagnosedDisease(null);
     setAnalysisProgress(0);
     setAnalysisDetails(null);
+    setPlantVerificationFailed(false);
     
     try {
-      // Progress simulation
+      // Progress simulation for plant verification phase
+      const verificationInterval = setInterval(() => {
+        setAnalysisProgress(prev => {
+          const newProgress = prev + Math.random() * 5;
+          return newProgress > 25 ? 25 : newProgress;
+        });
+      }, 200);
+
+      // First verify if the image contains a plant
+      const isPlant = await verifyImageContainsPlant(uploadedImage!);
+      clearInterval(verificationInterval);
+      
+      if (!isPlant) {
+        setIsAnalyzing(false);
+        setPlantVerificationFailed(true);
+        setAnalysisProgress(100);
+        toast.error("L'immagine non sembra contenere una pianta. Per favore, carica una nuova foto con una pianta chiaramente visibile.", {
+          duration: 5000
+        });
+        return;
+      }
+      
+      // Continue with progress simulation for analysis
       const progressInterval = setInterval(() => {
         setAnalysisProgress(prev => {
           const newProgress = prev + Math.random() * 15;
@@ -334,6 +377,7 @@ const DiagnoseTab = () => {
     setActiveResultTab('overview');
     setAnalysisDetails(null);
     setRetryCount(0);
+    setPlantVerificationFailed(false);
     stopCameraStream();
   };
 
@@ -427,25 +471,52 @@ const DiagnoseTab = () => {
           />
         </div>
       ) : (
-        <DiagnosisResult
-          uploadedImage={uploadedImage}
-          plantInfo={{
-            isIndoor: plantInfo.isIndoor,
-            inSunlight: plantInfo.inSunlight,
-            wateringFrequency: plantInfo.wateringFrequency
-          }}
-          isAnalyzing={isAnalyzing}
-          analysisProgress={analysisProgress}
-          diagnosedDisease={diagnosedDisease}
-          diagnosisResult={diagnosisResult}
-          analysisDetails={analysisDetails}
-          activeResultTab={activeResultTab}
-          setActiveResultTab={setActiveResultTab}
-          resetDiagnosis={resetDiagnosis}
-          navigateToChat={navigateToChat}
-          navigateToShop={navigateToShop}
-          navigateToLibrary={navigateToLibrary}
-        />
+        <div className="w-full max-w-md">
+          {plantVerificationFailed ? (
+            <div className="bg-white p-6 shadow-md rounded-2xl text-center mb-6">
+              <div className="bg-red-100 text-red-600 p-4 rounded-lg mb-4">
+                <h3 className="text-lg font-semibold mb-2">Nessuna Pianta Rilevata</h3>
+                <p className="mb-4">
+                  L'immagine caricata non sembra contenere una pianta. Per ottenere un'analisi accurata, carica un'immagine 
+                  che mostri chiaramente una pianta.
+                </p>
+                <img 
+                  src={uploadedImage!} 
+                  alt="Uploaded image" 
+                  className="w-full h-48 object-cover rounded-lg mb-4"
+                />
+                <div className="flex justify-center gap-4 mt-6">
+                  <button
+                    onClick={resetDiagnosis}
+                    className="px-4 py-2 bg-drplant-blue text-white rounded-md hover:bg-drplant-blue-dark"
+                  >
+                    Prova di nuovo
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <DiagnosisResult
+              uploadedImage={uploadedImage}
+              plantInfo={{
+                isIndoor: plantInfo.isIndoor,
+                inSunlight: plantInfo.inSunlight,
+                wateringFrequency: plantInfo.wateringFrequency
+              }}
+              isAnalyzing={isAnalyzing}
+              analysisProgress={analysisProgress}
+              diagnosedDisease={diagnosedDisease}
+              diagnosisResult={diagnosisResult}
+              analysisDetails={analysisDetails}
+              activeResultTab={activeResultTab}
+              setActiveResultTab={setActiveResultTab}
+              resetDiagnosis={resetDiagnosis}
+              navigateToChat={navigateToChat}
+              navigateToShop={navigateToShop}
+              navigateToLibrary={navigateToLibrary}
+            />
+          )}
+        </div>
       )}
     </div>
   );
