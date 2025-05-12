@@ -7,11 +7,20 @@ import ShopTab from '@/components/ShopTab';
 import LibraryTab from '@/components/LibraryTab';
 import ProfileTab from '@/components/ProfileTab';
 import BottomNavigation from '@/components/BottomNavigation';
+import { useAuth } from '@/context/AuthContext';
 
 type TabName = 'diagnose' | 'chat' | 'shop' | 'library' | 'profile';
 
 const Index = () => {
-  const [activeTab, setActiveTab] = useState<TabName>('diagnose');
+  const { isMasterAccount } = useAuth();
+  const [activeTab, setActiveTab] = useState<TabName>(isMasterAccount ? 'chat' : 'diagnose');
+
+  // Reset active tab if user role changes (e.g., after login)
+  useEffect(() => {
+    if (isMasterAccount && activeTab === 'diagnose') {
+      setActiveTab('chat');
+    }
+  }, [isMasterAccount, activeTab]);
 
   // Add event listener for tab switching
   useEffect(() => {
@@ -37,10 +46,12 @@ const Index = () => {
         <div className="container mx-auto">
           <div className="max-w-3xl mx-auto text-center">
             <h1 className="text-4xl md:text-5xl font-bold text-drplant-blue mb-6">
-              Smart Plant Disease Diagnosis
+              {isMasterAccount ? 'Plant Health Specialist Dashboard' : 'Smart Plant Disease Diagnosis'}
             </h1>
             <p className="text-lg md:text-xl text-gray-600 mb-8">
-              Get instant plant health analysis and expert consultation with our advanced AI-powered diagnosis system.
+              {isMasterAccount 
+                ? 'Connect with users and provide expert plant health advice and product recommendations.'
+                : 'Get instant plant health analysis and expert consultation with our advanced AI-powered diagnosis system.'}
             </p>
           </div>
         </div>
@@ -50,7 +61,7 @@ const Index = () => {
 
       <div className="container mx-auto px-4 pb-16">
         <div className="relative bg-white rounded-2xl shadow-lg p-4 min-h-[60vh]">
-          {activeTab === 'diagnose' && <DiagnoseTab />}
+          {activeTab === 'diagnose' && !isMasterAccount && <DiagnoseTab />}
           {activeTab === 'chat' && <ChatTab />}
           {activeTab === 'shop' && <ShopTab />}
           {activeTab === 'library' && <LibraryTab />}
