@@ -408,66 +408,66 @@ const ChatTab = () => {
   // Render master account view
   if (isMasterAccount) {
     return (
-      <div className="flex flex-col min-h-full pt-6 pb-24">
-        <h2 className="text-2xl font-bold mb-4 px-4 text-drplant-green">Plant Pathologist Panel</h2>
+      <div className="flex flex-col h-full">
+        <h2 className="text-xl font-bold mb-4 px-2 text-drplant-green">Plant Pathologist Panel</h2>
         
-        <div className="flex-1 flex">
+        <div className="flex-1 flex flex-col md:flex-row border rounded-lg overflow-hidden">
           {/* Conversations sidebar */}
-          <div className="w-1/3 border-r min-h-full overflow-auto">
-            <div className="p-4">
-              <h3 className="font-semibold text-lg mb-2">Conversations</h3>
-              <div className="space-y-2">
+          <div className="w-full md:w-1/3 border-r">
+            <div className="p-2">
+              <h3 className="font-medium text-sm mb-2">Conversations</h3>
+              <div className="space-y-1">
                 {conversations.map(conversation => (
                   <div 
                     key={conversation.id}
-                    className={`p-3 rounded-lg cursor-pointer flex items-center ${
+                    className={`p-2 rounded-lg cursor-pointer flex items-center ${
                       currentConversation?.id === conversation.id 
                         ? 'bg-drplant-green/10 border border-drplant-green/30' 
                         : 'hover:bg-gray-100'
                     } ${conversation.blocked ? 'opacity-50' : ''}`}
                     onClick={() => handleChatSelection(conversation.id)}
                   >
-                    <Avatar className="h-10 w-10 mr-3">
-                      <User className="h-6 w-6" />
+                    <Avatar className="h-8 w-8 mr-2">
+                      <User className="h-5 w-5" />
                     </Avatar>
                     <div className="flex-1 min-w-0">
                       <div className="flex justify-between items-center">
-                        <span className="font-medium">
+                        <span className="font-medium text-sm">
                           {conversation.username}
-                          {conversation.blocked && <span className="ml-2 text-xs bg-red-100 text-red-600 px-1 rounded">Blocked</span>}
+                          {conversation.blocked && <span className="ml-1 text-xs bg-red-100 text-red-600 px-1 rounded">Blocked</span>}
                         </span>
                         {conversation.unread && (
-                          <span className="bg-drplant-green text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                          <span className="bg-drplant-green text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
                             •
                           </span>
                         )}
                       </div>
-                      <p className="text-sm text-gray-600 truncate">{conversation.lastMessage}</p>
+                      <p className="text-xs text-gray-600 truncate">{conversation.lastMessage}</p>
                     </div>
-                    <div className="flex space-x-1 ml-2">
+                    <div className="flex space-x-1 ml-1">
                       <Button 
                         variant="ghost" 
                         size="icon"
-                        className="h-7 w-7 text-red-500 hover:text-red-700 hover:bg-red-50"
+                        className="h-6 w-6 text-red-500 hover:text-red-700 hover:bg-red-50"
                         onClick={(e) => {
                           e.stopPropagation();
                           handleDeleteConversation(conversation.id);
                         }}
                         title="Delete conversation"
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Trash2 className="h-3 w-3" />
                       </Button>
                       <Button 
                         variant="ghost" 
                         size="icon"
-                        className={`h-7 w-7 ${conversation.blocked ? 'text-green-500 hover:text-green-700 hover:bg-green-50' : 'text-red-500 hover:text-red-700 hover:bg-red-50'}`}
+                        className={`h-6 w-6 ${conversation.blocked ? 'text-green-500 hover:text-green-700 hover:bg-green-50' : 'text-red-500 hover:text-red-700 hover:bg-red-50'}`}
                         onClick={(e) => {
                           e.stopPropagation();
                           handleToggleBlockUser(conversation.id);
                         }}
                         title={conversation.blocked ? "Unblock user" : "Block user"}
                       >
-                        <Ban className="h-4 w-4" />
+                        <Ban className="h-3 w-3" />
                       </Button>
                     </div>
                   </div>
@@ -477,83 +477,83 @@ const ChatTab = () => {
           </div>
           
           {/* Chat area */}
-          <div className="w-2/3 flex flex-col">
+          <div className="w-full md:w-2/3 flex flex-col">
             {currentConversation ? (
               <>
-                <div className="bg-white p-4 shadow-sm flex items-center justify-between border-b">
-                  <div className="flex items-center gap-3">
-                    <Avatar className="h-8 w-8">
-                      <User className="h-5 w-5" />
+                <div className="bg-white p-2 shadow-sm flex items-center justify-between border-b">
+                  <div className="flex items-center gap-2">
+                    <Avatar className="h-6 w-6">
+                      <User className="h-4 w-4" />
                     </Avatar>
                     <div>
                       <h3 className="font-medium text-sm">
                         {currentConversation.username}
-                        {currentConversation.blocked && <span className="ml-2 text-xs bg-red-100 text-red-600 px-1 rounded">Blocked</span>}
+                        {currentConversation.blocked && <span className="ml-1 text-xs bg-red-100 text-red-600 px-1 rounded">Blocked</span>}
                       </h3>
                     </div>
                   </div>
                   
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-center space-x-1">
                     <Button 
                       size="sm" 
                       variant="outline"
-                      className="gap-1 text-sm"
+                      className="gap-1 text-xs py-1 h-7"
                       onClick={openProductDialog}
                       disabled={currentConversation.blocked}
                     >
-                      <ShoppingBag className="h-4 w-4" />
-                      Recommend Products
+                      <ShoppingBag className="h-3 w-3" />
+                      Recommend
                     </Button>
                     
                     <Button 
                       variant="ghost" 
                       size="icon"
-                      className="h-8 w-8 text-red-500 hover:bg-red-50"
+                      className="h-6 w-6 text-red-500 hover:bg-red-50"
                       onClick={() => handleToggleBlockUser(currentConversation.id)}
                       title={currentConversation.blocked ? "Unblock user" : "Block user"}
                     >
-                      <Ban className="h-4 w-4" />
+                      <Ban className="h-3 w-3" />
                     </Button>
                     
                     <Button 
                       variant="ghost" 
                       size="icon"
-                      className="h-8 w-8 text-red-500 hover:bg-red-50"
+                      className="h-6 w-6 text-red-500 hover:bg-red-50"
                       onClick={() => handleDeleteConversation(currentConversation.id)}
                       title="Delete conversation"
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2 className="h-3 w-3" />
                     </Button>
                   </div>
                 </div>
                 
-                <div className="flex-1 overflow-y-auto p-4 space-y-4" ref={messagesContainerRef}>
+                <div className="flex-1 overflow-y-auto p-3 space-y-3" ref={messagesContainerRef}>
                   {currentConversation.messages.map(message => (
                     <div 
                       key={message.id} 
                       className={`flex ${message.sender === 'expert' ? 'justify-end' : 'justify-start'}`}
                     >
                       <div 
-                        className={`max-w-[80%] rounded-2xl p-3 ${
+                        className={`max-w-[80%] rounded-lg p-2 ${
                           message.sender === 'expert' 
                             ? 'bg-drplant-green text-white rounded-tr-none' 
                             : 'bg-gray-100 text-gray-800 rounded-tl-none'
                         }`}
                       >
-                        <p>{message.text}</p>
+                        <p className="text-sm">{message.text}</p>
                         {message.products && (
-                          <div className="mt-3 space-y-2">
+                          <div className="mt-2 space-y-1">
                             {message.products.map(product => (
-                              <div key={product.id} className="bg-white rounded-lg p-2 flex items-center gap-2 text-gray-800">
-                                <div className="w-10 h-10 bg-gray-100 rounded overflow-hidden flex items-center justify-center">
+                              <div key={product.id} className="bg-white rounded-lg p-1 flex items-center gap-1 text-gray-800">
+                                <div className="w-8 h-8 bg-gray-100 rounded overflow-hidden flex items-center justify-center">
                                   {product.image ? (
                                     <img src={product.image} alt={product.name} className="object-cover w-full h-full" />
                                   ) : (
-                                    <ShoppingBag className="w-5 h-5 text-gray-400" />
+                                    <ShoppingBag className="w-4 h-4 text-gray-400" />
                                   )}
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                  <p className="font-medium text-sm">{product.name}</p>
+                                  <p className="font-medium text-xs">{product.name}</p>
                                   <p className="text-xs text-gray-500 truncate">{product.price.toFixed(2)} €</p>
                                 </div>
                               </div>
@@ -570,25 +570,26 @@ const ChatTab = () => {
                   ))}
                 </div>
                 
-                <div className="p-4 border-t bg-white">
+                <div className="p-2 border-t bg-white">
                   {currentConversation.blocked ? (
-                    <div className="p-3 bg-red-50 text-red-600 rounded-md text-center">
-                      This user is blocked. Unblock to continue the conversation.
+                    <div className="p-2 bg-red-50 text-red-600 rounded-md text-center text-sm">
+                      This user is blocked. Unblock to continue.
                     </div>
                   ) : (
-                    <div className="flex gap-2">
+                    <div className="flex gap-1">
                       <Input
                         value={newMessage}
                         onChange={(e) => setNewMessage(e.target.value)}
                         placeholder="Type your response..."
-                        className="flex-1"
+                        className="flex-1 h-8 text-sm"
                         onKeyPress={(e) => e.key === 'Enter' && !isSending && sendMessage()}
                       />
                       <Button 
-                        className="bg-drplant-green hover:bg-drplant-green-dark"
+                        size="sm"
+                        className="bg-drplant-green hover:bg-drplant-green-dark h-8 w-8 p-0"
                         onClick={sendMessage}
                       >
-                        <Send className="h-5 w-5" />
+                        <Send className="h-4 w-4" />
                       </Button>
                     </div>
                   )}
@@ -596,8 +597,8 @@ const ChatTab = () => {
               </>
             ) : (
               <div className="flex-1 flex flex-col items-center justify-center text-gray-500">
-                <MessageSquare className="h-12 w-12 mb-4 text-gray-300" />
-                <p>Select a conversation to start</p>
+                <MessageSquare className="h-10 w-10 mb-3 text-gray-300" />
+                <p className="text-sm">Select a conversation to start</p>
               </div>
             )}
           </div>
@@ -673,13 +674,13 @@ const ChatTab = () => {
 
   // Regular user view
   return (
-    <div className="flex flex-col min-h-full pt-6 pb-24">
+    <div className="flex flex-col min-h-full pt-3 pb-24">
       {!activeChat ? (
         <div className="px-4">
-          <h2 className="text-2xl font-bold mb-6 text-drplant-green">{t("expertConsultation") || "Expert Consultation"}</h2>
+          <h2 className="text-xl font-bold mb-4 text-drplant-green">{t("expertConsultation") || "Expert Consultation"}</h2>
           
           <div className="space-y-4">
-            <p className="text-gray-600">{t("connectWithExperts") || "Connect with our experts to receive advice about your plants"}</p>
+            <p className="text-gray-600 text-sm">{t("connectWithExperts") || "Connect with our experts to receive advice about your plants"}</p>
             
             <Card 
               key={expert.id} 
@@ -698,7 +699,7 @@ const ChatTab = () => {
               <ChevronRight className="text-gray-400" />
             </Card>
             
-            <div className="mt-6 text-center text-gray-500 text-sm">
+            <div className="mt-4 text-center text-gray-500 text-sm">
               <p>{t("responseTime") || "Our experts will respond within 24 hours"}</p>
             </div>
           </div>
@@ -706,16 +707,16 @@ const ChatTab = () => {
       ) : (
         <div className="flex flex-col h-full">
           {/* Chat header */}
-          <div className="bg-white p-4 shadow-sm flex items-center gap-3 border-b">
+          <div className="bg-white p-3 shadow-sm flex items-center gap-3 border-b">
             <Button 
               variant="ghost" 
               size="icon" 
-              className="h-8 w-8" 
+              className="h-7 w-7" 
               onClick={() => setActiveChat(null)}
             >
-              <ChevronRight className="rotate-180" />
+              <ChevronRight className="rotate-180 h-4 w-4" />
             </Button>
-            <Avatar className="h-10 w-10">
+            <Avatar className="h-8 w-8">
               <AvatarImage src={expert.avatar} alt={expert.name} />
             </Avatar>
             <div>
@@ -725,33 +726,33 @@ const ChatTab = () => {
           </div>
           
           {/* Chat messages */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4" ref={messagesContainerRef}>
+          <div className="flex-1 overflow-y-auto p-3 space-y-3" ref={messagesContainerRef}>
             {messages.map(message => (
               <div 
                 key={message.id} 
                 className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
               >
                 <div 
-                  className={`max-w-[80%] rounded-2xl p-3 ${
+                  className={`max-w-[80%] rounded-lg p-2 ${
                     message.sender === 'user' 
                       ? 'bg-drplant-blue text-white rounded-tr-none' 
                       : 'bg-gray-100 text-gray-800 rounded-tl-none'
                   }`}
                 >
-                  <p>{message.text}</p>
+                  <p className="text-sm">{message.text}</p>
                   {message.products && (
-                    <div className="mt-3 space-y-2">
+                    <div className="mt-2 space-y-1">
                       {message.products.map(product => (
-                        <div key={product.id} className="bg-white rounded-lg p-2 flex items-center gap-2 text-gray-800">
-                          <div className="w-10 h-10 bg-gray-100 rounded overflow-hidden flex items-center justify-center">
+                        <div key={product.id} className="bg-white rounded-lg p-1 flex items-center gap-1 text-gray-800">
+                          <div className="w-8 h-8 bg-gray-100 rounded overflow-hidden flex items-center justify-center">
                             {product.image ? (
                               <img src={product.image} alt={product.name} className="object-cover w-full h-full" />
                             ) : (
-                              <ShoppingBag className="w-5 h-5 text-gray-400" />
+                              <ShoppingBag className="w-4 h-4 text-gray-400" />
                             )}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="font-medium text-sm">{product.name}</p>
+                            <p className="font-medium text-xs">{product.name}</p>
                             <p className="text-xs text-gray-500 truncate">{product.price.toFixed(2)} €</p>
                           </div>
                         </div>
@@ -769,25 +770,26 @@ const ChatTab = () => {
           </div>
           
           {/* Message input */}
-          <div className="p-4 border-t bg-white">
-            <div className="flex gap-2">
+          <div className="p-3 border-t bg-white">
+            <div className="flex gap-1">
               <Input
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
                 placeholder={t("typeYourMessage") || "Type your message..."}
-                className="flex-1"
+                className="flex-1 h-9 text-sm"
                 onKeyPress={(e) => e.key === 'Enter' && !isSending && sendMessage()}
                 disabled={isSending}
               />
               <Button 
-                className="bg-drplant-blue hover:bg-drplant-blue-dark"
+                size="sm"
+                className="bg-drplant-blue hover:bg-drplant-blue-dark h-9 w-9 p-0"
                 onClick={sendMessage}
                 disabled={isSending}
               >
                 {isSending ? (
-                  <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
                 ) : (
-                  <Send className="h-5 w-5" />
+                  <Send className="h-4 w-4" />
                 )}
               </Button>
             </div>
@@ -799,4 +801,3 @@ const ChatTab = () => {
 };
 
 export default ChatTab;
-

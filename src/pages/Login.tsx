@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -32,34 +33,12 @@ const Login = () => {
     }
 
     try {
-      // Special case for test user
-      if (email === "test@gmail.com" && password === "test123") {
-        // Handle test user login directly
-        console.log("Using test account login");
-        
-        // Call the login function from AuthContext
-        await login(email, password);
-        
-        // Navigate directly without toast
-        navigate("/");
-        return;
-      }
-      
-      // Special case for premium user (Plant Pathologist)
-      if (email === "agrotecnicomarconigro@gmail.com" && password === "marconigro93") {
-        console.log("Using premium account login");
-        
-        // Call the login function from AuthContext
-        await login(email, password);
-        
-        // Navigate directly without toast
-        navigate("/");
-        return;
-      }
-
-      // Normal login for other users
+      // Handle all user logins
       await login(email, password);
+      
+      // Navigate directly without toast - fixes freezing issue
       navigate("/");
+      
     } catch (error) {
       toast({
         variant: "destructive",
