@@ -3,7 +3,7 @@ import { useState, createRef } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ArrowUpFromLine } from 'lucide-react';
+import { ArrowUpFromLine, Loader2 } from 'lucide-react';
 import AIPredictionService from './AIPredictionService';
 import { PlantDiagnosisResult } from '@/utils/plantDiagnosisService';
 
@@ -14,17 +14,61 @@ interface PytorchAnalysisProps {
 
 const PytorchAnalysis = ({ uploadedImageUrl, onPredictionComplete }: PytorchAnalysisProps) => {
   const [imageFile, setImageFile] = useState<File | null>(null);
+  const [isPredicting, setIsPredicting] = useState(false);
+  const [result, setResult] = useState<PlantDiagnosisResult | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const fileInputRef = createRef<HTMLInputElement>();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setImageFile(e.target.files[0]);
+      setResult(null);
+      setError(null);
     }
   };
 
   const triggerFileInput = () => {
     if (fileInputRef.current) {
       fileInputRef.current.click();
+    }
+  };
+
+  const handleAnalyze = async () => {
+    if (!imageFile) return;
+
+    setIsPredicting(true);
+    setError(null);
+    
+    const formData = new FormData();
+    formData.append("file", imageFile);
+
+    try {
+      const response = await fetch("http://localhost:8000/predict", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await response.json();
+      
+      // Convert the response format
+      const convertedResult: PlantDiagnosisResult = {
+        plant: data.plant,
+        disease: data.disease,
+        probability: data.probability,
+        suggestions: data.suggestions,
+        error: data.error
+      };
+      
+      setResult(convertedResult);
+      
+      if (!data.error) {
+        onPredictionComplete(convertedResult);
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Si è verificato un errore durante l\'analisi';
+      setError(errorMessage);
+    } finally {
+      setIsPredicting(false);
     }
   };
 
@@ -88,6 +132,56 @@ const PytorchAnalysis = ({ uploadedImageUrl, onPredictionComplete }: PytorchAnal
             </div>
           </div>
         )}
+
+        <div className="space-y-4">
+          <div className="flex space-x-2">
+            <Button 
+              onClick={handleAnalyze} 
+              disabled={!imageFile || isPredicting}
+              className="flex items-center gap-2"
+            >
+              {isPredicting ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Analisi in corso...
+                </>
+              ) : (
+                'Esegui analisi PyTorch'
+              )}
+            </Button>
+          </div>
+          
+          {error && (
+            <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-md">
+              <p className="font-medium">Errore</p>
+              <p className="text-sm">{error}</p>
+            </div>
+          )}
+          
+          {result && !error && (
+            <div className="p-3 bg-green-50 border border-green-200 text-green-800 rounded-md">
+              <h3 className="text-lg font-semibold mb-2">Risultato Analisi</h3>
+              <p><strong>Pianta:</strong> {result.plant}</p>
+              <p><strong>Malattia:</strong> {result.disease}</p>
+              <p><strong>Probabilità:</strong> {Math.round(result.probability * 100)}%</p>
+              
+              {result.suggestions && result.suggestions.length > 0 && (
+                <>
+                  <h4 className="mt-2 font-semibold">Suggerimenti:</h4>
+                  <ul className="list-disc list-inside">
+                    {result.suggestions.map((s, idx) => (
+                      <li key={idx}>{s}</li>
+                    ))}
+                  </ul>
+                </>
+              )}
+            </div>
+          )}
+          
+          <p className="text-xs text-gray-500">
+            L'immagine verrà inviata al nostro modello PyTorch per un'analisi dettagliata delle malattie della pianta.
+          </p>
+        </div>
 
         <AIPredictionService 
           imageFile={imageFile} 
