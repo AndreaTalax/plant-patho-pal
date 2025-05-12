@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, createRef } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -14,7 +14,7 @@ interface PytorchAnalysisProps {
 
 const PytorchAnalysis = ({ uploadedImageUrl, onPredictionComplete }: PytorchAnalysisProps) => {
   const [imageFile, setImageFile] = useState<File | null>(null);
-  const fileInputRef = React.createRef<HTMLInputElement>();
+  const fileInputRef = createRef<HTMLInputElement>();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
