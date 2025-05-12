@@ -1,11 +1,9 @@
+
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from '@/components/ui/sonner';
 import { analyzeImage, modelInfo } from '@/utils/aiDiagnosisUtils';
 import { usePlantInfo } from '@/context/PlantInfoContext';
-import { integratePytorchResult } from '@/utils/aiDiagnosisUtils';
-import { PlantDiagnosisResult } from '@/utils/plantDiagnosisService';
-import PytorchAnalysis from './diagnose/PytorchAnalysis';
 
 // Importing our components
 import PlantInfoForm, { PlantInfoFormValues } from './diagnose/PlantInfoForm';
@@ -373,42 +371,6 @@ const DiagnoseTab = () => {
     }, 100);
   };
 
-  // Add this new function to handle PyTorch predictions
-  const handlePytorchPrediction = (result: PlantDiagnosisResult) => {
-    if (result.error) {
-      toast.error(`Errore nell'analisi PyTorch: ${result.error}`);
-      return;
-    }
-
-    setIsAnalyzing(true);
-    setAnalysisProgress(50);
-
-    // Process the PyTorch result
-    try {
-      const processedResult = integratePytorchResult(result);
-      
-      // Find the disease in our database
-      const disease = PLANT_DISEASES.find(d => d.id === processedResult.diseaseId);
-      
-      if (disease) {
-        const diseaseWithUpdatedConfidence = {
-          ...disease,
-          confidence: processedResult.confidence
-        };
-        
-        setDiagnosedDisease(diseaseWithUpdatedConfidence);
-        setDiagnosisResult(`PyTorch ha rilevato ${disease.name} con ${Math.round(processedResult.confidence * 100)}% di confidenza.`);
-        setAnalysisDetails(processedResult.analysisDetails);
-      }
-    } catch (error) {
-      console.error("Error processing PyTorch result:", error);
-      toast.error("Errore nell'elaborazione del risultato PyTorch");
-    } finally {
-      setAnalysisProgress(100);
-      setIsAnalyzing(false);
-    }
-  };
-
   return (
     <div className="flex flex-col items-center justify-start px-4 pt-6 pb-24 min-h-full">
       <h2 className="text-2xl font-bold mb-6 text-drplant-green">Plant Diagnosis</h2>
@@ -463,43 +425,27 @@ const DiagnoseTab = () => {
             className="hidden"
             onChange={handleImageUpload}
           />
-          
-          {/* Add PyTorch Analysis component */}
-          <PytorchAnalysis
-            uploadedImageUrl={null}
-            onPredictionComplete={handlePytorchPrediction}
-          />
         </div>
       ) : (
-        <div className="w-full max-w-2xl">
-          <DiagnosisResult
-            uploadedImage={uploadedImage}
-            plantInfo={{
-              isIndoor: plantInfo.isIndoor,
-              inSunlight: plantInfo.inSunlight,
-              wateringFrequency: plantInfo.wateringFrequency
-            }}
-            isAnalyzing={isAnalyzing}
-            analysisProgress={analysisProgress}
-            diagnosedDisease={diagnosedDisease}
-            diagnosisResult={diagnosisResult}
-            analysisDetails={analysisDetails}
-            activeResultTab={activeResultTab}
-            setActiveResultTab={setActiveResultTab}
-            resetDiagnosis={resetDiagnosis}
-            navigateToChat={navigateToChat}
-            navigateToShop={navigateToShop}
-            navigateToLibrary={navigateToLibrary}
-          />
-          
-          {/* Add PyTorch Analysis under the result for additional analysis */}
-          {!isAnalyzing && diagnosedDisease && (
-            <PytorchAnalysis
-              uploadedImageUrl={uploadedImage}
-              onPredictionComplete={handlePytorchPrediction}
-            />
-          )}
-        </div>
+        <DiagnosisResult
+          uploadedImage={uploadedImage}
+          plantInfo={{
+            isIndoor: plantInfo.isIndoor,
+            inSunlight: plantInfo.inSunlight,
+            wateringFrequency: plantInfo.wateringFrequency
+          }}
+          isAnalyzing={isAnalyzing}
+          analysisProgress={analysisProgress}
+          diagnosedDisease={diagnosedDisease}
+          diagnosisResult={diagnosisResult}
+          analysisDetails={analysisDetails}
+          activeResultTab={activeResultTab}
+          setActiveResultTab={setActiveResultTab}
+          resetDiagnosis={resetDiagnosis}
+          navigateToChat={navigateToChat}
+          navigateToShop={navigateToShop}
+          navigateToLibrary={navigateToLibrary}
+        />
       )}
     </div>
   );

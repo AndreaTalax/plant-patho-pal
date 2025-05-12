@@ -2,7 +2,6 @@
 
 // Mocking PyTorch and Flask integration (in a real app, this would call an API endpoint)
 import { toast } from '@/components/ui/sonner';
-import { PlantDiagnosisResult } from './plantDiagnosisService';
 
 // Collection of realistic plant disease symptoms (same as before)
 export const diseaseSymptoms = {
@@ -570,75 +569,3 @@ export const modelInfo = {
   trainTime: "8.5 hours on GPU",
   lastUpdated: "May 2025"
 };
-
-// Add this function to integrate the PyTorch results with the existing system
-export const integratePytorchResult = (pytorchResult: PlantDiagnosisResult) => {
-  // Map the detected disease to our disease database
-  const matchingDiseaseId = mapPytorchDiseaseToDiseaseId(pytorchResult.disease);
-  
-  return {
-    diseaseId: matchingDiseaseId,
-    confidence: pytorchResult.probability,
-    analysisDetails: {
-      identifiedFeatures: pytorchResult.suggestions.slice(0, 3),
-      alternativeDiagnoses: [],
-      recommendedAdditionalTests: pytorchResult.suggestions.slice(3),
-      leafVerification: {
-        isLeaf: true,
-        leafPercentage: 90,
-      },
-      plantixInsights: {
-        plantType: pytorchResult.plant,
-        severity: getSeverityFromConfidence(pytorchResult.probability),
-        progressStage: getProgressStage(pytorchResult.probability),
-        spreadRisk: getSpreadRisk(pytorchResult.probability),
-        environmentalFactors: [
-          'Analyzed with PyTorch model',
-          'Based on ResNet architecture'
-        ],
-        reliability: 'high'
-      }
-    }
-  };
-};
-
-// Map the disease name from PyTorch to our disease IDs
-function mapPytorchDiseaseToDiseaseId(diseaseName: string): string {
-  const lowerDisease = diseaseName.toLowerCase();
-  
-  if (lowerDisease.includes('powdery mildew') || lowerDisease.includes('muffa')) {
-    return 'powdery-mildew';
-  } else if (lowerDisease.includes('leaf spot') || lowerDisease.includes('macchia fogliare')) {
-    return 'leaf-spot';
-  } else if (lowerDisease.includes('aphid') || lowerDisease.includes('afidi')) {
-    return 'aphid-infestation';
-  } else if (lowerDisease.includes('root rot') || lowerDisease.includes('marciume radicale')) {
-    return 'root-rot';
-  } else if (lowerDisease.includes('spider mite') || lowerDisease.includes('ragnetto')) {
-    return 'spider-mites';
-  }
-  
-  // Default to the first disease if no match
-  return 'powdery-mildew';
-}
-
-// Helper functions to determine severity, progress and risk based on confidence
-function getSeverityFromConfidence(confidence: number): 'mild' | 'moderate' | 'severe' | 'unknown' {
-  if (confidence > 0.8) return 'severe';
-  if (confidence > 0.6) return 'moderate';
-  if (confidence > 0.4) return 'mild';
-  return 'unknown';
-}
-
-function getProgressStage(confidence: number): 'early' | 'developing' | 'advanced' | 'unknown' {
-  if (confidence > 0.8) return 'advanced';
-  if (confidence > 0.6) return 'developing';
-  if (confidence > 0.4) return 'early';
-  return 'unknown';
-}
-
-function getSpreadRisk(confidence: number): 'low' | 'medium' | 'high' {
-  if (confidence > 0.7) return 'high';
-  if (confidence > 0.5) return 'medium';
-  return 'low';
-}
