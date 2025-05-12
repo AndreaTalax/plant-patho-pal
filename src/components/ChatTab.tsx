@@ -9,12 +9,12 @@ import { toast } from '@/components/ui/sonner';
 import { useTheme } from '@/context/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
 
-// Rimosso il client Supabase che causava l'errore
+// Removed the Supabase client that caused the error
 const mockSupabase = {
   functions: {
     invoke: async (_name: string, _options: any) => {
-      // Mock che simula sempre una risposta di successo
-      console.log('Invocazione simulata della funzione Supabase con:', _options);
+      // Mock that always simulates a successful response
+      console.log('Simulated invocation of Supabase function with:', _options);
       return { error: null };
     }
   },
@@ -22,13 +22,13 @@ const mockSupabase = {
     select: () => ({
       eq: (_field: string, _value: string) => ({
         order: (_field: string, _options: any) => {
-          console.log('Simulazione query Supabase per:', _table);
+          console.log('Simulation of Supabase query for:', _table);
           return { data: [], error: null };
         }
       })
     }),
     insert: (_data: any) => {
-      console.log('Simulazione inserimento dati in Supabase:', _data);
+      console.log('Simulation of data insertion in Supabase:', _data);
       return { error: null };
     }
   })
@@ -38,33 +38,33 @@ const mockSupabase = {
 const MOCK_CONVERSATIONS = [
   {
     id: 'conv1',
-    username: 'Maria Rossi',
-    lastMessage: 'Ho un problema con la mia pianta di basilico, le foglie sono macchiate.',
+    username: 'Maria Ross',
+    lastMessage: 'I have a problem with my basil plant, the leaves are spotted.',
     unread: true,
     messages: [
-      { id: '1', sender: 'user', text: 'Buongiorno, ho un problema con la mia pianta di basilico.', time: '10:30 AM' },
-      { id: '2', sender: 'user', text: 'Le foglie hanno delle macchie marroni e sembrano seccarsi. Cosa potrebbe essere?', time: '10:31 AM' },
+      { id: '1', sender: 'user', text: 'Good morning, I have a problem with my basil plant.', time: '10:30 AM' },
+      { id: '2', sender: 'user', text: 'The leaves have brown spots and seem to be drying out. What could it be?', time: '10:31 AM' },
     ]
   },
   {
     id: 'conv2',
-    username: 'Luca Bianchi',
-    lastMessage: 'Quale fertilizzante consigliate per le piante di pomodoro?',
+    username: 'Luke White',
+    lastMessage: 'What fertilizer do you recommend for tomato plants?',
     unread: false,
     messages: [
-      { id: '1', sender: 'user', text: 'Ciao, sto coltivando pomodori nel mio orto.', time: '09:15 AM' },
-      { id: '2', sender: 'user', text: 'Quale fertilizzante mi consigliate per avere una buona produzione?', time: '09:16 AM' },
-      { id: '3', sender: 'expert', text: 'Buongiorno! Per i pomodori consiglio un fertilizzante ricco di potassio e fosforo durante la fase di fioritura e fruttificazione.', time: '09:45 AM' },
+      { id: '1', sender: 'user', text: 'Hello, I am growing tomatoes in my garden.', time: '09:15 AM' },
+      { id: '2', sender: 'user', text: 'What fertilizer would you recommend for good production?', time: '09:16 AM' },
+      { id: '3', sender: 'expert', text: 'Good morning! For tomatoes I recommend a fertilizer rich in potassium and phosphorus during the flowering and fruiting phase.', time: '09:45 AM' },
     ]
   },
   {
     id: 'conv3',
-    username: 'Giuseppe Verdi',
-    lastMessage: 'La mia orchidea non fiorisce più, cosa posso fare?',
+    username: 'Joseph Green',
+    lastMessage: 'My orchid is not flowering anymore, what can I do?',
     unread: true,
     messages: [
-      { id: '1', sender: 'user', text: 'La mia orchidea non fiorisce più da mesi.', time: '14:22 PM' },
-      { id: '2', sender: 'user', text: 'È in un posto luminoso ma senza sole diretto, la annaffio una volta alla settimana. Cosa sto sbagliando?', time: '14:23 PM' },
+      { id: '1', sender: 'user', text: 'My orchid hasn\'t flowered for months.', time: '14:22 PM' },
+      { id: '2', sender: 'user', text: 'It\'s in a bright spot but without direct sunlight, I water it once a week. What am I doing wrong?', time: '14:23 PM' },
     ]
   }
 ];
@@ -80,17 +80,17 @@ const ChatTab = () => {
   const [currentConversation, setCurrentConversation] = useState<typeof MOCK_CONVERSATIONS[0] | null>(null);
   
   // Regular user view
-  // Real expert data - cambio da Agrotecnico a Fitopatologo Marco Nigro
+  // Real expert data - changed from Agrotecnico to Plant Pathologist Marco Nigro
   const expert = {
     id: 'marco-nigro', 
-    name: 'Fitopatologo Marco Nigro', 
-    specialty: 'Diagnosi e Cura delle Piante', 
+    name: 'Plant Pathologist Marco Nigro', 
+    specialty: 'Plant Diagnosis and Treatment', 
     avatar: '/lovable-uploads/c8ba9199-f82d-4a4f-a6ae-1c8e340ed1b5.png',
     email: 'agrotecnicomarconigro@gmail.com'
   };
   
   const [messages, setMessages] = useState<Array<{id: string, sender: string, text: string, time: string}>>([
-    { id: '1', sender: 'expert', text: 'Buongiorno! Sono Marco Nigro, fitopatologo specializzato nella diagnosi e cura delle piante. Come posso aiutarti oggi?', time: '10:30 AM' },
+    { id: '1', sender: 'expert', text: 'Good morning! I am Marco Nigro, a plant pathologist specialized in plant diagnosis and treatment. How can I help you today?', time: '10:30 AM' },
   ]);
   
   const [newMessage, setNewMessage] = useState('');
@@ -108,13 +108,13 @@ const ChatTab = () => {
   useEffect(() => {
     if (!activeChat || isMasterAccount) return;
     
-    // Simulazione di caricamento messaggi senza accesso a Supabase
+    // Simulation of loading messages without access to Supabase
     const loadDefaultMessages = () => {
-      // Imposta un messaggio iniziale dall'esperto
+      // Set an initial message from the expert
       setMessages([{ 
         id: '1', 
         sender: 'expert', 
-        text: 'Buongiorno! Sono Marco Nigro, fitopatologo specializzato nella diagnosi e cura delle piante. Come posso aiutarti oggi?', 
+        text: 'Good morning! I am Marco Nigro, a plant pathologist specialized in plant diagnosis and treatment. How can I help you today?', 
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) 
       }]);
       
@@ -165,7 +165,7 @@ const ChatTab = () => {
           conv.id === currentConversation.id ? {
             ...conv, 
             messages: [...conv.messages, expertMessage],
-            lastMessage: `Fitopatologo: ${newMessage}`
+            lastMessage: `Plant Pathologist: ${newMessage}`
           } : conv
         )
       );
@@ -176,11 +176,11 @@ const ChatTab = () => {
         return {
           ...prev,
           messages: [...prev.messages, expertMessage],
-          lastMessage: `Fitopatologo: ${newMessage}`
+          lastMessage: `Plant Pathologist: ${newMessage}`
         };
       });
       
-      toast.success("Risposta inviata con successo!");
+      toast.success("Reply sent successfully!");
       setNewMessage('');
       return;
     }
@@ -197,32 +197,32 @@ const ChatTab = () => {
     setIsSending(true);
     
     try {
-      // Invio notifica all'esperto tramite edge function
+      // Send notification to expert via edge function
       const result = await mockSupabase.functions.invoke("send-specialist-notification", {
         body: {
           expertName: expert.name,
-          userEmail: userProfile?.email || 'utente@esempio.com',
-          userName: userProfile?.username || 'Utente',
+          userEmail: userProfile?.email || 'user@example.com',
+          userName: userProfile?.username || 'User',
           message: newMessage
         }
       });
       
       if (result.error) {
-        throw new Error("Errore nell'invio della notifica");
+        throw new Error("Error sending notification");
       }
       
-      toast.success(t("notificationSent", { name: expert.name }) || `Notifica inviata a ${expert.name}`);
+      toast.success(t("notificationSent", { name: expert.name }) || `Notification sent to ${expert.name}`);
       
       // Clear input after sending
       setNewMessage('');
       
-      // Invia una sola risposta standard se è il primo messaggio dell'utente
+      // Send only one standard response if it's the user's first message
       if (!hasUserSentMessage) {
         setTimeout(() => {
           const expertResponse = {
             id: (Date.now() + 1).toString(),
             sender: 'expert',
-            text: "Fitopatologo Marco Nigro le risponderà appena possibile",
+            text: "Plant Pathologist Marco Nigro will respond as soon as possible",
             time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
           };
           
@@ -231,12 +231,12 @@ const ChatTab = () => {
           setIsSending(false);
         }, 1000);
       } else {
-        // Se l'utente ha già inviato un messaggio, non inviare alcuna risposta automatica
+        // If the user has already sent a message, don't send any automatic response
         setIsSending(false);
       }
     } catch (error) {
       console.error("Error sending message:", error);
-      toast.error(t("messageSendError") || "Errore nell'invio del messaggio");
+      toast.error(t("messageSendError") || "Error sending message");
       setIsSending(false);
     }
   };
@@ -245,13 +245,13 @@ const ChatTab = () => {
   if (isMasterAccount) {
     return (
       <div className="flex flex-col min-h-full pt-6 pb-24">
-        <h2 className="text-2xl font-bold mb-4 px-4 text-drplant-green">Pannello Fitopatologo</h2>
+        <h2 className="text-2xl font-bold mb-4 px-4 text-drplant-green">Plant Pathologist Panel</h2>
         
         <div className="flex-1 flex">
           {/* Conversations sidebar */}
           <div className="w-1/3 border-r min-h-full overflow-auto">
             <div className="p-4">
-              <h3 className="font-semibold text-lg mb-2">Conversazioni</h3>
+              <h3 className="font-semibold text-lg mb-2">Conversations</h3>
               <div className="space-y-2">
                 {conversations.map(conversation => (
                   <div 
@@ -325,7 +325,7 @@ const ChatTab = () => {
                     <Input
                       value={newMessage}
                       onChange={(e) => setNewMessage(e.target.value)}
-                      placeholder="Scrivi la tua risposta..."
+                      placeholder="Type your response..."
                       className="flex-1"
                       onKeyPress={(e) => e.key === 'Enter' && !isSending && sendMessage()}
                     />
@@ -341,7 +341,7 @@ const ChatTab = () => {
             ) : (
               <div className="flex-1 flex flex-col items-center justify-center text-gray-500">
                 <MessageSquare className="h-12 w-12 mb-4 text-gray-300" />
-                <p>Seleziona una conversazione per iniziare</p>
+                <p>Select a conversation to start</p>
               </div>
             )}
           </div>
@@ -355,10 +355,10 @@ const ChatTab = () => {
     <div className="flex flex-col min-h-full pt-6 pb-24">
       {!activeChat ? (
         <div className="px-4">
-          <h2 className="text-2xl font-bold mb-6 text-drplant-green">{t("expertConsultation") || "Consulenza con Esperti"}</h2>
+          <h2 className="text-2xl font-bold mb-6 text-drplant-green">{t("expertConsultation") || "Expert Consultation"}</h2>
           
           <div className="space-y-4">
-            <p className="text-gray-600">{t("connectWithExperts") || "Connettiti con i nostri esperti per ricevere consigli sulle tue piante"}</p>
+            <p className="text-gray-600">{t("connectWithExperts") || "Connect with our experts to receive advice about your plants"}</p>
             
             <Card 
               key={expert.id} 
@@ -378,7 +378,7 @@ const ChatTab = () => {
             </Card>
             
             <div className="mt-6 text-center text-gray-500 text-sm">
-              <p>{t("responseTime") || "I nostri esperti risponderanno entro 24 ore"}</p>
+              <p>{t("responseTime") || "Our experts will respond within 24 hours"}</p>
             </div>
           </div>
         </div>
@@ -434,7 +434,7 @@ const ChatTab = () => {
               <Input
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
-                placeholder={t("typeYourMessage") || "Scrivi il tuo messaggio..."}
+                placeholder={t("typeYourMessage") || "Type your message..."}
                 className="flex-1"
                 onKeyPress={(e) => e.key === 'Enter' && !isSending && sendMessage()}
                 disabled={isSending}
