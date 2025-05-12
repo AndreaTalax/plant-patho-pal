@@ -1,11 +1,12 @@
 
-import { useState, createRef } from 'react';
+import React, { useState, createRef } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ArrowUpFromLine, Loader2 } from 'lucide-react';
 import AIPredictionService from './AIPredictionService';
 import { PlantDiagnosisResult } from '@/utils/plantDiagnosisService';
+import { supabase } from '@/integrations/supabase/client';
 
 interface PytorchAnalysisProps {
   uploadedImageUrl: string | null;
@@ -43,19 +44,24 @@ const PytorchAnalysis = ({ uploadedImageUrl, onPredictionComplete }: PytorchAnal
     formData.append("file", imageFile);
 
     try {
-      const response = await fetch("http://localhost:8000/predict", {
-        method: "POST",
+      // Use the Supabase Edge Function instead of direct fetch
+      const { data, error } = await supabase.functions.invoke('plant-diagnosis', {
         body: formData,
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
       });
 
-      const data = await response.json();
+      if (error) {
+        throw error;
+      }
       
       // Convert the response format
       const convertedResult: PlantDiagnosisResult = {
-        plant: data.plant,
-        disease: data.disease,
-        probability: data.probability,
-        suggestions: data.suggestions,
+        plant: data.plant || data.pianta,
+        disease: data.disease || data.malattia,
+        probability: data.probability || data.probabilita,
+        suggestions: data.suggestions || data.suggerimenti,
         error: data.error
       };
       
