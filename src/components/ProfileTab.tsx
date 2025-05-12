@@ -48,8 +48,8 @@ const ProfileTab = () => {
   const handleSignOut = () => {
     logout();
     toast({
-      title: "Disconnesso con successo",
-      description: "Sei stato disconnesso dal tuo account",
+      title: "Successfully logged out",
+      description: "You have been disconnected from your account",
     });
     navigate("/login");
   };
@@ -58,8 +58,8 @@ const ProfileTab = () => {
     updateProfile("phone", phoneValue);
     setEditingPhone(false);
     toast({
-      title: "Numero di telefono aggiornato",
-      description: "Il tuo numero di telefono è stato salvato con successo",
+      title: "Phone number updated",
+      description: "Your phone number has been saved successfully",
     });
   };
 
@@ -67,8 +67,8 @@ const ProfileTab = () => {
     updateProfile("address", addressValue);
     setEditingAddress(false);
     toast({
-      title: "Indirizzo aggiornato",
-      description: "Il tuo indirizzo è stato salvato con successo",
+      title: "Address updated",
+      description: "Your address has been saved successfully",
     });
   };
 
@@ -147,7 +147,7 @@ const ProfileTab = () => {
       {/* Personal Info Card */}
       <Card>
         <CardHeader className="pb-3">
-          <h3 className="text-lg font-semibold">Informazioni Personali</h3>
+          <h3 className="text-lg font-semibold">Personal Information</h3>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center gap-3 text-gray-600">
@@ -162,7 +162,7 @@ const ProfileTab = () => {
                 <Input 
                   value={phoneValue} 
                   onChange={(e) => setPhoneValue(e.target.value)}
-                  placeholder="Inserisci numero di telefono"
+                  placeholder="Enter phone number"
                   className="flex-grow"
                 />
                 <Button size="icon" onClick={handleSavePhone}>
@@ -171,7 +171,7 @@ const ProfileTab = () => {
               </div>
             ) : (
               <>
-                <span className="flex-grow">{userProfile.phone || "Non specificato"}</span>
+                <span className="flex-grow">{userProfile.phone || "Not specified"}</span>
                 <Button variant="ghost" size="icon" onClick={() => setEditingPhone(true)}>
                   <Edit className="h-4 w-4" />
                 </Button>
@@ -186,7 +186,7 @@ const ProfileTab = () => {
                 <Input 
                   value={addressValue} 
                   onChange={(e) => setAddressValue(e.target.value)}
-                  placeholder="Inserisci indirizzo"
+                  placeholder="Enter address"
                   className="flex-grow"
                 />
                 <Button size="icon" onClick={handleSaveAddress}>
@@ -195,7 +195,7 @@ const ProfileTab = () => {
               </div>
             ) : (
               <>
-                <span className="flex-grow">{userProfile.address || "Non specificato"}</span>
+                <span className="flex-grow">{userProfile.address || "Not specified"}</span>
                 <Button variant="ghost" size="icon" onClick={() => setEditingAddress(true)}>
                   <Edit className="h-4 w-4" />
                 </Button>
@@ -209,7 +209,7 @@ const ProfileTab = () => {
       <div className="space-y-3">
         <Button variant="outline" className="w-full justify-start" size="lg" onClick={() => setSettingsOpen(true)}>
           <Settings className="mr-2" />
-          Impostazioni
+          Settings
         </Button>
         <Button variant="outline" className="w-full justify-start" size="lg" onClick={() => setPrivacyPolicyOpen(true)}>
           <Shield className="mr-2" />
@@ -217,7 +217,7 @@ const ProfileTab = () => {
         </Button>
         <Button variant="outline" className="w-full justify-start" size="lg" onClick={() => setCredentialsOpen(true)}>
           <User className="mr-2" />
-          Cambia Username & Password
+          Change Username & Password
         </Button>
         <Button 
           variant="outline" 
@@ -226,7 +226,7 @@ const ProfileTab = () => {
           onClick={handleSignOut}
         >
           <LogOut className="mr-2" />
-          Esci
+          Sign Out
         </Button>
       </div>
 

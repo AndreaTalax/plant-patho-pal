@@ -8,14 +8,14 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { toast } from '@/components/ui/sonner';
 
-// Mock product data
+// Mock product data with real product images
 const PRODUCTS = [
   {
     id: '1',
     name: 'Organic Neem Oil',
     category: 'Fungicides',
     price: 19.99,
-    image: 'https://images.unsplash.com/photo-1585687433492-9c648106f131?q=80&w=400&h=400&auto=format&fit=crop',
+    image: '/lovable-uploads/neem-oil.jpg', 
     description: 'Natural remedy for powdery mildew and aphids. Safe for organic gardening.',
   },
   {
@@ -23,7 +23,7 @@ const PRODUCTS = [
     name: 'Plant Vitality Boost',
     category: 'Nutrients',
     price: 15.50,
-    image: 'https://images.unsplash.com/photo-1625246333195-78d73c0c15b1?q=80&w=400&h=400&auto=format&fit=crop',
+    image: '/lovable-uploads/plant-vitality.jpg',
     description: 'Enhances plant immunity and growth. Ideal for recovering plants.',
   },
   {
@@ -31,7 +31,7 @@ const PRODUCTS = [
     name: 'Copper Fungicide',
     category: 'Fungicides',
     price: 24.95,
-    image: 'https://images.unsplash.com/photo-1635348424978-142afa11e458?q=80&w=400&h=400&auto=format&fit=crop',
+    image: '/lovable-uploads/copper-fungicide.jpg',
     description: 'Effective against leaf spots and blights. License-free formula.',
   },
   {
@@ -39,7 +39,7 @@ const PRODUCTS = [
     name: 'Insecticidal Soap',
     category: 'Insecticides',
     price: 12.99,
-    image: 'https://images.unsplash.com/photo-1588196749597-9ff075ee6b5b?q=80&w=400&h=400&auto=format&fit=crop',
+    image: '/lovable-uploads/insecticidal-soap.jpg',
     description: 'Controls aphids, mites and whiteflies. Safe for beneficial insects.',
   },
   {
@@ -47,7 +47,7 @@ const PRODUCTS = [
     name: 'Soil pH Tester Kit',
     category: 'Tools',
     price: 29.95,
-    image: 'https://images.unsplash.com/photo-1603912699214-92627f304eb6?q=80&w=400&h=400&auto=format&fit=crop',
+    image: '/lovable-uploads/soil-ph-tester.jpg',
     description: 'Accurately measure soil pH levels. Essential for plant health diagnosis.',
   }
 ];
