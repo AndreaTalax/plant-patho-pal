@@ -42,13 +42,13 @@ const Index = () => {
     <div className="bg-gradient-to-b from-sky-50 to-white min-h-screen pb-safe">
       <Header />
 
-      <div className="relative pt-24 pb-20 md:pt-32 md:pb-28 px-4 overflow-hidden">
+      <div className="relative pt-16 md:pt-24 pb-4 px-4 overflow-hidden">
         <div className="container mx-auto">
           <div className="max-w-3xl mx-auto text-center">
-            <h1 className="text-4xl md:text-5xl font-bold text-drplant-blue mb-6">
+            <h1 className="text-3xl md:text-4xl font-bold text-drplant-blue mb-4">
               {isMasterAccount ? 'Plant Health Specialist Dashboard' : 'Smart Plant Disease Diagnosis'}
             </h1>
-            <p className="text-lg md:text-xl text-gray-600 mb-8">
+            <p className="text-md md:text-lg text-gray-600">
               {isMasterAccount 
                 ? 'Connect with users and provide expert plant health advice and product recommendations.'
                 : 'Get instant plant health analysis and expert consultation with our advanced AI-powered diagnosis system.'}
@@ -59,7 +59,7 @@ const Index = () => {
         <div className="absolute top-1/4 -right-24 w-64 h-64 bg-drplant-green/10 rounded-full blur-3xl"/>
       </div>
 
-      <div className="container mx-auto px-4 pb-16">
+      <div className="container mx-auto px-4 pb-24 mt-4">
         <div className="relative bg-white rounded-2xl shadow-lg p-4 min-h-[60vh]">
           {activeTab === 'diagnose' && !isMasterAccount && <DiagnoseTab />}
           {activeTab === 'chat' && <ChatTab />}

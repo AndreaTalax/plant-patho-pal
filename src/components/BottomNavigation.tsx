@@ -33,11 +33,11 @@ const BottomNavigation = ({ activeTab, setActiveTab }: BottomNavigationProps) =>
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-md border-t border-gray-100 shadow-lg z-50 pb-safe">
       <div className="container mx-auto">
-        <div className={`grid grid-cols-${tabs.length} gap-1`}>
+        <div className="flex justify-between">
           {tabs.map((tab) => (
             <button
               key={tab.name}
-              className={`flex flex-col items-center justify-center py-3 px-1 transition-colors ${
+              className={`flex flex-col items-center justify-center py-3 px-4 transition-colors ${
                 activeTab === tab.name
                   ? 'text-drplant-blue'
                   : 'text-gray-500 hover:text-drplant-blue/70'
