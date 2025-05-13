@@ -4,7 +4,6 @@ import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { useToast } from "@/components/ui/use-toast";
 import { Leaf, LockKeyhole, Mail, AlertCircle } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { 
@@ -18,7 +17,9 @@ import {
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
+import { toast } from "sonner";
 
+// Define the validation schema for the sign-up form
 const signUpSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address" }),
   password: z.string().min(6, { message: "Password must contain at least 6 characters" }),
@@ -35,7 +36,6 @@ const SignUp = () => {
   const [emailSent, setEmailSent] = useState(false);
   const [isRateLimited, setIsRateLimited] = useState(false);
   const navigate = useNavigate();
-  const { toast } = useToast();
   const { register } = useAuth();
 
   const form = useForm<SignUpFormValues>({
@@ -50,16 +50,21 @@ const SignUp = () => {
   const onSubmit = async (values: SignUpFormValues) => {
     setIsLoading(true);
     setIsRateLimited(false);
-
+    
     try {
+      // Clear any previous toasts to prevent accumulation
+      toast.dismiss();
+      
       await register(values.email, values.password);
       
       setEmailSent(true);
-      toast({
-        title: "Registration completed",
+      toast.success("Registration completed", {
         description: "We have sent you a confirmation email. If you don't see it in your inbox, please check your spam or promotions folder.",
+        duration: 8000,
+        dismissible: true,
       });
     } catch (error: any) {
+      console.error("Registration error:", error);
       let errorMessage = "A problem occurred during registration";
       let registrationSuccessful = false;
       
@@ -82,15 +87,16 @@ const SignUp = () => {
       
       if (registrationSuccessful) {
         setEmailSent(true);
-        toast({
-          title: "Registration completed",
+        toast.success("Registration completed", {
           description: errorMessage,
+          duration: 8000,
+          dismissible: true,
         });
       } else {
-        toast({
-          variant: "destructive",
-          title: "Registration error",
+        toast.error("Registration error", {
           description: errorMessage,
+          duration: 8000,
+          dismissible: true,
         });
       }
     } finally {
@@ -145,7 +151,10 @@ const SignUp = () => {
               <Button 
                 variant="outline" 
                 className="mt-4 w-full"
-                onClick={() => navigate('/login')}
+                onClick={() => {
+                  toast.dismiss(); // Clear any toasts on navigation
+                  navigate('/login');
+                }}
               >
                 Back to login
               </Button>

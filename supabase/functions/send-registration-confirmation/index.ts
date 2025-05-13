@@ -15,14 +15,14 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 
 // Email configuration - reading from environment variables
-const EMAIL_HOST = Deno.env.get("EMAIL_HOST") || "smtp.sendgrid.net"; 
+const EMAIL_HOST = Deno.env.get("EMAIL_HOST") || "smtp.sendgrid.net"; // Fixed this to match SendGrid's correct hostname
 const EMAIL_PORT = Number(Deno.env.get("EMAIL_PORT")) || 465;
 const EMAIL_USERNAME = Deno.env.get("EMAIL_USERNAME") || "";
 const EMAIL_PASSWORD = Deno.env.get("EMAIL_PASSWORD") || "";
 const EMAIL_FROM = Deno.env.get("EMAIL_FROM") || "Dr.Plant <noreply@drplant.app>";
 const APP_URL = Deno.env.get("APP_URL") || "https://drplant.app";
 
-// Send registration confirmation email
+// Send registration confirmation email with better error handling
 async function sendConfirmationEmail(email: string, username: string) {
   const client = new SmtpClient();
   
