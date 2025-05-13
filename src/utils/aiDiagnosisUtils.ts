@@ -1,3 +1,4 @@
+
 // This file contains utilities for AI-powered plant diagnosis
 
 // Mock model information
@@ -256,7 +257,14 @@ function getPossiblePlantSpecies(): string {
 }
 
 // Simulated leaf verification function with PictureThis enhancement
-const verifyLeafImage = (image: string): { isLeaf: boolean, confidence: number, leafDetails?: any } => {
+// Updated return type to include leafPercentage and boundingBox
+const verifyLeafImage = (image: string): { 
+  isLeaf: boolean, 
+  confidence: number, 
+  leafPercentage?: number,
+  boundingBox?: {x: number, y: number, width: number, height: number},
+  leafDetails?: any 
+} => {
   // In a real implementation, this would use PictureThis specialized leaf detection
   // For simulation, this has a 10% chance to fail (improved from 15%)
   const isLeaf = Math.random() > 0.1;
@@ -268,6 +276,14 @@ const verifyLeafImage = (image: string): { isLeaf: boolean, confidence: number, 
       texture: ["smooth", "rough", "waxy", "hairy"][Math.floor(Math.random() * 4)],
       shape: ["ovate", "lanceolate", "cordate", "palmate", "pinnate"][Math.floor(Math.random() * 5)],
       margin: ["entire", "serrate", "dentate", "lobed"][Math.floor(Math.random() * 4)]
+    } : undefined,
+    // Add these properties directly to the return object
+    leafPercentage: isLeaf ? 60 + Math.floor(Math.random() * 35) : undefined,
+    boundingBox: isLeaf ? {
+      x: Math.floor(Math.random() * 50),
+      y: Math.floor(Math.random() * 50),
+      width: 150 + Math.floor(Math.random() * 100),
+      height: 150 + Math.floor(Math.random() * 100)
     } : undefined
   };
 };
@@ -318,16 +334,17 @@ export const analyzeImage = async (
   // Leaf verification step with PictureThis enhancements
   const leafVerification = verifyLeafImage(imageData);
   
-  // Add simulated bounding box for leaf detection with PictureThis
-  if (leafVerification.isLeaf) {
-    leafVerification.leafPercentage = 60 + Math.floor(Math.random() * 35);
-    leafVerification.boundingBox = {
-      x: Math.floor(Math.random() * 50),
-      y: Math.floor(Math.random() * 50),
-      width: 150 + Math.floor(Math.random() * 100),
-      height: 150 + Math.floor(Math.random() * 100)
-    };
-  }
+  // These lines were causing the error - now we don't need to add these properties
+  // as they are already included in the leafVerification return type
+  // if (leafVerification.isLeaf) {
+  //   leafVerification.leafPercentage = 60 + Math.floor(Math.random() * 35);
+  //   leafVerification.boundingBox = {
+  //     x: Math.floor(Math.random() * 50),
+  //     y: Math.floor(Math.random() * 50),
+  //     width: 150 + Math.floor(Math.random() * 100),
+  //     height: 150 + Math.floor(Math.random() * 100)
+  //   };
+  // }
   
   // Generate thermal map with PictureThis technology
   const thermalMap = generateThermalMap(imageData);
