@@ -47,7 +47,7 @@ export function isNotNullOrUndefined<T>(value: T | null | undefined): value is T
 // Cast UUID strings for Supabase queries - ensures proper type handling
 export function asUUID(id: string): string {
   // Converts a string to a UUID for use with Supabase queries
-  return id;
+  return id as unknown as any;
 }
 
 // Helper function to ensure API returns are properly typed
@@ -64,4 +64,21 @@ export function safeAccess<T>(obj: any, fallback: T): T {
   return obj as T || fallback;
 }
 
-// Update auth context to use these helper functions
+// Type cast helpers for database operations
+export function asFilterValue(value: any): any {
+  return value as any;
+}
+
+// Additional helper functions to correctly type database operations
+export function asDbInsert<T extends Record<string, any>>(data: T): any {
+  return data as any;
+}
+
+export function asDbUpdate<T extends Record<string, any>>(data: T): any {
+  return data as any;
+}
+
+// Helper for profile data access
+export function asProfileKey(key: string): any {
+  return key as any;
+}

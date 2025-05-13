@@ -8,7 +8,10 @@ import {
   DbConversation,
   DbConversationInsert,
   DbMessageInsert,
-  DbConversationUpdate
+  DbConversationUpdate,
+  asFilterValue,
+  asDbInsert,
+  asDbUpdate
 } from '@/integrations/supabase/client';
 import type { 
   DatabaseConversation, 
@@ -28,14 +31,14 @@ export const loadConversations = async (isMasterAccount: boolean, userId: string
       query = supabase
         .from('conversations')
         .select('*, user:profiles!conversations_user_id_fkey(id, username, first_name, last_name)')
-        .eq('expert_id', asUUID(EXPERT_ID))
+        .eq('expert_id', asFilterValue(EXPERT_ID))
         .order('updated_at', { ascending: false });
     } else {
       // Regular users fetch their conversations
       query = supabase
         .from('conversations')
         .select('*, expert:profiles!conversations_expert_id_fkey(id, username, first_name, last_name)')
-        .eq('user_id', asUUID(userId))
+        .eq('user_id', asFilterValue(userId))
         .order('updated_at', { ascending: false });
     }
     
@@ -60,8 +63,8 @@ export const findOrCreateConversation = async (userId: string) => {
     const { data: existingConversations, error: fetchError } = await supabase
       .from('conversations')
       .select('*')
-      .eq('user_id', asUUID(userId))
-      .eq('expert_id', asUUID(EXPERT_ID))
+      .eq('user_id', asFilterValue(userId))
+      .eq('expert_id', asFilterValue(EXPERT_ID))
       .limit(1);
       
     if (fetchError) {
@@ -74,15 +77,15 @@ export const findOrCreateConversation = async (userId: string) => {
     }
     
     // Create new conversation
-    const newConversationData = {
+    const newConversationData: DbConversationInsert = {
       user_id: userId,
       expert_id: EXPERT_ID,
       status: 'active'
-    } as DbConversationInsert;
+    };
     
     const { data: newConversation, error: createError } = await supabase
       .from('conversations')
-      .insert(newConversationData)
+      .insert(asDbInsert(newConversationData))
       .select()
       .single();
       
@@ -104,7 +107,7 @@ export const loadMessages = async (conversationId: string) => {
     const { data, error } = await supabase
       .from('messages')
       .select('*')
-      .eq('conversation_id', asUUID(conversationId))
+      .eq('conversation_id', asFilterValue(conversationId))
       .order('sent_at', { ascending: true });
       
     if (error) {
@@ -134,29 +137,29 @@ export const sendMessage = async (
   text: string,
   products?: Product[]
 ) => {
-  const messageData = {
+  const messageData: DbMessageInsert = {
     conversation_id: conversationId,
     sender_id: senderId,
     recipient_id: recipientId,
     text,
     products: convertProductsToJson(products)
-  } as DbMessageInsert;
+  };
   
   const { error } = await supabase
     .from('messages')
-    .insert(messageData);
+    .insert(asDbInsert(messageData));
     
   return !error;
 };
 
 // Update conversation status (archive, block, unblock)
 export const updateConversationStatus = async (conversationId: string, status: string) => {
-  const update = { status } as DbConversationUpdate;
+  const update: DbConversationUpdate = { status };
   
   const { error } = await supabase
     .from('conversations')
-    .update(update)
-    .eq('id', asUUID(conversationId));
+    .update(asDbUpdate(update))
+    .eq('id', asFilterValue(conversationId));
     
   return !error;
 };

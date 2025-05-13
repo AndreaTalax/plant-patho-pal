@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { toast } from '@/components/ui/sonner';
 import { supabase, EXPERT_ID } from '@/integrations/supabase/client';
-import { Message, DatabaseConversation } from '../types';
+import { Message, DatabaseConversation, EXPERT } from '../types';
 import {
   findOrCreateConversation,
   loadMessages,
