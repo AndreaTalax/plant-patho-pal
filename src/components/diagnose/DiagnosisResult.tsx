@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { MessageCircle, Loader2, Eye, EyeOff, Thermometer, Leaf } from 'lucide-react';
+import { MessageCircle, Loader2, Eye, EyeOff, Thermometer, Leaf, Check, X } from 'lucide-react';
 import DiagnosisTabs from './DiagnosisTabs';
 import { PlantInfoFormValues } from './PlantInfoForm';
 
@@ -50,13 +50,18 @@ const DiagnosisResult = ({
   navigateToLibrary
 }: DiagnosisResultProps) => {
   const [showThermalMap, setShowThermalMap] = useState(false);
+  const [showAiServices, setShowAiServices] = useState(false);
 
   // Check if we have a thermal map
   const hasThermalMap = analysisDetails?.thermalMap && !isAnalyzing;
   
-  // Check if PictureThis identified a plant species
-  const plantSpecies = analysisDetails?.pictureThisInsights?.plantSpecies;
+  // Check if multi-service identified a plant species
+  const plantSpecies = analysisDetails?.multiServiceInsights?.plantSpecies;
   
+  // Check if we have AI service-specific results
+  const hasAiServiceData = analysisDetails?.plantVerification?.aiServices &&
+                           analysisDetails.plantVerification.aiServices.length > 0;
+
   return (
     <Card className="bg-white p-6 shadow-md rounded-2xl w-full max-w-2xl">
       <div className="flex flex-col md:flex-row gap-6">
@@ -68,7 +73,7 @@ const DiagnosisResult = ({
               className="w-full h-full object-cover"
             />
             
-            {/* Plant species badge from PictureThis */}
+            {/* Plant species badge from multi-service */}
             {plantSpecies && !isAnalyzing && (
               <div className="absolute top-0 left-0 m-2">
                 <Badge className="bg-drplant-green text-white flex items-center gap-1 py-1.5">
@@ -118,11 +123,11 @@ const DiagnosisResult = ({
               >
                 {showThermalMap ? (
                   <>
-                    <EyeOff className="h-4 w-4" /> Hide PictureThis Scan
+                    <EyeOff className="h-4 w-4" /> Hide Thermal Scan
                   </>
                 ) : (
                   <>
-                    <Thermometer className="h-4 w-4" /> Show PictureThis Scan
+                    <Thermometer className="h-4 w-4" /> Show Thermal Scan
                   </>
                 )}
               </Button>
@@ -130,6 +135,64 @@ const DiagnosisResult = ({
                 <p className="text-xs text-gray-500 mt-1">
                   Red areas indicate possible disease locations
                 </p>
+              )}
+            </div>
+          )}
+          
+          {/* AI Services analysis results */}
+          {hasAiServiceData && !isAnalyzing && (
+            <div className="mb-4">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => setShowAiServices(!showAiServices)}
+                className={`flex items-center gap-1.5 w-full ${showAiServices ? 'bg-green-50 text-green-700' : ''}`}
+              >
+                {showAiServices ? (
+                  <>
+                    <EyeOff className="h-4 w-4" /> Hide AI Services Data
+                  </>
+                ) : (
+                  <>
+                    <Eye className="h-4 w-4" /> Show AI Services Data
+                  </>
+                )}
+              </Button>
+              
+              {showAiServices && (
+                <div className="mt-2 border rounded-lg p-2 text-xs bg-gray-50">
+                  <h4 className="font-semibold mb-1">AI Service Results</h4>
+                  <div className="space-y-1.5">
+                    {analysisDetails.plantVerification.aiServices.map((service: any, index: number) => (
+                      <div key={index} className="flex items-center justify-between">
+                        <span>{service.serviceName}</span>
+                        <div className="flex items-center gap-1">
+                          {service.result ? (
+                            <Check className="h-3 w-3 text-green-600" />
+                          ) : (
+                            <X className="h-3 w-3 text-red-600" />
+                          )}
+                          <span className={service.result ? "text-green-600" : "text-red-600"}>
+                            {Math.round(service.confidence * 100)}%
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  
+                  {analysisDetails.multiServiceInsights && (
+                    <div className="mt-2 pt-2 border-t">
+                      <div className="flex justify-between">
+                        <span>Agreement Score:</span>
+                        <span className="font-medium">{analysisDetails.multiServiceInsights.agreementScore}%</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Primary Service:</span>
+                        <span className="font-medium">{analysisDetails.multiServiceInsights.primaryService}</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
               )}
             </div>
           )}
@@ -180,7 +243,7 @@ const DiagnosisResult = ({
                 <progress value={analysisProgress} max="100" className="w-full h-2" />
               </div>
               <p className="text-xs text-gray-500 mt-2">
-                PictureThis AI is examining leaf patterns, spots, and discoloration
+                Multiple AI services are analyzing your plant
               </p>
             </div>
           ) : diagnosisResult && diagnosedDisease ? (
@@ -195,9 +258,14 @@ const DiagnosisResult = ({
                   <Badge className="bg-red-500">Low Reliability</Badge>
                 )}
                 
-                {/* PictureThis badge */}
-                {analysisDetails?.pictureThisInsights && (
-                  <Badge className="bg-blue-500 ml-auto">PictureThis™</Badge>
+                {/* AI Services badge */}
+                {analysisDetails?.multiServiceInsights && (
+                  <div className="flex ml-auto gap-1">
+                    <Badge className="bg-blue-500">PictureThis™</Badge>
+                    <Badge className="bg-purple-500">PlantIdentifier</Badge>
+                    <Badge className="bg-green-600">GIArdi</Badge>
+                    <Badge className="bg-orange-500">RiconoscereMalattie</Badge>
+                  </div>
                 )}
               </div>
               
