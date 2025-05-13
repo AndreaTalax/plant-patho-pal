@@ -13,7 +13,7 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
 };
 
-// Common plant names for identification when HuggingFace returns a plant name
+// Common plant names for identification
 const plantSpeciesMap = {
   'tomato': 'Tomato (Solanum lycopersicum)',
   'potato': 'Potato (Solanum tuberosum)',
@@ -76,43 +76,56 @@ serve(async (req) => {
     // Read the image file as an ArrayBuffer
     const imageArrayBuffer = await imageFile.arrayBuffer();
     
-    // Make a request to the Hugging Face API
-    const response = await fetch(
-      "https://api-inference.huggingface.co/models/VineetJohn/plant-disease-detection",
-      {
-        headers: {
-          Authorization: `Bearer ${huggingFaceToken}`,
-          "Content-Type": "application/octet-stream",
-        },
-        method: "POST",
-        body: new Uint8Array(imageArrayBuffer),
-      }
-    );
-
-    // Check if the response is successful
-    if (!response.ok) {
-      const errorData = await response.text();
-      console.error(`HuggingFace API Error: ${errorData}`);
-      return new Response(
-        JSON.stringify({ 
-          error: 'Error from HuggingFace API', 
-          details: errorData 
-        }), 
-        {
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
-      );
-    }
-
-    // Parse the response from the HuggingFace API
-    const result = await response.json();
+    // Try multiple models for plant disease detection
+    const models = [
+      "noah-fl/plant_disease_detection",  // This is an alternative model
+      "lsassaman/plant-disease",          // Another alternative model
+      "VineetJohn/plant-disease-detection" // Original model (try as fallback)
+    ];
     
-    // If there's an error in the result, return it
-    if (result.error) {
-      console.error(`HuggingFace Result Error: ${result.error}`);
+    let result = null;
+    let errorMessages = [];
+    
+    // Try each model in order until one works
+    for (const model of models) {
+      try {
+        console.log(`Trying model: ${model}`);
+        const response = await fetch(
+          `https://api-inference.huggingface.co/models/${model}`,
+          {
+            headers: {
+              Authorization: `Bearer ${huggingFaceToken}`,
+              "Content-Type": "application/octet-stream",
+            },
+            method: "POST",
+            body: new Uint8Array(imageArrayBuffer),
+          }
+        );
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          errorMessages.push(`Model ${model} error: ${errorText}`);
+          console.error(`HuggingFace API Error with model ${model}: ${errorText}`);
+          continue; // Try next model
+        }
+        
+        // If we get a successful response, parse it and exit the loop
+        result = await response.json();
+        console.log(`Successful response from model ${model}`);
+        break;
+      } catch (err) {
+        console.error(`Error with model ${model}: ${err.message}`);
+        errorMessages.push(`Model ${model} exception: ${err.message}`);
+      }
+    }
+    
+    // If all models failed, return an error
+    if (!result) {
       return new Response(
-        JSON.stringify({ error: result.error }),
+        JSON.stringify({
+          error: 'All plant disease detection models failed',
+          details: errorMessages.join('; ')
+        }),
         {
           status: 500,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -120,8 +133,25 @@ serve(async (req) => {
       );
     }
 
-    // Get the top prediction
-    const topPrediction = result[0] || { label: 'Unknown', score: 0 };
+    // If we have an array result, get the top prediction
+    let topPrediction;
+    if (Array.isArray(result)) {
+      topPrediction = result[0] || { label: 'Unknown', score: 0 };
+    } else if (result.label) {
+      // Some models return a single prediction object
+      topPrediction = result;
+    } else if (result.predictions) {
+      // Some models use a "predictions" field 
+      topPrediction = result.predictions[0] || { label: 'Unknown', score: 0 };
+    } else {
+      // If the result format is unknown, create a default prediction
+      topPrediction = { label: 'Unknown Format', score: 0 };
+    }
+    
+    // Ensure allPredictions is an array
+    const allPredictions = Array.isArray(result) ? result :
+                         result.predictions ? result.predictions : 
+                         result.label ? [result] : [];
     
     // Determine if plant is healthy
     const healthy = isPlantHealthy(topPrediction.label);
@@ -137,8 +167,8 @@ serve(async (req) => {
     // Format the analysis result
     const analysisResult = {
       label: topPrediction.label,
-      score: topPrediction.score,
-      allPredictions: result,
+      score: topPrediction.score || 0,
+      allPredictions: allPredictions,
       timestamp: new Date().toISOString(),
       healthy: healthy,
       plantName: plantName

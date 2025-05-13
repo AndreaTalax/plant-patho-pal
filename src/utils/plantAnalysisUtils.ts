@@ -56,21 +56,35 @@ export const formatHuggingFaceResult = (huggingFaceResult: any) => {
     return null;
   }
 
-  // Extract the primary prediction and format additional data
+  // Use the plant name from the result if available
+  const plantName = huggingFaceResult.plantName || null;
+  let plantNameOnly;
+  let speciesOnly;
+  
+  if (plantName) {
+    // Use the plantName provided by the backend
+    const parts = plantName.split(" (");
+    plantNameOnly = parts[0];
+    speciesOnly = parts[1]?.replace(")", "") || "Unidentified";
+  } else {
+    // Fallback to a random plant name
+    const randomPlantName = plantNames[Math.floor(Math.random() * plantNames.length)];
+    plantNameOnly = randomPlantName.split(' (')[0];
+    speciesOnly = randomPlantName.split(' (')[1]?.replace(')', '') || 'Unidentified';
+  }
+
+  // Extract the primary prediction
   const mainPrediction = {
     label: huggingFaceResult.label,
     score: huggingFaceResult.score || 0
   };
 
-  // Determine if the plant is healthy based on the label
-  const isHealthy = mainPrediction.label.toLowerCase().includes('healthy') || 
-                    mainPrediction.label.toLowerCase().includes('normal');
+  // Check for health flag directly from the result, or determine from label
+  const isHealthy = huggingFaceResult.healthy !== undefined ? 
+                   huggingFaceResult.healthy : 
+                   mainPrediction.label.toLowerCase().includes('healthy') || 
+                   mainPrediction.label.toLowerCase().includes('normal');
                     
-  // Select a random plant name for identification
-  const randomPlantName = plantNames[Math.floor(Math.random() * plantNames.length)];
-  const plantNameOnly = randomPlantName.split(' (')[0];
-  const speciesOnly = randomPlantName.split(' (')[1]?.replace(')', '') || 'Unidentified';
-
   // Format all predictions for alternative diagnoses
   const alternativeDiagnoses = huggingFaceResult.allPredictions
     ? huggingFaceResult.allPredictions
