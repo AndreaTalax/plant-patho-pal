@@ -41,6 +41,14 @@ export interface AnalysisDetails {
     diseaseMatchScore?: number;
     diagnosisTimestamp?: string;
     apiVersions?: Record<string, string>;
+    huggingFaceResult?: {
+      label: string;
+      score: number;
+      allPredictions?: Array<{
+        label: string;
+        score: number;
+      }>;
+    };
   };
   plantixInsights?: {
     plantType?: string;

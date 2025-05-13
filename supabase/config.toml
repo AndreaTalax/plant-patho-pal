@@ -12,3 +12,7 @@ import_map = ["./supabase/functions/import_map.json"]
 [functions.configure-auth-settings]
 verify_jwt = true
 import_map = ["./supabase/functions/import_map.json"]
+
+[functions.analyze-plant]
+verify_jwt = false
+import_map = ["./supabase/functions/import_map.json"]

@@ -1,4 +1,5 @@
 
+import { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { PlantInfoFormValues } from '../PlantInfoForm';
@@ -79,6 +80,13 @@ const DiagnosisResult = ({
                   <Badge className="bg-yellow-500">Medium Reliability</Badge>
                 ) : (
                   <Badge className="bg-red-500">Low Reliability</Badge>
+                )}
+                
+                {/* Aggiungiamo badge per indicare l'uso di HuggingFace */}
+                {analysisDetails?.multiServiceInsights?.huggingFaceResult && (
+                  <Badge className="bg-blue-500 flex items-center gap-1">
+                    <span className="text-xs">HuggingFace</span>
+                  </Badge>
                 )}
               </div>
               
