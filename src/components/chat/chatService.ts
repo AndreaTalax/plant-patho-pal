@@ -60,6 +60,18 @@ export const loadConversations = async (isMasterAccount: boolean, userId: string
 // Find or create conversation between user and expert
 export const findOrCreateConversation = async (userId: string) => {
   try {
+    // For testing accounts, create a mock conversation ID
+    if (userId === "test@gmail.com" || userId === "test-user-id") {
+      return {
+        id: "mock-conversation-id",
+        user_id: userId,
+        expert_id: EXPERT_ID,
+        status: 'active',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      } as DatabaseConversation;
+    }
+    
     // Check if conversation already exists
     const { data: existingConversations, error: fetchError } = await supabase
       .from('conversations')
@@ -105,6 +117,11 @@ export const findOrCreateConversation = async (userId: string) => {
 // Load messages for a specific conversation
 export const loadMessages = async (conversationId: string) => {
   try {
+    // For mock conversations, return empty array
+    if (conversationId === "mock-conversation-id") {
+      return [];
+    }
+    
     const { data, error } = await supabase
       .from('messages')
       .select('*')
@@ -138,6 +155,11 @@ export const sendMessage = async (
   text: string,
   products?: Product[]
 ) => {
+  // For mock conversations, always return success
+  if (conversationId === "mock-conversation-id") {
+    return true;
+  }
+  
   const messageData: DbMessageInsert = {
     conversation_id: conversationId,
     sender_id: senderId,
