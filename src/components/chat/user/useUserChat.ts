@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { toast } from '@/components/ui/sonner';
+import { toast } from '@/components/ui/use-toast';
 import { supabase, EXPERT_ID } from '@/integrations/supabase/client';
 import { Message, DatabaseConversation, EXPERT } from '../types';
 import {

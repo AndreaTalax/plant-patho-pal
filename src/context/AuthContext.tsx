@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, ReactNode, useEffect } from "react";
-import { supabase, asProfileKey } from '@/integrations/supabase/client';
+import { supabase, asProfileKey, asFilterValue, asDbUpdate } from '@/integrations/supabase/client';
 import { Session, User } from "@supabase/supabase-js";
 
 // Define type for user profile
@@ -135,7 +135,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
-        .eq('id', userId)
+        .eq(asProfileKey('id'), asFilterValue(userId))
         .single();
         
       if (error) {
@@ -143,9 +143,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
       
       if (data) {
-        setUsername(data.username || data.email?.split('@')[0] || '');
+        const username = data.username || data.email?.split('@')[0] || '';
+        setUsername(username);
         setUserProfile({
-          username: data.username || data.email?.split('@')[0] || '',
+          username: username,
           firstName: data.first_name || '',
           lastName: data.last_name || '',
           email: data.email || user?.email || '',
@@ -331,8 +332,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       
       supabase
         .from('profiles')
-        .update({ username: newUsername })
-        .eq('id', user.id)
+        .update(asDbUpdate({ username: newUsername }))
+        .eq(asProfileKey('id'), asFilterValue(user.id))
         .then(({ error }) => {
           if (error) {
             console.error('Error updating username:', error);
@@ -385,8 +386,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         
         const { error } = await supabase
           .from('profiles')
-          .update(updates)
-          .eq('id', user.id);
+          .update(asDbUpdate(updates))
+          .eq(asProfileKey('id'), asFilterValue(user.id));
           
         if (error) {
           throw error;

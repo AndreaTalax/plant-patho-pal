@@ -17,8 +17,8 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     autoRefreshToken: true,
   },
   realtime: {
-    // Fix for realtime options
-    minimal: true,
+    // Using allowed options only
+    presence: true,
   },
 });
 
@@ -45,9 +45,8 @@ export function isNotNullOrUndefined<T>(value: T | null | undefined): value is T
 }
 
 // Cast UUID strings for Supabase queries - ensures proper type handling
-export function asUUID(id: string): string {
-  // Converts a string to a UUID for use with Supabase queries
-  return id as unknown as any;
+export function asUUID(id: string): any {
+  return id;
 }
 
 // Helper function to ensure API returns are properly typed
@@ -66,19 +65,19 @@ export function safeAccess<T>(obj: any, fallback: T): T {
 
 // Type cast helpers for database operations
 export function asFilterValue(value: any): any {
-  return value as any;
+  return value;
 }
 
 // Additional helper functions to correctly type database operations
 export function asDbInsert<T extends Record<string, any>>(data: T): any {
-  return data as any;
+  return data;
 }
 
 export function asDbUpdate<T extends Record<string, any>>(data: T): any {
-  return data as any;
+  return data;
 }
 
 // Helper for profile data access
 export function asProfileKey(key: string): any {
-  return key as any;
+  return key;
 }

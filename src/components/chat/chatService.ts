@@ -31,14 +31,14 @@ export const loadConversations = async (isMasterAccount: boolean, userId: string
       query = supabase
         .from('conversations')
         .select('*, user:profiles!conversations_user_id_fkey(id, username, first_name, last_name)')
-        .eq('expert_id', asFilterValue(EXPERT_ID))
+        .eq(asFilterValue('expert_id'), asFilterValue(EXPERT_ID))
         .order('updated_at', { ascending: false });
     } else {
       // Regular users fetch their conversations
       query = supabase
         .from('conversations')
         .select('*, expert:profiles!conversations_expert_id_fkey(id, username, first_name, last_name)')
-        .eq('user_id', asFilterValue(userId))
+        .eq(asFilterValue('user_id'), asFilterValue(userId))
         .order('updated_at', { ascending: false });
     }
     
@@ -63,8 +63,8 @@ export const findOrCreateConversation = async (userId: string) => {
     const { data: existingConversations, error: fetchError } = await supabase
       .from('conversations')
       .select('*')
-      .eq('user_id', asFilterValue(userId))
-      .eq('expert_id', asFilterValue(EXPERT_ID))
+      .eq(asFilterValue('user_id'), asFilterValue(userId))
+      .eq(asFilterValue('expert_id'), asFilterValue(EXPERT_ID))
       .limit(1);
       
     if (fetchError) {
@@ -107,7 +107,7 @@ export const loadMessages = async (conversationId: string) => {
     const { data, error } = await supabase
       .from('messages')
       .select('*')
-      .eq('conversation_id', asFilterValue(conversationId))
+      .eq(asFilterValue('conversation_id'), asFilterValue(conversationId))
       .order('sent_at', { ascending: true });
       
     if (error) {
@@ -159,7 +159,7 @@ export const updateConversationStatus = async (conversationId: string, status: s
   const { error } = await supabase
     .from('conversations')
     .update(asDbUpdate(update))
-    .eq('id', asFilterValue(conversationId));
+    .eq(asFilterValue('id'), asFilterValue(conversationId));
     
   return !error;
 };
