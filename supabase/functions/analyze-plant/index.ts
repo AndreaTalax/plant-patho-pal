@@ -13,6 +13,38 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
 };
 
+// Common plant names for identification when HuggingFace returns a plant name
+const plantSpeciesMap = {
+  'tomato': 'Tomato (Solanum lycopersicum)',
+  'potato': 'Potato (Solanum tuberosum)',
+  'apple': 'Apple (Malus domestica)',
+  'grape': 'Grape (Vitis vinifera)',
+  'corn': 'Corn (Zea mays)',
+  'strawberry': 'Strawberry (Fragaria ananassa)',
+  'pepper': 'Pepper (Capsicum annuum)',
+  'peach': 'Peach (Prunus persica)',
+  'orange': 'Orange (Citrus sinensis)',
+  'cherry': 'Cherry (Prunus avium)'
+};
+
+// Function to determine if plant is healthy based on label
+const isPlantHealthy = (label: string): boolean => {
+  const healthyTerms = ['healthy', 'normal', 'no disease', 'good', 'well'];
+  const label_lower = label.toLowerCase();
+  return healthyTerms.some(term => label_lower.includes(term));
+};
+
+// Function to extract plant name from label
+const extractPlantName = (label: string): string | null => {
+  // Try to extract plant name from common formats like "Tomato: Healthy" or "Healthy Apple Tree"
+  for (const [key, value] of Object.entries(plantSpeciesMap)) {
+    if (label.toLowerCase().includes(key.toLowerCase())) {
+      return value;
+    }
+  }
+  return null;
+};
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -91,12 +123,25 @@ serve(async (req) => {
     // Get the top prediction
     const topPrediction = result[0] || { label: 'Unknown', score: 0 };
     
+    // Determine if plant is healthy
+    const healthy = isPlantHealthy(topPrediction.label);
+    
+    // Extract plant name if possible
+    let plantName = extractPlantName(topPrediction.label);
+    
+    // If no specific plant is identified, use a generic placeholder
+    if (!plantName) {
+      plantName = healthy ? 'Healthy Plant (Unidentified species)' : 'Plant (Unidentified species)';
+    }
+    
     // Format the analysis result
     const analysisResult = {
       label: topPrediction.label,
       score: topPrediction.score,
       allPredictions: result,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      healthy: healthy,
+      plantName: plantName
     };
 
     // Initialize Supabase client with service role key to bypass RLS
@@ -132,10 +177,14 @@ serve(async (req) => {
       .from('diagnosi_piante')
       .insert({
         immagine_nome: imageFile.name,
-        malattia: topPrediction.label,
+        malattia: healthy ? 'Healthy' : topPrediction.label,
         accuratezza: topPrediction.score,
         data: new Date().toISOString(),
-        risultati_completi: result,
+        risultati_completi: {
+          ...analysisResult,
+          plantName: plantName,
+          healthy: healthy
+        },
         user_id: userId
       });
     

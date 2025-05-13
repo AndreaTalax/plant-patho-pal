@@ -10,6 +10,7 @@ import AiServicesData from './AiServicesData';
 import PlantInfoCard from './PlantInfoCard';
 import ActionButtons from './ActionButtons';
 import AnalysisLoader from './AnalysisLoader';
+import { Leaf } from 'lucide-react';
 
 interface DiagnosisResultProps {
   uploadedImage: string;
@@ -72,17 +73,35 @@ const DiagnosisResult = ({
             <AnalysisLoader analysisProgress={analysisProgress} />
           ) : diagnosisResult && diagnosedDisease ? (
             <div className="h-full">
-              <div className="flex items-center gap-2 mb-4">
-                <Badge className="bg-amber-500">{Math.round(diagnosedDisease.confidence * 100)}% Confidence</Badge>
-                {diagnosedDisease.confidence > 0.9 ? (
+              <div className="flex flex-wrap items-center gap-2 mb-4">
+                {/* Plant species badge */}
+                {analysisDetails?.multiServiceInsights?.plantName && (
+                  <Badge className="bg-green-600 flex items-center gap-1">
+                    <Leaf className="h-3 w-3" />
+                    <span className="text-xs">{analysisDetails.multiServiceInsights.plantName}</span>
+                  </Badge>
+                )}
+                
+                {/* Plant health status */}
+                {analysisDetails?.multiServiceInsights?.isHealthy && (
+                  <Badge className="bg-green-500">Healthy Plant</Badge>
+                )}
+                
+                {/* Confidence badge - only display if plant is not healthy */}
+                {!analysisDetails?.multiServiceInsights?.isHealthy && (
+                  <Badge className="bg-amber-500">{Math.round(diagnosedDisease.confidence * 100)}% Confidence</Badge>
+                )}
+                
+                {/* Reliability badge - only display if plant is not healthy */}
+                {!analysisDetails?.multiServiceInsights?.isHealthy && diagnosedDisease.confidence > 0.9 ? (
                   <Badge className="bg-green-500">High Reliability</Badge>
-                ) : diagnosedDisease.confidence > 0.7 ? (
+                ) : !analysisDetails?.multiServiceInsights?.isHealthy && diagnosedDisease.confidence > 0.7 ? (
                   <Badge className="bg-yellow-500">Medium Reliability</Badge>
-                ) : (
+                ) : !analysisDetails?.multiServiceInsights?.isHealthy && (
                   <Badge className="bg-red-500">Low Reliability</Badge>
                 )}
                 
-                {/* Aggiungiamo badge per indicare l'uso di HuggingFace */}
+                {/* HuggingFace badge */}
                 {analysisDetails?.multiServiceInsights?.huggingFaceResult && (
                   <Badge className="bg-blue-500 flex items-center gap-1">
                     <span className="text-xs">HuggingFace</span>

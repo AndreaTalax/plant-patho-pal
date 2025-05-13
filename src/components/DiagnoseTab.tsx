@@ -263,47 +263,96 @@ const DiagnoseTab = () => {
         throw new Error("Could not format analysis result");
       }
       
-      // Find the disease in our database based on the label from HuggingFace
-      const disease = PLANT_DISEASES.find(d => 
-        d.name.toLowerCase().includes(result.label.toLowerCase()) || 
-        result.label.toLowerCase().includes(d.name.toLowerCase())
-      );
+      // Check if the analyzed plant is healthy from the formatted result
+      const isHealthy = formattedResult.multiServiceInsights?.huggingFaceResult?.label?.toLowerCase().includes('healthy') || false;
       
-      if (disease) {
-        // Update confidence with the one from analysis
-        const diseaseWithUpdatedConfidence = {
-          ...disease,
-          confidence: result.score
-        };
+      if (isHealthy) {
+        // Handle healthy plant scenario
+        const plantName = formattedResult.multiServiceInsights?.plantName || "Unknown Plant";
         
-        setDiagnosedDisease(diseaseWithUpdatedConfidence);
-        setDiagnosisResult(`Detected ${disease.name} with ${Math.round(result.score * 100)}% confidence.`);
-        setAnalysisDetails(formattedResult);
-      } else {
-        // If no disease matches, pick a random one with low confidence as best guess
-        const randomDisease = PLANT_DISEASES[Math.floor(Math.random() * PLANT_DISEASES.length)];
-        const lowConfidence = Math.max(0.4, result.score - 0.2); // Use result confidence but lower it
-        
-        setDiagnosedDisease({
-          ...randomDisease,
-          confidence: lowConfidence
-        });
-        setDiagnosisResult(`Possible ${randomDisease.name} with ${Math.round(lowConfidence * 100)}% confidence. Consider consulting an expert.`);
+        setDiagnosisResult(`${plantName} appears to be healthy. No diseases detected.`);
         setAnalysisDetails({
           ...formattedResult,
-          identifiedFeatures: ["Partial leaf pattern match", "Some discoloration detected", "Uncertain identification"],
-          alternativeDiagnoses: PLANT_DISEASES.filter(d => d.id !== randomDisease.id)
-            .slice(0, 3)
-            .map(d => ({ disease: d.id, probability: 0.15 + Math.random() * 0.25 })),
-          plantixInsights: {
-            severity: "medium",
-            progressStage: "early",
-            spreadRisk: "medium", 
-            environmentalFactors: ["Insufficient data"],
-            reliability: "low",
-            confidenceNote: "Analysis based on limited pattern recognition"
-          }
+          multiServiceInsights: {
+            ...formattedResult.multiServiceInsights,
+            isHealthy: true,
+            plantName: plantName
+          },
+          identifiedFeatures: ["Healthy foliage", "Good leaf coloration", "No visible disease symptoms", "Normal growth pattern"],
+          alternativeDiagnoses: []
         });
+        
+        // For healthy plants, we'll set a "placeholder" disease object with healthy status
+        setDiagnosedDisease({
+          id: "healthy",
+          name: "Healthy Plant",
+          description: "This plant appears to be in good health with no signs of disease or pest infestation.",
+          causes: "Proper care, adequate watering, appropriate light exposure, and good plant health practices.",
+          treatments: [
+            "Continue current care routine",
+            "Regular monitoring for any changes",
+            "Seasonal fertilization as needed",
+            "Occasional pruning to maintain shape and encourage growth"
+          ],
+          products: [],
+          confidence: 0.95,
+          resources: []
+        });
+      } else {
+        // Find the disease in our database based on the label from HuggingFace
+        const disease = PLANT_DISEASES.find(d => 
+          d.name.toLowerCase().includes(result.label?.toLowerCase()) || 
+          result.label?.toLowerCase().includes(d.name.toLowerCase())
+        );
+        
+        if (disease) {
+          // Update confidence with the one from analysis
+          const diseaseWithUpdatedConfidence = {
+            ...disease,
+            confidence: result.score
+          };
+          
+          const plantName = formattedResult.multiServiceInsights?.plantName || "Unknown Plant";
+          
+          setDiagnosedDisease(diseaseWithUpdatedConfidence);
+          setDiagnosisResult(`Detected ${disease.name} on ${plantName} with ${Math.round(result.score * 100)}% confidence.`);
+          setAnalysisDetails({
+            ...formattedResult,
+            identifiedFeatures: formattedResult.identifiedFeatures || [
+              "Discoloration detected", 
+              "Abnormal growth pattern", 
+              "Visible symptoms on foliage", 
+              "Signs of plant stress"
+            ],
+            alternativeDiagnoses: formattedResult.alternativeDiagnoses || []
+          });
+        } else {
+          // If no disease matches, pick a random one with low confidence as best guess
+          const randomDisease = PLANT_DISEASES[Math.floor(Math.random() * PLANT_DISEASES.length)];
+          const lowConfidence = Math.max(0.4, result.score - 0.2); // Use result confidence but lower it
+          const plantName = formattedResult.multiServiceInsights?.plantName || "Unknown Plant";
+          
+          setDiagnosedDisease({
+            ...randomDisease,
+            confidence: lowConfidence
+          });
+          setDiagnosisResult(`Possible ${randomDisease.name} on ${plantName} with ${Math.round(lowConfidence * 100)}% confidence. Consider consulting an expert.`);
+          setAnalysisDetails({
+            ...formattedResult,
+            identifiedFeatures: ["Partial leaf pattern match", "Some discoloration detected", "Uncertain identification"],
+            alternativeDiagnoses: PLANT_DISEASES.filter(d => d.id !== randomDisease.id)
+              .slice(0, 3)
+              .map(d => ({ disease: d.id, probability: 0.15 + Math.random() * 0.25 })),
+            plantixInsights: {
+              severity: "medium",
+              progressStage: "early",
+              spreadRisk: "medium", 
+              environmentalFactors: ["Insufficient data"],
+              reliability: "low",
+              confidenceNote: "Analysis based on limited pattern recognition"
+            }
+          });
+        }
       }
       
       setIsAnalyzing(false);

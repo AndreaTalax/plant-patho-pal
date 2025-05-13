@@ -1,4 +1,3 @@
-
 // Modello utilizzato per la diagnosi delle malattie delle piante
 export interface ModelInfo {
   name: string;
@@ -195,22 +194,22 @@ export const diseaseSymptoms = {
 
 import { analyzePlantImage } from './plantAnalysisUtils';
 
-// Analizzare un'immagine e ottenere un risultato diagnostico
+// Analyze an image and get a diagnostic result
 export const analyzeImage = async (
   imageDataUrl: string,
   lowQualityFallback = false,
   isVerificationOnly = false
 ) => {
   try {
-    // Simula un breve ritardo per l'analisi
+    // Simulate a brief delay for analysis
     await new Promise(resolve => setTimeout(resolve, 1500));
     
-    // Verifica se l'immagine è un URL di dati
+    // Verify if the image is a data URL
     if (!imageDataUrl.startsWith('data:')) {
       throw new Error('Invalid image format. Expected data URL.');
     }
     
-    // Converti data URL in Blob/File per l'invio
+    // Convert data URL to Blob/File for sending
     const base64Data = imageDataUrl.split(',')[1];
     const byteCharacters = atob(base64Data);
     const byteArrays = [];
@@ -223,11 +222,10 @@ export const analyzeImage = async (
     const blob = new Blob([byteArray], { type: 'image/jpeg' });
     const imageFile = new File([blob], 'plant-image.jpg', { type: 'image/jpeg' });
     
-    // Generazione di un ID casuale per la malattia
+    // Generation of a random ID for the disease
     const diseaseIds = ['powdery-mildew', 'leaf-spot', 'aphid-infestation', 'root-rot', 'spider-mites'];
-    const randomIndex = Math.floor(Math.random() * diseaseIds.length);
     
-    // Per verifica rapida, restituisci risultato semplificato
+    // For verification only, return simplified result
     if (isVerificationOnly) {
       return {
         analysisDetails: {
@@ -239,7 +237,7 @@ export const analyzeImage = async (
       };
     }
     
-    // Analizza l'immagine con HuggingFace
+    // Analyze the image with HuggingFace
     let huggingFaceResult;
     try {
       huggingFaceResult = await analyzePlantImage(imageFile);
@@ -249,17 +247,45 @@ export const analyzeImage = async (
       huggingFaceResult = null;
     }
     
-    // Generazione mock di elementi visivi e features per l'analisi
-    const thermalMapUrl = imageDataUrl; // In una versione reale, qui verrebbe generata una mappa termica
+    // Generate mock of visual elements and features for analysis
+    const thermalMapUrl = imageDataUrl; // In a real version, a thermal map would be generated here
     
-    const identifiedFeatures = [
-      'Foglie ingiallite',
-      'Macchie necrotiche',
-      'Bordi arricciati',
-      'Deformazione fogliare'
+    // Common plant names for identification
+    const plantNames = [
+      'Tomato (Solanum lycopersicum)',
+      'Basil (Ocimum basilicum)',
+      'Monstera (Monstera deliciosa)',
+      'Pothos (Epipremnum aureum)',
+      'Rose (Rosa)',
+      'Arrowhead Plant (Syngonium podophyllum)',
+      'Snake Plant (Sansevieria)',
+      'Aloe Vera (Aloe barbadensis miller)',
+      'Fiddle Leaf Fig (Ficus lyrata)',
+      'Peace Lily (Spathiphyllum)'
     ];
     
-    // Crea boundingBox per la verifica delle foglie
+    // Randomly select a plant name
+    const randomPlantName = plantNames[Math.floor(Math.random() * plantNames.length)];
+    
+    // Determine if the plant is healthy (70% chance)
+    const isPlantHealthy = Math.random() < 0.7;
+    
+    // Features based on plant health status
+    const identifiedFeatures = isPlantHealthy ? 
+      [
+        'Healthy foliage',
+        'Good coloration',
+        'Normal growth pattern',
+        'No visible damage'
+      ] : 
+      [
+        'Foglie ingiallite',
+        'Macchie necrotiche',
+        'Bordi arricciati',
+        'Deformazione fogliare'
+      ];
+    
+    // Create boundingBox for leaf verification
     const leafVerification = {
       isLeaf: true,
       leafPercentage: 85 + Math.floor(Math.random() * 10),
@@ -271,29 +297,37 @@ export const analyzeImage = async (
       }
     };
     
-    // Diagnosi alternativa
-    const alternativeDiagnoses = diseaseIds
-      .filter((_, i) => i !== randomIndex)
-      .slice(0, 2)
-      .map(id => ({ 
-        disease: id, 
-        probability: 0.1 + Math.random() * 0.2
-      }));
+    // Alternative diagnosis
+    const alternativeDiagnoses = isPlantHealthy ?
+      [] : // No alternative diagnoses for healthy plants
+      diseaseIds
+        .filter((_, i) => i !== Math.floor(Math.random() * diseaseIds.length))
+        .slice(0, 2)
+        .map(id => ({ 
+          disease: id, 
+          probability: 0.1 + Math.random() * 0.2
+        }));
     
-    // Risultati degli AI service
+    // Results of AI services
     const aiServices = [
       { serviceName: 'PictureThis Detection', result: true, confidence: 0.82 + Math.random() * 0.15 },
       { serviceName: 'PlantNet Verify', result: true, confidence: 0.79 + Math.random() * 0.15 },
       { serviceName: 'HuggingFace Model', result: true, confidence: huggingFaceResult ? huggingFaceResult.score : 0.77 + Math.random() * 0.15 }
     ];
     
-    // Determina il diseaseId e la confidenza, preferendo il risultato HuggingFace se disponibile
+    // Determine diseaseId and confidence, preferring the HuggingFace result if available
     let diseaseId, confidence;
     
-    if (huggingFaceResult) {
-      // Mappa l'etichetta HuggingFace a un ID nel nostro sistema
+    if (isPlantHealthy) {
+      // For healthy plants, no disease id is assigned
+      diseaseId = null;
+      confidence = 0.95; // High confidence that the plant is healthy
+    } else if (huggingFaceResult) {
+      // Map HuggingFace label to an ID in our system
       const labelLower = huggingFaceResult.label.toLowerCase();
-      if (labelLower.includes('blight')) {
+      if (labelLower.includes('healthy') || labelLower.includes('normal')) {
+        return analyzeHealthyPlant(randomPlantName, huggingFaceResult.score);
+      } else if (labelLower.includes('blight')) {
         diseaseId = 'leaf-spot';
       } else if (labelLower.includes('mildew') || labelLower.includes('powdery')) {
         diseaseId = 'powdery-mildew';
@@ -304,18 +338,23 @@ export const analyzeImage = async (
       } else if (labelLower.includes('aphid') || labelLower.includes('insect')) {
         diseaseId = 'aphid-infestation';
       } else {
-        // Fallback a una scelta random
-        diseaseId = diseaseIds[randomIndex];
+        // Fallback to a random choice
+        diseaseId = diseaseIds[Math.floor(Math.random() * diseaseIds.length)];
       }
       
       confidence = huggingFaceResult.score;
     } else {
-      // Fallback al comportamento precedente
-      diseaseId = diseaseIds[randomIndex];
+      // Fallback to previous behavior for sick plants without HuggingFace results
+      diseaseId = diseaseIds[Math.floor(Math.random() * diseaseIds.length)];
       confidence = 0.7 + Math.random() * 0.25;
     }
     
-    // Crea il risultato completo
+    // If the plant is healthy (based on our determination), return healthy plant analysis
+    if (isPlantHealthy) {
+      return analyzeHealthyPlant(randomPlantName, confidence);
+    }
+    
+    // Create complete result for sick plants
     return {
       diseaseId,
       confidence,
@@ -332,7 +371,9 @@ export const analyzeImage = async (
         multiServiceInsights: {
           agreementScore: 92,
           primaryService: 'PictureThis',
-          plantSpecies: 'Solanum lycopersicum',
+          plantSpecies: randomPlantName.split(' (')[1]?.replace(')', '') || 'Unidentified',
+          plantName: randomPlantName.split(' (')[0],
+          isHealthy: false,
           huggingFaceResult: huggingFaceResult || null
         },
         plantixInsights: {
@@ -351,4 +392,60 @@ export const analyzeImage = async (
     console.error("Error in AI diagnosis:", error);
     throw new Error(`Image analysis failed: ${error.message}`);
   }
+};
+
+// Helper function to create a response for healthy plants
+const analyzeHealthyPlant = (plantName, confidence) => {
+  return {
+    diseaseId: null, // No disease for healthy plants
+    confidence,
+    analysisDetails: {
+      identifiedFeatures: [
+        'Healthy foliage',
+        'Good coloration',
+        'Normal growth pattern',
+        'No visible symptoms of disease'
+      ],
+      alternativeDiagnoses: [], // No alternative diagnoses for healthy plants
+      thermalMap: null, // No thermal map needed for healthy plants
+      leafVerification: {
+        isLeaf: true,
+        leafPercentage: 95,
+        boundingBox: {
+          x: 50,
+          y: 50,
+          width: 200,
+          height: 200
+        }
+      },
+      plantVerification: {
+        isPlant: true,
+        confidence: 0.98,
+        aiServices: [
+          { serviceName: 'PictureThis Detection', result: true, confidence: 0.98 },
+          { serviceName: 'PlantNet Verify', result: true, confidence: 0.97 },
+          { serviceName: 'HuggingFace Model', result: true, confidence: 0.95 }
+        ]
+      },
+      multiServiceInsights: {
+        agreementScore: 98,
+        primaryService: 'PictureThis',
+        plantSpecies: plantName.split(' (')[1]?.replace(')', '') || 'Unidentified',
+        plantName: plantName.split(' (')[0],
+        isHealthy: true
+      },
+      plantixInsights: {
+        severity: 'none',
+        progressStage: 'healthy',
+        spreadRisk: 'none',
+        environmentalFactors: [
+          'Adequate light exposure',
+          'Proper watering schedule',
+          'Good air circulation'
+        ],
+        reliability: 'high',
+        confidenceNote: 'This plant appears to be in good health with no signs of disease'
+      }
+    }
+  };
 };

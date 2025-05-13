@@ -20,6 +20,8 @@ export interface AnalysisDetails {
     agreementScore?: number;
     primaryService?: string;
     plantSpecies?: string;
+    plantName?: string; // Added plant name field
+    isHealthy?: boolean; // Added flag to indicate if the plant is healthy
   };
   alternativeDiagnoses: {
     disease: string;
