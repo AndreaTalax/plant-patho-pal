@@ -31,14 +31,14 @@ export const loadConversations = async (isMasterAccount: boolean, userId: string
       // Expert fetches all conversations where they're the expert
       query = supabase
         .from('conversations')
-        .select('*, profiles!conversations_user_id_fkey(id, username, first_name, last_name)')
+        .select('*, user:user_id(id, username, first_name, last_name)')
         .eq('expert_id', EXPERT_ID)
         .order('updated_at', { ascending: false });
     } else {
       // Regular users fetch their conversations
       query = supabase
         .from('conversations')
-        .select('*, profiles!conversations_expert_id_fkey(id, username, first_name, last_name)')
+        .select('*, expert:expert_id(id, username, first_name, last_name)')
         .eq('user_id', userId)
         .order('updated_at', { ascending: false });
     }
@@ -156,6 +156,7 @@ export const sendMessage = async (
   products?: Product[]
 ) => {
   console.log(`Sending message in conversation ${conversationId}: ${text}`);
+  console.log(`Sender ID: ${senderId}, Recipient ID: ${recipientId}`);
   
   // For mock conversations, always return success
   if (conversationId === "mock-conversation-id") {
@@ -179,12 +180,13 @@ export const sendMessage = async (
     return false;
   }
 
-  // Invia notifica al destinatario se è l'utente premium
-  // Solo per messaggi inviati da utenti normali all'esperto
-  // o viceversa
-  if (senderId !== EXPERT_ID || recipientId !== EXPERT_ID) {
+  // Invia notifica quando:
+  // 1. Il mittente è un utente normale (non l'esperto) E il destinatario è l'esperto
+  // 2. Il mittente è l'esperto E il destinatario è un utente normale
+  if (senderId === EXPERT_ID && recipientId !== EXPERT_ID) {
+    // Esperto che scrive a utente normale
+    console.log("Expert sending notification to regular user");
     try {
-      // Chiama l'edge function per la notifica specialista
       await supabase.functions.invoke('send-specialist-notification', {
         body: {
           conversation_id: conversationId,
@@ -194,7 +196,24 @@ export const sendMessage = async (
         }
       });
     } catch (notificationError) {
-      console.error("Error sending notification:", notificationError);
+      console.error("Error sending expert notification to user:", notificationError);
+      // Continuiamo anche se la notifica fallisce
+    }
+  } 
+  else if (senderId !== EXPERT_ID && recipientId === EXPERT_ID) {
+    // Utente normale che scrive all'esperto
+    console.log("Regular user sending notification to expert");
+    try {
+      await supabase.functions.invoke('send-specialist-notification', {
+        body: {
+          conversation_id: conversationId,
+          sender_id: senderId,
+          recipient_id: recipientId,
+          message_text: text
+        }
+      });
+    } catch (notificationError) {
+      console.error("Error sending user notification to expert:", notificationError);
       // Continuiamo anche se la notifica fallisce
     }
   }
