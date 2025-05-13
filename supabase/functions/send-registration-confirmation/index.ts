@@ -15,7 +15,6 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 
 // Email configuration - reading from environment variables
-// Changed from "smtp.sendgrid.com" to "smtp.sendgrid.net" to match certificate
 const EMAIL_HOST = Deno.env.get("EMAIL_HOST") || "smtp.sendgrid.net"; 
 const EMAIL_PORT = Number(Deno.env.get("EMAIL_PORT")) || 465;
 const EMAIL_USERNAME = Deno.env.get("EMAIL_USERNAME") || "";
@@ -39,34 +38,47 @@ async function sendConfirmationEmail(email: string, username: string) {
     });
 
     console.log("Connected to SMTP server successfully");
-
+    
+    // Create an improved email template with better design and branding
     const message = `
       <html>
         <head>
           <style>
-            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
             .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background-color: #3b82f6; color: white; padding: 20px; text-align: center; }
-            .content { padding: 20px; background-color: #f9fafb; }
-            .footer { text-align: center; padding: 20px; font-size: 12px; color: #6b7280; }
-            .security-notice { margin-top: 20px; padding: 10px; background-color: #fef3c7; border-left: 4px solid #f59e0b; }
+            .header { background: linear-gradient(135deg, #3b82f6 0%, #10b981 100%); color: white; padding: 30px 20px; text-align: center; border-radius: 8px 8px 0 0; }
+            .header h1 { margin: 0; font-size: 28px; }
+            .logo { width: 80px; height: 80px; margin: 0 auto 20px; background-color: white; padding: 10px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+            .content { padding: 30px; background-color: #f9fafb; border-left: 1px solid #eaeaea; border-right: 1px solid #eaeaea; }
+            .welcome-text { font-size: 18px; margin-bottom: 25px; }
+            .features { background-color: #f0f9ff; padding: 20px; border-radius: 8px; margin: 20px 0; }
+            .feature-item { margin-bottom: 15px; display: flex; align-items: center; }
+            .feature-icon { margin-right: 10px; color: #10b981; }
+            .button { display: inline-block; background: linear-gradient(135deg, #3b82f6 0%, #10b981 100%); color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; margin: 20px 0; font-weight: bold; }
+            .security-notice { margin-top: 25px; padding: 15px; background-color: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 4px; }
+            .footer { text-align: center; padding: 20px; font-size: 12px; color: #6b7280; border-top: 1px solid #eaeaea; background-color: #f9fafb; border-radius: 0 0 8px 8px; }
           </style>
         </head>
         <body>
           <div class="container">
             <div class="header">
+              <div class="logo">🌱</div>
               <h1>Welcome to Dr.Plant!</h1>
             </div>
             <div class="content">
-              <p>Hello ${username},</p>
+              <p class="welcome-text">Hello ${username},</p>
               <p>Thank you for registering with Dr.Plant! Your registration has been successfully confirmed.</p>
-              <p>With Dr.Plant, you can:</p>
-              <ul>
-                <li>Diagnose your plant problems</li>
-                <li>Receive personalized advice from experts</li>
-                <li>Access our library of resources and information</li>
-              </ul>
+              
+              <div class="features">
+                <h3>With Dr.Plant, you can:</h3>
+                <div class="feature-item"><span class="feature-icon">✅</span> Diagnose plant problems using our AI technology</div>
+                <div class="feature-item"><span class="feature-icon">✅</span> Get expert advice from professional plant pathologists</div>
+                <div class="feature-item"><span class="feature-icon">✅</span> Access our comprehensive plant disease library</div>
+                <div class="feature-item"><span class="feature-icon">✅</span> Track your plants' health history over time</div>
+              </div>
+              
               <p>You can access your account using your email: <strong>${email}</strong></p>
+              <a href="${APP_URL}/login" class="button">Login to your account</a>
               
               <div class="security-notice">
                 <h3>Important Security Information:</h3>
@@ -74,12 +86,13 @@ async function sendConfirmationEmail(email: string, username: string) {
                 <p>Always use verification codes immediately after receiving them and never share them with anyone.</p>
               </div>
               
-              <p>If you have any questions or need assistance, please don't hesitate to contact us.</p>
+              <p>If you have any questions or need assistance, please don't hesitate to contact our support team.</p>
               <p>Best regards,<br>The Dr.Plant Team</p>
             </div>
             <div class="footer">
               <p>© 2025 Dr.Plant. All rights reserved.</p>
               <p>This email was sent to ${email} because you registered on our site.</p>
+              <p>If you didn't register for Dr.Plant, please <a href="${APP_URL}/contact">contact our support team</a>.</p>
             </div>
           </div>
         </body>
@@ -91,7 +104,7 @@ async function sendConfirmationEmail(email: string, username: string) {
     await client.send({
       from: EMAIL_FROM,
       to: email,
-      subject: "Welcome to Dr.Plant!",
+      subject: "Welcome to Dr.Plant! Registration Confirmed",
       content: message,
       html: message,
     });
