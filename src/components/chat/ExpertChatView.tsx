@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { toast } from '@/components/ui/sonner';
 import { Button } from '@/components/ui/button';
@@ -36,12 +35,11 @@ const ExpertChatView = ({ userId }: ExpertChatViewProps) => {
     const fetchConversations = async () => {
       const data = await loadConversations(true, userId);
       
-      // Cast data to the DatabaseConversation type
-      const typedData = data as unknown as DatabaseConversation[];
-      setDbConversations(typedData);
+      // Set database conversations
+      setDbConversations(data);
       
       // Convert to UI format
-      const convertedConversations = typedData.map((conv: DatabaseConversation) => {
+      const convertedConversations = data.map((conv: DatabaseConversation) => {
         const username = conv.user?.username || conv.user_id;
         return {
           id: conv.id,
@@ -123,7 +121,7 @@ const ExpertChatView = ({ userId }: ExpertChatViewProps) => {
           console.log('Message received:', payload);
           const newMsg = payload.new;
           
-          const formattedMessage = convertToUIMessage(newMsg);
+          const formattedMessage = convertToUIMessage(newMsg as any);
           
           // Update current conversation
           setCurrentConversation(prev => {

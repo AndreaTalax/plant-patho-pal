@@ -1,5 +1,12 @@
 
-import { supabase, EXPERT_ID } from '@/integrations/supabase/client';
+import { 
+  supabase, 
+  EXPERT_ID, 
+  isNotNullOrUndefined, 
+  asUUID, 
+  DbMessage, 
+  DbConversation 
+} from '@/integrations/supabase/client';
 import type { 
   DatabaseConversation, 
   DatabaseMessage, 
@@ -17,14 +24,14 @@ export const loadConversations = async (isMasterAccount: boolean, userId: string
       query = supabase
         .from('conversations')
         .select('*, user:profiles!conversations_user_id_fkey(id, username, first_name, last_name)')
-        .eq('expert_id', EXPERT_ID)
+        .eq('expert_id', asUUID(EXPERT_ID))
         .order('updated_at', { ascending: false });
     } else {
       // Regular users fetch their conversations
       query = supabase
         .from('conversations')
         .select('*, expert:profiles!conversations_expert_id_fkey(id, username, first_name, last_name)')
-        .eq('user_id', userId)
+        .eq('user_id', asUUID(userId))
         .order('updated_at', { ascending: false });
     }
     
@@ -35,7 +42,7 @@ export const loadConversations = async (isMasterAccount: boolean, userId: string
       return [];
     }
     
-    return data || [];
+    return (data || []) as unknown as DatabaseConversation[];
   } catch (error) {
     console.error("Error in loadConversations:", error);
     return [];
@@ -49,8 +56,8 @@ export const findOrCreateConversation = async (userId: string) => {
     const { data: existingConversations, error: fetchError } = await supabase
       .from('conversations')
       .select('*')
-      .eq('user_id', userId)
-      .eq('expert_id', EXPERT_ID)
+      .eq('user_id', asUUID(userId))
+      .eq('expert_id', asUUID(EXPERT_ID))
       .limit(1);
       
     if (fetchError) {
@@ -59,19 +66,19 @@ export const findOrCreateConversation = async (userId: string) => {
     }
     
     if (existingConversations && existingConversations.length > 0) {
-      return existingConversations[0];
+      return existingConversations[0] as unknown as DatabaseConversation;
     }
     
     // Create new conversation
-    const newConversationData = {
-      user_id: userId,
-      expert_id: EXPERT_ID,
+    const newConversationData: DbConversationInsert = {
+      user_id: userId as any,
+      expert_id: EXPERT_ID as any,
       status: 'active'
     };
     
     const { data: newConversation, error: createError } = await supabase
       .from('conversations')
-      .insert(newConversationData)
+      .insert(newConversationData as any)
       .select()
       .single();
       
@@ -80,7 +87,7 @@ export const findOrCreateConversation = async (userId: string) => {
       return null;
     }
     
-    return newConversation;
+    return newConversation as unknown as DatabaseConversation;
   } catch (error) {
     console.error("Error in findOrCreateConversation:", error);
     return null;
@@ -93,7 +100,7 @@ export const loadMessages = async (conversationId: string) => {
     const { data, error } = await supabase
       .from('messages')
       .select('*')
-      .eq('conversation_id', conversationId)
+      .eq('conversation_id', asUUID(conversationId))
       .order('sent_at', { ascending: true });
       
     if (error) {
@@ -101,7 +108,7 @@ export const loadMessages = async (conversationId: string) => {
       return [];
     }
     
-    return data || [];
+    return (data || []) as unknown as DatabaseMessage[];
   } catch (error) {
     console.error("Error in loadMessages:", error);
     return [];
@@ -116,27 +123,29 @@ export const sendMessage = async (
   text: string,
   products?: Product[]
 ) => {
-  const messageData = {
-    conversation_id: conversationId,
-    sender_id: senderId,
-    recipient_id: recipientId,
+  const messageData: DbMessageInsert = {
+    conversation_id: conversationId as any,
+    sender_id: senderId as any,
+    recipient_id: recipientId as any,
     text,
     products: products || null
   };
   
   const { error } = await supabase
     .from('messages')
-    .insert(messageData);
+    .insert(messageData as any);
     
   return !error;
 };
 
 // Update conversation status (archive, block, unblock)
 export const updateConversationStatus = async (conversationId: string, status: string) => {
+  const update: DbConversationUpdate = { status };
+  
   const { error } = await supabase
     .from('conversations')
-    .update({ status })
-    .eq('id', conversationId);
+    .update(update as any)
+    .eq('id', asUUID(conversationId));
     
   return !error;
 };

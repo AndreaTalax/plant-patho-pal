@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { toast } from '@/components/ui/sonner';
 import { Card } from '@/components/ui/card';
@@ -40,7 +39,7 @@ const UserChatView = ({ userId }: UserChatViewProps) => {
         return;
       }
       
-      setCurrentDbConversation(conversation as DatabaseConversation);
+      setCurrentDbConversation(conversation);
       
       // Load messages
       const messagesData = await loadMessages(conversation.id);
@@ -74,7 +73,7 @@ const UserChatView = ({ userId }: UserChatViewProps) => {
             console.log('Message received:', payload);
             const newMsg = payload.new;
             
-            const formattedMessage = convertToUIMessage(newMsg);
+            const formattedMessage = convertToUIMessage(newMsg as any);
             
             setMessages(prev => [...prev, formattedMessage]);
           }
@@ -102,7 +101,7 @@ const UserChatView = ({ userId }: UserChatViewProps) => {
           setIsSending(false);
           return;
         }
-        setCurrentDbConversation(conversation as DatabaseConversation);
+        setCurrentDbConversation(conversation);
       }
       
       const success = await sendMessageService(
