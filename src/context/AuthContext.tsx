@@ -1,6 +1,5 @@
-
 import { createContext, useContext, useState, ReactNode, useEffect } from "react";
-import { supabase, asProfileKey, asFilterValue, asDbUpdate, asDbProfile } from '@/integrations/supabase/client';
+import { supabase, EXPERT_ID } from '@/integrations/supabase/client';
 import { Session, User } from "@supabase/supabase-js";
 
 // Define type for user profile
@@ -130,13 +129,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
   }, []);
   
-  // Fetch user profile from database
+  // Simplified profile fetching to avoid type recursion
   const fetchUserProfile = async (userId: string) => {
     try {
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
-        .eq(asProfileKey('id'), asFilterValue(userId))
+        .eq('id', userId)
         .single();
         
       if (error) {
@@ -144,23 +143,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
       
       if (data) {
-        // Use the asDbProfile helper to properly type the data
-        const profileData = asDbProfile(data);
-        const username = profileData.username || profileData.email?.split('@')[0] || '';
+        // Use explicit type casting to avoid deep recursion
+        const username = (data as any).username || (data as any).email?.split('@')[0] || '';
         
         setUsername(username);
         setUserProfile({
           username: username,
-          firstName: profileData.first_name || '',
-          lastName: profileData.last_name || '',
-          email: profileData.email || user?.email || '',
-          phone: profileData.phone || '',
-          address: profileData.address || '',
-          role: (profileData.role as "user" | "master") || 'user'
+          firstName: (data as any).first_name || '',
+          lastName: (data as any).last_name || '',
+          email: (data as any).email || user?.email || '',
+          phone: (data as any).phone || '',
+          address: (data as any).address || '',
+          role: ((data as any).role as "user" | "master") || 'user'
         });
         
-        setIsProfileComplete(!!profileData.first_name && !!profileData.last_name);
-        setIsMasterAccount(profileData.role === "master");
+        setIsProfileComplete(!!(data as any).first_name && !!(data as any).last_name);
+        setIsMasterAccount((data as any).role === "master");
       }
     } catch (error) {
       console.error('Error fetching user profile:', error);
@@ -337,8 +335,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       
       supabase
         .from('profiles')
-        .update(asDbUpdate({ username: newUsername }))
-        .eq(asProfileKey('id'), asFilterValue(user.id))
+        .update({ username: newUsername })
+        .eq('id', user.id)
         .then(({ error }) => {
           if (error) {
             console.error('Error updating username:', error);
@@ -391,8 +389,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         
         const { error } = await supabase
           .from('profiles')
-          .update(asDbUpdate(updates))
-          .eq(asProfileKey('id'), asFilterValue(user.id));
+          .update(updates)
+          .eq('id', user.id);
           
         if (error) {
           throw error;

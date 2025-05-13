@@ -17,7 +17,8 @@ import type {
   DatabaseConversation, 
   DatabaseMessage, 
   Message,
-  Product
+  Product,
+  EXPERT
 } from './types';
 import { Json } from '@/integrations/supabase/types';
 
@@ -31,14 +32,14 @@ export const loadConversations = async (isMasterAccount: boolean, userId: string
       query = supabase
         .from('conversations')
         .select('*, user:profiles!conversations_user_id_fkey(id, username, first_name, last_name)')
-        .eq(asFilterValue('expert_id'), asFilterValue(EXPERT_ID))
+        .eq('expert_id', EXPERT_ID)
         .order('updated_at', { ascending: false });
     } else {
       // Regular users fetch their conversations
       query = supabase
         .from('conversations')
         .select('*, expert:profiles!conversations_expert_id_fkey(id, username, first_name, last_name)')
-        .eq(asFilterValue('user_id'), asFilterValue(userId))
+        .eq('user_id', userId)
         .order('updated_at', { ascending: false });
     }
     
@@ -63,8 +64,8 @@ export const findOrCreateConversation = async (userId: string) => {
     const { data: existingConversations, error: fetchError } = await supabase
       .from('conversations')
       .select('*')
-      .eq(asFilterValue('user_id'), asFilterValue(userId))
-      .eq(asFilterValue('expert_id'), asFilterValue(EXPERT_ID))
+      .eq('user_id', userId)
+      .eq('expert_id', EXPERT_ID)
       .limit(1);
       
     if (fetchError) {
@@ -85,7 +86,7 @@ export const findOrCreateConversation = async (userId: string) => {
     
     const { data: newConversation, error: createError } = await supabase
       .from('conversations')
-      .insert(asDbInsert(newConversationData))
+      .insert(newConversationData)
       .select()
       .single();
       
@@ -107,7 +108,7 @@ export const loadMessages = async (conversationId: string) => {
     const { data, error } = await supabase
       .from('messages')
       .select('*')
-      .eq(asFilterValue('conversation_id'), asFilterValue(conversationId))
+      .eq('conversation_id', conversationId)
       .order('sent_at', { ascending: true });
       
     if (error) {
@@ -147,7 +148,7 @@ export const sendMessage = async (
   
   const { error } = await supabase
     .from('messages')
-    .insert(asDbInsert(messageData));
+    .insert(messageData);
     
   return !error;
 };
@@ -158,8 +159,8 @@ export const updateConversationStatus = async (conversationId: string, status: s
   
   const { error } = await supabase
     .from('conversations')
-    .update(asDbUpdate(update))
-    .eq(asFilterValue('id'), asFilterValue(conversationId));
+    .update(update)
+    .eq('id', conversationId);
     
   return !error;
 };
