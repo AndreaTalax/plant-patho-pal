@@ -105,6 +105,28 @@ serve(async (req) => {
       supabaseServiceRoleKey
     );
 
+    // Get user ID from request headers if available
+    const authorization = req.headers.get('Authorization');
+    let userId = null;
+    
+    if (authorization) {
+      try {
+        // Extract JWT from Bearer token
+        const token = authorization.replace('Bearer ', '');
+        
+        // Use Supabase to get user info from token
+        const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+        
+        if (!authError && user) {
+          userId = user.id;
+          console.log(`Authenticated user: ${userId}`);
+        }
+      } catch (e) {
+        console.error('Error extracting user ID:', e);
+        // Continue without user ID
+      }
+    }
+
     // Save the analysis result to Supabase
     const { error: insertError } = await supabase
       .from('diagnosi_piante')
@@ -113,7 +135,8 @@ serve(async (req) => {
         malattia: topPrediction.label,
         accuratezza: topPrediction.score,
         data: new Date().toISOString(),
-        risultati_completi: result
+        risultati_completi: result,
+        user_id: userId
       });
     
     if (insertError) {

@@ -31,6 +31,11 @@ export type DbMessageUpdate = Database['public']['Tables']['messages']['Update']
 
 export type DbProfile = Database['public']['Tables']['profiles']['Row'];
 
+// Add types for diagnosi_piante
+export type DbDiagnosiPiante = Database['public']['Tables']['diagnosi_piante']['Row'];
+export type DbDiagnosiPianteInsert = Database['public']['Tables']['diagnosi_piante']['Insert'];
+export type DbDiagnosiPianteUpdate = Database['public']['Tables']['diagnosi_piante']['Update'];
+
 // Helper functions for type safety when dealing with Supabase responses
 export function isError<T>(result: T | PostgrestError): result is PostgrestError {
   return (result as any)?.code !== undefined;
@@ -56,6 +61,10 @@ export function asDbMessage(data: any): DbMessage {
 
 export function asDbProfile(data: any): DbProfile {
   return data as DbProfile;
+}
+
+export function asDbDiagnosiPiante(data: any): DbDiagnosiPiante {
+  return data as DbDiagnosiPiante;
 }
 
 // Suppress TypeScript errors for object access in certain contexts

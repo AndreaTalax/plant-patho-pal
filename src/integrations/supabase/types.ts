@@ -42,6 +42,36 @@ export type Database = {
         }
         Relationships: []
       }
+      diagnosi_piante: {
+        Row: {
+          accuratezza: number
+          data: string
+          id: string
+          immagine_nome: string
+          malattia: string
+          risultati_completi: Json | null
+          user_id: string | null
+        }
+        Insert: {
+          accuratezza: number
+          data?: string
+          id?: string
+          immagine_nome: string
+          malattia: string
+          risultati_completi?: Json | null
+          user_id?: string | null
+        }
+        Update: {
+          accuratezza?: number
+          data?: string
+          id?: string
+          immagine_nome?: string
+          malattia?: string
+          risultati_completi?: Json | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       messages: {
         Row: {
           conversation_id: string

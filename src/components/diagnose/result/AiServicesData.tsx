@@ -1,8 +1,9 @@
 
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Eye, EyeOff, Check, X } from 'lucide-react';
+import { Eye, EyeOff, Check, X, Brain } from 'lucide-react';
 import { AnalysisDetails } from '../types';
+import { toast } from 'sonner';
 
 interface AiServicesDataProps {
   analysisDetails: AnalysisDetails | null;
@@ -16,12 +17,22 @@ const AiServicesData = ({ analysisDetails, isAnalyzing }: AiServicesDataProps) =
   const hasAiServiceData = analysisDetails?.plantVerification?.aiServices &&
                          analysisDetails.plantVerification.aiServices.length > 0;
 
-  // Controlla se abbiamo dati di HuggingFace
+  // Check if we have HuggingFace data
   const hasHuggingFaceData = analysisDetails?.multiServiceInsights?.huggingFaceResult;
 
-  if (!hasAiServiceData && !hasHuggingFaceData || isAnalyzing) {
+  if ((!hasAiServiceData && !hasHuggingFaceData) || isAnalyzing) {
     return null;
   }
+
+  const copyDiagnosisToClipboard = () => {
+    if (hasHuggingFaceData) {
+      const diagnosis = analysisDetails?.multiServiceInsights?.huggingFaceResult;
+      const diagnosisText = `Diagnosi: ${diagnosis?.label} (Confidenza: ${Math.round((diagnosis?.score || 0) * 100)}%)`;
+      navigator.clipboard.writeText(diagnosisText)
+        .then(() => toast.success("Diagnosi copiata negli appunti"))
+        .catch(() => toast.error("Impossibile copiare la diagnosi"));
+    }
+  };
 
   return (
     <div className="mb-4">
@@ -49,7 +60,17 @@ const AiServicesData = ({ analysisDetails, isAnalyzing }: AiServicesDataProps) =
           {/* Diamo priorità ai dati di HuggingFace se presenti */}
           {hasHuggingFaceData && (
             <div className="mt-2 pt-2 border-t-2 border-blue-200 bg-blue-50 p-2 rounded mb-3">
-              <h5 className="font-semibold text-blue-700 mb-1">HuggingFace Analysis</h5>
+              <div className="flex justify-between items-center mb-1">
+                <h5 className="font-semibold text-blue-700">Analisi HuggingFace</h5>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="p-1 h-6" 
+                  onClick={copyDiagnosisToClipboard}
+                >
+                  <Brain className="h-3 w-3 text-blue-600" />
+                </Button>
+              </div>
               <div className="flex justify-between">
                 <span>Rilevato:</span>
                 <span className="font-medium">{analysisDetails?.multiServiceInsights?.huggingFaceResult?.label}</span>
@@ -82,7 +103,7 @@ const AiServicesData = ({ analysisDetails, isAnalyzing }: AiServicesDataProps) =
             </div>
           ))}
           
-          {analysisDetails?.multiServiceInsights && (
+          {analysisDetails?.multiServiceInsights && !hasHuggingFaceData && (
             <div className="mt-2 pt-2 border-t">
               <div className="flex justify-between">
                 <span>Punteggio Affidabilità:</span>
