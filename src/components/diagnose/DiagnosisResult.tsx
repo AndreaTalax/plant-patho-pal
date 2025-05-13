@@ -258,17 +258,7 @@ const DiagnosisResult = ({
                   <Badge className="bg-red-500">Low Reliability</Badge>
                 )}
                 
-                {/* AI Services badge */}
-                {analysisDetails?.multiServiceInsights && (
-                  <div className="flex flex-wrap ml-auto gap-1">
-                    <Badge className="bg-blue-500">PictureThis™</Badge>
-                    <Badge className="bg-purple-500">PlantIdentifier</Badge>
-                    <Badge className="bg-green-600">GIArdi</Badge>
-                    <Badge className="bg-orange-500">RiconoscereMalattie</Badge>
-                    <Badge className="bg-cyan-600">PlantNet</Badge>
-                    <Badge className="bg-emerald-500">PlantSnap</Badge>
-                  </div>
-                )}
+                {/* Removed AI Services badges */}
               </div>
               
               <DiagnosisTabs
@@ -292,3 +282,4 @@ const DiagnosisResult = ({
 };
 
 export default DiagnosisResult;
+
