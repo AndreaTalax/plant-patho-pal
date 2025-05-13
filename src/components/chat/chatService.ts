@@ -178,6 +178,26 @@ export const sendMessage = async (
     console.error("Error sending message:", error);
     return false;
   }
+
+  // Invia notifica al destinatario se è l'utente premium
+  // Solo per messaggi inviati da utenti normali all'esperto
+  // o viceversa
+  if (senderId !== EXPERT_ID || recipientId !== EXPERT_ID) {
+    try {
+      // Chiama l'edge function per la notifica specialista
+      await supabase.functions.invoke('send-specialist-notification', {
+        body: {
+          conversation_id: conversationId,
+          sender_id: senderId,
+          recipient_id: recipientId,
+          message_text: text
+        }
+      });
+    } catch (notificationError) {
+      console.error("Error sending notification:", notificationError);
+      // Continuiamo anche se la notifica fallisce
+    }
+  }
     
   return true;
 };
