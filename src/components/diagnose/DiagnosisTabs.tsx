@@ -1,30 +1,10 @@
-
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Check, AlertTriangle, Book, ShoppingBag } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { diseaseDetails, diseaseSymptoms } from '@/utils/aiDiagnosisUtils';
-
-interface DiagnosedDisease {
-  id: string;
-  name: string;
-  description: string;
-  causes: string;
-  treatments: string[];
-  products: string[];
-  confidence: number;
-  resources: string[];
-}
-
-interface AnalysisDetails {
-  identifiedFeatures: string[];
-  alternativeDiagnoses: {
-    disease: string;
-    probability: number;
-  }[];
-  recommendedAdditionalTests?: string[];
-}
+import { DiagnosedDisease, AnalysisDetails } from './types';
 
 interface DiagnosisTabsProps {
   disease: DiagnosedDisease;
@@ -211,7 +191,7 @@ const DiagnosisTabs = ({
           <Button 
             size="sm"
             className="bg-drplant-blue hover:bg-drplant-blue-dark"
-            onClick={() => onTabChange('products')}
+            onClick={() => onNavigateToShop()}
           >
             <ShoppingBag className="mr-2 h-4 w-4" /> Recommended Products
           </Button>

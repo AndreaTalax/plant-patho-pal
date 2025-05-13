@@ -21,7 +21,7 @@ export interface AnalysisDetails {
     primaryService?: string;
     plantSpecies?: string;
   };
-  alternativeDiagnoses?: {
+  alternativeDiagnoses: {
     disease: string;
     probability: number;
   }[];
