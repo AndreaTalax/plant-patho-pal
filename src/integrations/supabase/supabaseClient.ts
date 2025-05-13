@@ -13,6 +13,17 @@ export const signUp = async (email: string, password: string) => {
     });
 
     if (error) {
+      // Gestione speciale per l'errore di rate limit
+      if (error.status === 429 || error.message?.includes('rate limit exceeded')) {
+        console.warn('Email rate limit exceeded:', error.message);
+        // Restituisci un oggetto con un flag speciale per indicare il rate limit
+        return { 
+          rateLimitExceeded: true, 
+          message: "Troppe richieste di email per questo indirizzo. Prova ad accedere o attendere prima di richiedere un'altra email di conferma.",
+          data
+        };
+      }
+      
       console.error('Errore registrazione:', error.message);
       throw error;
     } else {

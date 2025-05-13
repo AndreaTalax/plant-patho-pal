@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { signUp, signIn } from '@/integrations/supabase/supabaseClient';
 import { toast } from 'sonner';
-import { Mail, LockKeyhole } from "lucide-react";
+import { Mail, LockKeyhole, AlertCircle } from "lucide-react";
 
 type AuthMode = 'login' | 'signup';
 
@@ -15,10 +15,12 @@ export function AuthForm() {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
+  const [isRateLimited, setIsRateLimited] = useState(false);
 
   const toggleMode = () => {
     setMode(mode === 'login' ? 'signup' : 'login');
     setEmailSent(false);
+    setIsRateLimited(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -27,11 +29,22 @@ export function AuthForm() {
     
     try {
       if (mode === 'signup') {
-        await signUp(email, password);
-        setEmailSent(true);
-        toast.success('Registrazione completata', {
-          description: "Ti abbiamo inviato un'email di conferma. Se non la vedi nella casella principale, controlla nella cartella spam.",
-        });
+        const result = await signUp(email, password);
+        
+        // Gestione del caso di rate limit
+        if (result && 'rateLimitExceeded' in result && result.rateLimitExceeded) {
+          setIsRateLimited(true);
+          setEmailSent(true); // Mostriamo comunque la schermata di conferma
+          toast.warning('Limite invio email raggiunto', {
+            description: result.message,
+            duration: 8000, // Durata più lunga per questo avviso importante
+          });
+        } else {
+          setEmailSent(true);
+          toast.success('Registrazione completata', {
+            description: "Ti abbiamo inviato un'email di conferma. Se non la vedi nella casella principale, controlla nella cartella spam.",
+          });
+        }
       } else {
         await signIn(email, password);
         toast.success('Login effettuato con successo', {
@@ -65,10 +78,31 @@ export function AuthForm() {
             <Mail className="h-16 w-16 text-drplant-green" />
           </div>
           <CardTitle className="mb-2">Controlla la tua email</CardTitle>
-          <CardDescription className="mb-6">
-            Abbiamo inviato un'email di conferma a <span className="font-medium">{email}</span>.<br />
-            Clicca sul link nell'email per completare la registrazione.
-          </CardDescription>
+          
+          {isRateLimited ? (
+            <>
+              <div className="flex justify-center mt-4 mb-2">
+                <AlertCircle className="h-8 w-8 text-amber-500" />
+              </div>
+              <div className="mb-4 p-3 bg-amber-50 rounded-md border border-amber-200">
+                <p className="text-sm text-amber-800 font-medium">
+                  Limite di email raggiunto
+                </p>
+                <p className="text-sm text-gray-600 mt-1">
+                  Hai effettuato troppe richieste di registrazione con questa email. Il tuo account è stato probabilmente creato, ma non possiamo inviare un'altra email di conferma al momento.
+                </p>
+                <p className="text-sm text-gray-600 mt-1">
+                  Se hai già ricevuto un'email di conferma precedente, usala per completare la registrazione o prova ad accedere direttamente.
+                </p>
+              </div>
+            </>
+          ) : (
+            <CardDescription className="mb-6">
+              Abbiamo inviato un'email di conferma a <span className="font-medium">{email}</span>.<br />
+              Clicca sul link nell'email per completare la registrazione.
+            </CardDescription>
+          )}
+          
           <Button variant="outline" className="mt-4" onClick={toggleMode}>
             Torna al login
           </Button>
