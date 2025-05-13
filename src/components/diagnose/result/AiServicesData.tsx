@@ -33,62 +33,64 @@ const AiServicesData = ({ analysisDetails, isAnalyzing }: AiServicesDataProps) =
       >
         {showAiServices ? (
           <>
-            <EyeOff className="h-4 w-4" /> Hide AI Services Data
+            <EyeOff className="h-4 w-4" /> Nascondi Dati Servizi AI
           </>
         ) : (
           <>
-            <Eye className="h-4 w-4" /> Show AI Services Data
+            <Eye className="h-4 w-4" /> Mostra Dati Servizi AI
           </>
         )}
       </Button>
       
       {showAiServices && (
         <div className="mt-2 border rounded-lg p-2 text-xs bg-gray-50">
-          <h4 className="font-semibold mb-1">AI Service Results</h4>
-          <div className="space-y-1.5">
-            {analysisDetails?.plantVerification?.aiServices?.map((service, index) => (
-              <div key={index} className="flex items-center justify-between">
-                <span>{service.serviceName}</span>
-                <div className="flex items-center gap-1">
-                  {service.result ? (
-                    <Check className="h-3 w-3 text-green-600" />
-                  ) : (
-                    <X className="h-3 w-3 text-red-600" />
-                  )}
-                  <span className={service.result ? "text-green-600" : "text-red-600"}>
-                    {Math.round(service.confidence * 100)}%
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
+          <h4 className="font-semibold mb-1">Risultati Servizi AI</h4>
           
-          {analysisDetails?.multiServiceInsights && (
-            <div className="mt-2 pt-2 border-t">
+          {/* Diamo priorità ai dati di HuggingFace se presenti */}
+          {hasHuggingFaceData && (
+            <div className="mt-2 pt-2 border-t-2 border-blue-200 bg-blue-50 p-2 rounded mb-3">
+              <h5 className="font-semibold text-blue-700 mb-1">HuggingFace Analysis</h5>
               <div className="flex justify-between">
-                <span>Agreement Score:</span>
-                <span className="font-medium">{analysisDetails.multiServiceInsights.agreementScore}%</span>
+                <span>Rilevato:</span>
+                <span className="font-medium">{analysisDetails?.multiServiceInsights?.huggingFaceResult?.label}</span>
               </div>
               <div className="flex justify-between">
-                <span>Primary Service:</span>
-                <span className="font-medium">{analysisDetails.multiServiceInsights.primaryService}</span>
+                <span>Confidenza:</span>
+                <span className="font-medium">
+                  {Math.round((analysisDetails?.multiServiceInsights?.huggingFaceResult?.score || 0) * 100)}%
+                </span>
+              </div>
+              <div className="text-xs text-blue-600 mt-1 italic">
+                Analisi effettuata tramite modello VineetJohn/plant-disease-detection
               </div>
             </div>
           )}
           
-          {/* Aggiungiamo i dati specifici di HuggingFace se presenti */}
-          {hasHuggingFaceData && (
-            <div className="mt-2 pt-2 border-t border-blue-200 bg-blue-50 p-2 rounded">
-              <h5 className="font-semibold text-blue-700 mb-1">HuggingFace Analysis</h5>
+          {analysisDetails?.plantVerification?.aiServices?.map((service, index) => (
+            <div key={index} className="flex items-center justify-between">
+              <span>{service.serviceName}</span>
+              <div className="flex items-center gap-1">
+                {service.result ? (
+                  <Check className="h-3 w-3 text-green-600" />
+                ) : (
+                  <X className="h-3 w-3 text-red-600" />
+                )}
+                <span className={service.result ? "text-green-600" : "text-red-600"}>
+                  {Math.round(service.confidence * 100)}%
+                </span>
+              </div>
+            </div>
+          ))}
+          
+          {analysisDetails?.multiServiceInsights && (
+            <div className="mt-2 pt-2 border-t">
               <div className="flex justify-between">
-                <span>Detected:</span>
-                <span className="font-medium">{analysisDetails?.multiServiceInsights?.huggingFaceResult?.label}</span>
+                <span>Punteggio Affidabilità:</span>
+                <span className="font-medium">{analysisDetails.multiServiceInsights.agreementScore}%</span>
               </div>
               <div className="flex justify-between">
-                <span>Confidence:</span>
-                <span className="font-medium">
-                  {Math.round((analysisDetails?.multiServiceInsights?.huggingFaceResult?.score || 0) * 100)}%
-                </span>
+                <span>Servizio Principale:</span>
+                <span className="font-medium">{analysisDetails.multiServiceInsights.primaryService}</span>
               </div>
             </div>
           )}

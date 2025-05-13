@@ -11,10 +11,11 @@ export interface PlantAnalysisResult {
     score: number;
   }>;
   timestamp?: string;
+  message?: string;
 }
 
 /**
- * Analizza un'immagine di pianta utilizzando il modello HuggingFace
+ * Analizza un'immagine di pianta utilizzando il modello HuggingFace attraverso la Edge Function di Supabase
  * @param imageFile File dell'immagine da analizzare
  * @returns Promise con il risultato dell'analisi
  */
@@ -42,6 +43,10 @@ export const analyzePlantImage = async (imageFile: File): Promise<PlantAnalysisR
     const readableLabel = data.label
       .replace(/_/g, ' ')
       .replace(/\b\w/g, (l) => l.toUpperCase());
+
+    if (data.message?.includes("salvata")) {
+      toast.success(data.message);
+    }
 
     return {
       ...data,

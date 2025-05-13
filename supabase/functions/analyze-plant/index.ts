@@ -5,6 +5,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
 const huggingFaceToken = Deno.env.get("HUGGINGFACE_ACCESS_TOKEN");
 const supabaseUrl = Deno.env.get("SUPABASE_URL");
 const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
+const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -90,7 +91,7 @@ serve(async (req) => {
     // Get the top prediction
     const topPrediction = result[0] || { label: 'Unknown', score: 0 };
     
-    // Format and return the response
+    // Format the analysis result
     const analysisResult = {
       label: topPrediction.label,
       score: topPrediction.score,
@@ -98,10 +99,37 @@ serve(async (req) => {
       timestamp: new Date().toISOString()
     };
 
+    // Initialize Supabase client with service role key to bypass RLS
+    const supabase = createClient(
+      supabaseUrl,
+      supabaseServiceRoleKey
+    );
+
+    // Save the analysis result to Supabase
+    const { error: insertError } = await supabase
+      .from('diagnosi_piante')
+      .insert({
+        immagine_nome: imageFile.name,
+        malattia: topPrediction.label,
+        accuratezza: topPrediction.score,
+        data: new Date().toISOString(),
+        risultati_completi: result
+      });
+    
+    if (insertError) {
+      console.error(`Error saving to Supabase: ${insertError.message}`);
+      // Continue with the response even if storage fails
+    } else {
+      console.log("Analysis saved to Supabase successfully");
+    }
+
     console.log(`Analysis completed: ${JSON.stringify(analysisResult)}`);
 
     return new Response(
-      JSON.stringify(analysisResult),
+      JSON.stringify({
+        ...analysisResult,
+        message: insertError ? "Diagnosi completata ma non salvata" : "Diagnosi completata e salvata"
+      }),
       {
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
