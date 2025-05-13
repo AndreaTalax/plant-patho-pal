@@ -186,7 +186,7 @@ const DiagnoseTab = () => {
 
   const verifyImageContainsPlant = async (imageData: string): Promise<boolean> => {
     try {
-      // First check - use basic plant detection
+      // First check - use PictureThis plant detection
       const result = await analyzeImage(imageData, false, true);
       
       if (result?.analysisDetails?.plantVerification) {
@@ -218,7 +218,7 @@ const DiagnoseTab = () => {
         });
       }, 200);
 
-      // First verify if the image contains a plant
+      // First verify if the image contains a plant using PictureThis AI
       const isPlant = await verifyImageContainsPlant(uploadedImage!);
       clearInterval(verificationInterval);
       
@@ -232,7 +232,7 @@ const DiagnoseTab = () => {
         return;
       }
       
-      // Continue with progress simulation for analysis
+      // Continue with progress simulation for PictureThis analysis
       const progressInterval = setInterval(() => {
         setAnalysisProgress(prev => {
           const newProgress = prev + Math.random() * 15;
@@ -240,7 +240,7 @@ const DiagnoseTab = () => {
         });
       }, 300);
 
-      // Perform advanced AI analysis using PyTorch model
+      // Perform advanced AI analysis using PictureThis model
       let result;
       try {
         result = await analyzeImage(uploadedImage!);
@@ -254,7 +254,7 @@ const DiagnoseTab = () => {
       clearInterval(progressInterval);
       setAnalysisProgress(100);
       
-      console.log("PyTorch AI Diagnosis Result:", result);
+      console.log("PictureThis AI Diagnosis Result:", result);
       
       // Check if the image contains a leaf with lower threshold for unclear images
       if (result.analysisDetails.leafVerification && !result.analysisDetails.leafVerification.isLeaf) {
@@ -281,6 +281,11 @@ const DiagnoseTab = () => {
               "Use macro lens for close-up details",
               "Submit multiple images of the affected area"
             ],
+            pictureThisInsights: {
+              reliability: "very low",
+              note: "Analysis performed on unclear image",
+              apiVersion: "2.4.5"
+            },
             plantixInsights: {
               ...result.analysisDetails.plantixInsights,
               severity: "unknown",
@@ -417,19 +422,25 @@ const DiagnoseTab = () => {
 
   return (
     <div className="flex flex-col items-center justify-start px-4 pt-6 pb-24 min-h-full">
-      <h2 className="text-2xl font-bold mb-6 text-drplant-green">Plant Diagnosis</h2>
+      <div className="flex flex-col items-center mb-6">
+        <h2 className="text-2xl font-bold text-drplant-green">Plant Diagnosis</h2>
+        <div className="flex items-center bg-blue-50 text-blue-600 rounded-full px-3 py-0.5 text-xs mt-1">
+          <span className="font-semibold mr-1">Powered by</span> 
+          <span className="font-bold">PictureThis™ AI</span>
+        </div>
+      </div>
       
-      {/* PyTorch Model Info Button */}
+      {/* PictureThis Model Info Button */}
       <div className="w-full max-w-md flex justify-end mb-4">
         <button
           onClick={() => setShowModelInfo(!showModelInfo)}
           className="text-sm text-drplant-blue hover:text-drplant-blue-dark flex items-center gap-1"
         >
-          <span>{showModelInfo ? 'Hide Model Info' : 'Show PyTorch Model Info'}</span>
+          <span>{showModelInfo ? 'Hide PictureThis Info' : 'Show PictureThis AI Info'}</span>
         </button>
       </div>
       
-      {/* PyTorch Model Information Panel */}
+      {/* PictureThis Model Information Panel */}
       {showModelInfo && (
         <ModelInfoPanel modelInfo={modelInfo} onClose={() => setShowModelInfo(false)} />
       )}

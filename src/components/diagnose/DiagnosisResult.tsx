@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { MessageCircle, Loader2, Eye, EyeOff, Thermometer } from 'lucide-react';
+import { MessageCircle, Loader2, Eye, EyeOff, Thermometer, Leaf } from 'lucide-react';
 import DiagnosisTabs from './DiagnosisTabs';
 import { PlantInfoFormValues } from './PlantInfoForm';
 
@@ -54,6 +54,9 @@ const DiagnosisResult = ({
   // Check if we have a thermal map
   const hasThermalMap = analysisDetails?.thermalMap && !isAnalyzing;
   
+  // Check if PictureThis identified a plant species
+  const plantSpecies = analysisDetails?.pictureThisInsights?.plantSpecies;
+  
   return (
     <Card className="bg-white p-6 shadow-md rounded-2xl w-full max-w-2xl">
       <div className="flex flex-col md:flex-row gap-6">
@@ -64,6 +67,16 @@ const DiagnosisResult = ({
               alt="Uploaded plant" 
               className="w-full h-full object-cover"
             />
+            
+            {/* Plant species badge from PictureThis */}
+            {plantSpecies && !isAnalyzing && (
+              <div className="absolute top-0 left-0 m-2">
+                <Badge className="bg-drplant-green text-white flex items-center gap-1 py-1.5">
+                  <Leaf className="h-3 w-3" />
+                  <span className="text-xs">{plantSpecies}</span>
+                </Badge>
+              </div>
+            )}
             
             {/* Leaf verification overlay */}
             {analysisDetails?.leafVerification && !isAnalyzing && analysisDetails.leafVerification.isLeaf && analysisDetails.leafVerification.boundingBox && (
@@ -105,11 +118,11 @@ const DiagnosisResult = ({
               >
                 {showThermalMap ? (
                   <>
-                    <EyeOff className="h-4 w-4" /> Hide Thermal Map
+                    <EyeOff className="h-4 w-4" /> Hide PictureThis Scan
                   </>
                 ) : (
                   <>
-                    <Thermometer className="h-4 w-4" /> Show Thermal Map
+                    <Thermometer className="h-4 w-4" /> Show PictureThis Scan
                   </>
                 )}
               </Button>
@@ -167,7 +180,7 @@ const DiagnosisResult = ({
                 <progress value={analysisProgress} max="100" className="w-full h-2" />
               </div>
               <p className="text-xs text-gray-500 mt-2">
-                PyTorch AI is examining leaf patterns, spots, and discoloration
+                PictureThis AI is examining leaf patterns, spots, and discoloration
               </p>
             </div>
           ) : diagnosisResult && diagnosedDisease ? (
@@ -180,6 +193,11 @@ const DiagnosisResult = ({
                   <Badge className="bg-yellow-500">Medium Reliability</Badge>
                 ) : (
                   <Badge className="bg-red-500">Low Reliability</Badge>
+                )}
+                
+                {/* PictureThis badge */}
+                {analysisDetails?.pictureThisInsights && (
+                  <Badge className="bg-blue-500 ml-auto">PictureThis™</Badge>
                 )}
               </div>
               

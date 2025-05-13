@@ -1,106 +1,114 @@
+import React from 'react';
 
-import { X } from 'lucide-react';
-import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-
-interface ModelInfoProps {
-  modelInfo: {
-    framework: string;
-    baseModel: string;
-    dataset: string;
-    datasetSize: string;
-    dataAugmentation: string[];
-    accuracy: string;
-    classes: number;
-    trainTime: string;
-    lastUpdated: string;
+interface ModelInfo {
+  name: string;
+  accuracy: string;
+  dataset: string;
+  inputSize: string;
+  classes: number;
+  lastUpdated: string;
+  framework: string;
+  architecture: {
+    name: string;
+    modified: boolean;
+    layers: number;
+    parameters: string;
   };
+  metrics: {
+    precision: number;
+    recall: number;
+    f1Score: number;
+  };
+  baseModel: string;
+  datasetSize: string;
+  dataAugmentation: string[];
+  trainTime: string;
+}
+
+interface ModelInfoPanelProps {
+  modelInfo: ModelInfo;
   onClose: () => void;
 }
 
-const ModelInfoPanel = ({ modelInfo, onClose }: ModelInfoProps) => {
+const ModelInfoPanel = ({ modelInfo, onClose }: ModelInfoPanelProps) => {
   return (
-    <Card className="bg-white p-6 shadow-lg rounded-xl w-full max-w-md mb-6 relative">
-      <button 
+    <div className="bg-white rounded-xl shadow-lg p-6 mb-6 relative text-sm">
+      <button
         onClick={onClose}
-        className="absolute top-3 right-3 text-gray-500 hover:text-gray-700"
+        className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
       >
-        <X size={18} />
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+          <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+        </svg>
       </button>
       
-      <div className="flex items-center mb-4">
-        <div className="bg-drplant-blue/10 p-2 rounded-lg mr-3">
-          <svg 
-            xmlns="http://www.w3.org/2000/svg" 
-            width="24" 
-            height="24" 
-            viewBox="0 0 24 24" 
-            fill="none" 
-            stroke="currentColor" 
-            strokeWidth="2" 
-            strokeLinecap="round" 
-            strokeLinejoin="round" 
-            className="text-drplant-blue"
-          >
-            <path d="M10 21v-7.5a2.5 2.5 0 0 1 5 0V21" />
-            <path d="M4 16.5a2.5 2.5 0 0 1 5 0V21" />
-            <path d="M19.5 8.5a2.5 2.5 0 0 0-5 0v7" />
-            <path d="M4 8.5a2.5 2.5 0 0 1 5 0v2.5" />
-          </svg>
+      <h3 className="text-lg font-bold mb-4 text-drplant-blue flex items-center">
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+          <path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd" />
+        </svg>
+        PictureThis AI Diagnosis Model
+      </h3>
+      
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <h4 className="font-semibold text-gray-700">Base Architecture</h4>
+          <p>{modelInfo.baseModel}</p>
         </div>
         <div>
-          <h3 className="font-semibold text-lg text-drplant-blue">PyTorch Plant Disease Model</h3>
-          <p className="text-sm text-gray-500">Last updated: {modelInfo.lastUpdated}</p>
+          <h4 className="font-semibold text-gray-700">Accuracy</h4>
+          <p>{modelInfo.accuracy}</p>
+        </div>
+        <div>
+          <h4 className="font-semibold text-gray-700">Classes</h4>
+          <p>{modelInfo.classes} plant diseases</p>
+        </div>
+        <div>
+          <h4 className="font-semibold text-gray-700">Last Updated</h4>
+          <p>{modelInfo.lastUpdated}</p>
+        </div>
+        <div>
+          <h4 className="font-semibold text-gray-700">Dataset</h4>
+          <p>{modelInfo.datasetSize}</p>
+        </div>
+        <div>
+          <h4 className="font-semibold text-gray-700">Framework</h4>
+          <p>{modelInfo.framework}</p>
         </div>
       </div>
       
-      <div className="space-y-4">
-        <div>
-          <h4 className="text-sm text-gray-500 mb-1">Model Architecture</h4>
-          <div className="flex items-center gap-2">
-            <Badge className="bg-purple-600">{modelInfo.framework}</Badge>
-            <Badge className="bg-gray-700">{modelInfo.baseModel}</Badge>
+      <div className="mt-4">
+        <h4 className="font-semibold text-gray-700 mb-1">Performance Metrics</h4>
+        <div className="bg-gray-50 p-3 rounded-lg grid grid-cols-3 gap-2">
+          <div>
+            <div className="text-xs text-gray-500">Precision</div>
+            <div className="font-medium">{modelInfo.metrics.precision.toFixed(3)}</div>
           </div>
-        </div>
-        
-        <div>
-          <h4 className="text-sm text-gray-500 mb-1">Dataset</h4>
-          <p className="text-sm">
-            <span className="font-medium">{modelInfo.dataset}</span> - {modelInfo.datasetSize} across {modelInfo.classes} classes
-          </p>
-        </div>
-        
-        <div>
-          <h4 className="text-sm text-gray-500 mb-1">Data Augmentation Techniques</h4>
-          <ul className="text-sm grid grid-cols-1 md:grid-cols-2 gap-1">
-            {modelInfo.dataAugmentation.map((technique, index) => (
-              <li key={index} className="flex items-start">
-                <span className="text-xs bg-green-100 text-green-800 rounded-full w-4 h-4 inline-flex items-center justify-center mr-1 mt-0.5">✓</span>
-                {technique}
-              </li>
-            ))}
-          </ul>
-        </div>
-        
-        <div>
-          <h4 className="text-sm text-gray-500 mb-1">Performance</h4>
-          <div className="flex items-center gap-4">
-            <div>
-              <span className="text-xs text-gray-500">Accuracy</span>
-              <p className="font-medium">{modelInfo.accuracy}</p>
-            </div>
-            <div>
-              <span className="text-xs text-gray-500">Training Time</span>
-              <p className="font-medium">{modelInfo.trainTime}</p>
-            </div>
+          <div>
+            <div className="text-xs text-gray-500">Recall</div>
+            <div className="font-medium">{modelInfo.metrics.recall.toFixed(3)}</div>
           </div>
-        </div>
-        
-        <div className="pt-2 text-xs text-gray-500 italic">
-          This model runs in the cloud with automatic scaling for high-volume processing.
+          <div>
+            <div className="text-xs text-gray-500">F1 Score</div>
+            <div className="font-medium">{modelInfo.metrics.f1Score.toFixed(3)}</div>
+          </div>
         </div>
       </div>
-    </Card>
+      
+      <div className="mt-4">
+        <h4 className="font-semibold text-gray-700 mb-1">Data Augmentation</h4>
+        <div className="flex flex-wrap gap-1">
+          {modelInfo.dataAugmentation.map((technique, index) => (
+            <span key={index} className="bg-gray-100 text-gray-600 px-2 py-1 rounded text-xs">
+              {technique}
+            </span>
+          ))}
+        </div>
+      </div>
+      
+      <div className="mt-4 text-xs text-gray-500">
+        <p>PictureThis AI integration provides enhanced plant identification and disease diagnosis capabilities.</p>
+      </div>
+    </div>
   );
 };
 
