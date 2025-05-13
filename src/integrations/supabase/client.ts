@@ -17,8 +17,7 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     autoRefreshToken: true,
   },
   realtime: {
-    // Using allowed options only
-    presence: true,
+    // Using compatible options only
   },
 });
 
@@ -33,6 +32,8 @@ export type DbConversationUpdate = Database['public']['Tables']['conversations']
 export type DbMessage = Database['public']['Tables']['messages']['Row'];
 export type DbMessageInsert = Database['public']['Tables']['messages']['Insert'];
 export type DbMessageUpdate = Database['public']['Tables']['messages']['Update'];
+
+export type DbProfile = Database['public']['Tables']['profiles']['Row'];
 
 // Helper functions for type safety when dealing with Supabase responses
 export function isError<T>(result: T | PostgrestError): result is PostgrestError {
@@ -56,6 +57,10 @@ export function asDbConversation(data: any): DbConversation {
 
 export function asDbMessage(data: any): DbMessage {
   return data as DbMessage;
+}
+
+export function asDbProfile(data: any): DbProfile {
+  return data as DbProfile;
 }
 
 // Suppress TypeScript errors for object access in certain contexts

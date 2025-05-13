@@ -1,5 +1,6 @@
+
 import { createContext, useContext, useState, ReactNode, useEffect } from "react";
-import { supabase, asProfileKey, asFilterValue, asDbUpdate } from '@/integrations/supabase/client';
+import { supabase, asProfileKey, asFilterValue, asDbUpdate, asDbProfile } from '@/integrations/supabase/client';
 import { Session, User } from "@supabase/supabase-js";
 
 // Define type for user profile
@@ -143,19 +144,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
       
       if (data) {
-        const username = data.username || data.email?.split('@')[0] || '';
+        // Use the asDbProfile helper to properly type the data
+        const profileData = asDbProfile(data);
+        const username = profileData.username || profileData.email?.split('@')[0] || '';
+        
         setUsername(username);
         setUserProfile({
           username: username,
-          firstName: data.first_name || '',
-          lastName: data.last_name || '',
-          email: data.email || user?.email || '',
-          phone: data.phone || '',
-          address: data.address || '',
-          role: (data.role as "user" | "master") || 'user'
+          firstName: profileData.first_name || '',
+          lastName: profileData.last_name || '',
+          email: profileData.email || user?.email || '',
+          phone: profileData.phone || '',
+          address: profileData.address || '',
+          role: (profileData.role as "user" | "master") || 'user'
         });
-        setIsProfileComplete(!!data.first_name && !!data.last_name);
-        setIsMasterAccount(data.role === "master");
+        
+        setIsProfileComplete(!!profileData.first_name && !!profileData.last_name);
+        setIsMasterAccount(profileData.role === "master");
       }
     } catch (error) {
       console.error('Error fetching user profile:', error);
