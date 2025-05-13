@@ -14,19 +14,140 @@ console.log("Hello from send-registration-confirmation");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 
-// Email configuration - reading from environment variables
-const EMAIL_HOST = Deno.env.get("EMAIL_HOST") || "smtp.sendgrid.net"; // Fixed this to match SendGrid's correct hostname
+// Email configuration - using SendGrid's correct hostname
+const EMAIL_HOST = Deno.env.get("EMAIL_HOST") || "smtp.sendgrid.net";
 const EMAIL_PORT = Number(Deno.env.get("EMAIL_PORT")) || 465;
 const EMAIL_USERNAME = Deno.env.get("EMAIL_USERNAME") || "";
 const EMAIL_PASSWORD = Deno.env.get("EMAIL_PASSWORD") || "";
 const EMAIL_FROM = Deno.env.get("EMAIL_FROM") || "Dr.Plant <noreply@drplant.app>";
 const APP_URL = Deno.env.get("APP_URL") || "https://drplant.app";
 
+// Either use SMTP or SendGrid API depending on availability of API key
+const SENDGRID_API_KEY = Deno.env.get("SENDGRID_API_KEY");
+
+// SendGrid API for email sending when API key is available
+async function sendWithSendGridAPI(toEmail: string, username: string) {
+  if (!SENDGRID_API_KEY) {
+    throw new Error("SendGrid API key is not configured");
+  }
+
+  console.log(`Using SendGrid API to send email to ${toEmail}`);
+
+  // Create the email template as before
+  const htmlContent = `
+    <html>
+      <head>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background: linear-gradient(135deg, #3b82f6 0%, #10b981 100%); color: white; padding: 30px 20px; text-align: center; border-radius: 8px 8px 0 0; }
+          .header h1 { margin: 0; font-size: 28px; }
+          .logo { width: 80px; height: 80px; margin: 0 auto 20px; background-color: white; padding: 10px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+          .content { padding: 30px; background-color: #f9fafb; border-left: 1px solid #eaeaea; border-right: 1px solid #eaeaea; }
+          .welcome-text { font-size: 18px; margin-bottom: 25px; }
+          .features { background-color: #f0f9ff; padding: 20px; border-radius: 8px; margin: 20px 0; }
+          .feature-item { margin-bottom: 15px; display: flex; align-items: center; }
+          .feature-icon { margin-right: 10px; color: #10b981; }
+          .button { display: inline-block; background: linear-gradient(135deg, #3b82f6 0%, #10b981 100%); color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; margin: 20px 0; font-weight: bold; }
+          .security-notice { margin-top: 25px; padding: 15px; background-color: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 4px; }
+          .footer { text-align: center; padding: 20px; font-size: 12px; color: #6b7280; border-top: 1px solid #eaeaea; background-color: #f9fafb; border-radius: 0 0 8px 8px; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <div class="logo">🌱</div>
+            <h1>Welcome to Dr.Plant!</h1>
+          </div>
+          <div class="content">
+            <p class="welcome-text">Hello ${username},</p>
+            <p>Thank you for registering with Dr.Plant! Your registration has been successfully confirmed.</p>
+            
+            <div class="features">
+              <h3>With Dr.Plant, you can:</h3>
+              <div class="feature-item"><span class="feature-icon">✅</span> Diagnose plant problems using our AI technology</div>
+              <div class="feature-item"><span class="feature-icon">✅</span> Get expert advice from professional plant pathologists</div>
+              <div class="feature-item"><span class="feature-icon">✅</span> Access our comprehensive plant disease library</div>
+              <div class="feature-item"><span class="feature-icon">✅</span> Track your plants' health history over time</div>
+            </div>
+            
+            <p>You can access your account using your email: <strong>${toEmail}</strong></p>
+            <a href="${APP_URL}/login" class="button">Login to your account</a>
+            
+            <div class="security-notice">
+              <h3>Important Security Information:</h3>
+              <p>For your security, any verification codes (OTPs) sent to you will expire after 15 minutes.</p>
+              <p>Always use verification codes immediately after receiving them and never share them with anyone.</p>
+            </div>
+            
+            <p>If you have any questions or need assistance, please don't hesitate to contact our support team.</p>
+            <p>Best regards,<br>The Dr.Plant Team</p>
+          </div>
+          <div class="footer">
+            <p>© 2025 Dr.Plant. All rights reserved.</p>
+            <p>This email was sent to ${toEmail} because you registered on our site.</p>
+            <p>If you didn't register for Dr.Plant, please <a href="${APP_URL}/contact">contact our support team</a>.</p>
+          </div>
+        </div>
+      </body>
+    </html>
+  `;
+  
+  // Call SendGrid API using v3 Mail Send API
+  const response = await fetch('https://api.sendgrid.com/v3/mail/send', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${SENDGRID_API_KEY}`
+    },
+    body: JSON.stringify({
+      personalizations: [
+        {
+          to: [
+            {
+              email: toEmail
+            }
+          ]
+        }
+      ],
+      from: {
+        email: EMAIL_FROM.includes('<') ? EMAIL_FROM.match(/<(.+)>/)?.[1] || "noreply@drplant.app" : EMAIL_FROM,
+        name: "Dr.Plant"
+      },
+      subject: "Welcome to Dr.Plant! Registration Confirmed",
+      content: [
+        {
+          type: "text/html",
+          value: htmlContent
+        }
+      ]
+    })
+  });
+  
+  if (!response.ok) {
+    const errorData = await response.text();
+    console.error("SendGrid API error:", errorData);
+    throw new Error(`SendGrid API error: ${response.status} ${response.statusText}`);
+  }
+  
+  const result = await response.json();
+  console.log("SendGrid API response:", result);
+  return result;
+}
+
 // Send registration confirmation email with better error handling
 async function sendConfirmationEmail(email: string, username: string) {
-  const client = new SmtpClient();
-  
   try {
+    // Try SendGrid API first if API key is configured
+    if (SENDGRID_API_KEY) {
+      console.log("Using SendGrid API for email delivery");
+      return await sendWithSendGridAPI(email, username);
+    }
+    
+    // Fall back to SMTP if no API key
+    console.log("No SendGrid API key found, falling back to SMTP");
+    const client = new SmtpClient();
+    
     console.log(`Connecting to SMTP server: ${EMAIL_HOST}:${EMAIL_PORT}`);
     console.log(`Using credentials: ${EMAIL_USERNAME} / [password hidden]`);
     
@@ -111,9 +232,9 @@ async function sendConfirmationEmail(email: string, username: string) {
 
     console.log(`Confirmation email sent to ${email} successfully`);
     await client.close();
+    return { success: true };
   } catch (error) {
     console.error(`Error sending email to ${email}:`, error);
-    await client.close();
     throw error;
   }
 }
