@@ -45,6 +45,137 @@ const extractPlantName = (label: string): string | null => {
   return null;
 };
 
+// Function to check if an image contains a plant using image classification models
+async function verifyImageContainsPlant(imageArrayBuffer: ArrayBuffer): Promise<{isPlant: boolean, confidence: number, aiServices: any[]}> {
+  try {
+    // Using Microsoft's ResNet-50 model for general image classification
+    const response = await fetch(
+      "https://api-inference.huggingface.co/models/microsoft/resnet-50",
+      {
+        headers: {
+          Authorization: `Bearer ${huggingFaceToken}`,
+          "Content-Type": "application/octet-stream",
+        },
+        method: "POST",
+        body: new Uint8Array(imageArrayBuffer),
+      }
+    );
+    
+    if (!response.ok) {
+      console.error(`ResNet-50 API Error: ${await response.text()}`);
+      // Default to true if verification fails to avoid blocking legitimate images
+      return { isPlant: true, confidence: 0.5, aiServices: [] };
+    }
+    
+    const result = await response.json();
+    
+    // Extract relevant plant-related classifications
+    const plantLabels = ['plant', 'leaf', 'flower', 'tree', 'vegetation', 'garden', 'herb', 
+                         'foliage', 'houseplant', 'botanical', 'flora', 'potted plant'];
+    
+    // Check if any of the top 5 predictions match plant-related terms
+    const plantDetections = result
+      .slice(0, 5) // Consider top 5 predictions
+      .filter((prediction: any) => {
+        const label = prediction.label.toLowerCase();
+        return plantLabels.some(plantLabel => label.includes(plantLabel));
+      });
+    
+    // Also check Google's ViT model if available as a second opinion
+    let vitResult = null;
+    let aiServices = [];
+    
+    try {
+      const vitResponse = await fetch(
+        "https://api-inference.huggingface.co/models/google/vit-base-patch16-224",
+        {
+          headers: {
+            Authorization: `Bearer ${huggingFaceToken}`,
+            "Content-Type": "application/octet-stream",
+          },
+          method: "POST",
+          body: new Uint8Array(imageArrayBuffer),
+        }
+      );
+      
+      if (vitResponse.ok) {
+        vitResult = await vitResponse.json();
+        
+        // Extract plant-related classifications from ViT
+        const vitPlantDetections = vitResult
+          .slice(0, 5)
+          .filter((prediction: any) => {
+            const label = prediction.label.toLowerCase();
+            return plantLabels.some(plantLabel => label.includes(plantLabel));
+          });
+        
+        const vitIsPlant = vitPlantDetections.length > 0;
+        const vitConfidence = vitPlantDetections.length > 0 
+          ? vitPlantDetections[0].score 
+          : 0;
+        
+        aiServices.push({
+          serviceName: "ViT Classification",
+          result: vitIsPlant,
+          confidence: vitConfidence
+        });
+      }
+    } catch (err) {
+      console.error('Error with ViT model:', err.message);
+      // Continue without ViT results
+    }
+    
+    // Record ResNet results
+    const resnetIsPlant = plantDetections.length > 0;
+    const resnetConfidence = plantDetections.length > 0 
+      ? plantDetections[0].score 
+      : 0;
+    
+    aiServices.push({
+      serviceName: "ResNet Classification",
+      result: resnetIsPlant,
+      confidence: resnetConfidence
+    });
+    
+    // Determine final verdict - if either model thinks it's a plant with confidence > 0.6, accept it
+    // Weighted decision - more weight to the model with higher confidence
+    let isPlant = false;
+    let confidence = 0;
+    
+    if (resnetIsPlant && resnetConfidence > 0.6) {
+      isPlant = true;
+      confidence = resnetConfidence;
+    }
+    
+    if (vitResult && vitResult.length > 0) {
+      const vitPlantDetections = vitResult
+        .slice(0, 5)
+        .filter((prediction: any) => {
+          const label = prediction.label.toLowerCase();
+          return plantLabels.some(plantLabel => label.includes(plantLabel));
+        });
+      
+      if (vitPlantDetections.length > 0 && vitPlantDetections[0].score > 0.6) {
+        isPlant = true;
+        // Use the higher confidence score
+        confidence = Math.max(confidence, vitPlantDetections[0].score);
+      }
+    }
+    
+    console.log(`Plant verification result: isPlant=${isPlant}, confidence=${confidence}`);
+    
+    return {
+      isPlant,
+      confidence,
+      aiServices
+    };
+  } catch (err) {
+    console.error('Plant verification error:', err.message);
+    // Default to true in case of errors to avoid blocking legitimate images
+    return { isPlant: true, confidence: 0.5, aiServices: [] };
+  }
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -75,6 +206,25 @@ serve(async (req) => {
 
     // Read the image file as an ArrayBuffer
     const imageArrayBuffer = await imageFile.arrayBuffer();
+    
+    // First, verify that the image contains a plant
+    const plantVerification = await verifyImageContainsPlant(imageArrayBuffer);
+    
+    // If the image doesn't appear to contain a plant with sufficient confidence, return an error
+    if (!plantVerification.isPlant) {
+      return new Response(JSON.stringify({
+        error: false,
+        plantVerification: {
+          isPlant: false,
+          confidence: plantVerification.confidence,
+          aiServices: plantVerification.aiServices,
+          message: "The image does not appear to contain a plant. Please upload a valid plant photo."
+        }
+      }), {
+        status: 200, // We return 200 instead of error status so frontend can handle the message display
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
     
     // Try multiple models for plant disease detection
     const models = [
@@ -153,6 +303,9 @@ serve(async (req) => {
                          result.predictions ? result.predictions : 
                          result.label ? [result] : [];
     
+    // Check for low confidence - if under 0.6, mark the prediction as unreliable
+    const isReliable = topPrediction.score >= 0.6;
+    
     // Determine if plant is healthy
     const healthy = isPlantHealthy(topPrediction.label);
     
@@ -171,7 +324,10 @@ serve(async (req) => {
       allPredictions: allPredictions,
       timestamp: new Date().toISOString(),
       healthy: healthy,
-      plantName: plantName
+      plantName: plantName,
+      plantVerification: plantVerification,
+      isValidPlantImage: plantVerification.isPlant,
+      isReliable: isReliable
     };
 
     // Initialize Supabase client with service role key to bypass RLS

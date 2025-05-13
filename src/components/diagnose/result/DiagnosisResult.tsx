@@ -10,7 +10,7 @@ import AiServicesData from './AiServicesData';
 import PlantInfoCard from './PlantInfoCard';
 import ActionButtons from './ActionButtons';
 import AnalysisLoader from './AnalysisLoader';
-import { Leaf } from 'lucide-react';
+import { Leaf, AlertTriangle } from 'lucide-react';
 
 interface DiagnosisResultProps {
   uploadedImage: string;
@@ -43,6 +43,14 @@ const DiagnosisResult = ({
   navigateToShop,
   navigateToLibrary
 }: DiagnosisResultProps) => {
+  // Check if image is a valid plant image
+  const isValidPlantImage = analysisDetails?.plantVerification?.isPlant !== false &&
+                           analysisDetails?.multiServiceInsights?.isValidPlantImage !== false;
+  
+  // Check if the diagnosis has sufficient confidence
+  const hasSufficientConfidence = diagnosedDisease?.confidence !== undefined && 
+                                 diagnosedDisease.confidence >= 0.6;
+  
   return (
     <Card className="bg-white p-6 shadow-md rounded-2xl w-full max-w-2xl">
       <div className="flex flex-col md:flex-row gap-6">
@@ -52,6 +60,30 @@ const DiagnosisResult = ({
             analysisDetails={analysisDetails} 
             isAnalyzing={isAnalyzing} 
           />
+          
+          {!isAnalyzing && !isValidPlantImage && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
+              <div className="flex items-center gap-2 text-red-600 font-medium mb-1">
+                <AlertTriangle className="h-4 w-4" />
+                <span>No Plant Detected</span>
+              </div>
+              <p className="text-sm text-red-700">
+                The image does not appear to contain a plant. Please upload a valid plant photo.
+              </p>
+            </div>
+          )}
+          
+          {!isAnalyzing && isValidPlantImage && !hasSufficientConfidence && diagnosedDisease && (
+            <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-md">
+              <div className="flex items-center gap-2 text-amber-600 font-medium mb-1">
+                <AlertTriangle className="h-4 w-4" />
+                <span>Low Confidence Diagnosis</span>
+              </div>
+              <p className="text-sm text-amber-700">
+                The image is not clear enough for a reliable diagnosis. Please try again with a clearer photo of the plant.
+              </p>
+            </div>
+          )}
           
           <AiServicesData 
             analysisDetails={analysisDetails} 
@@ -89,7 +121,9 @@ const DiagnosisResult = ({
                 
                 {/* Confidence badge - only display if plant is not healthy */}
                 {!analysisDetails?.multiServiceInsights?.isHealthy && (
-                  <Badge className="bg-amber-500">{Math.round(diagnosedDisease.confidence * 100)}% Confidence</Badge>
+                  <Badge className={`${diagnosedDisease.confidence >= 0.6 ? 'bg-amber-500' : 'bg-red-500'}`}>
+                    {Math.round(diagnosedDisease.confidence * 100)}% Confidence
+                  </Badge>
                 )}
                 
                 {/* Reliability badge - only display if plant is not healthy */}
@@ -109,14 +143,42 @@ const DiagnosisResult = ({
                 )}
               </div>
               
-              <DiagnosisTabs
-                disease={diagnosedDisease}
-                analysisDetails={analysisDetails}
-                activeTab={activeResultTab}
-                onTabChange={setActiveResultTab}
-                onNavigateToLibrary={navigateToLibrary}
-                onNavigateToShop={navigateToShop}
-              />
+              {(!isValidPlantImage || !hasSufficientConfidence) ? (
+                <div className="bg-white p-6 rounded-lg border border-gray-200">
+                  <h3 className="text-xl font-semibold mb-4">Diagnosis Not Available</h3>
+                  
+                  {!isValidPlantImage ? (
+                    <div className="space-y-2">
+                      <p>To get an accurate plant diagnosis:</p>
+                      <ul className="list-disc pl-5 space-y-1">
+                        <li>Make sure your image contains a clearly visible plant</li>
+                        <li>Ensure good lighting when taking the photo</li>
+                        <li>Focus on the plant, avoiding cluttered backgrounds</li>
+                        <li>Include the affected areas if your plant has visible symptoms</li>
+                      </ul>
+                    </div>
+                  ) : !hasSufficientConfidence ? (
+                    <div className="space-y-2">
+                      <p>For a more reliable diagnosis:</p>
+                      <ul className="list-disc pl-5 space-y-1">
+                        <li>Take a clearer photo of the affected plant</li>
+                        <li>Ensure proper lighting to show details clearly</li>
+                        <li>Focus directly on the symptoms or affected areas</li>
+                        <li>Take multiple pictures from different angles</li>
+                      </ul>
+                    </div>
+                  ) : null}
+                </div>
+              ) : (
+                <DiagnosisTabs
+                  disease={diagnosedDisease}
+                  analysisDetails={analysisDetails}
+                  activeTab={activeResultTab}
+                  onTabChange={setActiveResultTab}
+                  onNavigateToLibrary={navigateToLibrary}
+                  onNavigateToShop={navigateToShop}
+                />
+              )}
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center py-4 h-full">

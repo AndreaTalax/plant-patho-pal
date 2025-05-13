@@ -20,8 +20,10 @@ export interface AnalysisDetails {
     agreementScore?: number;
     primaryService?: string;
     plantSpecies?: string;
-    plantName?: string; // Added plant name field
-    isHealthy?: boolean; // Added flag to indicate if the plant is healthy
+    plantName?: string;
+    isHealthy?: boolean;
+    isValidPlantImage?: boolean;
+    isReliable?: boolean;
   };
   alternativeDiagnoses: {
     disease: string;
@@ -41,6 +43,8 @@ export interface AnalysisDetails {
   };
   plantVerification?: {
     isPlant: boolean;
+    confidence?: number;
+    message?: string;
     aiServices?: {
       serviceName: string;
       result: boolean;

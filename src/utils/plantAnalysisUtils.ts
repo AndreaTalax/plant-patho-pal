@@ -103,7 +103,11 @@ export const formatHuggingFaceResult = (huggingFaceResult: any) => {
       primaryService: 'HuggingFace',
       plantSpecies: speciesOnly,
       plantName: plantNameOnly,
-      isHealthy: isHealthy
+      isHealthy: isHealthy,
+      isValidPlantImage: huggingFaceResult.isValidPlantImage !== undefined ? 
+                         huggingFaceResult.isValidPlantImage : true,
+      isReliable: huggingFaceResult.isReliable !== undefined ? 
+                 huggingFaceResult.isReliable : mainPrediction.score >= 0.6
     },
     identifiedFeatures: isHealthy ? 
       [
@@ -117,6 +121,11 @@ export const formatHuggingFaceResult = (huggingFaceResult: any) => {
         'Patterns recognized by the artificial intelligence model'
       ],
     alternativeDiagnoses: isHealthy ? [] : alternativeDiagnoses,
+    plantVerification: huggingFaceResult.plantVerification || {
+      isPlant: huggingFaceResult.isValidPlantImage !== undefined ? 
+               huggingFaceResult.isValidPlantImage : true,
+      aiServices: []
+    },
     plantixInsights: {
       severity: isHealthy ? 'none' : 'unknown',
       progressStage: isHealthy ? 'healthy' : 'medium',
