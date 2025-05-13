@@ -62,6 +62,12 @@ const DiagnosisResult = ({
   const hasAiServiceData = analysisDetails?.plantVerification?.aiServices &&
                            analysisDetails.plantVerification.aiServices.length > 0;
 
+  // Check if the image is valid (contains a plant)
+  const isValidPlantImage = analysisDetails?.multiServiceInsights?.isValidPlantImage !== false;
+
+  // Check if the analysis has a reliable confidence score
+  const hasReliableConfidence = diagnosedDisease && diagnosedDisease.confidence >= 0.6;
+
   return (
     <Card className="bg-white p-6 shadow-md rounded-2xl w-full max-w-2xl">
       <div className="flex flex-col md:flex-row gap-6">
@@ -198,19 +204,19 @@ const DiagnosisResult = ({
           )}
           
           <div className="bg-drplant-green/10 p-3 rounded-lg mb-4">
-            <h4 className="font-medium mb-1">Informazioni sulla pianta</h4>
+            <h4 className="font-medium mb-1">Plant Information</h4>
             <div className="text-sm space-y-1">
               <div className="flex items-center gap-2">
-                <span className="text-gray-600">Ambiente: </span>
-                <span>{plantInfo.isIndoor ? "Interno" : "Esterno"}</span>
+                <span className="text-gray-600">Environment: </span>
+                <span>{plantInfo.isIndoor ? "Indoor" : "Outdoor"}</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-gray-600">Esposizione: </span>
-                <span>{plantInfo.inSunlight ? "Soleggiata" : "Ombreggiata"}</span>
+                <span className="text-gray-600">Light exposure: </span>
+                <span>{plantInfo.inSunlight ? "Sunny" : "Shaded"}</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-gray-600">Irrigazione: </span>
-                <span>{plantInfo.wateringFrequency} volte/settimana</span>
+                <span className="text-gray-600">Watering: </span>
+                <span>{plantInfo.wateringFrequency} times/week</span>
               </div>
             </div>
           </div>
@@ -223,7 +229,7 @@ const DiagnosisResult = ({
             >
               New Diagnosis
             </Button>
-            {diagnosisResult && diagnosedDisease && (
+            {diagnosisResult && diagnosedDisease && hasReliableConfidence && (
               <Button 
                 className="flex-1 bg-drplant-blue hover:bg-drplant-blue-dark"
                 onClick={navigateToChat}
@@ -246,8 +252,33 @@ const DiagnosisResult = ({
                 Multiple AI services are analyzing your plant
               </p>
             </div>
+          ) : !isValidPlantImage ? (
+            <div className="bg-red-50 text-red-600 p-4 rounded-lg mb-4">
+              <h3 className="text-lg font-semibold mb-2">No Plant Detected</h3>
+              <p className="mb-4">
+                The uploaded image does not appear to contain a plant. To get an accurate analysis, please upload an image
+                that clearly shows a plant.
+              </p>
+              <Button 
+                variant="destructive" 
+                className="w-full"
+                onClick={resetDiagnosis}
+              >
+                Try Again
+              </Button>
+            </div>
           ) : diagnosisResult && diagnosedDisease ? (
             <div className="h-full">
+              {!hasReliableConfidence && (
+                <div className="bg-amber-50 text-amber-600 p-4 rounded-lg mb-4">
+                  <h3 className="text-md font-semibold mb-1">Low Confidence Analysis</h3>
+                  <p className="text-sm mb-2">
+                    The image isn't clear enough for a reliable diagnosis. Our system has made a best guess, but we recommend
+                    uploading a clearer image of the affected plant area.
+                  </p>
+                </div>
+              )}
+              
               <div className="flex items-center gap-2 mb-4">
                 <Badge className="bg-amber-500">{Math.round(diagnosedDisease.confidence * 100)}% Confidence</Badge>
                 {diagnosedDisease.confidence > 0.9 ? (
@@ -257,18 +288,29 @@ const DiagnosisResult = ({
                 ) : (
                   <Badge className="bg-red-500">Low Reliability</Badge>
                 )}
-                
-                {/* Removed AI Services badges */}
               </div>
               
-              <DiagnosisTabs
-                disease={diagnosedDisease}
-                analysisDetails={analysisDetails}
-                activeTab={activeResultTab}
-                onTabChange={setActiveResultTab}
-                onNavigateToLibrary={navigateToLibrary}
-                onNavigateToShop={navigateToShop}
-              />
+              {hasReliableConfidence ? (
+                <DiagnosisTabs
+                  disease={diagnosedDisease}
+                  analysisDetails={analysisDetails}
+                  activeTab={activeResultTab}
+                  onTabChange={setActiveResultTab}
+                  onNavigateToLibrary={navigateToLibrary}
+                  onNavigateToShop={navigateToShop}
+                />
+              ) : (
+                <div className="p-4 border rounded-lg">
+                  <h3 className="font-medium mb-2">Possible Issue: {diagnosedDisease.name}</h3>
+                  <p className="text-sm text-gray-600 mb-4">{diagnosedDisease.description}</p>
+                  <Button 
+                    onClick={resetDiagnosis} 
+                    className="w-full bg-drplant-blue hover:bg-drplant-blue-dark"
+                  >
+                    Try a New Photo
+                  </Button>
+                </div>
+              )}
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center py-4 h-full">
@@ -282,4 +324,3 @@ const DiagnosisResult = ({
 };
 
 export default DiagnosisResult;
-
