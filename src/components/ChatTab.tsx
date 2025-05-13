@@ -9,7 +9,7 @@ import { Send, ChevronRight, User, MessageSquare, Trash2, Ban, ShoppingBag } fro
 import { toast } from '@/components/ui/sonner';
 import { useTheme } from '@/context/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase, EXPERT_ID } from '@/integrations/supabase/client';
 import {
   Dialog,
   DialogContent,
@@ -100,7 +100,6 @@ const MOCK_PRODUCTS: Product[] = [
 ];
 
 // Marco Nigro's expert data
-const EXPERT_ID = "premium-user-id"; // This ID corresponds to Marco Nigro's account
 const EXPERT = {
   id: EXPERT_ID,
   name: 'Plant Pathologist Marco Nigro', 
@@ -153,7 +152,7 @@ const ChatTab = () => {
           query = supabase
             .from('conversations')
             .select('*, user:profiles!conversations_user_id_fkey(id, username, first_name, last_name)')
-            .eq('expert_id', userProfile.email === EXPERT.email ? EXPERT_ID : userProfile.email)
+            .eq('expert_id', EXPERT_ID)
             .order('updated_at', { ascending: false });
         } else {
           // Regular users fetch their conversations
@@ -176,7 +175,7 @@ const ChatTab = () => {
           return;
         }
         
-        setDbConversations(data);
+        setDbConversations(data as DatabaseConversation[]);
         
         // Convert to UI format for master account
         if (isMasterAccount) {
@@ -240,16 +239,18 @@ const ChatTab = () => {
         return [];
       }
       
-      setDbMessages(data);
+      // Cast the data to DatabaseMessage[] since we know the structure
+      const typedMessages = data as DatabaseMessage[];
+      setDbMessages(typedMessages);
       
       // Convert to UI format
-      const convertedMessages = data.map((msg: DatabaseMessage) => {
+      const convertedMessages = typedMessages.map((msg: DatabaseMessage) => {
         return {
           id: msg.id,
           sender: msg.sender_id === EXPERT_ID ? 'expert' : 'user',
           text: msg.text,
           time: new Date(msg.sent_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          products: msg.products
+          products: msg.products || undefined
         };
       });
       
@@ -279,17 +280,19 @@ const ChatTab = () => {
       }
       
       if (existingConversations && existingConversations.length > 0) {
-        return existingConversations[0];
+        return existingConversations[0] as DatabaseConversation;
       }
       
       // Create new conversation
+      const newConversationData = {
+        user_id: userProfile.email,
+        expert_id: EXPERT_ID,
+        status: 'active'
+      };
+      
       const { data: newConversation, error: createError } = await supabase
         .from('conversations')
-        .insert({
-          user_id: userProfile.email,
-          expert_id: EXPERT_ID,
-          status: 'active'
-        })
+        .insert(newConversationData)
         .select()
         .single();
         
@@ -298,7 +301,7 @@ const ChatTab = () => {
         return null;
       }
       
-      return newConversation;
+      return newConversation as DatabaseConversation;
     } catch (error) {
       console.error("Error in findOrCreateConversation:", error);
       return null;
@@ -322,7 +325,7 @@ const ChatTab = () => {
       // Load messages
       const messagesForConversation = await loadMessages(conversation.id);
       
-      if (messagesForConversation.length === 0) {
+      if (!messagesForConversation || messagesForConversation.length === 0) {
         // Add initial greeting message if no messages exist
         setMessages([{ 
           id: '1', 
@@ -353,7 +356,7 @@ const ChatTab = () => {
               sender: newMsg.sender_id === EXPERT_ID ? 'expert' : 'user',
               text: newMsg.text,
               time: new Date(newMsg.sent_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-              products: newMsg.products
+              products: newMsg.products || undefined
             };
             
             setMessages(prev => [...prev, formattedMessage]);
@@ -384,7 +387,7 @@ const ChatTab = () => {
     if (uiConversation) {
       setCurrentConversation({
         ...uiConversation,
-        messages: messagesForConversation,
+        messages: messagesForConversation || [],
         unread: false // Mark as read
       });
       
@@ -415,7 +418,7 @@ const ChatTab = () => {
             sender: newMsg.sender_id === EXPERT_ID ? 'expert' : 'user',
             text: newMsg.text,
             time: new Date(newMsg.sent_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            products: newMsg.products
+            products: newMsg.products || undefined
           };
           
           // Update current conversation
@@ -529,15 +532,17 @@ const ChatTab = () => {
     }
     
     try {
+      const messageData = {
+        conversation_id: currentDbConversation.id,
+        sender_id: isMasterAccount ? EXPERT_ID : userProfile.email,
+        recipient_id: isMasterAccount ? currentDbConversation.user_id : EXPERT_ID,
+        text: 'I recommend the following products for your plant:',
+        products: selectedProducts
+      };
+      
       const { error } = await supabase
         .from('messages')
-        .insert({
-          conversation_id: currentDbConversation.id,
-          sender_id: isMasterAccount ? EXPERT_ID : userProfile.email,
-          recipient_id: isMasterAccount ? currentDbConversation.user_id : EXPERT_ID,
-          text: 'I recommend the following products for your plant:',
-          products: selectedProducts
-        });
+        .insert(messageData);
         
       if (error) {
         console.error("Error sending products:", error);
@@ -570,14 +575,16 @@ const ChatTab = () => {
         setCurrentDbConversation(conversation);
       }
       
+      const messageData = {
+        conversation_id: currentDbConversation?.id,
+        sender_id: isMasterAccount ? EXPERT_ID : userProfile.email,
+        recipient_id: isMasterAccount ? currentDbConversation?.user_id : EXPERT_ID,
+        text: newMessage
+      };
+      
       const { error } = await supabase
         .from('messages')
-        .insert({
-          conversation_id: currentDbConversation?.id,
-          sender_id: isMasterAccount ? EXPERT_ID : userProfile.email,
-          recipient_id: isMasterAccount ? currentDbConversation?.user_id : EXPERT_ID,
-          text: newMessage
-        });
+        .insert(messageData);
         
       if (error) {
         console.error("Error sending message:", error);

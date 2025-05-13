@@ -21,3 +21,6 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     },
   },
 });
+
+// The expert ID is used in multiple places - centralizing it here
+export const EXPERT_ID = "premium-user-id"; 
