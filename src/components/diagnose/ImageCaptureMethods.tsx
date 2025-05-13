@@ -1,7 +1,7 @@
 
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Camera, Upload } from 'lucide-react';
+import { Camera, Upload, Info } from 'lucide-react';
 import React from 'react';
 
 interface ImageCaptureMethodsProps {
@@ -46,11 +46,19 @@ const ImageCaptureMethods = ({ onTakePhoto, onUploadPhoto }: ImageCaptureMethods
         </Button>
       </Card>
 
-      <div className="mt-6 text-center text-gray-600">
-        <p>Our AI can help identify common plant diseases</p>
-        <p className="text-sm mt-2 text-gray-400">
-          For the most accurate results, take clear, well-lit photos of affected areas
-        </p>
+      <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-100">
+        <div className="flex items-start">
+          <Info className="h-5 w-5 text-blue-500 mt-0.5 mr-2 flex-shrink-0" />
+          <div className="text-sm text-blue-700">
+            <p className="font-medium mb-1">For best diagnosis results:</p>
+            <ul className="list-disc list-inside space-y-1 text-blue-600 pl-1">
+              <li>Take clear, well-lit photos of affected areas</li>
+              <li>Avoid shadows and make sure the plant is in focus</li>
+              <li>Include both healthy and diseased parts for comparison</li>
+              <li>Take close-up shots of symptoms (spots, discoloration, etc.)</li>
+            </ul>
+          </div>
+        </div>
       </div>
     </div>
   );

@@ -12,6 +12,10 @@ export const analyzePlantImage = async (imageFile: File) => {
     const formData = new FormData();
     formData.append('image', imageFile);
 
+    toast.info("Analyzing your plant image...", {
+      duration: 3000,
+    });
+
     // Call the Supabase Edge Function
     const { data, error } = await supabase.functions.invoke('analyze-plant', {
       body: formData,
@@ -24,6 +28,22 @@ export const analyzePlantImage = async (imageFile: File) => {
     }
 
     console.log('Plant analysis result:', data);
+    
+    // If the image validation failed, show a specific message
+    if (data.isValidPlantImage === false) {
+      toast.error("The uploaded image does not appear to contain a plant. Please try with a different image.", {
+        duration: 5000,
+      });
+    } else if (!data.isReliable) {
+      toast.warning("The analysis results have low confidence. Consider uploading a clearer image for better results.", {
+        duration: 5000,
+      });
+    } else {
+      toast.success("Plant analysis complete!", {
+        duration: 3000,
+      });
+    }
+    
     return data;
   } catch (err) {
     console.error('Exception during plant analysis:', err);
