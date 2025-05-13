@@ -1,3 +1,4 @@
+
 // Modello utilizzato per la diagnosi delle malattie delle piante
 export interface ModelInfo {
   name: string;
@@ -22,6 +23,15 @@ export interface ModelInfo {
   datasetSize: string;
   dataAugmentation: string[];
   trainTime: string;
+  // Add the missing properties from the modelInfo object
+  version?: string;
+  capabilities?: string[];
+  description?: string;
+  license?: string;
+  authors?: string[];
+  repo?: string;
+  paperUrl?: string;
+  inferenceTime?: string;
 }
 
 export const modelInfo: ModelInfo = {
