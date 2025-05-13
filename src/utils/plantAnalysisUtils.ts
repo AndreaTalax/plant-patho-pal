@@ -19,7 +19,7 @@ export const analyzePlantImage = async (imageFile: File) => {
 
     if (error) {
       console.error('Error calling analyze-plant function:', error);
-      toast.error(`Errore nell'analisi: ${error.message || 'Errore sconosciuto'}`);
+      toast.error(`Analysis error: ${error.message || 'Unknown error'}`);
       return null;
     }
 
@@ -27,7 +27,7 @@ export const analyzePlantImage = async (imageFile: File) => {
     return data;
   } catch (err) {
     console.error('Exception during plant analysis:', err);
-    toast.error(`Errore nell'analisi: ${(err as Error).message || 'Errore sconosciuto'}`);
+    toast.error(`Analysis error: ${(err as Error).message || 'Unknown error'}`);
     return null;
   }
 };
@@ -66,9 +66,36 @@ export const formatHuggingFaceResult = (huggingFaceResult: any) => {
       primaryService: 'HuggingFace',
     },
     identifiedFeatures: [
-      `Foglie con segni di ${mainPrediction.label}`,
-      'Patterns riconosciuti dal modello di intelligenza artificiale'
+      `Leaves with signs of ${mainPrediction.label}`,
+      'Patterns recognized by the artificial intelligence model'
     ],
-    alternativeDiagnoses: alternativeDiagnoses
+    alternativeDiagnoses: alternativeDiagnoses,
+    plantixInsights: {
+      severity: 'unknown',
+      progressStage: 'medium',
+      spreadRisk: 'medium',
+      environmentalFactors: ['Unable to determine from image'],
+      reliability: 'medium'
+    }
   };
+};
+
+/**
+ * Converts a data URL to a File object
+ * @param dataUrl The data URL string (e.g., from canvas.toDataURL())
+ * @param filename The desired filename
+ * @returns A File object that can be uploaded
+ */
+export const dataURLtoFile = (dataUrl: string, filename: string): File => {
+  const arr = dataUrl.split(',');
+  const mime = arr[0].match(/:(.*?);/)?.[1] || 'image/jpeg';
+  const bstr = atob(arr[1]);
+  let n = bstr.length;
+  const u8arr = new Uint8Array(n);
+  
+  while (n--) {
+    u8arr[n] = bstr.charCodeAt(n);
+  }
+  
+  return new File([u8arr], filename, { type: mime });
 };

@@ -11,8 +11,17 @@ export interface DiagnosedDisease {
 }
 
 export interface AnalysisDetails {
-  identifiedFeatures: string[];
-  alternativeDiagnoses: {
+  identifiedFeatures?: string[];
+  multiServiceInsights?: {
+    huggingFaceResult?: {
+      label: string;
+      score: number;
+    };
+    agreementScore?: number;
+    primaryService?: string;
+    plantSpecies?: string;
+  };
+  alternativeDiagnoses?: {
     disease: string;
     probability: number;
   }[];
@@ -20,7 +29,7 @@ export interface AnalysisDetails {
   thermalMap?: string;
   leafVerification?: {
     isLeaf: boolean;
-    leafPercentage: number;
+    leafPercentage?: number;
     boundingBox?: {
       x: number;
       y: number;
@@ -30,20 +39,18 @@ export interface AnalysisDetails {
   };
   plantVerification?: {
     isPlant: boolean;
-    confidence: number;
     aiServices?: {
       serviceName: string;
       result: boolean;
       confidence: number;
     }[];
   };
-  multiServiceInsights?: {
-    agreementScore: number;
-    primaryService: string;
-    plantSpecies?: string;
-    huggingFaceResult?: {
-      label: string;
-      score: number;
-    };
+  plantixInsights?: {
+    severity?: string;
+    progressStage?: string;
+    spreadRisk?: string;
+    environmentalFactors?: string[];
+    reliability?: string;
+    confidenceNote?: string;
   };
 }

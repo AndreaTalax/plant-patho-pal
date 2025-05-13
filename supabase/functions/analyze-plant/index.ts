@@ -151,7 +151,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         ...analysisResult,
-        message: insertError ? "Diagnosi completata ma non salvata" : "Diagnosi completata e salvata"
+        message: insertError ? "Diagnosis completed but not saved" : "Diagnosis completed and saved"
       }),
       {
         status: 200,

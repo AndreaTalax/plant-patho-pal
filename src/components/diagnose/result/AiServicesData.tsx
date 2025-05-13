@@ -27,10 +27,10 @@ const AiServicesData = ({ analysisDetails, isAnalyzing }: AiServicesDataProps) =
   const copyDiagnosisToClipboard = () => {
     if (hasHuggingFaceData) {
       const diagnosis = analysisDetails?.multiServiceInsights?.huggingFaceResult;
-      const diagnosisText = `Diagnosi: ${diagnosis?.label} (Confidenza: ${Math.round((diagnosis?.score || 0) * 100)}%)`;
+      const diagnosisText = `Diagnosis: ${diagnosis?.label} (Confidence: ${Math.round((diagnosis?.score || 0) * 100)}%)`;
       navigator.clipboard.writeText(diagnosisText)
-        .then(() => toast.success("Diagnosi copiata negli appunti"))
-        .catch(() => toast.error("Impossibile copiare la diagnosi"));
+        .then(() => toast.success("Diagnosis copied to clipboard"))
+        .catch(() => toast.error("Unable to copy diagnosis"));
     }
   };
 
@@ -44,24 +44,24 @@ const AiServicesData = ({ analysisDetails, isAnalyzing }: AiServicesDataProps) =
       >
         {showAiServices ? (
           <>
-            <EyeOff className="h-4 w-4" /> Nascondi Dati Servizi AI
+            <EyeOff className="h-4 w-4" /> Hide AI Services Data
           </>
         ) : (
           <>
-            <Eye className="h-4 w-4" /> Mostra Dati Servizi AI
+            <Eye className="h-4 w-4" /> Show AI Services Data
           </>
         )}
       </Button>
       
       {showAiServices && (
         <div className="mt-2 border rounded-lg p-2 text-xs bg-gray-50">
-          <h4 className="font-semibold mb-1">Risultati Servizi AI</h4>
+          <h4 className="font-semibold mb-1">AI Services Results</h4>
           
-          {/* Diamo priorità ai dati di HuggingFace se presenti */}
+          {/* Prioritize HuggingFace data if present */}
           {hasHuggingFaceData && (
             <div className="mt-2 pt-2 border-t-2 border-blue-200 bg-blue-50 p-2 rounded mb-3">
               <div className="flex justify-between items-center mb-1">
-                <h5 className="font-semibold text-blue-700">Analisi HuggingFace</h5>
+                <h5 className="font-semibold text-blue-700">HuggingFace Analysis</h5>
                 <Button 
                   variant="ghost" 
                   size="sm" 
@@ -72,17 +72,17 @@ const AiServicesData = ({ analysisDetails, isAnalyzing }: AiServicesDataProps) =
                 </Button>
               </div>
               <div className="flex justify-between">
-                <span>Rilevato:</span>
+                <span>Detected:</span>
                 <span className="font-medium">{analysisDetails?.multiServiceInsights?.huggingFaceResult?.label}</span>
               </div>
               <div className="flex justify-between">
-                <span>Confidenza:</span>
+                <span>Confidence:</span>
                 <span className="font-medium">
                   {Math.round((analysisDetails?.multiServiceInsights?.huggingFaceResult?.score || 0) * 100)}%
                 </span>
               </div>
               <div className="text-xs text-blue-600 mt-1 italic">
-                Analisi effettuata tramite modello VineetJohn/plant-disease-detection
+                Analysis performed using VineetJohn/plant-disease-detection model
               </div>
             </div>
           )}
@@ -106,13 +106,37 @@ const AiServicesData = ({ analysisDetails, isAnalyzing }: AiServicesDataProps) =
           {analysisDetails?.multiServiceInsights && !hasHuggingFaceData && (
             <div className="mt-2 pt-2 border-t">
               <div className="flex justify-between">
-                <span>Punteggio Affidabilità:</span>
+                <span>Reliability Score:</span>
                 <span className="font-medium">{analysisDetails.multiServiceInsights.agreementScore}%</span>
               </div>
               <div className="flex justify-between">
-                <span>Servizio Principale:</span>
+                <span>Primary Service:</span>
                 <span className="font-medium">{analysisDetails.multiServiceInsights.primaryService}</span>
               </div>
+            </div>
+          )}
+          
+          {/* Display PlantixInsights if available */}
+          {analysisDetails?.plantixInsights && (
+            <div className="mt-2 pt-2 border-t">
+              <h5 className="font-semibold mb-1">Additional Insights</h5>
+              {analysisDetails.plantixInsights.severity && (
+                <div className="flex justify-between">
+                  <span>Severity:</span>
+                  <span className="font-medium">{analysisDetails.plantixInsights.severity}</span>
+                </div>
+              )}
+              {analysisDetails.plantixInsights.spreadRisk && (
+                <div className="flex justify-between">
+                  <span>Spread Risk:</span>
+                  <span className="font-medium">{analysisDetails.plantixInsights.spreadRisk}</span>
+                </div>
+              )}
+              {analysisDetails.plantixInsights.confidenceNote && (
+                <div className="text-xs italic mt-1 text-gray-600">
+                  {analysisDetails.plantixInsights.confidenceNote}
+                </div>
+              )}
             </div>
           )}
         </div>

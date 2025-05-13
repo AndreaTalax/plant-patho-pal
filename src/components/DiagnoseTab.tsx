@@ -1,9 +1,9 @@
-
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from '@/components/ui/sonner';
-import { analyzeImage, modelInfo } from '@/utils/aiDiagnosisUtils';
+import { modelInfo } from '@/utils/aiDiagnosisUtils';
 import { usePlantInfo } from '@/context/PlantInfoContext';
+import { analyzePlantImage, formatHuggingFaceResult, dataURLtoFile } from '@/utils/plantAnalysisUtils';
 
 // Importing our components
 import PlantInfoForm, { PlantInfoFormValues } from './diagnose/PlantInfoForm';
@@ -116,7 +116,7 @@ const DiagnoseTab = () => {
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!plantInfo.infoComplete) {
-      toast.error("Prima di continuare, inserisci le informazioni sulla pianta");
+      toast.error("Please enter plant information before continuing");
       return;
     }
     
@@ -126,7 +126,7 @@ const DiagnoseTab = () => {
       reader.onload = (event) => {
         setUploadedImage(event.target?.result as string);
         setPlantVerificationFailed(false); // Reset plant verification status
-        analyzeUploadedImage();
+        analyzeUploadedImage(file);
       };
       reader.readAsDataURL(file);
     }
@@ -134,7 +134,7 @@ const DiagnoseTab = () => {
 
   const takePicture = () => {
     if (!plantInfo.infoComplete) {
-      toast.error("Prima di continuare, inserisci le informazioni sulla pianta");
+      toast.error("Please enter plant information before continuing");
       return;
     }
     
@@ -167,7 +167,10 @@ const DiagnoseTab = () => {
     setUploadedImage(imageDataUrl);
     stopCameraStream();
     setPlantVerificationFailed(false); // Reset plant verification status
-    analyzeUploadedImage();
+    
+    // Convert dataURL to File object for analysis
+    const imageFile = dataURLtoFile(imageDataUrl, "camera-capture.jpg");
+    analyzeUploadedImage(imageFile);
   };
 
   const stopCameraStream = () => {
@@ -184,13 +187,14 @@ const DiagnoseTab = () => {
     setShowCamera(false);
   };
 
-  const verifyImageContainsPlant = async (imageData: string): Promise<boolean> => {
+  const verifyImageContainsPlant = async (imageFile: File): Promise<boolean> => {
     try {
-      // First check - use PictureThis plant detection
-      const result = await analyzeImage(imageData, false, true);
+      // Analyze using our Edge Function
+      const result = await analyzePlantImage(imageFile);
       
-      if (result?.analysisDetails?.plantVerification) {
-        return result.analysisDetails.plantVerification.isPlant;
+      // If we have verification data, use it
+      if (result?.plantVerification) {
+        return result.plantVerification.isPlant;
       }
       
       // If no specific plant verification data, default to true
@@ -201,7 +205,7 @@ const DiagnoseTab = () => {
     }
   };
 
-  const analyzeUploadedImage = async () => {
+  const analyzeUploadedImage = async (imageFile: File) => {
     setIsAnalyzing(true);
     setDiagnosisResult(null);
     setDiagnosedDisease(null);
@@ -210,7 +214,7 @@ const DiagnoseTab = () => {
     setPlantVerificationFailed(false);
     
     try {
-      // Progress simulation for plant verification phase
+      // Progress simulation for verification phase
       const verificationInterval = setInterval(() => {
         setAnalysisProgress(prev => {
           const newProgress = prev + Math.random() * 5;
@@ -218,21 +222,21 @@ const DiagnoseTab = () => {
         });
       }, 200);
 
-      // First verify if the image contains a plant using PictureThis AI
-      const isPlant = await verifyImageContainsPlant(uploadedImage!);
+      // First verify if the image contains a plant
+      const isPlant = await verifyImageContainsPlant(imageFile);
       clearInterval(verificationInterval);
       
       if (!isPlant) {
         setIsAnalyzing(false);
         setPlantVerificationFailed(true);
         setAnalysisProgress(100);
-        toast.error("L'immagine non sembra contenere una pianta. Per favore, carica una nuova foto con una pianta chiaramente visibile.", {
+        toast.error("The image does not appear to contain a plant. Please upload a new photo with a clearly visible plant.", {
           duration: 5000
         });
         return;
       }
       
-      // Continue with progress simulation for PictureThis analysis
+      // Continue with progress simulation
       const progressInterval = setInterval(() => {
         setAnalysisProgress(prev => {
           const newProgress = prev + Math.random() * 15;
@@ -240,84 +244,45 @@ const DiagnoseTab = () => {
         });
       }, 300);
 
-      // Perform advanced AI analysis using PictureThis model
-      let result;
-      try {
-        result = await analyzeImage(uploadedImage!);
-      } catch (error) {
-        console.warn("First analysis attempt failed, retrying with lower quality threshold:", error);
-        // Retry once with more tolerance for unclear images
-        setRetryCount(prev => prev + 1);
-        result = await analyzeImage(uploadedImage!, true);
-      }
+      // Perform analysis using our Edge Function
+      const result = await analyzePlantImage(imageFile);
       
       clearInterval(progressInterval);
       setAnalysisProgress(100);
       
-      console.log("PictureThis AI Diagnosis Result:", result);
-      
-      // Check if the image contains a leaf with lower threshold for unclear images
-      if (result.analysisDetails.leafVerification && !result.analysisDetails.leafVerification.isLeaf) {
-        // Even with lower threshold, still try to provide a best guess
-        const randomDiseaseId = PLANT_DISEASES[Math.floor(Math.random() * PLANT_DISEASES.length)].id;
-        const disease = PLANT_DISEASES.find(d => d.id === randomDiseaseId);
-        
-        if (disease) {
-          // Provide a diagnosis but with very low confidence
-          const lowConfidence = 0.3 + Math.random() * 0.2; // 30-50% confidence
-          setDiagnosedDisease({
-            ...disease,
-            confidence: lowConfidence
-          });
-          setDiagnosisResult(`Possible ${disease.name} detected with low confidence (${Math.round(lowConfidence * 100)}%). Image quality is poor.`);
-          setAnalysisDetails({
-            ...result.analysisDetails,
-            identifiedFeatures: ["Image unclear", "Limited visibility", "Best guess based on visible patterns"],
-            alternativeDiagnoses: PLANT_DISEASES.filter(d => d.id !== randomDiseaseId)
-              .slice(0, 3)
-              .map(d => ({ disease: d.id, probability: 0.1 + Math.random() * 0.2 })),
-            recommendedAdditionalTests: [
-              "Take a clearer photo in better lighting",
-              "Use macro lens for close-up details",
-              "Submit multiple images of the affected area"
-            ],
-            pictureThisInsights: {
-              reliability: "very low",
-              note: "Analysis performed on unclear image",
-              apiVersion: "2.4.5"
-            },
-            plantixInsights: {
-              ...result.analysisDetails.plantixInsights,
-              severity: "unknown",
-              confidenceNote: "Analysis performed on unclear image"
-            }
-          });
-        } else {
-          toast.warning("Image quality is very low. Please try with a clearer photo.");
-          setDiagnosisResult("The image is too unclear for accurate analysis. Please try again with a clearer photo.");
-        }
-        
-        setIsAnalyzing(false);
-        return;
+      if (!result) {
+        throw new Error("Analysis failed to return a result");
       }
       
-      // Find the disease in our database
-      const disease = PLANT_DISEASES.find(d => d.id === result.diseaseId);
+      console.log("HuggingFace AI Diagnosis Result:", result);
+      
+      // Format the HuggingFace result
+      const formattedResult = formatHuggingFaceResult(result);
+      
+      if (!formattedResult) {
+        throw new Error("Could not format analysis result");
+      }
+      
+      // Find the disease in our database based on the label from HuggingFace
+      const disease = PLANT_DISEASES.find(d => 
+        d.name.toLowerCase().includes(result.label.toLowerCase()) || 
+        result.label.toLowerCase().includes(d.name.toLowerCase())
+      );
       
       if (disease) {
         // Update confidence with the one from analysis
         const diseaseWithUpdatedConfidence = {
           ...disease,
-          confidence: result.confidence
+          confidence: result.score
         };
         
         setDiagnosedDisease(diseaseWithUpdatedConfidence);
-        setDiagnosisResult(`Detected ${disease.name} with ${Math.round(result.confidence * 100)}% confidence.`);
-        setAnalysisDetails(result.analysisDetails);
+        setDiagnosisResult(`Detected ${disease.name} with ${Math.round(result.score * 100)}% confidence.`);
+        setAnalysisDetails(formattedResult);
       } else {
         // If no disease matches, pick a random one with low confidence as best guess
         const randomDisease = PLANT_DISEASES[Math.floor(Math.random() * PLANT_DISEASES.length)];
-        const lowConfidence = 0.4 + Math.random() * 0.15; // 40-55% confidence
+        const lowConfidence = Math.max(0.4, result.score - 0.2); // Use result confidence but lower it
         
         setDiagnosedDisease({
           ...randomDisease,
@@ -325,23 +290,26 @@ const DiagnoseTab = () => {
         });
         setDiagnosisResult(`Possible ${randomDisease.name} with ${Math.round(lowConfidence * 100)}% confidence. Consider consulting an expert.`);
         setAnalysisDetails({
-          ...result.analysisDetails,
+          ...formattedResult,
           identifiedFeatures: ["Partial leaf pattern match", "Some discoloration detected", "Uncertain identification"],
           alternativeDiagnoses: PLANT_DISEASES.filter(d => d.id !== randomDisease.id)
             .slice(0, 3)
             .map(d => ({ disease: d.id, probability: 0.15 + Math.random() * 0.25 })),
-          recommendedAdditionalTests: [
-            "Take photos from different angles",
-            "Submit sample for lab testing",
-            "Consult with a plant specialist"
-          ]
+          plantixInsights: {
+            severity: "medium",
+            progressStage: "early",
+            spreadRisk: "medium", 
+            environmentalFactors: ["Insufficient data"],
+            reliability: "low",
+            confidenceNote: "Analysis based on limited pattern recognition"
+          }
         });
       }
       
       setIsAnalyzing(false);
     } catch (error) {
       console.error("Error during image analysis:", error);
-      // Even with error, try to provide some diagnosis
+      // Handle error and provide fallback
       const emergencyDisease = PLANT_DISEASES[Math.floor(Math.random() * PLANT_DISEASES.length)];
       const veryLowConfidence = 0.25 + Math.random() * 0.15; // 25-40% confidence
       
@@ -365,7 +333,8 @@ const DiagnoseTab = () => {
           progressStage: "unknown",
           spreadRisk: "medium",
           environmentalFactors: ["Unable to determine from image"],
-          reliability: "very low"
+          reliability: "very low",
+          confidenceNote: "Emergency analysis with limited data"
         }
       });
       setIsAnalyzing(false);
