@@ -10,7 +10,7 @@ import PlantInfoForm, { PlantInfoFormValues } from './diagnose/PlantInfoForm';
 import PlantInfoSummary from './diagnose/PlantInfoSummary';
 import CameraCapture from './diagnose/CameraCapture';
 import ImageCaptureMethods from './diagnose/ImageCaptureMethods';
-import DiagnosisResult from './diagnose/DiagnosisResult';
+import DiagnosisResult from './diagnose/result/DiagnosisResult';
 import { DiagnosedDisease, AnalysisDetails } from './diagnose/types';
 import ModelInfoPanel from './diagnose/ModelInfoPanel';
 
