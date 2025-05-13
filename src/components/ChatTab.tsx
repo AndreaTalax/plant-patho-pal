@@ -9,7 +9,15 @@ import { Send, ChevronRight, User, MessageSquare, Trash2, Ban, ShoppingBag } fro
 import { toast } from '@/components/ui/sonner';
 import { useTheme } from '@/context/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
-import { supabase, EXPERT_ID } from '@/integrations/supabase/client';
+import { 
+  supabase, 
+  EXPERT_ID, 
+  DbConversation, 
+  DbConversationInsert, 
+  DbConversationUpdate,
+  DbMessage, 
+  DbMessageInsert 
+} from '@/integrations/supabase/client';
 import {
   Dialog,
   DialogContent,
@@ -17,6 +25,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import type { Database } from '@/integrations/supabase/types';
 
 // Type definitions for messages and products
 interface Product {
@@ -35,14 +44,8 @@ interface Message {
   products?: Product[];
 }
 
-interface DatabaseMessage {
-  id: string;
-  conversation_id: string;
-  sender_id: string;
-  recipient_id: string;
-  text: string;
-  sent_at: string;
-  read: boolean;
+// Using the helper types from client.ts
+interface DatabaseMessage extends DbMessage {
   products: Product[] | null;
 }
 
@@ -55,15 +58,7 @@ interface Conversation {
   messages: Message[];
 }
 
-interface DatabaseConversation {
-  id: string;
-  created_at: string;
-  updated_at: string;
-  expert_id: string;
-  user_id: string;
-  status: string | null;
-  last_message_text: string | null;
-  last_message_timestamp: string | null;
+interface DatabaseConversation extends DbConversation {
   user?: {
     id: string;
     username: string;
@@ -175,11 +170,13 @@ const ChatTab = () => {
           return;
         }
         
-        setDbConversations(data as DatabaseConversation[]);
+        // Cast data to the DatabaseConversation type
+        const typedData = data as unknown as DatabaseConversation[];
+        setDbConversations(typedData);
         
         // Convert to UI format for master account
         if (isMasterAccount) {
-          const convertedConversations = data.map((conv: DatabaseConversation) => {
+          const convertedConversations = typedData.map((conv: DatabaseConversation) => {
             const username = conv.user?.username || conv.user_id;
             return {
               id: conv.id,
@@ -240,7 +237,7 @@ const ChatTab = () => {
       }
       
       // Cast the data to DatabaseMessage[] since we know the structure
-      const typedMessages = data as DatabaseMessage[];
+      const typedMessages = data as unknown as DatabaseMessage[];
       setDbMessages(typedMessages);
       
       // Convert to UI format
@@ -280,11 +277,11 @@ const ChatTab = () => {
       }
       
       if (existingConversations && existingConversations.length > 0) {
-        return existingConversations[0] as DatabaseConversation;
+        return existingConversations[0] as unknown as DatabaseConversation;
       }
       
       // Create new conversation
-      const newConversationData = {
+      const newConversationData: DbConversationInsert = {
         user_id: userProfile.email,
         expert_id: EXPERT_ID,
         status: 'active'
@@ -301,7 +298,7 @@ const ChatTab = () => {
         return null;
       }
       
-      return newConversation as DatabaseConversation;
+      return newConversation as unknown as DatabaseConversation;
     } catch (error) {
       console.error("Error in findOrCreateConversation:", error);
       return null;
@@ -349,7 +346,7 @@ const ChatTab = () => {
           }, 
           (payload) => {
             console.log('Message received:', payload);
-            const newMsg = payload.new as DatabaseMessage;
+            const newMsg = payload.new as unknown as DatabaseMessage;
             
             const formattedMessage = {
               id: newMsg.id,
@@ -411,7 +408,7 @@ const ChatTab = () => {
         }, 
         (payload) => {
           console.log('Message received:', payload);
-          const newMsg = payload.new as DatabaseMessage;
+          const newMsg = payload.new as unknown as DatabaseMessage;
           
           const formattedMessage = {
             id: newMsg.id,
@@ -442,9 +439,11 @@ const ChatTab = () => {
   const handleDeleteConversation = async (conversationId: string) => {
     try {
       // Archive conversation instead of deleting it
+      const updateData: DbConversationUpdate = { status: 'archived' };
+      
       const { error } = await supabase
         .from('conversations')
-        .update({ status: 'archived' })
+        .update(updateData)
         .eq('id', conversationId);
         
       if (error) {
@@ -471,9 +470,11 @@ const ChatTab = () => {
       const isCurrentlyBlocked = conversations.find(c => c.id === conversationId)?.blocked || false;
       const newStatus = isCurrentlyBlocked ? 'active' : 'blocked';
       
+      const updateData: DbConversationUpdate = { status: newStatus };
+      
       const { error } = await supabase
         .from('conversations')
-        .update({ status: newStatus })
+        .update(updateData)
         .eq('id', conversationId);
         
       if (error) {
@@ -532,7 +533,7 @@ const ChatTab = () => {
     }
     
     try {
-      const messageData = {
+      const messageData: DbMessageInsert = {
         conversation_id: currentDbConversation.id,
         sender_id: isMasterAccount ? EXPERT_ID : userProfile.email,
         recipient_id: isMasterAccount ? currentDbConversation.user_id : EXPERT_ID,
@@ -575,7 +576,7 @@ const ChatTab = () => {
         setCurrentDbConversation(conversation);
       }
       
-      const messageData = {
+      const messageData: DbMessageInsert = {
         conversation_id: currentDbConversation?.id,
         sender_id: isMasterAccount ? EXPERT_ID : userProfile.email,
         recipient_id: isMasterAccount ? currentDbConversation?.user_id : EXPERT_ID,
