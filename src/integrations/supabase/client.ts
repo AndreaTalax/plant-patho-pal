@@ -17,9 +17,8 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     autoRefreshToken: true,
   },
   realtime: {
-    channels: {
-      minimal: true,
-    },
+    // Fix for realtime options
+    minimal: true,
   },
 });
 
@@ -45,7 +44,7 @@ export function isNotNullOrUndefined<T>(value: T | null | undefined): value is T
   return value !== null && value !== undefined;
 }
 
-// Cast UUID strings for Supabase queries
-export function asUUID(id: string) {
-  return id as unknown as Parameters<typeof supabase.from<any>>[0];
+// Cast UUID strings for Supabase queries - fixed to work with correct typing
+export function asUUID(id: string): string {
+  return id;
 }

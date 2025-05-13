@@ -20,7 +20,7 @@ export interface Message {
 }
 
 // Using the helper types from client.ts but with our own customizations
-export interface DatabaseMessage extends DbMessage {
+export interface DatabaseMessage extends Omit<DbMessage, 'products'> {
   products: Product[] | null;
 }
 

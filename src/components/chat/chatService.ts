@@ -5,7 +5,10 @@ import {
   isNotNullOrUndefined, 
   asUUID, 
   DbMessage, 
-  DbConversation 
+  DbConversation,
+  DbConversationInsert,
+  DbMessageInsert,
+  DbConversationUpdate
 } from '@/integrations/supabase/client';
 import type { 
   DatabaseConversation, 
