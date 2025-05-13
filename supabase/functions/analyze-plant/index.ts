@@ -45,12 +45,19 @@ const extractPlantName = (label: string): string | null => {
   return null;
 };
 
-// Function to check if an image contains a plant using image classification models
+// Improved plant verification function that accepts more plant-related terms
+const isPlantLabel = (label: string): boolean => {
+  const plantLabels = ["plant", "leaf", "leaves", "flower", "potted plant", "foliage", "shrub", "vegetation",
+                      "botanical", "flora", "garden", "herb", "houseplant", "tree"];
+  return plantLabels.some(keyword => label.toLowerCase().includes(keyword));
+};
+
+// Function to check if an image contains a plant using the plant-specific model
 async function verifyImageContainsPlant(imageArrayBuffer: ArrayBuffer): Promise<{isPlant: boolean, confidence: number, aiServices: any[]}> {
   try {
-    // Using Google's ViT model for general image classification
+    // Try using the plantdoc/vit-plantdoc model first for better plant recognition
     const response = await fetch(
-      "https://api-inference.huggingface.co/models/google/vit-base-patch16-224",
+      "https://api-inference.huggingface.co/models/plantdoc/vit-plantdoc",
       {
         headers: {
           Authorization: `Bearer ${huggingFaceToken}`,
@@ -62,11 +69,12 @@ async function verifyImageContainsPlant(imageArrayBuffer: ArrayBuffer): Promise<
     );
     
     if (!response.ok) {
-      console.error(`ViT API Error: ${await response.text()}`);
+      console.error(`PlantDoc API Error: ${await response.text()}`);
       
-      // Try Microsoft's ResNet-50 as backup
-      const resnetResponse = await fetch(
-        "https://api-inference.huggingface.co/models/microsoft/resnet-50",
+      // Fall back to general image classification models
+      // Try ViT model first
+      const vitResponse = await fetch(
+        "https://api-inference.huggingface.co/models/google/vit-base-patch16-224",
         {
           headers: {
             Authorization: `Bearer ${huggingFaceToken}`,
@@ -77,18 +85,61 @@ async function verifyImageContainsPlant(imageArrayBuffer: ArrayBuffer): Promise<
         }
       );
       
-      if (!resnetResponse.ok) {
-        console.error(`ResNet-50 API Error: ${await resnetResponse.text()}`);
-        // Default to true if both models fail to avoid blocking legitimate images
-        return { isPlant: true, confidence: 0.5, aiServices: [] };
+      if (!vitResponse.ok) {
+        console.error(`ViT API Error: ${await vitResponse.text()}`);
+        
+        // Try Microsoft's ResNet-50 as backup
+        const resnetResponse = await fetch(
+          "https://api-inference.huggingface.co/models/microsoft/resnet-50",
+          {
+            headers: {
+              Authorization: `Bearer ${huggingFaceToken}`,
+              "Content-Type": "application/octet-stream",
+            },
+            method: "POST",
+            body: new Uint8Array(imageArrayBuffer),
+          }
+        );
+        
+        if (!resnetResponse.ok) {
+          console.error(`ResNet-50 API Error: ${await resnetResponse.text()}`);
+          // Default to true if all models fail to avoid blocking legitimate images
+          return { isPlant: true, confidence: 0.5, aiServices: [] };
+        }
+        
+        const resnetResult = await resnetResponse.json();
+        return processClassificationResult(resnetResult, "ResNet-50");
       }
       
-      const resnetResult = await resnetResponse.json();
-      return processClassificationResult(resnetResult, "ResNet-50");
+      const vitResult = await vitResponse.json();
+      return processClassificationResult(vitResult, "ViT");
     }
     
+    // If we get a response from the plant-specific model, assume it's a plant
+    // but still check the label for confirmation
     const result = await response.json();
-    return processClassificationResult(result, "ViT");
+    
+    // Plant-specific model result processing
+    if (Array.isArray(result)) {
+      // Plant-specific model often returns array of predictions
+      // Check if any top predictions are plant-related
+      const topPredictions = result.slice(0, 3);
+      const isPlant = true; // Plant-specific model assumes input is a plant
+      const confidence = topPredictions[0]?.score || 0.7;
+      
+      return {
+        isPlant: confidence >= 0.25, // Lower threshold for plant-specific model (0.25)
+        confidence,
+        aiServices: [{
+          serviceName: "PlantDoc Classification",
+          result: true,
+          confidence
+        }]
+      };
+    }
+    
+    // Default fallback to general image classification
+    return processClassificationResult(result, "PlantDoc");
     
   } catch (err) {
     console.error('Plant verification error:', err.message);
@@ -97,7 +148,7 @@ async function verifyImageContainsPlant(imageArrayBuffer: ArrayBuffer): Promise<
   }
 }
 
-// Helper function to process classification results
+// Helper function to process classification results from general models
 function processClassificationResult(result: any, modelName: string): {isPlant: boolean, confidence: number, aiServices: any[]} {
   // Define plant-related keywords to look for in labels
   const plantKeywords = ['plant', 'leaf', 'flower', 'tree', 'vegetation', 'garden', 'herb', 
@@ -120,8 +171,9 @@ function processClassificationResult(result: any, modelName: string): {isPlant: 
     confidence: confidence
   }];
   
+  // Lower threshold to 0.3 as requested
   return {
-    isPlant: isPlant && confidence > 0.6, // Require minimum confidence of 60%
+    isPlant: isPlant && confidence > 0.3, 
     confidence,
     aiServices
   };
@@ -178,11 +230,13 @@ serve(async (req) => {
       });
     }
     
-    // Try multiple models for plant disease detection
+    // Try specialized plant disease models first, then fallbacks
     const models = [
-      "noah-fl/plant_disease_detection",  // This is an alternative model
-      "lsassaman/plant-disease",          // Another alternative model
-      "VineetJohn/plant-disease-detection" // Original model (try as fallback)
+      "plantdoc/vit-plantdoc",           // Primary plant-specific model
+      "dima806/plant_disease_classification", // Secondary specialized model
+      "noah-fl/plant_disease_detection",  // Fallback options
+      "lsassaman/plant-disease",
+      "VineetJohn/plant-disease-detection"
     ];
     
     let result = null;

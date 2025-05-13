@@ -100,7 +100,7 @@ export const formatHuggingFaceResult = (huggingFaceResult: any) => {
     multiServiceInsights: {
       huggingFaceResult: mainPrediction,
       agreementScore: Math.round(mainPrediction.score * 100),
-      primaryService: 'HuggingFace',
+      primaryService: 'PlantDoc AI',  // Updated name to reflect the specialized model
       plantSpecies: speciesOnly,
       plantName: plantNameOnly,
       isHealthy: isHealthy,

@@ -138,7 +138,7 @@ const DiagnosisResult = ({
                 {/* HuggingFace badge */}
                 {analysisDetails?.multiServiceInsights?.huggingFaceResult && (
                   <Badge className="bg-blue-500 flex items-center gap-1">
-                    <span className="text-xs">HuggingFace</span>
+                    <span className="text-xs">PlantDoc AI</span>
                   </Badge>
                 )}
               </div>
