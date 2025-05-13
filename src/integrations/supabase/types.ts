@@ -9,6 +9,80 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      conversations: {
+        Row: {
+          created_at: string
+          expert_id: string
+          id: string
+          last_message_text: string | null
+          last_message_timestamp: string | null
+          status: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          expert_id: string
+          id?: string
+          last_message_text?: string | null
+          last_message_timestamp?: string | null
+          status?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          expert_id?: string
+          id?: string
+          last_message_text?: string | null
+          last_message_timestamp?: string | null
+          status?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      messages: {
+        Row: {
+          conversation_id: string
+          id: string
+          products: Json | null
+          read: boolean
+          recipient_id: string
+          sender_id: string
+          sent_at: string
+          text: string
+        }
+        Insert: {
+          conversation_id: string
+          id?: string
+          products?: Json | null
+          read?: boolean
+          recipient_id: string
+          sender_id: string
+          sent_at?: string
+          text: string
+        }
+        Update: {
+          conversation_id?: string
+          id?: string
+          products?: Json | null
+          read?: boolean
+          recipient_id?: string
+          sender_id?: string
+          sent_at?: string
+          text?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           address: string | null
