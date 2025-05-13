@@ -43,7 +43,7 @@ const AiServicesData = ({ analysisDetails, isAnalyzing }: AiServicesDataProps) =
         <div className="mt-2 border rounded-lg p-2 text-xs bg-gray-50">
           <h4 className="font-semibold mb-1">AI Service Results</h4>
           <div className="space-y-1.5">
-            {analysisDetails.plantVerification.aiServices.map((service: any, index: number) => (
+            {analysisDetails.plantVerification?.aiServices?.map((service, index) => (
               <div key={index} className="flex items-center justify-between">
                 <span>{service.serviceName}</span>
                 <div className="flex items-center gap-1">

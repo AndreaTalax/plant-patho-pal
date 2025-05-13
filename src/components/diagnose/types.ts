@@ -23,6 +23,25 @@ export interface AnalysisDetails {
     leafPercentage?: number;
     boundingBox?: {x: number, y: number, width: number, height: number};
   };
+  plantVerification?: {
+    isPlant: boolean;
+    confidence: number;
+    plantSpecies?: string;
+    aiServices?: {
+      serviceName: string;
+      result: boolean;
+      confidence: number;
+      notes?: string;
+    }[];
+  };
+  multiServiceInsights?: {
+    agreementScore: number;
+    primaryService: string;
+    plantSpecies?: string;
+    diseaseMatchScore?: number;
+    diagnosisTimestamp?: string;
+    apiVersions?: Record<string, string>;
+  };
   plantixInsights?: {
     plantType?: string;
     severity: 'mild' | 'moderate' | 'severe' | 'unknown';
