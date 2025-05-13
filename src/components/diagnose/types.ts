@@ -11,7 +11,7 @@ export interface DiagnosedDisease {
 }
 
 export interface AnalysisDetails {
-  identifiedFeatures?: string[];
+  identifiedFeatures: string[];
   multiServiceInsights?: {
     huggingFaceResult?: {
       label: string;
