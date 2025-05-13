@@ -90,7 +90,7 @@ export const findOrCreateConversation = async (userId: string) => {
     }
     
     // Create new conversation
-    const newConversationData: DbConversationInsert = {
+    const newConversationData = {
       user_id: userId,
       expert_id: EXPERT_ID,
       status: 'active'
@@ -155,6 +155,8 @@ export const sendMessage = async (
   text: string,
   products?: Product[]
 ) => {
+  console.log(`Sending message in conversation ${conversationId}: ${text}`);
+  
   // For mock conversations, always return success
   if (conversationId === "mock-conversation-id") {
     return true;
@@ -171,8 +173,13 @@ export const sendMessage = async (
   const { error } = await supabase
     .from('messages')
     .insert(messageData);
+  
+  if (error) {
+    console.error("Error sending message:", error);
+    return false;
+  }
     
-  return !error;
+  return true;
 };
 
 // Update conversation status (archive, block, unblock)

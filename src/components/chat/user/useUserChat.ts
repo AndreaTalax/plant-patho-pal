@@ -104,6 +104,15 @@ export const useUserChat = (userId: string) => {
         setCurrentDbConversation(conversation);
       }
       
+      // Add message to UI immediately to improve UX
+      const tempMessage: Message = {
+        id: `temp-${Date.now()}`,
+        sender: 'user',
+        text: text,
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      };
+      setMessages(prev => [...prev, tempMessage]);
+      
       const success = await sendMessageService(
         currentDbConversation!.id,
         userId,
@@ -112,13 +121,14 @@ export const useUserChat = (userId: string) => {
       );
         
       if (!success) {
+        // Remove temp message if sending failed
+        setMessages(prev => prev.filter(msg => msg.id !== tempMessage.id));
         toast("Error sending message");
         setIsSending(false);
         return;
       }
       
       setIsSending(false);
-      toast(t("notificationSent", { name: EXPERT.name }) || `Message sent to ${EXPERT.name}`);
     } catch (error) {
       console.error("Error in handleSendMessage:", error);
       toast("Error sending message");
