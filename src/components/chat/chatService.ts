@@ -16,6 +16,7 @@ import type {
   Message,
   Product
 } from './types';
+import { Json } from '@/integrations/supabase/types';
 
 // Load conversations from database
 export const loadConversations = async (isMasterAccount: boolean, userId: string) => {
@@ -73,15 +74,15 @@ export const findOrCreateConversation = async (userId: string) => {
     }
     
     // Create new conversation
-    const newConversationData: DbConversationInsert = {
-      user_id: userId as any,
-      expert_id: EXPERT_ID as any,
+    const newConversationData = {
+      user_id: userId,
+      expert_id: EXPERT_ID,
       status: 'active'
-    };
+    } as DbConversationInsert;
     
     const { data: newConversation, error: createError } = await supabase
       .from('conversations')
-      .insert(newConversationData as any)
+      .insert(newConversationData)
       .select()
       .single();
       
@@ -118,6 +119,13 @@ export const loadMessages = async (conversationId: string) => {
   }
 };
 
+// Convert product array to Json type
+const convertProductsToJson = (products?: Product[]): Json => {
+  if (!products || products.length === 0) return null;
+  
+  return products as unknown as Json;
+};
+
 // Send a message
 export const sendMessage = async (
   conversationId: string, 
@@ -126,28 +134,28 @@ export const sendMessage = async (
   text: string,
   products?: Product[]
 ) => {
-  const messageData: DbMessageInsert = {
-    conversation_id: conversationId as any,
-    sender_id: senderId as any,
-    recipient_id: recipientId as any,
+  const messageData = {
+    conversation_id: conversationId,
+    sender_id: senderId,
+    recipient_id: recipientId,
     text,
-    products: products || null
-  };
+    products: convertProductsToJson(products)
+  } as DbMessageInsert;
   
   const { error } = await supabase
     .from('messages')
-    .insert(messageData as any);
+    .insert(messageData);
     
   return !error;
 };
 
 // Update conversation status (archive, block, unblock)
 export const updateConversationStatus = async (conversationId: string, status: string) => {
-  const update: DbConversationUpdate = { status };
+  const update = { status } as DbConversationUpdate;
   
   const { error } = await supabase
     .from('conversations')
-    .update(update as any)
+    .update(update)
     .eq('id', asUUID(conversationId));
     
   return !error;
@@ -160,6 +168,6 @@ export const convertToUIMessage = (dbMessage: DatabaseMessage): Message => {
     sender: dbMessage.sender_id === EXPERT_ID ? 'expert' : 'user',
     text: dbMessage.text,
     time: new Date(dbMessage.sent_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    products: dbMessage.products || undefined
+    products: dbMessage.products as unknown as Product[] || undefined
   };
 };
