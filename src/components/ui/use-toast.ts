@@ -1,5 +1,9 @@
 
 import { toast } from "sonner";
+import { useToast as useToastHook } from "@/hooks/use-toast"; // Import for re-export
+
+// Re-export the useToast hook to maintain backward compatibility
+export const useToast = useToastHook;
 
 // Re-export toast function so it can be used throughout the app
 export { toast };

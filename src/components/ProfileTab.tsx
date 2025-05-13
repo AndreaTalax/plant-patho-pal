@@ -21,7 +21,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast"; // Updated import path
 import PrivacyPolicyModal from "./PrivacyPolicyModal";
 import SettingsModal from "./SettingsModal";
 import ChangeCredentialsModal from "./ChangeCredentialsModal";
