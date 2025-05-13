@@ -9,7 +9,7 @@ import {
   sendMessage as sendMessageService,
   updateConversationStatus
 } from '../chatService';
-import { toast } from '@/components/ui/use-toast';
+import { toast } from 'sonner';
 
 export const useExpertConversation = (userId: string) => {
   // State management
@@ -23,25 +23,29 @@ export const useExpertConversation = (userId: string) => {
   // Load conversations from database
   useEffect(() => {
     const fetchConversations = async () => {
-      const data = await loadConversations(true, userId);
-      
-      // Set database conversations
-      setDbConversations(data);
-      
-      // Convert to UI format
-      const convertedConversations = data.map((conv: DatabaseConversation) => {
-        const username = conv.user?.username || conv.user_id;
-        return {
-          id: conv.id,
-          username: username,
-          lastMessage: conv.last_message_text || "No messages yet",
-          unread: false, // TODO: Implement unread status
-          blocked: conv.status === "blocked",
-          messages: []
-        };
-      });
-      
-      setConversations(convertedConversations);
+      try {
+        const data = await loadConversations(true, userId);
+        
+        // Set database conversations
+        setDbConversations(data);
+        
+        // Convert to UI format
+        const convertedConversations = data.map((conv: DatabaseConversation) => {
+          const username = conv.user?.username || conv.user_id;
+          return {
+            id: conv.id,
+            username: username,
+            lastMessage: conv.last_message_text || "No messages yet",
+            unread: false, // TODO: Implement unread status
+            blocked: conv.status === "blocked",
+            messages: []
+          };
+        });
+        
+        setConversations(convertedConversations);
+      } catch (error) {
+        console.error("Error fetching conversations:", error);
+      }
     };
     
     fetchConversations();
@@ -108,7 +112,7 @@ export const useExpertConversation = (userId: string) => {
           filter: `conversation_id=eq.${conversationId}`
         }, 
         (payload) => {
-          console.log('Message received:', payload);
+          console.log('Message received (expert view):', payload);
           const newMsg = payload.new;
           
           const formattedMessage = convertToUIMessage(newMsg as any);
@@ -125,6 +129,8 @@ export const useExpertConversation = (userId: string) => {
       )
       .subscribe();
       
+    console.log("Expert subscribed to messages channel:", `messages-channel-${conversationId}`);
+      
     return () => {
       supabase.removeChannel(messagesSubscription);
     };
@@ -137,7 +143,7 @@ export const useExpertConversation = (userId: string) => {
       const success = await updateConversationStatus(conversationId, 'archived');
         
       if (!success) {
-        toast.error("Error archiving conversation");
+        toast("Error archiving conversation");
         return;
       }
       
@@ -146,10 +152,10 @@ export const useExpertConversation = (userId: string) => {
         setCurrentConversation(null);
       }
       
-      toast.success("Conversation deleted successfully");
+      toast("Conversation deleted successfully");
     } catch (error) {
       console.error("Error in handleDeleteConversation:", error);
-      toast.error("Error deleting conversation");
+      toast("Error deleting conversation");
     }
   };
   
@@ -162,7 +168,7 @@ export const useExpertConversation = (userId: string) => {
       const success = await updateConversationStatus(conversationId, newStatus);
         
       if (!success) {
-        toast.error(`Error ${isCurrentlyBlocked ? 'unblocking' : 'blocking'} user`);
+        toast(`Error ${isCurrentlyBlocked ? 'unblocking' : 'blocking'} user`);
         return;
       }
       
@@ -179,13 +185,13 @@ export const useExpertConversation = (userId: string) => {
         );
       }
       
-      toast.success(isCurrentlyBlocked 
+      toast(isCurrentlyBlocked 
         ? "User has been unblocked" 
         : "User has been blocked"
       );
     } catch (error) {
       console.error("Error in handleToggleBlockUser:", error);
-      toast.error("Error changing user block status");
+      toast("Error changing user block status");
     }
   };
   
@@ -207,16 +213,16 @@ export const useExpertConversation = (userId: string) => {
       );
         
       if (!success) {
-        toast.error("Error sending product recommendations");
+        toast("Error sending product recommendations");
         setIsSending(false);
         return;
       }
       
-      toast.success("Product recommendations sent!");
+      toast("Product recommendations sent!");
       setIsSending(false);
     } catch (error) {
       console.error("Error in sendProductRecommendations:", error);
-      toast.error("Error sending product recommendations");
+      toast("Error sending product recommendations");
       setIsSending(false);
     }
   };
@@ -228,6 +234,22 @@ export const useExpertConversation = (userId: string) => {
     try {
       setIsSending(true);
       
+      // Add message to UI immediately to improve UX
+      const tempMessage: Message = {
+        id: `temp-${Date.now()}`,
+        sender: 'expert',
+        text: text,
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      };
+      
+      setCurrentConversation(prev => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          messages: [...prev.messages, tempMessage]
+        };
+      });
+      
       const success = await sendMessageService(
         currentDbConversation.id,
         EXPERT_ID,
@@ -236,16 +258,24 @@ export const useExpertConversation = (userId: string) => {
       );
         
       if (!success) {
-        toast.error("Error sending message");
+        // Remove temp message if sending failed
+        setCurrentConversation(prev => {
+          if (!prev) return null;
+          return {
+            ...prev,
+            messages: prev.messages.filter(msg => msg.id !== tempMessage.id)
+          };
+        });
+        
+        toast("Error sending message");
         setIsSending(false);
         return;
       }
       
       setIsSending(false);
-      toast.success("Reply sent successfully!");
     } catch (error) {
       console.error("Error in sendMessage:", error);
-      toast.error("Error sending message");
+      toast("Error sending message");
       setIsSending(false);
     }
   };

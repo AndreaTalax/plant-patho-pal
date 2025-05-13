@@ -31,14 +31,14 @@ export const loadConversations = async (isMasterAccount: boolean, userId: string
       // Expert fetches all conversations where they're the expert
       query = supabase
         .from('conversations')
-        .select('*, user:profiles!conversations_user_id_fkey(id, username, first_name, last_name)')
+        .select('*, profiles!conversations_user_id_fkey(id, username, first_name, last_name)')
         .eq('expert_id', EXPERT_ID)
         .order('updated_at', { ascending: false });
     } else {
       // Regular users fetch their conversations
       query = supabase
         .from('conversations')
-        .select('*, expert:profiles!conversations_expert_id_fkey(id, username, first_name, last_name)')
+        .select('*, profiles!conversations_expert_id_fkey(id, username, first_name, last_name)')
         .eq('user_id', userId)
         .order('updated_at', { ascending: false });
     }
@@ -162,7 +162,7 @@ export const sendMessage = async (
     return true;
   }
   
-  const messageData: DbMessageInsert = {
+  const messageData = {
     conversation_id: conversationId,
     sender_id: senderId,
     recipient_id: recipientId,
@@ -184,7 +184,7 @@ export const sendMessage = async (
 
 // Update conversation status (archive, block, unblock)
 export const updateConversationStatus = async (conversationId: string, status: string) => {
-  const update: DbConversationUpdate = { status };
+  const update = { status };
   
   const { error } = await supabase
     .from('conversations')

@@ -9,10 +9,8 @@ import {
   convertToUIMessage,
   sendMessage as sendMessageService
 } from '../chatService';
-import { useTheme } from '@/context/ThemeContext';
 
 export const useUserChat = (userId: string) => {
-  const { t } = useTheme();
   const [activeChat, setActiveChat] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [currentDbConversation, setCurrentDbConversation] = useState<DatabaseConversation | null>(null);
@@ -73,6 +71,8 @@ export const useUserChat = (userId: string) => {
             }
           )
           .subscribe();
+          
+        console.log("Subscribed to messages channel:", `messages-channel-${conversation.id}`);
       } catch (error) {
         console.error("Error initializing chat:", error);
         toast("Could not initialize chat with expert");
