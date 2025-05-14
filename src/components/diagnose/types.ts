@@ -21,6 +21,7 @@ export interface AnalysisDetails {
     primaryService?: string;
     plantSpecies?: string;
     plantName?: string;
+    plantPart?: string;
     isHealthy?: boolean;
     isValidPlantImage?: boolean;
     isReliable?: boolean;
@@ -34,6 +35,8 @@ export interface AnalysisDetails {
   leafVerification?: {
     isLeaf: boolean;
     leafPercentage?: number;
+    partName?: string;
+    confidence?: number;
     boundingBox?: {
       x: number;
       y: number;
