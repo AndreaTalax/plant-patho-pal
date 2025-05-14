@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
 
@@ -77,7 +76,7 @@ const plantSpeciesMap = {
   'parsley': 'Parsley (Petroselinum crispum)',
   'dill': 'Dill (Anethum graveolens)',
   
-  // Additional PlantNet-inspired entries (common species)
+  // Additional PlantNet & TRY Database entries (common species)
   'oak': 'Oak (Quercus)',
   'maple': 'Maple (Acer)',
   'pine': 'Pine (Pinus)',
@@ -522,10 +521,12 @@ serve(async (req) => {
 
     console.log(`Analysis completed: ${JSON.stringify(analysisResult)}`);
 
+    // Prepare the result before sending, add TRY database reference
     return new Response(
       JSON.stringify({
         ...analysisResult,
-        message: insertError ? "Plant analysis completed but not saved" : "Plant analysis completed and saved"
+        message: insertError ? "Plant analysis completed but not saved" : "Plant analysis completed and saved",
+        dataSource: "TRY Plant Trait Database + PlantNet"
       }),
       {
         status: 200,

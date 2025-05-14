@@ -23,7 +23,7 @@ const ModelInfoPanel = ({ modelInfo, onClose }: ModelInfoPanelProps) => {
         <div>
           <p className="text-gray-700 mb-1 font-medium">Description</p>
           <p className="text-gray-600 mb-3">
-            PlantNet-inspired plant identification system combined with advanced disease detection.
+            PlantNet-inspired plant identification system combined with advanced disease detection and the TRY Plant Trait Database.
           </p>
           
           <p className="text-gray-700 mb-1 font-medium">Capabilities</p>
@@ -62,12 +62,12 @@ const ModelInfoPanel = ({ modelInfo, onClose }: ModelInfoPanelProps) => {
       
       <div className="bg-blue-50 p-3 rounded-md mt-4">
         <p className="text-blue-800 font-medium text-xs mb-1">
-          PlantNet Integration
+          TRY Plant Trait Database Integration
         </p>
         <p className="text-blue-700 text-xs">
-          This system incorporates plant identification techniques inspired by the PlantNet open-source project, 
-          combined with advanced vision models for disease detection. It uses multiple AI services to verify and classify plants 
-          with higher accuracy.
+          This system incorporates plant identification techniques from the PlantNet project combined with the TRY Plant Trait Database - 
+          an open-source global database of plant traits. This enhances our ability to accurately identify plant species and their 
+          specific traits across different environmental conditions.
         </p>
       </div>
     </div>

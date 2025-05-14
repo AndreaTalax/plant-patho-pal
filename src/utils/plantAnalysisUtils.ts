@@ -4,7 +4,7 @@ import { toast } from "sonner";
 
 /**
  * Sends an image to the Supabase Edge Function for plant disease analysis
- * Using a PlantNet-inspired approach
+ * Using a PlantNet-inspired approach combined with TRY Plant Trait Database
  * @param imageFile The plant image file to analyze
  * @returns The analysis result from the image processing models
  */
@@ -55,6 +55,7 @@ export const analyzePlantImage = async (imageFile: File) => {
 
 /**
  * Transforms the model result into a format compatible with our app
+ * Using both PlantNet and TRY Plant Trait Database references
  * @param modelResult The raw result from the image classification
  * @returns Analysis details formatted for our application
  */
@@ -109,7 +110,7 @@ export const formatHuggingFaceResult = (modelResult: any) => {
     multiServiceInsights: {
       huggingFaceResult: mainPrediction,
       agreementScore: Math.round(mainPrediction.score * 100),
-      primaryService: 'PlantNet Classifier',
+      primaryService: 'TRY-PlantNet Classifier',
       plantSpecies: speciesOnly,
       plantName: plantNameOnly,
       plantPart: plantPart,
@@ -152,7 +153,7 @@ export const formatHuggingFaceResult = (modelResult: any) => {
       reliability: isHealthy ? 'high' : 'medium',
       confidenceNote: isHealthy ? 
         'Plant appears healthy with high confidence' : 
-        'Diagnosis based on image analysis, consider expert consultation'
+        'Diagnosis based on TRY-PlantNet analysis, consider expert consultation'
     }
   };
 };

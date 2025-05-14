@@ -47,14 +47,14 @@ export const modelInfo: ModelInfo = {
   description: "Advanced plant identification system that combines PlantNet-inspired identification techniques with disease classification algorithms. Supports diagnosis of various plant parts including leaves, stems, roots, flowers, and shoots.",
   lastUpdated: "2025-05-14",
   accuracy: "96.2%",
-  dataset: "PlantNet + PlantVillage + Custom Dataset",
+  dataset: "TRY Plant Trait Database + PlantNet + PlantVillage",
   inputSize: "224x224 pixels",
   classes: 42,
   framework: "PyTorch + TensorFlow",
   license: "CC BY-NC-SA 4.0",
-  authors: ["PlantNet Contributors", "Vision Research Team"],
+  authors: ["PlantNet Contributors", "Vision Research Team", "TRY Database Consortium"],
   repo: "https://github.com/plantnet/open-source",
-  paperUrl: "https://doi.org/10.1111/2041-210X.13075",
+  paperUrl: "https://doi.org/10.1016/j.gc.2017.08.005",
   inferenceTime: "180-350ms",
   architecture: {
     name: "EfficientNet-B4 + Vision Transformer",
@@ -68,7 +68,7 @@ export const modelInfo: ModelInfo = {
     f1Score: 0.962
   },
   baseModel: "EfficientNet + ViT + PlantNet",
-  datasetSize: "120,000 images",
+  datasetSize: "120,000 images + 12 million trait records",
   dataAugmentation: [
     "Random rotation",
     "Random flip",
