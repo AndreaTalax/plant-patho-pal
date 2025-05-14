@@ -258,7 +258,7 @@ export const diseaseSymptoms = {
   ],
   'fire-blight': [
     'Wilting and blackening of blossoms and leaves',
-    'Shepherd's crook appearance of wilted shoots',
+    'Shepherd\'s crook appearance of wilted shoots',
     'Amber-colored bacterial ooze on infected tissue',
     'Water-soaked appearance of infected tissue',
     'Blackened, sunken cankers on branches',
