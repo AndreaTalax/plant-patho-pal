@@ -2,6 +2,7 @@
 import { Button } from '@/components/ui/button';
 import { MessageCircle } from 'lucide-react';
 import { DiagnosedDisease } from '../types';
+import { useTheme } from '@/context/ThemeContext';
 
 interface ActionButtonsProps {
   resetDiagnosis: () => void;
@@ -16,6 +17,8 @@ const ActionButtons = ({
   diagnosisResult,
   diagnosedDisease
 }: ActionButtonsProps) => {
+  const { t } = useTheme();
+  
   return (
     <div className="flex gap-2 mt-4">
       <Button 
@@ -23,14 +26,14 @@ const ActionButtons = ({
         className="flex-1"
         onClick={resetDiagnosis}
       >
-        Nuova Diagnosi
+        New Diagnosis
       </Button>
       {diagnosisResult && diagnosedDisease && (
         <Button 
           className="flex-1 bg-drplant-blue hover:bg-drplant-blue-dark"
           onClick={navigateToChat}
         >
-          <MessageCircle className="mr-2 h-4 w-4" /> Consulta Esperto
+          <MessageCircle className="mr-2 h-4 w-4" /> Consult Expert
         </Button>
       )}
     </div>
