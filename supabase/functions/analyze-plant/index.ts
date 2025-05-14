@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
 
@@ -12,43 +13,127 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
 };
 
-// Common plant names for identification
+// Enhanced plant database for better identification
 const plantSpeciesMap = {
+  // Common garden vegetables
   'tomato': 'Tomato (Solanum lycopersicum)',
   'potato': 'Potato (Solanum tuberosum)',
+  'pepper': 'Pepper (Capsicum annuum)',
+  'cucumber': 'Cucumber (Cucumis sativus)',
+  'lettuce': 'Lettuce (Lactuca sativa)',
+  'carrot': 'Carrot (Daucus carota)',
+  'spinach': 'Spinach (Spinacia oleracea)',
+  'pumpkin': 'Pumpkin (Cucurbita pepo)',
+  'beans': 'Beans (Phaseolus vulgaris)',
+  'corn': 'Corn (Zea mays)',
+  
+  // Fruits
   'apple': 'Apple (Malus domestica)',
   'grape': 'Grape (Vitis vinifera)',
-  'corn': 'Corn (Zea mays)',
   'strawberry': 'Strawberry (Fragaria ananassa)',
-  'pepper': 'Pepper (Capsicum annuum)',
   'peach': 'Peach (Prunus persica)',
   'orange': 'Orange (Citrus sinensis)',
-  'cherry': 'Cherry (Prunus avium)'
+  'cherry': 'Cherry (Prunus avium)',
+  'lemon': 'Lemon (Citrus limon)',
+  'raspberry': 'Raspberry (Rubus idaeus)',
+  'blueberry': 'Blueberry (Vaccinium)',
+  'banana': 'Banana (Musa)',
+  
+  // Common houseplants
+  'monstera': 'Monstera (Monstera deliciosa)',
+  'pothos': 'Pothos (Epipremnum aureum)',
+  'snake plant': 'Snake Plant (Sansevieria)',
+  'aloe': 'Aloe Vera (Aloe barbadensis)',
+  'fiddle': 'Fiddle Leaf Fig (Ficus lyrata)',
+  'peace lily': 'Peace Lily (Spathiphyllum)',
+  'orchid': 'Orchid (Orchidaceae)',
+  'spider plant': 'Spider Plant (Chlorophytum comosum)',
+  'rubber plant': 'Rubber Plant (Ficus elastica)',
+  'jade plant': 'Jade Plant (Crassula ovata)',
+  'zz plant': 'ZZ Plant (Zamioculcas zamiifolia)',
+  'philodendron': 'Philodendron (Philodendron)',
+  
+  // Garden flowers
+  'rose': 'Rose (Rosa)',
+  'tulip': 'Tulip (Tulipa)',
+  'daisy': 'Daisy (Bellis perennis)',
+  'sunflower': 'Sunflower (Helianthus)',
+  'lily': 'Lily (Lilium)',
+  'lavender': 'Lavender (Lavandula)',
+  'marigold': 'Marigold (Tagetes)',
+  'hydrangea': 'Hydrangea (Hydrangea)',
+  'geranium': 'Geranium (Pelargonium)',
+  'dahlia': 'Dahlia (Dahlia)',
+  
+  // Herbs
+  'basil': 'Basil (Ocimum basilicum)',
+  'mint': 'Mint (Mentha)',
+  'rosemary': 'Rosemary (Rosmarinus officinalis)',
+  'thyme': 'Thyme (Thymus vulgaris)',
+  'cilantro': 'Cilantro (Coriandrum sativum)',
+  'oregano': 'Oregano (Origanum vulgare)',
+  'sage': 'Sage (Salvia officinalis)',
+  'chives': 'Chives (Allium schoenoprasum)',
+  'parsley': 'Parsley (Petroselinum crispum)',
+  'dill': 'Dill (Anethum graveolens)',
 };
 
 // Function to determine if plant is healthy based on label
 const isPlantHealthy = (label: string): boolean => {
   const healthyTerms = ['healthy', 'normal', 'no disease', 'good', 'well'];
+  const diseaseTerms = ['disease', 'infection', 'blight', 'spot', 'mildew', 'rust', 'rot', 'wilt'];
   const label_lower = label.toLowerCase();
-  return healthyTerms.some(term => label_lower.includes(term));
+  
+  // Check if label explicitly mentions being healthy
+  if (healthyTerms.some(term => label_lower.includes(term))) {
+    return true;
+  }
+  
+  // Check if label mentions any disease conditions
+  if (diseaseTerms.some(term => label_lower.includes(term))) {
+    return false;
+  }
+  
+  // Default to healthy if no clear indicators
+  return true;
 };
 
-// Function to extract plant name from label
+// Enhanced function to extract plant name from label
 const extractPlantName = (label: string): string | null => {
-  // Try to extract plant name from common formats like "Tomato: Healthy" or "Healthy Apple Tree"
+  label = label.toLowerCase();
+  
+  // First try exact matches with the keys in our database
   for (const [key, value] of Object.entries(plantSpeciesMap)) {
-    if (label.toLowerCase().includes(key.toLowerCase())) {
+    if (label.includes(key)) {
       return value;
     }
   }
+  
+  // Try to extract from common formats 
+  // Example formats: "Tomato: Healthy", "Tomato Late Blight", "Healthy Apple Tree"
+  const commonPlantNames = Object.keys(plantSpeciesMap);
+  for (const plantKey of commonPlantNames) {
+    if (new RegExp(`\\b${plantKey}\\b`, 'i').test(label)) {
+      return plantSpeciesMap[plantKey];
+    }
+  }
+  
+  // If nothing found, return null
   return null;
 };
 
-// Improved plant verification function that accepts more plant-related terms
+// Improved plant verification function
 const isPlantLabel = (label: string): boolean => {
-  const plantLabels = ["plant", "leaf", "leaves", "flower", "potted plant", "foliage", "shrub", "vegetation",
-                      "botanical", "flora", "garden", "herb", "houseplant", "tree"];
-  return plantLabels.some(keyword => label.toLowerCase().includes(keyword));
+  const plantLabels = [
+    "plant", "leaf", "leaves", "flower", "potted plant", "foliage", "shrub", "vegetation",
+    "botanical", "flora", "garden", "herb", "houseplant", "tree", "succulent", "bloom",
+    "petal", "stem", "root", "seedling", "bud", "shoot", "cutting", "bulb", "crop"
+  ];
+  
+  // Also check our plant database keys
+  const allPlantTerms = [...plantLabels, ...Object.keys(plantSpeciesMap)];
+  
+  return allPlantTerms.some(keyword => label.toLowerCase().includes(keyword));
 };
 
 // Function to check if an image contains a plant using multiple models

@@ -16,6 +16,9 @@ const ActionButtons = ({
   diagnosisResult,
   diagnosedDisease
 }: ActionButtonsProps) => {
+  // Check if we should show expert consultation (only if we have a disease with confidence)
+  const showExpertConsult = diagnosisResult && diagnosedDisease;
+  
   return (
     <div className="flex gap-2 mt-4">
       <Button 
@@ -25,12 +28,12 @@ const ActionButtons = ({
       >
         New Diagnosis
       </Button>
-      {diagnosisResult && diagnosedDisease && (
+      {showExpertConsult && (
         <Button 
           className="flex-1 bg-drplant-blue hover:bg-drplant-blue-dark"
           onClick={navigateToChat}
         >
-          <MessageCircle className="mr-2 h-4 w-4" /> Expert Consult
+          <MessageCircle className="mr-2 h-4 w-4" /> Consult Expert
         </Button>
       )}
     </div>
