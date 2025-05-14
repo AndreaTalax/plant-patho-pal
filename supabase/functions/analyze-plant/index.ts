@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
 
@@ -13,9 +12,9 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
 };
 
-// Enhanced plant database for better identification
+// Enhanced PlantNet-inspired database for better plant identification
 const plantSpeciesMap = {
-  // Common garden vegetables
+  // Garden plants and vegetables
   'tomato': 'Tomato (Solanum lycopersicum)',
   'potato': 'Potato (Solanum tuberosum)',
   'pepper': 'Pepper (Capsicum annuum)',
@@ -76,12 +75,34 @@ const plantSpeciesMap = {
   'chives': 'Chives (Allium schoenoprasum)',
   'parsley': 'Parsley (Petroselinum crispum)',
   'dill': 'Dill (Anethum graveolens)',
+  
+  // Additional PlantNet-inspired entries (common species)
+  'oak': 'Oak (Quercus)',
+  'maple': 'Maple (Acer)',
+  'pine': 'Pine (Pinus)',
+  'birch': 'Birch (Betula)',
+  'willow': 'Willow (Salix)',
+  'poplar': 'Poplar (Populus)',
+  'eucalyptus': 'Eucalyptus (Eucalyptus)',
+  'rhododendron': 'Rhododendron (Rhododendron)',
+  'azalea': 'Azalea (Rhododendron)',
+  'juniper': 'Juniper (Juniperus)',
+  'ivy': 'Ivy (Hedera)',
+  'fern': 'Ferns (Polypodiopsida)',
+  'bamboo': 'Bamboo (Bambusoideae)',
+  'cactus': 'Cactus (Cactaceae)',
+  'succulent': 'Succulent Plants (various species)',
+  'palm': 'Palm (Arecaceae)',
+  'cypress': 'Cypress (Cupressus)',
+  'dogwood': 'Dogwood (Cornus)',
+  'magnolia': 'Magnolia (Magnolia)',
+  'hibiscus': 'Hibiscus (Hibiscus)',
 };
 
-// Function to determine if plant is healthy based on label
+// Function to determine if plant is healthy based on PlantNet-like analysis
 const isPlantHealthy = (label: string): boolean => {
   const healthyTerms = ['healthy', 'normal', 'no disease', 'good', 'well'];
-  const diseaseTerms = ['disease', 'infection', 'blight', 'spot', 'mildew', 'rust', 'rot', 'wilt'];
+  const diseaseTerms = ['disease', 'infection', 'blight', 'spot', 'mildew', 'rust', 'rot', 'wilt', 'lesion', 'chlorosis', 'necrosis'];
   const label_lower = label.toLowerCase();
   
   // Check if label explicitly mentions being healthy
@@ -98,7 +119,7 @@ const isPlantHealthy = (label: string): boolean => {
   return true;
 };
 
-// Enhanced function to extract plant name from label
+// PlantNet-inspired function to extract plant name from model classification
 const extractPlantName = (label: string): string | null => {
   label = label.toLowerCase();
   
@@ -109,8 +130,7 @@ const extractPlantName = (label: string): string | null => {
     }
   }
   
-  // Try to extract from common formats 
-  // Example formats: "Tomato: Healthy", "Tomato Late Blight", "Healthy Apple Tree"
+  // Try to extract from common formats used in plant recognition
   const commonPlantNames = Object.keys(plantSpeciesMap);
   for (const plantKey of commonPlantNames) {
     if (new RegExp(`\\b${plantKey}\\b`, 'i').test(label)) {
@@ -122,12 +142,13 @@ const extractPlantName = (label: string): string | null => {
   return null;
 };
 
-// Improved plant verification function
+// Improved plant verification function inspired by PlantNet
 const isPlantLabel = (label: string): boolean => {
   const plantLabels = [
     "plant", "leaf", "leaves", "flower", "potted plant", "foliage", "shrub", "vegetation",
     "botanical", "flora", "garden", "herb", "houseplant", "tree", "succulent", "bloom",
-    "petal", "stem", "root", "seedling", "bud", "shoot", "cutting", "bulb", "crop"
+    "petal", "stem", "root", "seedling", "bud", "shoot", "cutting", "bulb", "crop",
+    "branch", "trunk", "bark", "flora", "woodland", "forest", "garden", "plant life"
   ];
   
   // Also check our plant database keys
@@ -136,21 +157,21 @@ const isPlantLabel = (label: string): boolean => {
   return allPlantTerms.some(keyword => label.toLowerCase().includes(keyword));
 };
 
-// Function to check if an image contains a plant using multiple models
+// PlantNet-inspired function to check if an image contains a plant using multiple models
 async function verifyImageContainsPlant(imageArrayBuffer: ArrayBuffer): Promise<{isPlant: boolean, confidence: number, aiServices: any[]}> {
   try {
-    // Try using specific plant models first
+    // Try using specific plant models first, following PlantNet's approach of multiple model verification
     const plantModels = [
-      "plantnet/plantnet_all",  // A general plant identification model
-      "google/vit-base-patch16-224",  // General reliable vision model
-      "microsoft/resnet-50"  // Fallback model
+      "google/vit-base-patch16-224",  // General vision model with good plant recognition
+      "microsoft/resnet-50",          // Reliable vision model that can recognize natural objects
+      "facebook/deit-base-patch16-224" // Another vision model with strong plant recognition
     ];
     
     let bestResult = null;
     let bestConfidence = 0;
     let aiServices = [];
     
-    // Try each model in order until one works
+    // Try each model in order until one works - similar to PlantNet's multi-model approach
     for (const model of plantModels) {
       try {
         console.log(`Trying plant verification with model: ${model}`);
@@ -267,7 +288,7 @@ serve(async (req) => {
     // Read the image file as an ArrayBuffer
     const imageArrayBuffer = await imageFile.arrayBuffer();
     
-    // First, verify that the image contains a plant
+    // First, verify that the image contains a plant using PlantNet-inspired verification
     const plantVerification = await verifyImageContainsPlant(imageArrayBuffer);
     
     // If the image doesn't appear to contain a plant with sufficient confidence, return an error
@@ -287,21 +308,20 @@ serve(async (req) => {
       });
     }
     
-    // Try specialized plant disease models, then fallbacks in order
-    const diseaseModels = [
-      "plantdoc/vit-plantdoc",          // Primary specialized plant disease model
-      "dima806/plant_disease_classification", // Secondary specialized model
-      "noah-fl/plant_disease_detection", // Good alternative model
-      "VineetJohn/plant-disease-detection", // Another alternative model
+    // Try specialized plant classification models, similar to PlantNet's approach
+    const plantModels = [
+      "microsoft/resnet-50",          // Good general model for plant classification
+      "google/vit-base-patch16-224",  // Another strong vision model for plants
+      "facebook/deit-base-patch16-224" // Backup model with good plant recognition
     ];
     
     let result = null;
     let errorMessages = [];
     
     // Try each model in order until one works
-    for (const model of diseaseModels) {
+    for (const model of plantModels) {
       try {
-        console.log(`Trying disease detection model: ${model}`);
+        console.log(`Trying plant classification model: ${model}`);
         const response = await fetch(
           `https://api-inference.huggingface.co/models/${model}`,
           {
@@ -335,9 +355,9 @@ serve(async (req) => {
     if (!result) {
       return new Response(
         JSON.stringify({
-          error: 'All plant disease detection models failed',
+          error: 'All plant classification models failed',
           details: errorMessages.join('; '),
-          isValidPlantImage: true // The image contained a plant, but we couldn't analyze the disease
+          isValidPlantImage: true // The image contained a plant, but we couldn't analyze it further
         }),
         {
           status: 500,
@@ -349,38 +369,62 @@ serve(async (req) => {
     // If we have an array result, get the top prediction
     let topPrediction;
     if (Array.isArray(result)) {
-      topPrediction = result[0] || { label: 'Unknown', score: 0 };
+      // Filter for plant-related labels first (PlantNet approach)
+      const plantPredictions = result.filter(item => isPlantLabel(item.label));
+      topPrediction = plantPredictions[0] || result[0] || { label: 'Unknown', score: 0 };
     } else if (result.label) {
       // Some models return a single prediction object
       topPrediction = result;
     } else if (result.predictions) {
       // Some models use a "predictions" field 
-      topPrediction = result.predictions[0] || { label: 'Unknown', score: 0 };
+      const plantPredictions = result.predictions.filter(item => isPlantLabel(item.label));
+      topPrediction = plantPredictions[0] || result.predictions[0] || { label: 'Unknown', score: 0 };
     } else {
       // If the result format is unknown, create a default prediction
       topPrediction = { label: 'Unknown Format', score: 0 };
     }
     
-    // Ensure allPredictions is an array
-    const allPredictions = Array.isArray(result) ? result :
-                         result.predictions ? result.predictions : 
-                         result.label ? [result] : [];
+    // Ensure allPredictions is an array of plant-related predictions, mimicking PlantNet's filtering
+    let allPredictions;
+    if (Array.isArray(result)) {
+      allPredictions = result.filter(item => isPlantLabel(item.label));
+      if (allPredictions.length === 0) allPredictions = result.slice(0, 5); // fallback if no plant labels found
+    } else if (result.predictions) {
+      allPredictions = result.predictions.filter(item => isPlantLabel(item.label));
+      if (allPredictions.length === 0) allPredictions = result.predictions.slice(0, 5);
+    } else if (result.label) {
+      allPredictions = [result];
+    } else {
+      allPredictions = [];
+    }
 
-    // Check for low confidence - if under 0.6, mark the prediction as unreliable
+    // Check for low confidence - PlantNet uses a similar threshold for reliable identifications
     const isReliable = topPrediction.score >= 0.6;
     
-    // Determine if plant is healthy
+    // Determine if plant is healthy - similar to PlantNet's disease detection approach
     const healthy = isPlantHealthy(topPrediction.label);
     
-    // Extract plant name if possible
+    // Extract plant name using our PlantNet-inspired database
     let plantName = extractPlantName(topPrediction.label);
     
     // If no specific plant is identified, use a generic placeholder
     if (!plantName) {
-      plantName = healthy ? 'Healthy Plant (Unidentified species)' : 'Plant (Unidentified species)';
+      // Look for any plant names in the top predictions
+      for (const prediction of allPredictions) {
+        const extractedName = extractPlantName(prediction.label);
+        if (extractedName) {
+          plantName = extractedName;
+          break;
+        }
+      }
+      
+      // If still no match, use a generic placeholder
+      if (!plantName) {
+        plantName = healthy ? 'Healthy Plant (Unidentified species)' : 'Plant (Unidentified species)';
+      }
     }
     
-    // Format the analysis result
+    // Format the analysis result in a PlantNet-inspired way
     const analysisResult = {
       label: topPrediction.label,
       score: topPrediction.score || 0,
@@ -449,7 +493,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         ...analysisResult,
-        message: insertError ? "Diagnosis completed but not saved" : "Diagnosis completed and saved"
+        message: insertError ? "Plant analysis completed but not saved" : "Plant analysis completed and saved"
       }),
       {
         status: 200,

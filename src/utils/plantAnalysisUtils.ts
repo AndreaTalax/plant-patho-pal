@@ -4,8 +4,9 @@ import { toast } from "sonner";
 
 /**
  * Sends an image to the Supabase Edge Function for plant disease analysis
+ * Using a PlantNet-inspired approach
  * @param imageFile The plant image file to analyze
- * @returns The analysis result from HuggingFace or error
+ * @returns The analysis result from the image processing models
  */
 export const analyzePlantImage = async (imageFile: File) => {
   try {
@@ -52,32 +53,18 @@ export const analyzePlantImage = async (imageFile: File) => {
   }
 };
 
-// Common plant names for identification
-const plantNames = [
-  'Tomato (Solanum lycopersicum)',
-  'Basil (Ocimum basilicum)',
-  'Monstera (Monstera deliciosa)',
-  'Pothos (Epipremnum aureum)',
-  'Rose (Rosa)',
-  'Arrowhead Plant (Syngonium podophyllum)',
-  'Snake Plant (Sansevieria)',
-  'Aloe Vera (Aloe barbadensis miller)',
-  'Fiddle Leaf Fig (Ficus lyrata)',
-  'Peace Lily (Spathiphyllum)'
-];
-
 /**
- * Transforms the HuggingFace result into a format compatible with our app's model
- * @param huggingFaceResult The raw result from HuggingFace
+ * Transforms the model result into a format compatible with our app
+ * @param modelResult The raw result from the image classification
  * @returns Analysis details formatted for our application
  */
-export const formatHuggingFaceResult = (huggingFaceResult: any) => {
-  if (!huggingFaceResult || !huggingFaceResult.label) {
+export const formatHuggingFaceResult = (modelResult: any) => {
+  if (!modelResult || !modelResult.label) {
     return null;
   }
 
   // Use the plant name from the result if available
-  const plantName = huggingFaceResult.plantName || null;
+  const plantName = modelResult.plantName || null;
   let plantNameOnly;
   let speciesOnly;
   
@@ -87,27 +74,26 @@ export const formatHuggingFaceResult = (huggingFaceResult: any) => {
     plantNameOnly = parts[0];
     speciesOnly = parts[1]?.replace(")", "") || "Unidentified";
   } else {
-    // Fallback to a random plant name
-    const randomPlantName = plantNames[Math.floor(Math.random() * plantNames.length)];
-    plantNameOnly = randomPlantName.split(' (')[0];
-    speciesOnly = randomPlantName.split(' (')[1]?.replace(')', '') || 'Unidentified';
+    // Fallback to a generic name
+    plantNameOnly = "Unknown Plant";
+    speciesOnly = "Unidentified";
   }
 
   // Extract the primary prediction
   const mainPrediction = {
-    label: huggingFaceResult.label,
-    score: huggingFaceResult.score || 0
+    label: modelResult.label,
+    score: modelResult.score || 0
   };
 
   // Check for health flag directly from the result, or determine from label
-  const isHealthy = huggingFaceResult.healthy !== undefined ? 
-                   huggingFaceResult.healthy : 
+  const isHealthy = modelResult.healthy !== undefined ? 
+                   modelResult.healthy : 
                    mainPrediction.label.toLowerCase().includes('healthy') || 
                    mainPrediction.label.toLowerCase().includes('normal');
                     
   // Format all predictions for alternative diagnoses
-  const alternativeDiagnoses = huggingFaceResult.allPredictions
-    ? huggingFaceResult.allPredictions
+  const alternativeDiagnoses = modelResult.allPredictions
+    ? modelResult.allPredictions
         .slice(1) // Skip the main prediction which is already used
         .map((pred: any) => ({
           disease: pred.label,
@@ -120,14 +106,14 @@ export const formatHuggingFaceResult = (huggingFaceResult: any) => {
     multiServiceInsights: {
       huggingFaceResult: mainPrediction,
       agreementScore: Math.round(mainPrediction.score * 100),
-      primaryService: 'PlantDoc AI',  // Updated name to reflect the specialized model
+      primaryService: 'PlantNet Classifier',
       plantSpecies: speciesOnly,
       plantName: plantNameOnly,
       isHealthy: isHealthy,
-      isValidPlantImage: huggingFaceResult.isValidPlantImage !== undefined ? 
-                         huggingFaceResult.isValidPlantImage : true,
-      isReliable: huggingFaceResult.isReliable !== undefined ? 
-                 huggingFaceResult.isReliable : mainPrediction.score >= 0.6
+      isValidPlantImage: modelResult.isValidPlantImage !== undefined ? 
+                         modelResult.isValidPlantImage : true,
+      isReliable: modelResult.isReliable !== undefined ? 
+                 modelResult.isReliable : mainPrediction.score >= 0.6
     },
     identifiedFeatures: isHealthy ? 
       [
@@ -138,12 +124,12 @@ export const formatHuggingFaceResult = (huggingFaceResult: any) => {
       ] : 
       [
         `Leaves with signs of ${mainPrediction.label}`,
-        'Patterns recognized by the artificial intelligence model'
+        'Patterns recognized by the AI model'
       ],
     alternativeDiagnoses: isHealthy ? [] : alternativeDiagnoses,
-    plantVerification: huggingFaceResult.plantVerification || {
-      isPlant: huggingFaceResult.isValidPlantImage !== undefined ? 
-               huggingFaceResult.isValidPlantImage : true,
+    plantVerification: modelResult.plantVerification || {
+      isPlant: modelResult.isValidPlantImage !== undefined ? 
+               modelResult.isValidPlantImage : true,
       aiServices: []
     },
     plantixInsights: {
