@@ -26,6 +26,11 @@ export interface AnalysisDetails {
     isValidPlantImage?: boolean;
     isReliable?: boolean;
     dataSource?: string;
+    eppoRegulated?: {
+      name: string;
+      isQuarantine: boolean;
+      warningLevel: string;
+    } | null;
   };
   alternativeDiagnoses: {
     disease: string;
@@ -64,4 +69,10 @@ export interface AnalysisDetails {
     reliability?: string;
     confidenceNote?: string;
   };
+  eppoData?: {
+    regulationStatus: string;
+    reportAdvised: boolean;
+    warningLevel: string;
+    infoLink?: string;
+  } | null;
 }

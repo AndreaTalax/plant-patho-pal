@@ -1,7 +1,7 @@
 
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Eye, EyeOff, Check, X, Brain } from 'lucide-react';
+import { Eye, EyeOff, Check, X, Brain, AlertTriangle } from 'lucide-react';
 import { AnalysisDetails } from '../types';
 import { toast } from 'sonner';
 
@@ -19,6 +19,10 @@ const AiServicesData = ({ analysisDetails, isAnalyzing }: AiServicesDataProps) =
 
   // Check if we have HuggingFace data
   const hasHuggingFaceData = analysisDetails?.multiServiceInsights?.huggingFaceResult;
+  
+  // Check if we have EPPO regulated pest/disease data
+  const hasEppoData = analysisDetails?.eppoData || 
+                     analysisDetails?.multiServiceInsights?.eppoRegulated;
 
   if ((!hasAiServiceData && !hasHuggingFaceData) || isAnalyzing) {
     return null;
@@ -57,6 +61,37 @@ const AiServicesData = ({ analysisDetails, isAnalyzing }: AiServicesDataProps) =
         <div className="mt-2 border rounded-lg p-2 text-xs bg-gray-50">
           <h4 className="font-semibold mb-1">AI Services Results</h4>
           
+          {/* EPPO Regulated Pest Warning if present */}
+          {hasEppoData && (
+            <div className="mt-2 mb-3 p-2 bg-red-50 border border-red-300 rounded-md text-red-800">
+              <div className="flex items-center gap-1.5 mb-1 font-semibold">
+                <AlertTriangle className="h-4 w-4 text-red-600" />
+                <span>EPPO Regulated Pest/Disease Alert</span>
+              </div>
+              <p className="text-xs mb-1">
+                Potential detection of a quarantine pest or disease that may require reporting to local authorities.
+              </p>
+              <div className="flex justify-between text-xs">
+                <span>Regulation status:</span>
+                <span className="font-medium">
+                  {analysisDetails?.eppoData?.regulationStatus || 'Quarantine pest/disease'}
+                </span>
+              </div>
+              {analysisDetails?.eppoData?.infoLink && (
+                <div className="mt-1 text-center">
+                  <a 
+                    href={analysisDetails.eppoData.infoLink} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-red-700 underline text-xs"
+                  >
+                    EPPO Database Information
+                  </a>
+                </div>
+              )}
+            </div>
+          )}
+          
           {/* Prioritize HuggingFace data if present */}
           {hasHuggingFaceData && (
             <div className="mt-2 pt-2 border-t-2 border-blue-200 bg-blue-50 p-2 rounded mb-3">
@@ -82,7 +117,7 @@ const AiServicesData = ({ analysisDetails, isAnalyzing }: AiServicesDataProps) =
                 </span>
               </div>
               <div className="text-xs text-blue-600 mt-1 italic">
-                Analysis performed using VineetJohn/plant-disease-detection model
+                Analysis performed using {analysisDetails?.multiServiceInsights?.dataSource || 'PlantNet-based model'}
               </div>
             </div>
           )}
@@ -113,6 +148,12 @@ const AiServicesData = ({ analysisDetails, isAnalyzing }: AiServicesDataProps) =
                 <span>Primary Service:</span>
                 <span className="font-medium">{analysisDetails.multiServiceInsights.primaryService}</span>
               </div>
+              {analysisDetails.multiServiceInsights.dataSource && (
+                <div className="flex justify-between">
+                  <span>Data Source:</span>
+                  <span className="font-medium">{analysisDetails.multiServiceInsights.dataSource}</span>
+                </div>
+              )}
             </div>
           )}
           

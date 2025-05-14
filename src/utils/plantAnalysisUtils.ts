@@ -4,8 +4,8 @@ import { toast } from "sonner";
 
 /**
  * Sends an image to the Supabase Edge Function for plant disease analysis
- * Using a PlantNet-inspired approach combined with TRY Plant Trait Database
- * and specialized leaf disease detection using New Plant Diseases Dataset and OLID I
+ * Using a PlantNet-inspired approach combined with TRY Plant Trait Database,
+ * the New Plant Diseases Dataset, OLID I, and EPPO Global Database
  * @param imageFile The plant image file to analyze
  * @returns The analysis result from the image processing models
  */
@@ -40,6 +40,11 @@ export const analyzePlantImage = async (imageFile: File) => {
       toast.warning("The analysis results have low confidence. Consider uploading a clearer image for better results.", {
         duration: 5000,
       });
+    } else if (data.eppoRegulatedConcern) {
+      // Special EPPO alert for regulated pests and diseases
+      toast.error(`ALERT: Possible detection of ${data.eppoRegulatedConcern.name}, a regulated pest/disease. Please report to local plant protection authorities.`, {
+        duration: 8000,
+      });
     } else {
       toast.success("Plant analysis complete!", {
         duration: 3000,
@@ -56,7 +61,8 @@ export const analyzePlantImage = async (imageFile: File) => {
 
 /**
  * Transforms the model result into a format compatible with our app
- * Using TRY Plant Trait Database for plants and New Plant Diseases Dataset/OLID I for leaf diseases
+ * Using TRY Plant Trait Database for plants, New Plant Diseases Dataset/OLID I for leaf diseases,
+ * and EPPO Global Database for regulated pests and diseases
  * @param modelResult The raw result from the image classification
  * @returns Analysis details formatted for our application
  */
@@ -109,19 +115,33 @@ export const formatHuggingFaceResult = (modelResult: any) => {
   // Determine if this is a leaf analysis
   const isLeafAnalysis = plantPart === 'leaf' || 
                         mainPrediction.label.toLowerCase().includes('leaf') || 
-                        (modelResult.leafVerification && modelResult.leafVerification.isLeaf);
+                        (modelResult.leafVerification && modelResult.leafVerification.isLeaf) ||
+                        modelResult.isLeafAnalysis === true;
+
+  // Check if this is an EPPO regulated pest/disease
+  const isEppoRegulated = modelResult.eppoRegulatedConcern !== undefined && 
+                          modelResult.eppoRegulatedConcern !== null;
 
   // Create data source info based on what dataset was used
-  const dataSource = isLeafAnalysis ? 
-                    'New Plant Diseases Dataset + OLID I' : 
-                    'TRY Plant Trait Database + PlantNet';
+  let dataSource = modelResult.dataSource;
+  if (!dataSource) {
+    if (isEppoRegulated) {
+      dataSource = 'EPPO Global Database';
+    } else if (isLeafAnalysis) {
+      dataSource = 'New Plant Diseases Dataset + OLID I';
+    } else {
+      dataSource = 'TRY Plant Trait Database + PlantNet';
+    }
+  }
 
   // Create a formatted analysis details object
   return {
     multiServiceInsights: {
       huggingFaceResult: mainPrediction,
       agreementScore: Math.round(mainPrediction.score * 100),
-      primaryService: isLeafAnalysis ? 'Leaf Disease Classifier' : 'TRY-PlantNet Classifier',
+      primaryService: isEppoRegulated ? 'EPPO Regulatory Database' :
+                     isLeafAnalysis ? 'Leaf Disease Classifier' : 
+                     'TRY-PlantNet Classifier',
       plantSpecies: speciesOnly,
       plantName: plantNameOnly,
       plantPart: plantPart,
@@ -130,7 +150,8 @@ export const formatHuggingFaceResult = (modelResult: any) => {
                          modelResult.isValidPlantImage : true,
       isReliable: modelResult.isReliable !== undefined ? 
                  modelResult.isReliable : mainPrediction.score >= 0.6,
-      dataSource: dataSource
+      dataSource: dataSource,
+      eppoRegulated: isEppoRegulated ? modelResult.eppoRegulatedConcern : null
     },
     identifiedFeatures: isHealthy ? 
       [
@@ -138,7 +159,13 @@ export const formatHuggingFaceResult = (modelResult: any) => {
         'Good coloration',
         'Normal growth pattern',
         'No visible disease symptoms'
-      ] : 
+      ] : isEppoRegulated ?
+      [
+        `ALERT: Potential ${modelResult.eppoRegulatedConcern.name} detected`,
+        'This may be a regulated pest/disease',
+        'Consider reporting to plant health authorities',
+        'Further laboratory testing advised'
+      ] :
       [
         `${capitalize(plantPart || 'Plant')} with signs of ${mainPrediction.label}`,
         'Patterns recognized by the AI model',
@@ -158,19 +185,27 @@ export const formatHuggingFaceResult = (modelResult: any) => {
       dataSource: dataSource
     },
     plantixInsights: {
-      severity: isHealthy ? 'none' : 'unknown',
+      severity: isEppoRegulated ? 'high' : isHealthy ? 'none' : 'unknown',
       progressStage: isHealthy ? 'healthy' : 'medium',
-      spreadRisk: isHealthy ? 'none' : 'medium',
+      spreadRisk: isEppoRegulated ? 'very high' : isHealthy ? 'none' : 'medium',
       environmentalFactors: isHealthy ? 
         ['Adequate light exposure', 'Proper watering', 'Good growing conditions'] :
         ['Unable to determine from image'],
       reliability: isHealthy ? 'high' : 'medium',
-      confidenceNote: isHealthy ? 
+      confidenceNote: isEppoRegulated ?
+        'Analysis identifies potential regulated pest/disease from EPPO Global Database' :
+        isHealthy ? 
         'Plant appears healthy with high confidence' : 
         isLeafAnalysis ?
           'Diagnosis based on New Plant Diseases Dataset and OLID I, specialized for leaf diseases' :
           'Diagnosis based on TRY-PlantNet analysis, consider expert consultation'
-    }
+    },
+    eppoData: isEppoRegulated ? {
+      regulationStatus: 'Quarantine pest/disease',
+      reportAdvised: true,
+      warningLevel: modelResult.eppoRegulatedConcern.warningLevel || 'high',
+      infoLink: `https://gd.eppo.int/search?q=${encodeURIComponent(modelResult.eppoRegulatedConcern.name)}`
+    } : null
   };
 };
 

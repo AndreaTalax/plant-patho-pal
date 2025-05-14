@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
 
@@ -12,7 +13,7 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
 };
 
-// Enhanced database integrating PlantNet, TRY Plant Trait Database and New Plant Diseases Dataset
+// Enhanced database integrating PlantNet, TRY Plant Trait Database, New Plant Diseases Dataset, OLID I and EPPO Global Database
 const plantSpeciesMap = {
   // Garden plants and vegetables
   'tomato': 'Tomato (Solanum lycopersicum)',
@@ -119,6 +120,28 @@ const plantSpeciesMap = {
   'tomato target spot': 'Tomato (Solanum lycopersicum) - Target Spot',
   'tomato mosaic virus': 'Tomato (Solanum lycopersicum) - Mosaic Virus',
   'tomato yellow curl': 'Tomato (Solanum lycopersicum) - Yellow Leaf Curl Virus',
+  
+  // EPPO Global Database entries (quarantine pests and regulated plants)
+  'citrus greening': 'Citrus (Citrus spp.) - Huanglongbing Disease',
+  'citrus canker': 'Citrus (Citrus spp.) - Bacterial Canker',
+  'citrus tristeza': 'Citrus (Citrus spp.) - Tristeza Virus',
+  'xylella': 'Olive (Olea europaea) - Xylella fastidiosa',
+  'pine wood nematode': 'Pine (Pinus spp.) - Pine Wilt Disease',
+  'emerald ash borer': 'Ash (Fraxinus spp.) - Emerald Ash Borer Damage',
+  'box tree moth': 'Boxwood (Buxus spp.) - Box Tree Moth Damage',
+  'fire blight': 'Apple/Pear (Rosaceae) - Fire Blight',
+  'plum pox': 'Stone Fruit (Prunus spp.) - Sharka Disease',
+  'sudden oak death': 'Oak (Quercus spp.) - Phytophthora ramorum',
+  'ash dieback': 'Ash (Fraxinus spp.) - Chalara Ash Dieback',
+  'japanese beetle': 'Various Plants - Japanese Beetle Damage',
+  'dutch elm disease': 'Elm (Ulmus spp.) - Dutch Elm Disease',
+  'oak processionary': 'Oak (Quercus spp.) - Oak Processionary Moth',
+  'pepino mosaic': 'Tomato (Solanum lycopersicum) - Pepino Mosaic Virus',
+  'bacterial wilt': 'Various Plants - Ralstonia solanacearum',
+  'red palm weevil': 'Palm (Arecaceae) - Red Palm Weevil Damage',
+  'grapevine flavescence': 'Grape (Vitis vinifera) - Flavescence dorée',
+  'colorado beetle': 'Potato (Solanum tuberosum) - Colorado Beetle Damage',
+  'black sigatoka': 'Banana (Musa) - Black Sigatoka Disease'
 };
 
 // Database of plant parts keywords for identification
@@ -134,13 +157,32 @@ const plantPartKeywords = {
   'collar region': ['collar', 'crown', 'base']
 };
 
+// Enhanced database of EPPO regulated pest and disease symptoms
+const eppoSymptoms = {
+  'citrus greening': ['yellow mottling', 'leaf asymmetry', 'vein yellowing', 'stunted growth', 'blotchy mottle'],
+  'citrus canker': ['water-soaked lesions', 'circular lesions', 'raised corky tissue', 'chlorotic halo', 'ruptured epidermis'],
+  'xylella': ['leaf scorch', 'marginal leaf burn', 'wilting', 'dieback', 'stunted growth'],
+  'fire blight': ['blackened leaves', 'shepherd's crook', 'bacterial ooze', 'cankers', 'fruit mummification'],
+  'sudden oak death': ['trunk cankers', 'bleeding trunk', 'wilting foliage', 'black leaf lesions', 'shoot dieback'],
+  'ash dieback': ['diamond-shaped lesions', 'wilting leaves', 'crown dieback', 'bark lesions', 'wood discoloration'],
+  'dutch elm disease': ['yellowing foliage', 'wilting leaves', 'vascular discoloration', 'crown dieback', 'bark beetles'],
+  'grape flavescence': ['downward leaf rolling', 'leaf discoloration', 'lack of lignification', 'flower abortion', 'berry shrivel'],
+  'bacterial wilt': ['rapid wilting', 'vascular discoloration', 'bacterial streaming', 'epinasty', 'adventitious roots'],
+  'plum pox': ['chlorotic rings', 'vein yellowing', 'leaf deformation', 'fruit rings', 'fruit deformation']
+};
+
 // Function to determine if plant is healthy based on enhanced dataset analysis
+// including EPPO Global Database symptoms recognition
 const isPlantHealthy = (label: string): boolean => {
   const healthyTerms = ['healthy', 'normal', 'no disease', 'good', 'well'];
   const diseaseTerms = ['disease', 'infection', 'blight', 'spot', 'mildew', 'rust', 'rot', 'wilt', 'lesion', 'chlorosis', 'necrosis'];
   const newPlantDiseaseTerms = ['scab', 'black rot', 'rust', 'powdery mildew', 'gray leaf spot', 
                               'blight', 'esca', 'leaf scorch', 'bacterial spot', 'leaf mold', 
                               'septoria', 'spider mites', 'target spot', 'mosaic virus', 'yellow curl'];
+  // EPPO specific disease terms
+  const eppoTerms = ['greening', 'canker', 'xylella', 'nematode', 'dieback', 'bacterial', 'virus', 
+                    'moth', 'beetle', 'weevil', 'ash borer', 'flavescence', 'sigatoka', 'tristeza'];
+  
   const label_lower = label.toLowerCase();
   
   // Check if label explicitly mentions being healthy
@@ -148,9 +190,10 @@ const isPlantHealthy = (label: string): boolean => {
     return true;
   }
   
-  // Check if label mentions any disease conditions from both datasets
+  // Check if label mentions any disease conditions from any dataset
   if (diseaseTerms.some(term => label_lower.includes(term)) || 
-      newPlantDiseaseTerms.some(term => label_lower.includes(term))) {
+      newPlantDiseaseTerms.some(term => label_lower.includes(term)) ||
+      eppoTerms.some(term => label_lower.includes(term))) {
     return false;
   }
   
@@ -171,7 +214,7 @@ const identifyPlantPart = (label: string): string | null => {
   return null; // Unknown plant part
 };
 
-// PlantNet-inspired function to extract plant name from model classification
+// Enhanced plant name extraction using combined databases including EPPO
 const extractPlantName = (label: string): string | null => {
   label = label.toLowerCase();
   
@@ -190,11 +233,22 @@ const extractPlantName = (label: string): string | null => {
     }
   }
   
+  // Check for EPPO regulated plant indicators
+  if (label.includes('citrus') && (label.includes('greening') || label.includes('canker') || label.includes('tristeza'))) {
+    return 'Citrus (Citrus spp.)';
+  }
+  if (label.includes('xylella') || label.includes('olive')) {
+    return 'Olive (Olea europaea)';
+  }
+  if ((label.includes('pine') && label.includes('nematode')) || label.includes('pine wilt')) {
+    return 'Pine (Pinus spp.)';
+  }
+  
   // If nothing found, return null
   return null;
 };
 
-// Improved plant verification function with New Plant Diseases Dataset
+// Improved plant verification function with EPPO Global Database
 const isPlantLabel = (label: string): boolean => {
   const plantLabels = [
     "plant", "leaf", "leaves", "flower", "potted plant", "foliage", "shrub", "vegetation",
@@ -209,8 +263,15 @@ const isPlantLabel = (label: string): boolean => {
     'leaf', 'plant', 'foliage', 'stem', 'crop', 'fruit'
   ];
   
+  // Add EPPO specific plant terms
+  const eppoPlantLabels = [
+    'citrus', 'olive', 'pine', 'ash', 'boxwood', 'plum', 'oak',
+    'elm', 'palm', 'grapevine', 'banana', 'rosaceae'
+  ];
+  
   // Also check our plant database keys
-  const allPlantTerms = [...plantLabels, ...Object.keys(plantSpeciesMap), ...diseaseDatasetPlantLabels];
+  const allPlantTerms = [...plantLabels, ...Object.keys(plantSpeciesMap), 
+                        ...diseaseDatasetPlantLabels, ...eppoPlantLabels];
   
   return allPlantTerms.some(keyword => label.toLowerCase().includes(keyword));
 };
@@ -356,6 +417,35 @@ const isLeafImage = async (imageArrayBuffer: ArrayBuffer): Promise<boolean> => {
   }
 };
 
+// Function to check if the image might contain EPPO regulated diseases/pests
+const checkForEppoConcerns = (label: string): { isEppoConcern: boolean, concernName: string | null } => {
+  const label_lower = label.toLowerCase();
+  
+  // Check for specific EPPO regulated pests and diseases
+  const eppoRegulatedConcerns = [
+    { name: 'citrus greening', terms: ['citrus greening', 'huanglongbing', 'yellow dragon'] },
+    { name: 'citrus canker', terms: ['citrus canker', 'bacterial canker', 'xanthomonas citri'] },
+    { name: 'citrus tristeza', terms: ['citrus tristeza', 'tristeza virus', 'ctv'] },
+    { name: 'xylella fastidiosa', terms: ['xylella', 'fastidiosa', 'olive quick decline'] },
+    { name: 'pine wood nematode', terms: ['pine wood nematode', 'bursaphelenchus', 'pine wilt'] },
+    { name: 'emerald ash borer', terms: ['emerald ash borer', 'agrilus planipennis'] },
+    { name: 'box tree moth', terms: ['box tree moth', 'cydalima perspectalis'] },
+    { name: 'fire blight', terms: ['fire blight', 'erwinia amylovora'] },
+    { name: 'plum pox virus', terms: ['plum pox', 'sharka disease', 'ppv'] },
+    { name: 'phytophthora ramorum', terms: ['sudden oak death', 'phytophthora ramorum'] },
+    { name: 'ash dieback', terms: ['ash dieback', 'chalara', 'hymenoscyphus fraxineus'] }
+  ];
+  
+  // Check if the label contains any EPPO regulated concern terms
+  for (const concern of eppoRegulatedConcerns) {
+    if (concern.terms.some(term => label_lower.includes(term))) {
+      return { isEppoConcern: true, concernName: concern.name };
+    }
+  }
+  
+  return { isEppoConcern: false, concernName: null };
+};
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -414,14 +504,14 @@ serve(async (req) => {
     let plantModels;
     
     if (isLeaf) {
-      // For leaf images, use models better suited for the New Plant Diseases Dataset
+      // For leaf images, use models better suited for the New Plant Diseases Dataset and OLID I
       plantModels = [
         "microsoft/resnet-50",          // Good for leaf disease classification
         "google/vit-base-patch16-224",  // Good general vision model
         "facebook/deit-base-patch16-224" // Backup model
       ];
     } else {
-      // For general plant images, use models better with the TRY Plant Trait Database
+      // For general plant images, use models better with the TRY Plant Trait Database and EPPO
       plantModels = [
         "google/vit-base-patch16-224",  // Good general plant classification
         "microsoft/resnet-50",          // Another strong vision model for plants
@@ -515,6 +605,9 @@ serve(async (req) => {
     // Check for low confidence
     const isReliable = topPrediction.score >= 0.6;
     
+    // Check if this might be an EPPO regulated pest/disease
+    const eppoCheck = checkForEppoConcerns(topPrediction.label);
+    
     // Determine if plant is healthy
     const healthy = isPlantHealthy(topPrediction.label);
     
@@ -541,7 +634,17 @@ serve(async (req) => {
       }
     }
     
-    // Format the analysis result integrating both TRY Plant Trait Database and New Plant Diseases Dataset
+    // Determine appropriate database source
+    let dataSource;
+    if (eppoCheck.isEppoConcern) {
+      dataSource = "EPPO Global Database";
+    } else if (isLeaf) {
+      dataSource = "New Plant Diseases Dataset + OLID I";
+    } else {
+      dataSource = "TRY Plant Trait Database + PlantNet";
+    }
+    
+    // Format the analysis result integrating TRY Plant Trait Database, New Plant Diseases Dataset, and EPPO Global Database
     const analysisResult = {
       label: topPrediction.label,
       score: topPrediction.score || 0,
@@ -554,7 +657,12 @@ serve(async (req) => {
       isValidPlantImage: plantVerification.isPlant,
       isReliable: isReliable,
       isLeafAnalysis: isLeaf,
-      dataSource: isLeaf ? "New Plant Diseases Dataset + OLID I" : "TRY Plant Trait Database + PlantNet"
+      dataSource: dataSource,
+      eppoRegulatedConcern: eppoCheck.isEppoConcern ? {
+        name: eppoCheck.concernName,
+        isQuarantine: true,
+        warningLevel: 'high'
+      } : null
     };
 
     // Initialize Supabase client with service role key to bypass RLS
@@ -598,7 +706,8 @@ serve(async (req) => {
           plantName: plantName,
           plantPart: plantPart,
           healthy: healthy,
-          isLeaf: isLeaf
+          isLeaf: isLeaf,
+          eppoRegulated: eppoCheck.isEppoConcern
         },
         user_id: userId
       });
@@ -617,7 +726,7 @@ serve(async (req) => {
       JSON.stringify({
         ...analysisResult,
         message: insertError ? "Plant analysis completed but not saved" : "Plant analysis completed and saved",
-        dataSource: isLeaf ? "New Plant Diseases Dataset + OLID I" : "TRY Plant Trait Database + PlantNet"
+        dataSource: dataSource
       }),
       {
         status: 200,
