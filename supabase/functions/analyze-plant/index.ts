@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
 
@@ -99,6 +100,19 @@ const plantSpeciesMap = {
   'hibiscus': 'Hibiscus (Hibiscus)',
 };
 
+// Database of plant parts keywords for identification
+const plantPartKeywords = {
+  'leaf': ['leaf', 'foliage', 'frond', 'leaflet', 'blade'],
+  'stem': ['stem', 'stalk', 'petiole', 'cane'],
+  'root': ['root', 'rhizome', 'tuber', 'bulb', 'corm'],
+  'flower': ['flower', 'bloom', 'blossom', 'inflorescence', 'petal'],
+  'fruit': ['fruit', 'berry', 'pod', 'seed', 'cone'],
+  'shoot': ['shoot', 'sprout', 'seedling', 'bud', 'tendril'],
+  'branch': ['branch', 'twig', 'bough'],
+  'trunk': ['trunk', 'bark', 'wood'],
+  'collar region': ['collar', 'crown', 'base']
+};
+
 // Function to determine if plant is healthy based on PlantNet-like analysis
 const isPlantHealthy = (label: string): boolean => {
   const healthyTerms = ['healthy', 'normal', 'no disease', 'good', 'well'];
@@ -117,6 +131,19 @@ const isPlantHealthy = (label: string): boolean => {
   
   // Default to healthy if no clear indicators
   return true;
+};
+
+// Identify the plant part from the model classification
+const identifyPlantPart = (label: string): string | null => {
+  const label_lower = label.toLowerCase();
+  
+  for (const [partName, keywords] of Object.entries(plantPartKeywords)) {
+    if (keywords.some(keyword => label_lower.includes(keyword))) {
+      return partName;
+    }
+  }
+  
+  return null; // Unknown plant part
 };
 
 // PlantNet-inspired function to extract plant name from model classification
@@ -407,6 +434,9 @@ serve(async (req) => {
     // Extract plant name using our PlantNet-inspired database
     let plantName = extractPlantName(topPrediction.label);
     
+    // Identify plant part
+    const plantPart = identifyPlantPart(topPrediction.label);
+    
     // If no specific plant is identified, use a generic placeholder
     if (!plantName) {
       // Look for any plant names in the top predictions
@@ -432,6 +462,7 @@ serve(async (req) => {
       timestamp: new Date().toISOString(),
       healthy: healthy,
       plantName: plantName,
+      plantPart: plantPart,
       plantVerification: plantVerification,
       isValidPlantImage: plantVerification.isPlant,
       isReliable: isReliable
@@ -476,6 +507,7 @@ serve(async (req) => {
         risultati_completi: {
           ...analysisResult,
           plantName: plantName,
+          plantPart: plantPart,
           healthy: healthy
         },
         user_id: userId
