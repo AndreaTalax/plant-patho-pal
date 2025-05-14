@@ -1,4 +1,3 @@
-
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from '@/components/ui/sonner';
@@ -108,7 +107,6 @@ const DiagnoseTab = () => {
   const [analysisDetails, setAnalysisDetails] = useState<AnalysisDetails | null>(null);
   const [showModelInfo, setShowModelInfo] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
-  const [plantVerificationFailed, setPlantVerificationFailed] = useState(false);
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -126,7 +124,6 @@ const DiagnoseTab = () => {
       const reader = new FileReader();
       reader.onload = (event) => {
         setUploadedImage(event.target?.result as string);
-        setPlantVerificationFailed(false); // Reset plant verification status
         analyzeUploadedImage(file);
       };
       reader.readAsDataURL(file);
@@ -167,7 +164,7 @@ const DiagnoseTab = () => {
   const captureImage = (imageDataUrl: string) => {
     setUploadedImage(imageDataUrl);
     stopCameraStream();
-    setPlantVerificationFailed(false); // Reset plant verification status
+    setAnalysisProgress(0);
     
     // Convert dataURL to File object for analysis
     const imageFile = dataURLtoFile(imageDataUrl, "camera-capture.jpg");
@@ -193,9 +190,19 @@ const DiagnoseTab = () => {
       // Analyze using our Edge Function
       const result = await analyzePlantImage(imageFile);
       
+      // Consider an image containing any plant part as valid
+      if (result?.plantPart || result?.multiServiceInsights?.plantPart) {
+        return true;
+      }
+      
       // If we have verification data, use it
       if (result?.plantVerification) {
         return result.plantVerification.isPlant;
+      }
+      
+      // If we have leaf verification data, consider it as a plant
+      if (result?.leafVerification?.isLeaf) {
+        return true;
       }
       
       // If no specific plant verification data, default to true
@@ -212,7 +219,6 @@ const DiagnoseTab = () => {
     setDiagnosedDisease(null);
     setAnalysisProgress(0);
     setAnalysisDetails(null);
-    setPlantVerificationFailed(false);
     
     try {
       // Progress simulation for verification phase
@@ -229,7 +235,6 @@ const DiagnoseTab = () => {
       
       if (!isPlant) {
         setIsAnalyzing(false);
-        setPlantVerificationFailed(true);
         setAnalysisProgress(100);
         toast.error("The image does not appear to contain a plant. Please upload a new photo with a clearly visible plant.", {
           duration: 5000
@@ -265,7 +270,9 @@ const DiagnoseTab = () => {
       }
       
       // Check if the analyzed plant is healthy from the formatted result
-      const isHealthy = formattedResult.multiServiceInsights?.huggingFaceResult?.label?.toLowerCase().includes('healthy') || false;
+      const isHealthy = formattedResult.multiServiceInsights?.isHealthy || 
+                      formattedResult.multiServiceInsights?.huggingFaceResult?.label?.toLowerCase().includes('healthy') || 
+                      false;
       
       if (isHealthy) {
         // Handle healthy plant scenario
@@ -401,7 +408,6 @@ const DiagnoseTab = () => {
     setActiveResultTab('overview');
     setAnalysisDetails(null);
     setRetryCount(0);
-    setPlantVerificationFailed(false);
     stopCameraStream();
   };
 
@@ -502,50 +508,25 @@ const DiagnoseTab = () => {
         </div>
       ) : (
         <div className="w-full max-w-md">
-          {plantVerificationFailed ? (
-            <div className="bg-white p-6 shadow-md rounded-2xl text-center mb-6">
-              <div className="bg-red-100 text-red-600 p-4 rounded-lg mb-4">
-                <h3 className="text-lg font-semibold mb-2">Nessuna Pianta Rilevata</h3>
-                <p className="mb-4">
-                  L'immagine caricata non sembra contenere una pianta. Per ottenere un'analisi accurata, carica un'immagine 
-                  che mostri chiaramente una pianta.
-                </p>
-                <img 
-                  src={uploadedImage!} 
-                  alt="Uploaded image" 
-                  className="w-full h-48 object-cover rounded-lg mb-4"
-                />
-                <div className="flex justify-center gap-4 mt-6">
-                  <button
-                    onClick={resetDiagnosis}
-                    className="px-4 py-2 bg-drplant-blue text-white rounded-md hover:bg-drplant-blue-dark"
-                  >
-                    Prova di nuovo
-                  </button>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <DiagnosisResult
-              uploadedImage={uploadedImage}
-              plantInfo={{
-                isIndoor: plantInfo.isIndoor,
-                inSunlight: plantInfo.inSunlight,
-                wateringFrequency: plantInfo.wateringFrequency
-              }}
-              isAnalyzing={isAnalyzing}
-              analysisProgress={analysisProgress}
-              diagnosedDisease={diagnosedDisease}
-              diagnosisResult={diagnosisResult}
-              analysisDetails={analysisDetails}
-              activeResultTab={activeResultTab}
-              setActiveResultTab={setActiveResultTab}
-              resetDiagnosis={resetDiagnosis}
-              navigateToChat={navigateToChat}
-              navigateToShop={navigateToShop}
-              navigateToLibrary={navigateToLibrary}
-            />
-          )}
+          <DiagnosisResult
+            uploadedImage={uploadedImage}
+            plantInfo={{
+              isIndoor: plantInfo.isIndoor,
+              inSunlight: plantInfo.inSunlight,
+              wateringFrequency: plantInfo.wateringFrequency
+            }}
+            isAnalyzing={isAnalyzing}
+            analysisProgress={analysisProgress}
+            diagnosedDisease={diagnosedDisease}
+            diagnosisResult={diagnosisResult}
+            analysisDetails={analysisDetails}
+            activeResultTab={activeResultTab}
+            setActiveResultTab={setActiveResultTab}
+            resetDiagnosis={resetDiagnosis}
+            navigateToChat={navigateToChat}
+            navigateToShop={navigateToShop}
+            navigateToLibrary={navigateToLibrary}
+          />
         </div>
       )}
     </div>

@@ -131,6 +131,12 @@ export const formatHuggingFaceResult = (modelResult: any) => {
         'Patterns recognized by the AI model'
       ],
     alternativeDiagnoses: isHealthy ? [] : alternativeDiagnoses,
+    leafVerification: modelResult.leafVerification || {
+      isLeaf: plantPart === 'leaf',
+      partName: plantPart || null,
+      confidence: modelResult.score ? Math.round(modelResult.score * 100) : null,
+      boundingBox: modelResult.boundingBox || null
+    },
     plantVerification: modelResult.plantVerification || {
       isPlant: modelResult.isValidPlantImage !== undefined ? 
                modelResult.isValidPlantImage : true,
