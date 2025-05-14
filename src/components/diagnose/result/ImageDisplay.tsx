@@ -18,14 +18,14 @@ const ImageDisplay = ({ uploadedImage, analysisDetails, isAnalyzing }: ImageDisp
   const hasThermalMap = analysisDetails?.thermalMap && !isAnalyzing;
   
   // Check if multi-service identified a plant species
-  const plantSpecies = analysisDetails?.multiServiceInsights?.plantSpecies;
+  const plantSpecies = analysisDetails?.multiServiceInsights?.plantName || analysisDetails?.multiServiceInsights?.plantSpecies;
 
   return (
     <div>
       <div className="aspect-square w-full overflow-hidden rounded-xl mb-4 relative">
         <img 
           src={uploadedImage} 
-          alt="Uploaded plant" 
+          alt="Pianta caricata" 
           className="w-full h-full object-cover"
         />
         
@@ -51,7 +51,7 @@ const ImageDisplay = ({ uploadedImage, analysisDetails, isAnalyzing }: ImageDisp
             }}
           >
             <Badge className="absolute top-0 right-0 translate-x-1/2 -translate-y-1/2 bg-green-500">
-              Leaf {analysisDetails.leafVerification.leafPercentage}%
+              Foglia {analysisDetails.leafVerification.leafPercentage}%
             </Badge>
           </div>
         )}
@@ -61,7 +61,7 @@ const ImageDisplay = ({ uploadedImage, analysisDetails, isAnalyzing }: ImageDisp
           <div className="absolute inset-0 mix-blend-overlay">
             <img 
               src={analysisDetails.thermalMap} 
-              alt="Thermal map" 
+              alt="Mappa termica" 
               className="w-full h-full object-cover"
             />
           </div>
@@ -79,17 +79,17 @@ const ImageDisplay = ({ uploadedImage, analysisDetails, isAnalyzing }: ImageDisp
           >
             {showThermalMap ? (
               <>
-                <EyeOff className="h-4 w-4" /> Hide Thermal Scan
+                <EyeOff className="h-4 w-4" /> Nascondi Scansione Termica
               </>
             ) : (
               <>
-                <Thermometer className="h-4 w-4" /> Show Thermal Scan
+                <Thermometer className="h-4 w-4" /> Mostra Scansione Termica
               </>
             )}
           </Button>
           {showThermalMap && (
             <p className="text-xs text-gray-500 mt-1">
-              Red areas indicate possible disease locations
+              Le aree rosse indicano possibili localizzazioni di malattie
             </p>
           )}
         </div>

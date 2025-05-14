@@ -20,12 +20,12 @@ const ImageCaptureMethods = ({ onTakePhoto, onUploadPhoto }: ImageCaptureMethods
           <div className="bg-drplant-green/10 rounded-full p-6 inline-flex mx-auto mb-4">
             <Leaf size={36} className="text-drplant-green" />
           </div>
-          <h3 className="text-lg font-semibold mb-2">Identify Plant</h3>
+          <h3 className="text-lg font-semibold mb-2">Identifica Pianta</h3>
           <AspectRatio ratio={16/9} className="mb-4 bg-gray-100 rounded-lg">
             <div className="w-full h-full flex items-center justify-center">
               <img 
                 src="/lovable-uploads/1cb629ef-f7f2-4b66-a48a-5f22564bb3fa.png" 
-                alt="Plant identification" 
+                alt="Identificazione pianta" 
                 className="object-contain w-full h-full p-1"
               />
             </div>
@@ -34,7 +34,7 @@ const ImageCaptureMethods = ({ onTakePhoto, onUploadPhoto }: ImageCaptureMethods
             className="w-full bg-drplant-green hover:bg-drplant-green-dark"
             onClick={() => onTakePhoto('identify')}
           >
-            <Camera className="mr-2 h-5 w-5" /> Identify Plant
+            <Camera className="mr-2 h-5 w-5" /> Identifica Pianta
           </Button>
         </Card>
 
@@ -42,12 +42,12 @@ const ImageCaptureMethods = ({ onTakePhoto, onUploadPhoto }: ImageCaptureMethods
           <div className="bg-drplant-blue/10 rounded-full p-6 inline-flex mx-auto mb-4">
             <Bug size={36} className="text-drplant-blue" />
           </div>
-          <h3 className="text-lg font-semibold mb-2">Diagnose Problem</h3>
+          <h3 className="text-lg font-semibold mb-2">Diagnosi Problema</h3>
           <AspectRatio ratio={16/9} className="mb-4 bg-gray-100 rounded-lg">
             <div className="w-full h-full flex items-center justify-center">
               <img 
                 src="/lovable-uploads/c8ba9199-f82d-4a4f-a6ae-1c8e340ed1b5.png" 
-                alt="Plant diagnosis" 
+                alt="Diagnosi pianta" 
                 className="object-contain w-full h-full p-1"
               />
             </div>
@@ -56,14 +56,14 @@ const ImageCaptureMethods = ({ onTakePhoto, onUploadPhoto }: ImageCaptureMethods
             className="w-full bg-drplant-blue hover:bg-drplant-blue-dark"
             onClick={() => onTakePhoto('diagnose')}
           >
-            <Camera className="mr-2 h-5 w-5" /> Diagnose Problem
+            <Camera className="mr-2 h-5 w-5" /> Diagnosi Problema
           </Button>
         </Card>
       </div>
 
       <div className="text-center text-gray-500 my-4 flex items-center justify-center">
         <div className="border-t border-gray-200 flex-grow"></div>
-        <span className="px-4">OR</span>
+        <span className="px-4">OPPURE</span>
         <div className="border-t border-gray-200 flex-grow"></div>
       </div>
 
@@ -71,16 +71,16 @@ const ImageCaptureMethods = ({ onTakePhoto, onUploadPhoto }: ImageCaptureMethods
         <div className="bg-gray-100 rounded-full p-6 inline-flex mx-auto mb-4">
           <Upload size={36} className="text-gray-600" />
         </div>
-        <h3 className="text-lg font-semibold mb-2">Upload a Photo</h3>
+        <h3 className="text-lg font-semibold mb-2">Carica una Foto</h3>
         <p className="text-gray-600 mb-4">
-          Select an image from your gallery to analyze
+          Seleziona un'immagine dalla galleria per analizzare
         </p>
         <Button 
           className="w-full border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
           variant="outline"
           onClick={onUploadPhoto}
         >
-          <Upload className="mr-2 h-5 w-5" /> Upload Image
+          <Upload className="mr-2 h-5 w-5" /> Carica Immagine
         </Button>
       </Card>
 
@@ -90,7 +90,7 @@ const ImageCaptureMethods = ({ onTakePhoto, onUploadPhoto }: ImageCaptureMethods
         onClick={() => setShowTips(!showTips)}
       >
         <Info className="mr-2 h-4 w-4" /> 
-        {showTips ? "Hide Photography Tips" : "Show Photography Tips"}
+        {showTips ? "Nascondi Consigli Fotografici" : "Mostra Consigli Fotografici"}
       </Button>
       
       {showTips && (
@@ -98,25 +98,25 @@ const ImageCaptureMethods = ({ onTakePhoto, onUploadPhoto }: ImageCaptureMethods
           <div className="flex items-start">
             <Info className="h-5 w-5 text-blue-500 mt-0.5 mr-2 flex-shrink-0" />
             <div className="text-sm">
-              <p className="font-medium mb-1 text-blue-700">For best results:</p>
+              <p className="font-medium mb-1 text-blue-700">Per risultati migliori:</p>
               
               <div className="mb-3">
-                <h4 className="text-blue-700 font-medium">Plant Identification:</h4>
+                <h4 className="text-blue-700 font-medium">Identificazione Piante:</h4>
                 <ul className="list-disc list-inside space-y-1 text-blue-600 pl-1">
-                  <li>Capture the entire plant structure</li>
-                  <li>Include flowers and/or fruits if available</li>
-                  <li>Use natural lighting without shadows</li>
-                  <li>Take multiple angles for better accuracy</li>
+                  <li>Cattura l'intera struttura della pianta</li>
+                  <li>Includi fiori e/o frutti se disponibili</li>
+                  <li>Usa luce naturale senza ombre</li>
+                  <li>Scatta da più angolazioni per maggiore precisione</li>
                 </ul>
               </div>
               
               <div>
-                <h4 className="text-blue-700 font-medium">Disease Diagnosis:</h4>
+                <h4 className="text-blue-700 font-medium">Diagnosi Malattie:</h4>
                 <ul className="list-disc list-inside space-y-1 text-blue-600 pl-1">
-                  <li>Focus on affected areas showing symptoms</li>
-                  <li>Include both healthy and diseased parts for comparison</li>
-                  <li>Take clear, well-lit photos without shadows</li>
-                  <li>Capture multiple affected parts if symptoms vary</li>
+                  <li>Concentrati sulle aree che mostrano sintomi</li>
+                  <li>Includi sia parti sane che malate per confronto</li>
+                  <li>Scatta foto chiare, ben illuminate senza ombre</li>
+                  <li>Cattura più parti affette se i sintomi variano</li>
                 </ul>
               </div>
             </div>

@@ -23,14 +23,14 @@ const ActionButtons = ({
         className="flex-1"
         onClick={resetDiagnosis}
       >
-        New Diagnosis
+        Nuova Diagnosi
       </Button>
       {diagnosisResult && diagnosedDisease && (
         <Button 
           className="flex-1 bg-drplant-blue hover:bg-drplant-blue-dark"
           onClick={navigateToChat}
         >
-          <MessageCircle className="mr-2 h-4 w-4" /> Expert Consult
+          <MessageCircle className="mr-2 h-4 w-4" /> Consulta Esperto
         </Button>
       )}
     </div>

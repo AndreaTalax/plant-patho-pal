@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
 
@@ -14,21 +15,31 @@ const corsHeaders = {
 
 // Common plant names for identification
 const plantSpeciesMap = {
-  'tomato': 'Tomato (Solanum lycopersicum)',
-  'potato': 'Potato (Solanum tuberosum)',
-  'apple': 'Apple (Malus domestica)',
-  'grape': 'Grape (Vitis vinifera)',
-  'corn': 'Corn (Zea mays)',
-  'strawberry': 'Strawberry (Fragaria ananassa)',
-  'pepper': 'Pepper (Capsicum annuum)',
-  'peach': 'Peach (Prunus persica)',
-  'orange': 'Orange (Citrus sinensis)',
-  'cherry': 'Cherry (Prunus avium)'
+  'tomato': 'Pomodoro (Solanum lycopersicum)',
+  'potato': 'Patata (Solanum tuberosum)',
+  'apple': 'Mela (Malus domestica)',
+  'grape': 'Uva (Vitis vinifera)',
+  'corn': 'Mais (Zea mays)',
+  'strawberry': 'Fragola (Fragaria ananassa)',
+  'pepper': 'Peperone (Capsicum annuum)',
+  'peach': 'Pesca (Prunus persica)',
+  'orange': 'Arancio (Citrus sinensis)',
+  'cherry': 'Ciliegia (Prunus avium)',
+  'basil': 'Basilico (Ocimum basilicum)',
+  'mint': 'Menta (Mentha)',
+  'rosemary': 'Rosmarino (Rosmarinus officinalis)',
+  'thyme': 'Timo (Thymus)',
+  'sage': 'Salvia (Salvia officinalis)',
+  'lettuce': 'Lattuga (Lactuca sativa)',
+  'spinach': 'Spinaci (Spinacia oleracea)',
+  'rose': 'Rosa (Rosa)',
+  'tulip': 'Tulipano (Tulipa)',
+  'sunflower': 'Girasole (Helianthus)'
 };
 
 // Function to determine if plant is healthy based on label
 const isPlantHealthy = (label: string): boolean => {
-  const healthyTerms = ['healthy', 'normal', 'no disease', 'good', 'well'];
+  const healthyTerms = ['healthy', 'normal', 'no disease', 'good', 'well', 'sana', 'sano', 'salutare'];
   const label_lower = label.toLowerCase();
   return healthyTerms.some(term => label_lower.includes(term));
 };
@@ -47,7 +58,9 @@ const extractPlantName = (label: string): string | null => {
 // Improved plant verification function that accepts more plant-related terms
 const isPlantLabel = (label: string): boolean => {
   const plantLabels = ["plant", "leaf", "leaves", "flower", "potted plant", "foliage", "shrub", "vegetation",
-                      "botanical", "flora", "garden", "herb", "houseplant", "tree"];
+                      "botanical", "flora", "garden", "herb", "houseplant", "tree", 
+                      "pianta", "foglia", "foglie", "fiore", "pianta in vaso", "fogliame", "arbusto", "vegetazione",
+                      "botanico", "flora", "giardino", "erba", "pianta da appartamento", "albero"];
   return plantLabels.some(keyword => label.toLowerCase().includes(keyword));
 };
 
@@ -169,6 +182,7 @@ serve(async (req) => {
     // Get the request body
     const formData = await req.formData();
     const imageFile = formData.get('image');
+    const mode = formData.get('mode') || 'diagnose'; // Default to diagnose if not specified
 
     if (!imageFile || !(imageFile instanceof File)) {
       return new Response(JSON.stringify({ error: 'No image file provided' }), {
@@ -177,7 +191,7 @@ serve(async (req) => {
       });
     }
 
-    console.log(`Analyzing plant image with size: ${imageFile.size} bytes`);
+    console.log(`Analyzing plant image with size: ${imageFile.size} bytes, mode: ${mode}`);
 
     // Read the image file as an ArrayBuffer
     const imageArrayBuffer = await imageFile.arrayBuffer();
@@ -193,7 +207,7 @@ serve(async (req) => {
           isPlant: false,
           confidence: plantVerification.confidence,
           aiServices: plantVerification.aiServices,
-          message: "The image does not appear to contain a plant. Please upload a valid plant photo."
+          message: "L'immagine non sembra contenere una pianta. Per favore carica una foto valida di una pianta."
         },
         isValidPlantImage: false
       }), {
@@ -202,21 +216,33 @@ serve(async (req) => {
       });
     }
     
-    // Try specialized plant disease models, then fallbacks in order
-    const diseaseModels = [
-      "plantdoc/vit-plantdoc",          // Primary specialized plant disease model
-      "dima806/plant_disease_classification", // Secondary specialized model
-      "noah-fl/plant_disease_detection", // Good alternative model
-      "VineetJohn/plant-disease-detection", // Another alternative model
-    ];
+    // Choose models based on the requested mode
+    let modelsToTry = [];
+    
+    if (mode === 'identify') {
+      // Models specifically good for plant identification
+      modelsToTry = [
+        "plantnet/plantnet_all",
+        "google/vit-base-patch16-224",
+        "microsoft/resnet-50"
+      ];
+    } else {
+      // Models specifically for disease detection
+      modelsToTry = [
+        "plantdoc/vit-plantdoc",
+        "dima806/plant_disease_classification",
+        "noah-fl/plant_disease_detection",
+        "VineetJohn/plant-disease-detection"
+      ];
+    }
     
     let result = null;
     let errorMessages = [];
     
     // Try each model in order until one works
-    for (const model of diseaseModels) {
+    for (const model of modelsToTry) {
       try {
-        console.log(`Trying disease detection model: ${model}`);
+        console.log(`Trying ${mode === 'identify' ? 'identification' : 'disease detection'} model: ${model}`);
         const response = await fetch(
           `https://api-inference.huggingface.co/models/${model}`,
           {
@@ -250,7 +276,7 @@ serve(async (req) => {
     if (!result) {
       return new Response(
         JSON.stringify({
-          error: 'All plant disease detection models failed',
+          error: 'Tutti i modelli di analisi hanno fallito',
           details: errorMessages.join('; '),
           isValidPlantImage: true // The image contained a plant, but we couldn't analyze the disease
         }),
@@ -264,16 +290,16 @@ serve(async (req) => {
     // If we have an array result, get the top prediction
     let topPrediction;
     if (Array.isArray(result)) {
-      topPrediction = result[0] || { label: 'Unknown', score: 0 };
+      topPrediction = result[0] || { label: 'Sconosciuto', score: 0 };
     } else if (result.label) {
       // Some models return a single prediction object
       topPrediction = result;
     } else if (result.predictions) {
       // Some models use a "predictions" field 
-      topPrediction = result.predictions[0] || { label: 'Unknown', score: 0 };
+      topPrediction = result.predictions[0] || { label: 'Sconosciuto', score: 0 };
     } else {
       // If the result format is unknown, create a default prediction
-      topPrediction = { label: 'Unknown Format', score: 0 };
+      topPrediction = { label: 'Formato Sconosciuto', score: 0 };
     }
     
     // Ensure allPredictions is an array
@@ -292,7 +318,7 @@ serve(async (req) => {
     
     // If no specific plant is identified, use a generic placeholder
     if (!plantName) {
-      plantName = healthy ? 'Healthy Plant (Unidentified species)' : 'Plant (Unidentified species)';
+      plantName = healthy ? 'Pianta Sana (Specie non identificata)' : 'Pianta (Specie non identificata)';
     }
     
     // Format the analysis result
@@ -305,7 +331,8 @@ serve(async (req) => {
       plantName: plantName,
       plantVerification: plantVerification,
       isValidPlantImage: plantVerification.isPlant,
-      isReliable: isReliable
+      isReliable: isReliable,
+      mode: mode
     };
 
     // Initialize Supabase client with service role key to bypass RLS
@@ -364,7 +391,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         ...analysisResult,
-        message: insertError ? "Diagnosis completed but not saved" : "Diagnosis completed and saved"
+        message: insertError ? "Analisi completata ma non salvata" : "Analisi completata e salvata"
       }),
       {
         status: 200,
@@ -374,7 +401,7 @@ serve(async (req) => {
   } catch (error) {
     console.error(`Error in analyze-plant function: ${error.message}`);
     return new Response(
-      JSON.stringify({ error: 'An unexpected error occurred', details: error.message }),
+      JSON.stringify({ error: 'Si è verificato un errore imprevisto', details: error.message }),
       {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
