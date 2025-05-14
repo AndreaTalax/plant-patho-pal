@@ -1,7 +1,8 @@
+
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Eye, EyeOff, Check, X, Brain } from 'lucide-react';
-import { AnalysisDetails } from '../types';
+import { AnalysisDetails } from './types';
 import { toast } from 'sonner';
 
 interface AiServicesDataProps {
