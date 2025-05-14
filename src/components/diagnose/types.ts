@@ -25,6 +25,7 @@ export interface AnalysisDetails {
     isHealthy?: boolean;
     isValidPlantImage?: boolean;
     isReliable?: boolean;
+    dataSource?: string;
   };
   alternativeDiagnoses: {
     disease: string;
@@ -53,6 +54,7 @@ export interface AnalysisDetails {
       result: boolean;
       confidence: number;
     }[];
+    dataSource?: string;
   };
   plantixInsights?: {
     severity?: string;

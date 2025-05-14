@@ -73,18 +73,6 @@ const DiagnosisResult = ({
             </div>
           )}
           
-          {!isAnalyzing && isValidPlantImage && !hasSufficientConfidence && diagnosedDisease && (
-            <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-md">
-              <div className="flex items-center gap-2 text-amber-600 font-medium mb-1">
-                <AlertTriangle className="h-4 w-4" />
-                <span>Low Confidence Diagnosis</span>
-              </div>
-              <p className="text-sm text-amber-700">
-                The image is not clear enough for a reliable diagnosis. Please try again with a clearer photo of the plant.
-              </p>
-            </div>
-          )}
-          
           <AiServicesData 
             analysisDetails={analysisDetails} 
             isAnalyzing={isAnalyzing} 
@@ -135,10 +123,13 @@ const DiagnosisResult = ({
                   <Badge className="bg-red-500">Low Reliability</Badge>
                 )}
                 
-                {/* HuggingFace badge */}
-                {analysisDetails?.multiServiceInsights?.huggingFaceResult && (
+                {/* Dataset badge */}
+                {analysisDetails?.multiServiceInsights?.dataSource && (
                   <Badge className="bg-blue-500 flex items-center gap-1">
-                    <span className="text-xs">PlantDoc AI</span>
+                    <span className="text-xs">{
+                      analysisDetails.multiServiceInsights.plantPart === 'leaf' ? 
+                      'Leaf Disease Dataset' : 'PlantDoc AI'
+                    }</span>
                   </Badge>
                 )}
               </div>

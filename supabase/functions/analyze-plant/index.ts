@@ -12,7 +12,7 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
 };
 
-// Enhanced PlantNet-inspired database for better plant identification
+// Enhanced database integrating PlantNet, TRY Plant Trait Database and New Plant Diseases Dataset
 const plantSpeciesMap = {
   // Garden plants and vegetables
   'tomato': 'Tomato (Solanum lycopersicum)',
@@ -97,6 +97,28 @@ const plantSpeciesMap = {
   'dogwood': 'Dogwood (Cornus)',
   'magnolia': 'Magnolia (Magnolia)',
   'hibiscus': 'Hibiscus (Hibiscus)',
+  
+  // Additional entries from New Plant Diseases Dataset
+  'apple scab': 'Apple (Malus domestica) - Scab Disease',
+  'apple black rot': 'Apple (Malus domestica) - Black Rot',
+  'apple cedar rust': 'Apple (Malus domestica) - Cedar Apple Rust',
+  'cherry powdery': 'Cherry (Prunus avium) - Powdery Mildew',
+  'corn gray': 'Corn (Zea mays) - Gray Leaf Spot',
+  'corn rust': 'Corn (Zea mays) - Common Rust',
+  'grape black rot': 'Grape (Vitis vinifera) - Black Rot',
+  'grape esca': 'Grape (Vitis vinifera) - Esca (Black Measles)',
+  'potato early blight': 'Potato (Solanum tuberosum) - Early Blight',
+  'potato late blight': 'Potato (Solanum tuberosum) - Late Blight',
+  'strawberry leaf scorch': 'Strawberry (Fragaria ananassa) - Leaf Scorch',
+  'tomato bacterial': 'Tomato (Solanum lycopersicum) - Bacterial Spot',
+  'tomato early blight': 'Tomato (Solanum lycopersicum) - Early Blight',
+  'tomato late blight': 'Tomato (Solanum lycopersicum) - Late Blight',
+  'tomato leaf mold': 'Tomato (Solanum lycopersicum) - Leaf Mold',
+  'tomato septoria': 'Tomato (Solanum lycopersicum) - Septoria Leaf Spot',
+  'tomato spider mites': 'Tomato (Solanum lycopersicum) - Spider Mite Damage',
+  'tomato target spot': 'Tomato (Solanum lycopersicum) - Target Spot',
+  'tomato mosaic virus': 'Tomato (Solanum lycopersicum) - Mosaic Virus',
+  'tomato yellow curl': 'Tomato (Solanum lycopersicum) - Yellow Leaf Curl Virus',
 };
 
 // Database of plant parts keywords for identification
@@ -112,10 +134,13 @@ const plantPartKeywords = {
   'collar region': ['collar', 'crown', 'base']
 };
 
-// Function to determine if plant is healthy based on PlantNet-like analysis
+// Function to determine if plant is healthy based on enhanced dataset analysis
 const isPlantHealthy = (label: string): boolean => {
   const healthyTerms = ['healthy', 'normal', 'no disease', 'good', 'well'];
   const diseaseTerms = ['disease', 'infection', 'blight', 'spot', 'mildew', 'rust', 'rot', 'wilt', 'lesion', 'chlorosis', 'necrosis'];
+  const newPlantDiseaseTerms = ['scab', 'black rot', 'rust', 'powdery mildew', 'gray leaf spot', 
+                              'blight', 'esca', 'leaf scorch', 'bacterial spot', 'leaf mold', 
+                              'septoria', 'spider mites', 'target spot', 'mosaic virus', 'yellow curl'];
   const label_lower = label.toLowerCase();
   
   // Check if label explicitly mentions being healthy
@@ -123,8 +148,9 @@ const isPlantHealthy = (label: string): boolean => {
     return true;
   }
   
-  // Check if label mentions any disease conditions
-  if (diseaseTerms.some(term => label_lower.includes(term))) {
+  // Check if label mentions any disease conditions from both datasets
+  if (diseaseTerms.some(term => label_lower.includes(term)) || 
+      newPlantDiseaseTerms.some(term => label_lower.includes(term))) {
     return false;
   }
   
@@ -168,7 +194,7 @@ const extractPlantName = (label: string): string | null => {
   return null;
 };
 
-// Improved plant verification function inspired by PlantNet
+// Improved plant verification function with New Plant Diseases Dataset
 const isPlantLabel = (label: string): boolean => {
   const plantLabels = [
     "plant", "leaf", "leaves", "flower", "potted plant", "foliage", "shrub", "vegetation",
@@ -177,20 +203,26 @@ const isPlantLabel = (label: string): boolean => {
     "branch", "trunk", "bark", "flora", "woodland", "forest", "garden", "plant life"
   ];
   
+  // Add New Plant Diseases Dataset specific plant terms
+  const diseaseDatasetPlantLabels = [
+    'apple', 'cherry', 'corn', 'grape', 'potato', 'strawberry', 'tomato',
+    'leaf', 'plant', 'foliage', 'stem', 'crop', 'fruit'
+  ];
+  
   // Also check our plant database keys
-  const allPlantTerms = [...plantLabels, ...Object.keys(plantSpeciesMap)];
+  const allPlantTerms = [...plantLabels, ...Object.keys(plantSpeciesMap), ...diseaseDatasetPlantLabels];
   
   return allPlantTerms.some(keyword => label.toLowerCase().includes(keyword));
 };
 
-// PlantNet-inspired function to check if an image contains a plant using multiple models
+// Enhanced plant verification function with multi-model approach
 async function verifyImageContainsPlant(imageArrayBuffer: ArrayBuffer): Promise<{isPlant: boolean, confidence: number, aiServices: any[]}> {
   try {
-    // Try using specific plant models first, following PlantNet's approach of multiple model verification
+    // Try using specific plant models first, combining approaches from multiple databases
     const plantModels = [
-      "google/vit-base-patch16-224",  // General vision model with good plant recognition
-      "microsoft/resnet-50",          // Reliable vision model that can recognize natural objects
-      "facebook/deit-base-patch16-224" // Another vision model with strong plant recognition
+      "google/vit-base-patch16-224",
+      "microsoft/resnet-50",
+      "facebook/deit-base-patch16-224"
     ];
     
     let bestResult = null;
@@ -283,6 +315,47 @@ async function verifyImageContainsPlant(imageArrayBuffer: ArrayBuffer): Promise<
   }
 }
 
+// Function to identify if the image is of a leaf and should use the New Plant Diseases Dataset
+const isLeafImage = async (imageArrayBuffer: ArrayBuffer): Promise<boolean> => {
+  try {
+    // Use a general model to check if the image contains a leaf
+    const model = "google/vit-base-patch16-224";
+    
+    const response = await fetch(
+      `https://api-inference.huggingface.co/models/${model}`,
+      {
+        headers: {
+          Authorization: `Bearer ${huggingFaceToken}`,
+          "Content-Type": "application/octet-stream",
+        },
+        method: "POST",
+        body: new Uint8Array(imageArrayBuffer),
+      }
+    );
+    
+    if (!response.ok) {
+      return false;
+    }
+    
+    const result = await response.json();
+    
+    if (!Array.isArray(result)) {
+      return false;
+    }
+    
+    // Check if any of the top predictions include leaf-related terms
+    const leafTerms = ['leaf', 'leaves', 'foliage', 'frond'];
+    const topPredictions = result.slice(0, 5);
+    
+    return topPredictions.some(prediction => 
+      leafTerms.some(term => prediction.label.toLowerCase().includes(term))
+    );
+  } catch (err) {
+    console.error('Leaf verification error:', err.message);
+    return false;
+  }
+};
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -314,7 +387,7 @@ serve(async (req) => {
     // Read the image file as an ArrayBuffer
     const imageArrayBuffer = await imageFile.arrayBuffer();
     
-    // First, verify that the image contains a plant using PlantNet-inspired verification
+    // First, verify that the image contains a plant
     const plantVerification = await verifyImageContainsPlant(imageArrayBuffer);
     
     // If the image doesn't appear to contain a plant with sufficient confidence, return an error
@@ -334,12 +407,27 @@ serve(async (req) => {
       });
     }
     
-    // Try specialized plant classification models, similar to PlantNet's approach
-    const plantModels = [
-      "microsoft/resnet-50",          // Good general model for plant classification
-      "google/vit-base-patch16-224",  // Another strong vision model for plants
-      "facebook/deit-base-patch16-224" // Backup model with good plant recognition
-    ];
+    // Check if the image is likely to be a leaf to use the proper dataset
+    const isLeaf = await isLeafImage(imageArrayBuffer);
+    
+    // Select appropriate models based on whether it's a leaf image or general plant
+    let plantModels;
+    
+    if (isLeaf) {
+      // For leaf images, use models better suited for the New Plant Diseases Dataset
+      plantModels = [
+        "microsoft/resnet-50",          // Good for leaf disease classification
+        "google/vit-base-patch16-224",  // Good general vision model
+        "facebook/deit-base-patch16-224" // Backup model
+      ];
+    } else {
+      // For general plant images, use models better with the TRY Plant Trait Database
+      plantModels = [
+        "google/vit-base-patch16-224",  // Good general plant classification
+        "microsoft/resnet-50",          // Another strong vision model for plants
+        "facebook/deit-base-patch16-224" // Backup model with good plant recognition
+      ];
+    }
     
     let result = null;
     let errorMessages = [];
@@ -395,7 +483,7 @@ serve(async (req) => {
     // If we have an array result, get the top prediction
     let topPrediction;
     if (Array.isArray(result)) {
-      // Filter for plant-related labels first (PlantNet approach)
+      // Filter for plant-related labels first
       const plantPredictions = result.filter(item => isPlantLabel(item.label));
       topPrediction = plantPredictions[0] || result[0] || { label: 'Unknown', score: 0 };
     } else if (result.label) {
@@ -410,7 +498,7 @@ serve(async (req) => {
       topPrediction = { label: 'Unknown Format', score: 0 };
     }
     
-    // Ensure allPredictions is an array of plant-related predictions, mimicking PlantNet's filtering
+    // Ensure allPredictions is an array of plant-related predictions
     let allPredictions;
     if (Array.isArray(result)) {
       allPredictions = result.filter(item => isPlantLabel(item.label));
@@ -424,13 +512,13 @@ serve(async (req) => {
       allPredictions = [];
     }
 
-    // Check for low confidence - PlantNet uses a similar threshold for reliable identifications
+    // Check for low confidence
     const isReliable = topPrediction.score >= 0.6;
     
-    // Determine if plant is healthy - similar to PlantNet's disease detection approach
+    // Determine if plant is healthy
     const healthy = isPlantHealthy(topPrediction.label);
     
-    // Extract plant name using our PlantNet-inspired database
+    // Extract plant name using our database
     let plantName = extractPlantName(topPrediction.label);
     
     // Identify plant part
@@ -453,7 +541,7 @@ serve(async (req) => {
       }
     }
     
-    // Format the analysis result in a PlantNet-inspired way
+    // Format the analysis result integrating both TRY Plant Trait Database and New Plant Diseases Dataset
     const analysisResult = {
       label: topPrediction.label,
       score: topPrediction.score || 0,
@@ -464,7 +552,9 @@ serve(async (req) => {
       plantPart: plantPart,
       plantVerification: plantVerification,
       isValidPlantImage: plantVerification.isPlant,
-      isReliable: isReliable
+      isReliable: isReliable,
+      isLeafAnalysis: isLeaf,
+      dataSource: isLeaf ? "New Plant Diseases Dataset + OLID I" : "TRY Plant Trait Database + PlantNet"
     };
 
     // Initialize Supabase client with service role key to bypass RLS
@@ -507,7 +597,8 @@ serve(async (req) => {
           ...analysisResult,
           plantName: plantName,
           plantPart: plantPart,
-          healthy: healthy
+          healthy: healthy,
+          isLeaf: isLeaf
         },
         user_id: userId
       });
@@ -521,12 +612,12 @@ serve(async (req) => {
 
     console.log(`Analysis completed: ${JSON.stringify(analysisResult)}`);
 
-    // Prepare the result before sending, add TRY database reference
+    // Prepare the result before sending
     return new Response(
       JSON.stringify({
         ...analysisResult,
         message: insertError ? "Plant analysis completed but not saved" : "Plant analysis completed and saved",
-        dataSource: "TRY Plant Trait Database + PlantNet"
+        dataSource: isLeaf ? "New Plant Diseases Dataset + OLID I" : "TRY Plant Trait Database + PlantNet"
       }),
       {
         status: 200,

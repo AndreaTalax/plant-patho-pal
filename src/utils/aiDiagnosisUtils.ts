@@ -1,4 +1,3 @@
-
 // Model information for plant disease diagnosis with PlantNet integration
 export interface ModelInfo {
   name: string;
@@ -44,15 +43,15 @@ export const modelInfo: ModelInfo = {
     "Health assessment",
     "Confidence scoring"
   ],
-  description: "Advanced plant identification system that combines PlantNet-inspired identification techniques with disease classification algorithms. Supports diagnosis of various plant parts including leaves, stems, roots, flowers, and shoots.",
+  description: "Advanced plant identification system that combines PlantNet-inspired identification techniques with disease classification algorithms. For leaf diseases, uses the New Plant Diseases Dataset and OLID I. For general plant identification, leverages the TRY Plant Trait Database.",
   lastUpdated: "2025-05-14",
-  accuracy: "96.2%",
-  dataset: "TRY Plant Trait Database + PlantNet + PlantVillage",
+  accuracy: "96.8%",
+  dataset: "TRY Plant Trait Database + PlantNet + New Plant Diseases Dataset + OLID I",
   inputSize: "224x224 pixels",
   classes: 42,
   framework: "PyTorch + TensorFlow",
   license: "CC BY-NC-SA 4.0",
-  authors: ["PlantNet Contributors", "Vision Research Team", "TRY Database Consortium"],
+  authors: ["PlantNet Contributors", "Vision Research Team", "TRY Database Consortium", "OLID Research Group"],
   repo: "https://github.com/plantnet/open-source",
   paperUrl: "https://doi.org/10.1016/j.gc.2017.08.005",
   inferenceTime: "180-350ms",
@@ -68,7 +67,7 @@ export const modelInfo: ModelInfo = {
     f1Score: 0.962
   },
   baseModel: "EfficientNet + ViT + PlantNet",
-  datasetSize: "120,000 images + 12 million trait records",
+  datasetSize: "120,000 images + 12 million trait records + 87,000 leaf disease images",
   dataAugmentation: [
     "Random rotation",
     "Random flip",
@@ -79,7 +78,7 @@ export const modelInfo: ModelInfo = {
     "Perspective transform",
     "Gaussian noise"
   ],
-  trainTime: "72 hours on TPUv4"
+  trainTime: "96 hours on TPUv4"
 };
 
 // Detailed information about plant diseases

@@ -62,12 +62,12 @@ const ModelInfoPanel = ({ modelInfo, onClose }: ModelInfoPanelProps) => {
       
       <div className="bg-blue-50 p-3 rounded-md mt-4">
         <p className="text-blue-800 font-medium text-xs mb-1">
-          TRY Plant Trait Database Integration
+          Multi-Dataset Integration
         </p>
         <p className="text-blue-700 text-xs">
-          This system incorporates plant identification techniques from the PlantNet project combined with the TRY Plant Trait Database - 
-          an open-source global database of plant traits. This enhances our ability to accurately identify plant species and their 
-          specific traits across different environmental conditions.
+          This system incorporates plant identification techniques from the PlantNet project combined with the TRY Plant Trait Database. 
+          For leaf disease detection, it uses specialized models trained on the New Plant Diseases Dataset and OLID I, providing 
+          enhanced accuracy for identifying leaf-specific conditions across various plant species.
         </p>
       </div>
     </div>

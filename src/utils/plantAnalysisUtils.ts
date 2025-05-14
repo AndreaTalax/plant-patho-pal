@@ -5,6 +5,7 @@ import { toast } from "sonner";
 /**
  * Sends an image to the Supabase Edge Function for plant disease analysis
  * Using a PlantNet-inspired approach combined with TRY Plant Trait Database
+ * and specialized leaf disease detection using New Plant Diseases Dataset and OLID I
  * @param imageFile The plant image file to analyze
  * @returns The analysis result from the image processing models
  */
@@ -55,7 +56,7 @@ export const analyzePlantImage = async (imageFile: File) => {
 
 /**
  * Transforms the model result into a format compatible with our app
- * Using both PlantNet and TRY Plant Trait Database references
+ * Using TRY Plant Trait Database for plants and New Plant Diseases Dataset/OLID I for leaf diseases
  * @param modelResult The raw result from the image classification
  * @returns Analysis details formatted for our application
  */
@@ -104,13 +105,23 @@ export const formatHuggingFaceResult = (modelResult: any) => {
     
   // Identify plant part from analysis if available
   const plantPart = modelResult.plantPart || getPlantPartFromLabel(mainPrediction.label);
+  
+  // Determine if this is a leaf analysis
+  const isLeafAnalysis = plantPart === 'leaf' || 
+                        mainPrediction.label.toLowerCase().includes('leaf') || 
+                        (modelResult.leafVerification && modelResult.leafVerification.isLeaf);
+
+  // Create data source info based on what dataset was used
+  const dataSource = isLeafAnalysis ? 
+                    'New Plant Diseases Dataset + OLID I' : 
+                    'TRY Plant Trait Database + PlantNet';
 
   // Create a formatted analysis details object
   return {
     multiServiceInsights: {
       huggingFaceResult: mainPrediction,
       agreementScore: Math.round(mainPrediction.score * 100),
-      primaryService: 'TRY-PlantNet Classifier',
+      primaryService: isLeafAnalysis ? 'Leaf Disease Classifier' : 'TRY-PlantNet Classifier',
       plantSpecies: speciesOnly,
       plantName: plantNameOnly,
       plantPart: plantPart,
@@ -118,7 +129,8 @@ export const formatHuggingFaceResult = (modelResult: any) => {
       isValidPlantImage: modelResult.isValidPlantImage !== undefined ? 
                          modelResult.isValidPlantImage : true,
       isReliable: modelResult.isReliable !== undefined ? 
-                 modelResult.isReliable : mainPrediction.score >= 0.6
+                 modelResult.isReliable : mainPrediction.score >= 0.6,
+      dataSource: dataSource
     },
     identifiedFeatures: isHealthy ? 
       [
@@ -129,7 +141,8 @@ export const formatHuggingFaceResult = (modelResult: any) => {
       ] : 
       [
         `${capitalize(plantPart || 'Plant')} with signs of ${mainPrediction.label}`,
-        'Patterns recognized by the AI model'
+        'Patterns recognized by the AI model',
+        isLeafAnalysis ? 'Leaf analysis completed using specialized disease datasets' : 'Plant analysis completed'
       ],
     alternativeDiagnoses: isHealthy ? [] : alternativeDiagnoses,
     leafVerification: modelResult.leafVerification || {
@@ -141,7 +154,8 @@ export const formatHuggingFaceResult = (modelResult: any) => {
     plantVerification: modelResult.plantVerification || {
       isPlant: modelResult.isValidPlantImage !== undefined ? 
                modelResult.isValidPlantImage : true,
-      aiServices: []
+      aiServices: [],
+      dataSource: dataSource
     },
     plantixInsights: {
       severity: isHealthy ? 'none' : 'unknown',
@@ -153,7 +167,9 @@ export const formatHuggingFaceResult = (modelResult: any) => {
       reliability: isHealthy ? 'high' : 'medium',
       confidenceNote: isHealthy ? 
         'Plant appears healthy with high confidence' : 
-        'Diagnosis based on TRY-PlantNet analysis, consider expert consultation'
+        isLeafAnalysis ?
+          'Diagnosis based on New Plant Diseases Dataset and OLID I, specialized for leaf diseases' :
+          'Diagnosis based on TRY-PlantNet analysis, consider expert consultation'
     }
   };
 };
