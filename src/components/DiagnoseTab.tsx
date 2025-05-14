@@ -108,6 +108,7 @@ const DiagnoseTab = () => {
   const [showModelInfo, setShowModelInfo] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
   const [plantVerificationFailed, setPlantVerificationFailed] = useState(false);
+  const [captureMode, setCaptureMode] = useState<'identify' | 'diagnose'>('diagnose');
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -116,7 +117,7 @@ const DiagnoseTab = () => {
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!plantInfo.infoComplete) {
-      toast.error("Please enter plant information before continuing");
+      toast.error("Inserisci le informazioni sulla pianta prima di continuare");
       return;
     }
     
@@ -132,12 +133,13 @@ const DiagnoseTab = () => {
     }
   };
 
-  const takePicture = () => {
+  const takePicture = (mode: 'identify' | 'diagnose') => {
     if (!plantInfo.infoComplete) {
-      toast.error("Please enter plant information before continuing");
+      toast.error("Inserisci le informazioni sulla pianta prima di continuare");
       return;
     }
     
+    setCaptureMode(mode);
     setShowCamera(true);
     
     // Start camera stream
@@ -149,16 +151,16 @@ const DiagnoseTab = () => {
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
           streamRef.current = stream;
-          toast.success("Camera activated successfully");
+          toast.success("Fotocamera attivata con successo");
         }
       })
       .catch(err => {
-        console.error("Error accessing camera:", err);
-        toast.error("Could not access camera. Please check permissions.");
+        console.error("Errore nell'accesso alla fotocamera:", err);
+        toast.error("Impossibile accedere alla fotocamera. Controlla i permessi.");
         setShowCamera(false);
       });
     } else {
-      toast.error("Camera not supported in your browser or device");
+      toast.error("Fotocamera non supportata dal tuo browser o dispositivo");
       setShowCamera(false);
     }
   };
@@ -200,7 +202,7 @@ const DiagnoseTab = () => {
       // If no specific plant verification data, default to true
       return true;
     } catch (error) {
-      console.error("Error during plant verification:", error);
+      console.error("Errore durante la verifica della pianta:", error);
       return false; // Assume verification failed on error
     }
   };
@@ -230,7 +232,7 @@ const DiagnoseTab = () => {
         setIsAnalyzing(false);
         setPlantVerificationFailed(true);
         setAnalysisProgress(100);
-        toast.error("The image does not appear to contain a plant. Please upload a new photo with a clearly visible plant.", {
+        toast.error("L'immagine non sembra contenere una pianta. Carica un'immagine con una pianta chiaramente visibile.", {
           duration: 5000
         });
         return;
@@ -251,16 +253,16 @@ const DiagnoseTab = () => {
       setAnalysisProgress(100);
       
       if (!result) {
-        throw new Error("Analysis failed to return a result");
+        throw new Error("Analisi non riuscita a restituire un risultato");
       }
       
-      console.log("HuggingFace AI Diagnosis Result:", result);
+      console.log("Diagnosi AI HuggingFace:", result);
       
       // Format the HuggingFace result
       const formattedResult = formatHuggingFaceResult(result);
       
       if (!formattedResult) {
-        throw new Error("Could not format analysis result");
+        throw new Error("Impossibile formattare il risultato dell'analisi");
       }
       
       // Check if the analyzed plant is healthy from the formatted result
@@ -270,7 +272,7 @@ const DiagnoseTab = () => {
         // Handle healthy plant scenario
         const plantName = formattedResult.multiServiceInsights?.plantName || "Unknown Plant";
         
-        setDiagnosisResult(`${plantName} appears to be healthy. No diseases detected.`);
+        setDiagnosisResult(`${plantName} sembra essere in buona salute. Nessi patologie sono state rilevate.`);
         setAnalysisDetails({
           ...formattedResult,
           multiServiceInsights: {
@@ -278,21 +280,21 @@ const DiagnoseTab = () => {
             isHealthy: true,
             plantName: plantName
           },
-          identifiedFeatures: ["Healthy foliage", "Good leaf coloration", "No visible disease symptoms", "Normal growth pattern"],
+          identifiedFeatures: ["Foglia integra", "Colorazione buona", "Nessun sintomo visibile di patologia", "Pattino di crescita normale"],
           alternativeDiagnoses: []
         });
         
         // For healthy plants, we'll set a "placeholder" disease object with healthy status
         setDiagnosedDisease({
           id: "healthy",
-          name: "Healthy Plant",
-          description: "This plant appears to be in good health with no signs of disease or pest infestation.",
-          causes: "Proper care, adequate watering, appropriate light exposure, and good plant health practices.",
+          name: "Pianta Saluta",
+          description: "Questa pianta sembra essere in buona salute con nessi segni di patologia o infestazione di insetti.",
+          causes: "Cura adeguata, abbondante irrigazione, esposizione ad una luce adeguata e buone pratiche di salute delle piante.",
           treatments: [
-            "Continue current care routine",
-            "Regular monitoring for any changes",
-            "Seasonal fertilization as needed",
-            "Occasional pruning to maintain shape and encourage growth"
+            "Continua la routine di cura attuale",
+            "Monitora regolarmente per eventuali cambiamenti",
+            "Fertilizzazione regolare come necessario",
+            "Pruning occasionale per mantenere la forma e promuovere la crescita"
           ],
           products: [],
           confidence: 0.95,
@@ -315,14 +317,14 @@ const DiagnoseTab = () => {
           const plantName = formattedResult.multiServiceInsights?.plantName || "Unknown Plant";
           
           setDiagnosedDisease(diseaseWithUpdatedConfidence);
-          setDiagnosisResult(`Detected ${disease.name} on ${plantName} with ${Math.round(result.score * 100)}% confidence.`);
+          setDiagnosisResult(`Rilevata ${disease.name} sulla ${plantName} con ${Math.round(result.score * 100)}% di confidenza.`);
           setAnalysisDetails({
             ...formattedResult,
             identifiedFeatures: formattedResult.identifiedFeatures || [
-              "Discoloration detected", 
-              "Abnormal growth pattern", 
-              "Visible symptoms on foliage", 
-              "Signs of plant stress"
+              "Discolorazione rilevata", 
+              "Pattino di crescita anomalo", 
+              "Sintomi visibili sulla foglia", 
+              "Segni di stress della pianta"
             ],
             alternativeDiagnoses: formattedResult.alternativeDiagnoses || []
           });
@@ -336,10 +338,10 @@ const DiagnoseTab = () => {
             ...randomDisease,
             confidence: lowConfidence
           });
-          setDiagnosisResult(`Possible ${randomDisease.name} on ${plantName} with ${Math.round(lowConfidence * 100)}% confidence. Consider consulting an expert.`);
+          setDiagnosisResult(`Possibile ${randomDisease.name} sulla ${plantName} con ${Math.round(lowConfidence * 100)}% di confidenza. Considera la consulenza di un esperto.`);
           setAnalysisDetails({
             ...formattedResult,
-            identifiedFeatures: ["Partial leaf pattern match", "Some discoloration detected", "Uncertain identification"],
+            identifiedFeatures: ["Parziale corrispondenza di pattern", "Sicuramente discoloreata", "Identificazione incerta"],
             alternativeDiagnoses: PLANT_DISEASES.filter(d => d.id !== randomDisease.id)
               .slice(0, 3)
               .map(d => ({ disease: d.id, probability: 0.15 + Math.random() * 0.25 })),
@@ -349,7 +351,7 @@ const DiagnoseTab = () => {
               spreadRisk: "medium", 
               environmentalFactors: ["Insufficient data"],
               reliability: "low",
-              confidenceNote: "Analysis based on limited pattern recognition"
+              confidenceNote: "Analisi basata su un riconoscimento parziale dei pattern"
             }
           });
         }
@@ -357,38 +359,38 @@ const DiagnoseTab = () => {
       
       setIsAnalyzing(false);
     } catch (error) {
-      console.error("Error during image analysis:", error);
+      console.error("Errore durante l'analisi dell'immagine:", error);
       // Handle error and provide fallback
       const emergencyDisease = PLANT_DISEASES[Math.floor(Math.random() * PLANT_DISEASES.length)];
-      const veryLowConfidence = 0.25 + Math.random() * 0.15; // 25-40% confidence
+      const veryLowConfidence = 0.25 + Math.random() * 0.15; // 25-40% di confidenza
       
-      setDiagnosisResult(`Analysis encountered difficulties. Best guess: ${emergencyDisease.name} (${Math.round(veryLowConfidence * 100)}% confidence).`);
+      setDiagnosisResult(`L'analisi ha avuto difficoltà. Sogno migliore: ${emergencyDisease.name} (${Math.round(veryLowConfidence * 100)}% di confidenza).`);
       setDiagnosedDisease({
         ...emergencyDisease,
         confidence: veryLowConfidence
       });
       setAnalysisDetails({
-        identifiedFeatures: ["Partial pattern recognition", "Limited visual data", "Emergency diagnosis"],
+        identifiedFeatures: ["Parziale riconoscimento dei pattern", "Dati visivi limitati", "Diagnosi emergente"],
         alternativeDiagnoses: PLANT_DISEASES.filter(d => d.id !== emergencyDisease.id)
           .slice(0, 2)
           .map(d => ({ disease: d.id, probability: 0.1 + Math.random() * 0.15 })),
         recommendedAdditionalTests: [
-          "Retry with better lighting and focus",
-          "Consult with a plant expert",
-          "Consider in-person diagnosis"
+          "Riprova con una migliore illuminazione e focalizzazione",
+          "Consulta un esperto di piante",
+          "Considera una diagnosi in persona"
         ],
         plantixInsights: {
           severity: "unknown",
           progressStage: "unknown",
           spreadRisk: "medium",
-          environmentalFactors: ["Unable to determine from image"],
+          environmentalFactors: ["Impossibile determinare dalla immagine"],
           reliability: "very low",
-          confidenceNote: "Emergency analysis with limited data"
+          confidenceNote: "Diagnosi emergente con dati limitati"
         }
       });
       setIsAnalyzing(false);
       setAnalysisProgress(100);
-      toast.warning("Analysis had difficulties but provided a best guess. Try with a clearer image for better results.");
+      toast.warning("L'analisi ha avuto difficoltà ma ha fornito un'ipotesi migliore. Prova con un'immagine più chiara per ottenere risultati migliori.");
     }
   };
 
@@ -441,24 +443,24 @@ const DiagnoseTab = () => {
   return (
     <div className="flex flex-col items-center justify-start px-4 pt-6 pb-24 min-h-full">
       <div className="flex flex-col items-center mb-6">
-        <h2 className="text-2xl font-bold text-drplant-green">Plant Diagnosis</h2>
+        <h2 className="text-2xl font-bold text-drplant-green">Diagnosi Piante</h2>
         <div className="flex items-center bg-blue-50 text-blue-600 rounded-full px-3 py-0.5 text-xs mt-1">
           <span className="font-semibold mr-1">Powered by</span> 
           <span className="font-bold">PictureThis™ AI</span>
         </div>
       </div>
       
-      {/* PictureThis Model Info Button */}
+      {/* Model Info Button */}
       <div className="w-full max-w-md flex justify-end mb-4">
         <button
           onClick={() => setShowModelInfo(!showModelInfo)}
           className="text-sm text-drplant-blue hover:text-drplant-blue-dark flex items-center gap-1"
         >
-          <span>{showModelInfo ? 'Hide PictureThis Info' : 'Show PictureThis AI Info'}</span>
+          <span>{showModelInfo ? 'Nascondi Info PictureThis' : 'Mostra Info PictureThis AI'}</span>
         </button>
       </div>
       
-      {/* PictureThis Model Information Panel */}
+      {/* Model Information Panel */}
       {showModelInfo && (
         <ModelInfoPanel modelInfo={modelInfo} onClose={() => setShowModelInfo(false)} />
       )}
@@ -469,6 +471,7 @@ const DiagnoseTab = () => {
           onCancel={stopCameraStream}
           videoRef={videoRef}
           canvasRef={canvasRef}
+          mode={captureMode}
         />
       )}
       
