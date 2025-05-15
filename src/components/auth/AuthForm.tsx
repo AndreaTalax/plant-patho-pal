@@ -74,8 +74,11 @@ export function AuthForm() {
           });
         } else {
           setEmailSent(true);
+          // Fix per la TypeScript error: verifica se la proprietà esiste
+          const needsConfirmation = 'confirmationRequired' in result ? result.confirmationRequired : true;
+          
           toast.success('Registrazione completata', {
-            description: result.confirmationRequired 
+            description: needsConfirmation 
               ? "Ti abbiamo inviato un'email di conferma. Se non la vedi nella casella principale, controlla nella cartella spam."
               : "Registrazione completata con successo.",
           });
