@@ -106,6 +106,19 @@ export const resendConfirmationEmail = async (email: string) => {
   }
 };
 
+// Funzione per eliminare un utente (reset)
+export const deleteUser = async (userId: string) => {
+  try {
+    // Questa funzionalità richiede il ruolo service_role, quindi deve essere eseguita dal backend
+    // Qui implementiamo una funzione di simulazione per l'interfaccia
+    console.error('La cancellazione utente deve essere eseguita dal backend con service_role');
+    throw new Error('Funzionalità non disponibile dal frontend');
+  } catch (error: any) {
+    console.error('Errore durante la cancellazione dell\'utente:', error);
+    throw error;
+  }
+};
+
 // Funzione di logout utente
 export const signOut = async () => {
   try {
