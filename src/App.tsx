@@ -10,6 +10,7 @@ import { PlantInfoProvider } from "./context/PlantInfoContext";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import SignUp from "./pages/SignUp";
+import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import AboutUs from "./pages/AboutUs";
 import Services from "./pages/Services";
@@ -55,6 +56,7 @@ const AppRoutes = () => {
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<SignUp />} />
+      <Route path="/auth" element={<Auth />} />
       <Route path="/complete-profile" element={
         <ProfileCompletionRoute>
           <CompleteProfile />
