@@ -509,23 +509,15 @@ const DiagnoseTab = () => {
       ) : (
         <div className="w-full max-w-md">
           <DiagnosisResult
-            uploadedImage={uploadedImage}
+            imageSrc={uploadedImage}
             plantInfo={{
               isIndoor: plantInfo.isIndoor,
               inSunlight: plantInfo.inSunlight,
               wateringFrequency: plantInfo.wateringFrequency
             }}
+            analysisData={diagnosedDisease}
             isAnalyzing={isAnalyzing}
-            analysisProgress={analysisProgress}
-            diagnosedDisease={diagnosedDisease}
-            diagnosisResult={diagnosisResult}
-            analysisDetails={analysisDetails}
-            activeResultTab={activeResultTab}
-            setActiveResultTab={setActiveResultTab}
-            resetDiagnosis={resetDiagnosis}
-            navigateToChat={navigateToChat}
-            navigateToShop={navigateToShop}
-            navigateToLibrary={navigateToLibrary}
+            onStartNewAnalysis={resetDiagnosis}
           />
         </div>
       )}
