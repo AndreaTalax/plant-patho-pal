@@ -1,29 +1,38 @@
 
-import { PlantInfoFormValues } from '../PlantInfoForm';
+import React from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { AnalysisDetails } from '../types';
 
-interface PlantInfoCardProps {
-  plantInfo: PlantInfoFormValues;
+export interface PlantInfoCardProps {
+  plantInfo: any;
+  analysisDetails: AnalysisDetails | null;
 }
 
-const PlantInfoCard = ({ plantInfo }: PlantInfoCardProps) => {
+const PlantInfoCard: React.FC<PlantInfoCardProps> = ({ plantInfo, analysisDetails }) => {
+  const plantName = analysisDetails?.multiServiceInsights?.plantName || plantInfo?.name || 'Unknown Plant';
+  
   return (
-    <div className="bg-drplant-green/10 p-3 rounded-lg mb-4">
-      <h4 className="font-medium mb-1">Informazioni sulla pianta</h4>
-      <div className="text-sm space-y-1">
-        <div className="flex items-center gap-2">
-          <span className="text-gray-600">Ambiente: </span>
-          <span>{plantInfo.isIndoor ? "Interno" : "Esterno"}</span>
+    <Card className="mb-4">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-lg">{plantName}</CardTitle>
+      </CardHeader>
+      <CardContent className="pt-0">
+        <div className="text-sm">
+          {plantInfo && (
+            <div className="grid grid-cols-2 gap-2">
+              <div>Environment:</div>
+              <div>{plantInfo.isIndoor ? 'Indoor' : 'Outdoor'}</div>
+              
+              <div>Light exposure:</div>
+              <div>{plantInfo.inSunlight ? 'Sunny' : 'Shaded'}</div>
+              
+              <div>Watering frequency:</div>
+              <div>{plantInfo.wateringFrequency || 'Not specified'} times/week</div>
+            </div>
+          )}
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-gray-600">Esposizione: </span>
-          <span>{plantInfo.inSunlight ? "Soleggiata" : "Ombreggiata"}</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-gray-600">Irrigazione: </span>
-          <span>{plantInfo.wateringFrequency} volte/settimana</span>
-        </div>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 };
 

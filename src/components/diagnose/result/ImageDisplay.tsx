@@ -1,61 +1,24 @@
 
-import { Loader2 } from 'lucide-react';
-import { AnalysisDetails } from '../types';
-import { Badge } from '@/components/ui/badge';
+import React from 'react';
 
-interface ImageDisplayProps {
-  uploadedImage: string;
-  analysisDetails: AnalysisDetails | null;
-  isAnalyzing: boolean;
+export interface ImageDisplayProps {
+  imageSrc: string;
+  isHealthy?: boolean;
 }
 
-const ImageDisplay = ({ uploadedImage, analysisDetails, isAnalyzing }: ImageDisplayProps) => {
-  // Check if we have a plant part identified
-  const plantPart = analysisDetails?.multiServiceInsights?.plantPart;
-  
-  // Get the bounding box if we have one
-  const boundingBox = analysisDetails?.leafVerification?.boundingBox;
-  
+const ImageDisplay: React.FC<ImageDisplayProps> = ({ imageSrc, isHealthy }) => {
   return (
-    <div className="aspect-square w-full overflow-hidden rounded-xl mb-4 relative">
-      {/* Image */}
+    <div className="relative mb-4">
       <img 
-        src={uploadedImage} 
-        alt="Uploaded plant" 
-        className="w-full h-full object-cover"
+        src={imageSrc} 
+        alt="Analyzed plant" 
+        className="w-full rounded-lg border shadow-sm"
       />
-      
-      {/* Loading overlay */}
-      {isAnalyzing && (
-        <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-          <Loader2 className="h-8 w-8 text-white animate-spin" />
-        </div>
-      )}
-      
-      {/* Plant part badge */}
-      {plantPart && !isAnalyzing && (
-        <div className="absolute top-0 right-0 m-2">
-          <Badge className="bg-blue-500 text-white">
-            {plantPart.charAt(0).toUpperCase() + plantPart.slice(1)} Analysis
-          </Badge>
-        </div>
-      )}
-      
-      {/* Bounding box for identified plant part */}
-      {boundingBox && !isAnalyzing && analysisDetails?.leafVerification && (
-        <div 
-          className="absolute border-2 border-green-500"
-          style={{
-            top: `${boundingBox.y}px`,
-            left: `${boundingBox.x}px`,
-            width: `${boundingBox.width}px`,
-            height: `${boundingBox.height}px`,
-            pointerEvents: 'none'
-          }}
-        >
-          <Badge className="absolute top-0 right-0 translate-x-1/2 -translate-y-1/2 bg-green-500">
-            {analysisDetails.leafVerification.partName || 'Leaf'} {analysisDetails.leafVerification.confidence || ''}%
-          </Badge>
+      {isHealthy !== undefined && (
+        <div className={`absolute top-2 right-2 px-2 py-1 text-xs font-medium rounded-full ${
+          isHealthy ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+        }`}>
+          {isHealthy ? 'Healthy' : 'Issue Detected'}
         </div>
       )}
     </div>

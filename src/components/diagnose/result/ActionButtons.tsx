@@ -1,41 +1,49 @@
 
+import React from 'react';
 import { Button } from '@/components/ui/button';
-import { MessageCircle } from 'lucide-react';
-import { DiagnosedDisease } from '../types';
+import { Loader2, RefreshCw, Save } from 'lucide-react';
 
-interface ActionButtonsProps {
-  resetDiagnosis: () => void;
-  navigateToChat: () => void;
-  diagnosisResult: string | null;
-  diagnosedDisease: DiagnosedDisease | null;
+export interface ActionButtonsProps {
+  onStartNewAnalysis: () => void;
+  onSaveDiagnosis: () => Promise<void>;
+  saveLoading: boolean;
+  hasValidAnalysis: boolean;
 }
 
-const ActionButtons = ({ 
-  resetDiagnosis, 
-  navigateToChat,
-  diagnosisResult,
-  diagnosedDisease
-}: ActionButtonsProps) => {
-  // Check if we should show expert consultation (only if we have a disease with confidence)
-  const showExpertConsult = diagnosisResult && diagnosedDisease;
-  
+const ActionButtons: React.FC<ActionButtonsProps> = ({ 
+  onStartNewAnalysis,
+  onSaveDiagnosis,
+  saveLoading,
+  hasValidAnalysis
+}) => {
   return (
-    <div className="flex gap-2 mt-4">
+    <div className="flex flex-wrap gap-2 mt-4">
       <Button 
         variant="outline" 
+        onClick={onStartNewAnalysis}
         className="flex-1"
-        onClick={resetDiagnosis}
       >
-        New Diagnosis
+        <RefreshCw className="mr-2 h-4 w-4" />
+        Nuova analisi
       </Button>
-      {showExpertConsult && (
-        <Button 
-          className="flex-1 bg-drplant-blue hover:bg-drplant-blue-dark"
-          onClick={navigateToChat}
-        >
-          <MessageCircle className="mr-2 h-4 w-4" /> Consult Expert
-        </Button>
-      )}
+      
+      <Button 
+        onClick={onSaveDiagnosis}
+        disabled={saveLoading || !hasValidAnalysis}
+        className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+      >
+        {saveLoading ? (
+          <>
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            Salvataggio...
+          </>
+        ) : (
+          <>
+            <Save className="mr-2 h-4 w-4" />
+            Salva diagnosi
+          </>
+        )}
+      </Button>
     </div>
   );
 };

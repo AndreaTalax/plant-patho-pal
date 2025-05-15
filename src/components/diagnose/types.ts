@@ -10,6 +10,14 @@ export interface DiagnosedDisease {
   resources: string[];
 }
 
+export interface DiagnosisResultProps {
+  imageSrc: string;
+  plantInfo: any;
+  analysisData: any;
+  isAnalyzing: boolean;
+  onStartNewAnalysis: () => void;
+}
+
 export interface AnalysisDetails {
   identifiedFeatures: string[];
   multiServiceInsights?: {
