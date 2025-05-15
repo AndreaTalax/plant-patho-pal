@@ -3,9 +3,9 @@ import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { signUp, signIn } from '@/integrations/supabase/supabaseClient';
+import { signUp, signIn, resendConfirmationEmail } from '@/integrations/supabase/supabaseClient';
 import { toast } from 'sonner';
-import { Mail, LockKeyhole, AlertCircle } from "lucide-react";
+import { Mail, LockKeyhole, AlertCircle, RefreshCw } from "lucide-react";
 
 type AuthMode = 'login' | 'signup';
 
@@ -16,11 +16,44 @@ export function AuthForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
   const [isRateLimited, setIsRateLimited] = useState(false);
+  const [isResendingEmail, setIsResendingEmail] = useState(false);
 
   const toggleMode = () => {
     setMode(mode === 'login' ? 'signup' : 'login');
     setEmailSent(false);
     setIsRateLimited(false);
+  };
+
+  const handleResendConfirmation = async () => {
+    if (!email) {
+      toast.error('Email mancante', {
+        description: "Per favore inserisci la tua email per ricevere un nuovo link di conferma."
+      });
+      return;
+    }
+    
+    setIsResendingEmail(true);
+    
+    try {
+      const result = await resendConfirmationEmail(email);
+      
+      if (result.rateLimitExceeded) {
+        toast.warning('Limite invio email raggiunto', {
+          description: result.message,
+          duration: 8000,
+        });
+      } else {
+        toast.success('Email inviata', {
+          description: "Abbiamo inviato una nuova email di conferma. Controlla la tua casella di posta.",
+        });
+      }
+    } catch (error) {
+      toast.error('Errore invio email', {
+        description: "Non è stato possibile inviare l'email di conferma. Riprova più tardi.",
+      });
+    } finally {
+      setIsResendingEmail(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -42,14 +75,28 @@ export function AuthForm() {
         } else {
           setEmailSent(true);
           toast.success('Registrazione completata', {
-            description: "Ti abbiamo inviato un'email di conferma. Se non la vedi nella casella principale, controlla nella cartella spam.",
+            description: result.confirmationRequired 
+              ? "Ti abbiamo inviato un'email di conferma. Se non la vedi nella casella principale, controlla nella cartella spam."
+              : "Registrazione completata con successo.",
           });
         }
       } else {
-        await signIn(email, password);
-        toast.success('Login effettuato con successo', {
-          description: "Benvenuto nel tuo account!",
-        });
+        try {
+          await signIn(email, password);
+          toast.success('Login effettuato con successo', {
+            description: "Benvenuto nel tuo account!",
+          });
+        } catch (error: any) {
+          if (error.message === 'email_not_confirmed') {
+            setEmailSent(true);
+            toast.warning('Email non confermata', {
+              description: "Devi confermare la tua email prima di poter accedere. Controlla la tua casella di posta o richiedi un nuovo link di conferma.",
+              duration: 8000,
+            });
+          } else {
+            throw error;
+          }
+        }
       }
     } catch (error: any) {
       let message = "Si è verificato un errore";
@@ -97,14 +144,44 @@ export function AuthForm() {
               </div>
             </>
           ) : (
-            <CardDescription className="mb-6">
-              Abbiamo inviato un'email di conferma a <span className="font-medium">{email}</span>.<br />
-              Clicca sul link nell'email per completare la registrazione.
-            </CardDescription>
+            <>
+              <CardDescription className="mb-6">
+                Abbiamo inviato un'email di conferma a <span className="font-medium">{email}</span>.<br />
+                Clicca sul link nell'email per {mode === 'signup' ? 'completare la registrazione' : 'accedere al tuo account'}.
+              </CardDescription>
+              
+              <div className="mt-4 p-3 bg-blue-50 rounded-md border border-blue-200">
+                <p className="text-sm text-blue-800 font-medium">
+                  Non hai ricevuto l'email?
+                </p>
+                <p className="text-sm text-gray-600 mt-1">
+                  Controlla nella cartella spam o nella posta indesiderata.
+                </p>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  className="mt-2 w-full"
+                  onClick={handleResendConfirmation}
+                  disabled={isResendingEmail}
+                >
+                  {isResendingEmail ? (
+                    <>
+                      <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                      Invio in corso...
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="mr-2 h-4 w-4" />
+                      Invia di nuovo l'email
+                    </>
+                  )}
+                </Button>
+              </div>
+            </>
           )}
           
-          <Button variant="outline" className="mt-4" onClick={toggleMode}>
-            Torna al login
+          <Button variant="outline" className="mt-6" onClick={toggleMode}>
+            Torna al {mode === 'signup' ? 'login' : 'signup'}
           </Button>
         </div>
       ) : (

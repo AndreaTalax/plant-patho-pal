@@ -1,3 +1,4 @@
+
 import { createContext, useContext, useState, ReactNode, useEffect } from "react";
 import { supabase, EXPERT_ID } from '@/integrations/supabase/client';
 import { Session, User } from "@supabase/supabase-js";
@@ -19,7 +20,7 @@ type AuthContextType = {
   userProfile: UserProfile;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
-  register: (email: string, password: string) => Promise<void>;
+  register: (email: string, password: string) => Promise<any>;
   updateUsername: (newUsername: string) => void;
   updatePassword: (newPassword: string) => void;
   updateProfile: (field: keyof UserProfile, value: string) => void;
@@ -246,6 +247,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       });
       
       if (error) {
+        // Check if the error is due to unconfirmed email
+        if (error.message?.includes('Email not confirmed') || error.message?.includes('email not confirmed')) {
+          throw new Error('email_not_confirmed');
+        }
+        
         throw error;
       }
       
@@ -296,31 +302,41 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
       });
       
-      // Se c'è un errore diverso dal limite di email, lo lanciamo
-      if (error && error.status !== 429) {
-        throw error;
-      }
-      
-      // Se è un errore di limite email, stampiamo il messaggio ma consideriamolo un successo
+      // Check for rate limit error
       if (error && error.status === 429) {
         console.log("Email rate limit error, but continuing registration process:", error);
-        // Possiamo continuare come se la registrazione fosse riuscita, l'utente dovrà solo aspettare
-        return Promise.resolve();
+        return {
+          rateLimitExceeded: true,
+          message: "You've reached the email sending limit. Please try again later or check for a previous confirmation email.",
+          confirmationRequired: true
+        };
+      }
+      
+      // Check for other errors
+      if (error) {
+        // If user is already registered, we can consider this a "success" case
+        if (error.message?.includes("already registered")) {
+          return {
+            confirmationRequired: true,
+            message: "This email is already registered. Please check your email for a confirmation link or try logging in."
+          };
+        }
+        
+        throw error;
       }
       
       console.log("Registration response:", data);
       
-      // Even if there was an error sending the email, registration might have succeeded
-      if (data?.user) {
-        return Promise.resolve();
-      } else if (error?.message?.includes("already registered")) {
-        // L'utente è già registrato, consideriamolo un successo
-        return Promise.resolve();
-      } else if (!data?.user) {
-        throw new Error("Registration failed");
-      }
+      // Determine if email confirmation is required
+      const confirmationRequired = !data.user?.email_confirmed_at;
       
-      return Promise.resolve();
+      return {
+        ...data,
+        confirmationRequired,
+        message: confirmationRequired 
+          ? "Please check your email for a confirmation link to complete your registration." 
+          : "Registration completed successfully."
+      };
       
     } catch (error: any) {
       console.error('Registration error:', error);

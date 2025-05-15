@@ -4,7 +4,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Leaf, LockKeyhole, Mail, AlertCircle } from "lucide-react";
+import { Leaf, LockKeyhole, Mail, AlertCircle, RefreshCw } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { 
   Form,
@@ -18,6 +18,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { toast } from "sonner";
+import { resendConfirmationEmail } from "@/integrations/supabase/supabaseClient";
 
 // Define the validation schema for the sign-up form
 const signUpSchema = z.object({
@@ -35,6 +36,7 @@ const SignUp = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
   const [isRateLimited, setIsRateLimited] = useState(false);
+  const [isResendingEmail, setIsResendingEmail] = useState(false);
   const navigate = useNavigate();
   const { register } = useAuth();
 
@@ -47,6 +49,39 @@ const SignUp = () => {
     },
   });
 
+  const handleResendConfirmation = async () => {
+    const email = form.getValues().email;
+    if (!email) {
+      toast.error("Email required", {
+        description: "Please enter your email to receive a new confirmation link.",
+      });
+      return;
+    }
+    
+    setIsResendingEmail(true);
+    
+    try {
+      const result = await resendConfirmationEmail(email);
+      
+      if (result.rateLimitExceeded) {
+        toast.warning("Email rate limit reached", {
+          description: result.message,
+          duration: 8000,
+        });
+      } else {
+        toast.success("Confirmation email sent", {
+          description: "We've sent a new confirmation email. Please check your inbox.",
+        });
+      }
+    } catch (error) {
+      toast.error("Failed to send email", {
+        description: "Could not send the confirmation email. Please try again later.",
+      });
+    } finally {
+      setIsResendingEmail(false);
+    }
+  };
+
   const onSubmit = async (values: SignUpFormValues) => {
     setIsLoading(true);
     setIsRateLimited(false);
@@ -55,14 +90,34 @@ const SignUp = () => {
       // Clear any previous toasts to prevent accumulation
       toast.dismiss();
       
-      await register(values.email, values.password);
+      const result = await register(values.email, values.password);
       
-      setEmailSent(true);
-      toast.success("Registration completed", {
-        description: "We have sent you a confirmation email. If you don't see it in your inbox, please check your spam or promotions folder.",
-        duration: 8000,
-        dismissible: true,
-      });
+      // If result contains confirmationRequired flag (coming from our modified function)
+      if (result && typeof result === 'object' && 'confirmationRequired' in result) {
+        setEmailSent(true);
+        
+        if (result.confirmationRequired) {
+          toast.success("Registration completed", {
+            description: "We have sent you a confirmation email. If you don't see it in your inbox, please check your spam or promotions folder.",
+            duration: 8000,
+            dismissible: true,
+          });
+        } else {
+          // User might be already registered or email confirmed
+          toast.success("Registration completed", {
+            description: result.message || "Your account has been created successfully.",
+            duration: 8000,
+            dismissible: true,
+          });
+        }
+      } else {
+        setEmailSent(true);
+        toast.success("Registration completed", {
+          description: "We have sent you a confirmation email. If you don't see it in your inbox, please check your spam or promotions folder.",
+          duration: 8000,
+          dismissible: true,
+        });
+      }
     } catch (error: any) {
       console.error("Registration error:", error);
       let errorMessage = "A problem occurred during registration";
@@ -143,10 +198,40 @@ const SignUp = () => {
                   </div>
                 </>
               ) : (
-                <p className="text-gray-600">
-                  We've sent a confirmation email to <span className="font-medium">{form.getValues().email}</span>.
-                  Please click the link in the email to complete your registration. If you don't see it in your inbox, please check your spam or promotions folder.
-                </p>
+                <>
+                  <p className="text-gray-600">
+                    We've sent a confirmation email to <span className="font-medium">{form.getValues().email}</span>.
+                    Please click the link in the email to complete your registration.
+                  </p>
+                  
+                  <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                    <p className="text-blue-800 font-medium">
+                      Haven't received the email?
+                    </p>
+                    <p className="text-gray-700 text-sm mt-1">
+                      Check your spam or promotions folder, or request a new confirmation email.
+                    </p>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      className="mt-3 w-full"
+                      onClick={handleResendConfirmation}
+                      disabled={isResendingEmail}
+                    >
+                      {isResendingEmail ? (
+                        <>
+                          <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                          Sending...
+                        </>
+                      ) : (
+                        <>
+                          <RefreshCw className="mr-2 h-4 w-4" />
+                          Resend confirmation email
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </>
               )}
               <Button 
                 variant="outline" 

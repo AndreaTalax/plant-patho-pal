@@ -27,8 +27,22 @@ export const signUp = async (email: string, password: string) => {
       console.error('Errore registrazione:', error.message);
       throw error;
     } else {
-      console.log('Email inviata a:', email);
-      return data;
+      // Check if the user needs to confirm their email
+      const userConfirmationStatus = data.user?.confirmed_at 
+        ? 'already_confirmed' 
+        : data.user?.email_confirmed_at 
+          ? 'already_confirmed' 
+          : 'confirmation_required';
+            
+      console.log('Email inviata a:', email, 'Status:', userConfirmationStatus);
+      
+      return {
+        ...data,
+        confirmationRequired: userConfirmationStatus === 'confirmation_required',
+        message: userConfirmationStatus === 'confirmation_required'
+          ? "Per favore controlla la tua email per confermare l'account."
+          : "Registrazione completata con successo."
+      };
     }
   } catch (error: any) {
     console.error('Errore durante la registrazione:', error);
@@ -45,6 +59,12 @@ export const signIn = async (email: string, password: string) => {
     });
 
     if (error) {
+      // Check if error is because email is not confirmed
+      if (error.message?.includes('Email not confirmed') || error.message?.includes('email not confirmed')) {
+        console.warn('Email non confermata:', error.message);
+        throw new Error('email_not_confirmed');
+      }
+      
       console.error('Errore login:', error.message);
       throw error;
     } else {
@@ -53,6 +73,35 @@ export const signIn = async (email: string, password: string) => {
     }
   } catch (error: any) {
     console.error('Errore durante il login:', error);
+    throw error;
+  }
+};
+
+// Funzione per inviare nuovamente l'email di conferma
+export const resendConfirmationEmail = async (email: string) => {
+  try {
+    const { data, error } = await supabase.auth.resend({
+      type: 'signup',
+      email,
+    });
+
+    if (error) {
+      if (error.status === 429) {
+        return { 
+          rateLimitExceeded: true, 
+          message: "Troppe richieste di email per questo indirizzo. Attendi prima di richiedere un'altra email di conferma."
+        };
+      }
+      console.error('Errore invio email di conferma:', error.message);
+      throw error;
+    }
+    
+    return { 
+      success: true, 
+      message: "Abbiamo inviato una nuova email di conferma. Controlla la tua casella di posta."
+    };
+  } catch (error: any) {
+    console.error('Errore durante l\'invio dell\'email di conferma:', error);
     throw error;
   }
 };

@@ -26,14 +26,14 @@ const APP_URL = Deno.env.get("APP_URL") || "https://drplant.app";
 const SENDGRID_API_KEY = Deno.env.get("SENDGRID_API_KEY");
 
 // SendGrid API for email sending when API key is available
-async function sendWithSendGridAPI(toEmail: string, username: string) {
+async function sendWithSendGridAPI(toEmail: string, username: string, confirmationUrl?: string) {
   if (!SENDGRID_API_KEY) {
     throw new Error("SendGrid API key is not configured");
   }
 
   console.log(`Using SendGrid API to send email to ${toEmail}`);
 
-  // Create the email template as before
+  // Create the email template
   const htmlContent = `
     <html>
       <head>
@@ -61,7 +61,20 @@ async function sendWithSendGridAPI(toEmail: string, username: string) {
           </div>
           <div class="content">
             <p class="welcome-text">Hello ${username},</p>
-            <p>Thank you for registering with Dr.Plant! Your registration has been successfully confirmed.</p>
+            <p>${confirmationUrl 
+              ? 'Thank you for registering with Dr.Plant! Please confirm your email to complete your registration.' 
+              : 'Thank you for registering with Dr.Plant! Your registration has been completed.'}
+            </p>
+            
+            ${confirmationUrl ? `
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${confirmationUrl}" class="button">Confirm your email</a>
+            </div>
+            <p>If the button above doesn't work, you can copy and paste the following link into your browser:</p>
+            <p style="word-break: break-all; background-color: #f0f9ff; padding: 10px; border-radius: 4px; font-size: 14px;">
+              ${confirmationUrl}
+            </p>
+            ` : ''}
             
             <div class="features">
               <h3>With Dr.Plant, you can:</h3>
@@ -76,7 +89,7 @@ async function sendWithSendGridAPI(toEmail: string, username: string) {
             
             <div class="security-notice">
               <h3>Important Security Information:</h3>
-              <p>For your security, any verification codes (OTPs) sent to you will expire after 15 minutes.</p>
+              <p>For your security, confirmation links and verification codes (OTPs) sent to you will expire after 24 hours.</p>
               <p>Always use verification codes immediately after receiving them and never share them with anyone.</p>
             </div>
             
@@ -114,7 +127,9 @@ async function sendWithSendGridAPI(toEmail: string, username: string) {
         email: EMAIL_FROM.includes('<') ? EMAIL_FROM.match(/<(.+)>/)?.[1] || "noreply@drplant.app" : EMAIL_FROM,
         name: "Dr.Plant"
       },
-      subject: "Welcome to Dr.Plant! Registration Confirmed",
+      subject: confirmationUrl 
+        ? "Confirm Your Email - Dr.Plant Registration" 
+        : "Welcome to Dr.Plant! Registration Confirmed",
       content: [
         {
           type: "text/html",
@@ -136,12 +151,12 @@ async function sendWithSendGridAPI(toEmail: string, username: string) {
 }
 
 // Send registration confirmation email with better error handling
-async function sendConfirmationEmail(email: string, username: string) {
+async function sendConfirmationEmail(email: string, username: string, confirmationUrl?: string) {
   try {
     // Try SendGrid API first if API key is configured
     if (SENDGRID_API_KEY) {
       console.log("Using SendGrid API for email delivery");
-      return await sendWithSendGridAPI(email, username);
+      return await sendWithSendGridAPI(email, username, confirmationUrl);
     }
     
     // Fall back to SMTP if no API key
@@ -188,7 +203,20 @@ async function sendConfirmationEmail(email: string, username: string) {
             </div>
             <div class="content">
               <p class="welcome-text">Hello ${username},</p>
-              <p>Thank you for registering with Dr.Plant! Your registration has been successfully confirmed.</p>
+              <p>${confirmationUrl 
+                ? 'Thank you for registering with Dr.Plant! Please confirm your email to complete your registration.' 
+                : 'Thank you for registering with Dr.Plant! Your registration has been completed.'}
+              </p>
+              
+              ${confirmationUrl ? `
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="${confirmationUrl}" class="button">Confirm your email</a>
+              </div>
+              <p>If the button above doesn't work, you can copy and paste the following link into your browser:</p>
+              <p style="word-break: break-all; background-color: #f0f9ff; padding: 10px; border-radius: 4px; font-size: 14px;">
+                ${confirmationUrl}
+              </p>
+              ` : ''}
               
               <div class="features">
                 <h3>With Dr.Plant, you can:</h3>
@@ -203,7 +231,7 @@ async function sendConfirmationEmail(email: string, username: string) {
               
               <div class="security-notice">
                 <h3>Important Security Information:</h3>
-                <p>For your security, any verification codes (OTPs) sent to you will expire after 15 minutes.</p>
+                <p>For your security, confirmation links and verification codes (OTPs) sent to you will expire after 24 hours.</p>
                 <p>Always use verification codes immediately after receiving them and never share them with anyone.</p>
               </div>
               
@@ -225,7 +253,9 @@ async function sendConfirmationEmail(email: string, username: string) {
     await client.send({
       from: EMAIL_FROM,
       to: email,
-      subject: "Welcome to Dr.Plant! Registration Confirmed",
+      subject: confirmationUrl 
+        ? "Confirm Your Email - Dr.Plant Registration" 
+        : "Welcome to Dr.Plant! Registration Confirmed",
       content: message,
       html: message,
     });
@@ -248,43 +278,54 @@ serve(async (req) => {
   }
   
   try {
-    const { user, email_token } = await req.json();
+    const { user, email, confirmationToken, confirmationUrl } = await req.json();
     
-    if (!user || !email_token) {
-      console.error("Missing user or email_token in request");
-      throw new Error("Missing user or email_token");
+    if (!user && !email) {
+      console.error("Missing user or email in request");
+      throw new Error("Missing user or email");
     }
     
-    console.log(`Processing registration for user: ${user.email}`);
+    const userEmail = user?.email || email;
+    console.log(`Processing registration for user: ${userEmail}`);
     
     // Initialize Supabase client with service role to access auth admin functions
     const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     
-    // Create user profile in the database
-    const username = user.email.split('@')[0];
-    const { error: profileError } = await supabaseAdmin
-      .from('profiles')
-      .insert({
-        id: user.id,
-        email: user.email,
-        username: username,
-        created_at: new Date(),
-        updated_at: new Date()
-      });
-      
-    if (profileError) {
-      console.error("Error creating profile:", profileError);
-      throw profileError;
+    // Create user profile in the database if not already exists
+    if (user?.id) {
+      const { data: existingProfile } = await supabaseAdmin
+        .from('profiles')
+        .select('id')
+        .eq('id', user.id)
+        .single();
+        
+      if (!existingProfile) {
+        const username = userEmail.split('@')[0];
+        const { error: profileError } = await supabaseAdmin
+          .from('profiles')
+          .insert({
+            id: user.id,
+            email: userEmail,
+            username: username,
+            created_at: new Date(),
+            updated_at: new Date()
+          });
+            
+        if (profileError) {
+          console.error("Error creating profile:", profileError);
+        } else {
+          console.log(`Profile created successfully for: ${userEmail}`);
+        }
+      }
     }
     
-    console.log(`Profile created successfully for: ${user.email}`);
-    
-    // Send confirmation email
+    // Send confirmation or welcome email based on context
     try {
-      await sendConfirmationEmail(user.email, username);
-      console.log(`Confirmation email sent to ${user.email}`);
+      const username = userEmail.split('@')[0];
+      await sendConfirmationEmail(userEmail, username, confirmationUrl);
+      console.log(`Email sent to ${userEmail}`);
     } catch (emailError) {
-      console.error("Error sending confirmation email:", emailError);
+      console.error("Error sending email:", emailError);
       // Continue even if email sending fails, the user is still registered
       return new Response(
         JSON.stringify({ 
