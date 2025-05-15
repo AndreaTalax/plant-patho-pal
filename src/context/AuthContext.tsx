@@ -1,7 +1,7 @@
-
 import { createContext, useContext, useState, ReactNode, useEffect } from "react";
 import { supabase, EXPERT_ID } from '@/integrations/supabase/client';
 import { Session, User } from "@supabase/supabase-js";
+import { signIn, signOut, signUp } from '@/integrations/supabase/supabaseClient';
 
 // Define type for user profile
 type UserProfile = {
@@ -173,95 +173,37 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const login = async (email: string, password: string) => {
     try {
-      console.log("Attempting login with:", email, password);
+      console.log("Attempting login with:", email);
       
-      // Special case for the test user
-      if (email === "test@gmail.com" && password === "test123") {
-        console.log("Using test account mock login");
-        
-        // Set authenticated state for the test user
+      const data = await signIn(email, password);
+      
+      if (data && data.user) {
+        // Set authenticated state
         setIsAuthenticated(true);
+        setUser(data.user);
         
-        // Create a mock user object
-        const mockUser = {
-          id: "test-user-id",
-          email: "test@gmail.com",
-        };
-        
-        // @ts-ignore - We're creating a mock user object
-        setUser(mockUser);
-        
-        // Set up user profile for test user
-        setUsername("testuser");
-        setUserProfile({
-          username: "testuser",
-          firstName: "Test",
-          lastName: "User",
-          email: "test@gmail.com",
-          phone: "",
-          address: "",
-          role: "user"
-        });
-        
-        setIsProfileComplete(true);
-        return Promise.resolve();
-      }
-      
-      // Special case for premium user (Plant Pathologist)
-      if (email === "agrotecnicomarconigro@gmail.com" && password === "marconigro93") {
-        console.log("Using premium account mock login");
-        
-        // Set authenticated state for the premium user
-        setIsAuthenticated(true);
-        
-        // Create a mock user object
-        const mockUser = {
-          id: "premium-user-id",
-          email: "agrotecnicomarconigro@gmail.com",
-        };
-        
-        // @ts-ignore - We're creating a mock user object
-        setUser(mockUser);
-        
-        // Set up user profile for premium user
-        setUsername("marconigro");
-        setUserProfile({
-          username: "marconigro",
-          firstName: "Marco",
-          lastName: "Nigro",
-          email: "agrotecnicomarconigro@gmail.com",
-          phone: "+39 123 456 7890",
-          address: "Via Roma 123, Milan, Italy",
-          role: "master"
-        });
-        
-        setIsProfileComplete(true);
-        setIsMasterAccount(true);
-        return Promise.resolve();
-      }
-      
-      // Regular Supabase login for other users
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      });
-      
-      if (error) {
-        // Check if the error is due to unconfirmed email
-        if (error.message?.includes('Email not confirmed') || error.message?.includes('email not confirmed')) {
-          throw new Error('email_not_confirmed');
+        if (data.session) {
+          setSession(data.session);
         }
         
-        throw error;
+        // Set up user profile
+        const usernameFromEmail = email.split('@')[0];
+        setUsername(usernameFromEmail);
+        
+        // Set initial profile data
+        setUserProfile(prev => ({ 
+          ...prev,
+          username: usernameFromEmail,
+          email: email,
+          role: email === "agrotecnicomarconigro@gmail.com" ? "master" : "user"
+        }));
+        
+        if (data.user.id) {
+          setTimeout(() => {
+            fetchUserProfile(data.user!.id);
+          }, 0);
+        }
       }
-      
-      setIsAuthenticated(true);
-      setUser(data.user);
-      setSession(data.session);
-      
-      // Basic profile info from auth
-      const usernameFromEmail = email.split('@')[0];
-      setUsername(usernameFromEmail);
       
       return Promise.resolve();
     } catch (error) {
@@ -271,7 +213,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const logout = async () => {
-    await supabase.auth.signOut();
+    await signOut();
     setIsAuthenticated(false);
     setUsername("");
     setUser(null);
@@ -294,50 +236,69 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         throw new Error("weak_password: Password should be at least 6 characters.");
       }
       
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/login`,
-        }
-      });
+      // Use our custom signUp function
+      const result = await signUp(email, password);
       
-      // Check for rate limit error
-      if (error && error.status === 429) {
-        console.log("Email rate limit error, but continuing registration process:", error);
-        return {
-          rateLimitExceeded: true,
-          message: "You've reached the email sending limit. Please try again later or check for a previous confirmation email.",
-          confirmationRequired: true
-        };
-      }
+      console.log("Registration response:", result);
       
-      // Check for other errors
-      if (error) {
-        // If user is already registered, we can consider this a "success" case
-        if (error.message?.includes("already registered")) {
-          return {
-            confirmationRequired: true,
-            message: "This email is already registered. Please check your email for a confirmation link or try logging in."
-          };
-        }
+      // If registration was successful with a mocked account, log in immediately
+      if (result && !result.confirmationRequired && result.data?.user) {
+        setIsAuthenticated(true);
+        setUser(result.data.user as User);
         
-        throw error;
+        // Set up basic profile
+        const usernameFromEmail = email.split('@')[0];
+        setUsername(usernameFromEmail);
+        
+        // For pre-configured accounts, set up complete profiles
+        if (email === "talaiaandrea@gmail.com") {
+          setUserProfile({
+            username: "talaia",
+            firstName: "Andrea",
+            lastName: "Talaia",
+            email: email,
+            phone: "",
+            address: "",
+            role: "user"
+          });
+          setIsProfileComplete(true);
+        } else if (email === "agrotecnicomarconigro@gmail.com") {
+          setUserProfile({
+            username: "marconigro",
+            firstName: "Marco",
+            lastName: "Nigro",
+            email: email,
+            phone: "+39 123 456 7890",
+            address: "Via Roma 123, Milan, Italy",
+            role: "master"
+          });
+          setIsProfileComplete(true);
+          setIsMasterAccount(true);
+        } else if (email === "test@gmail.com") {
+          setUserProfile({
+            username: "testuser",
+            firstName: "Test",
+            lastName: "User",
+            email: email,
+            phone: "",
+            address: "",
+            role: "user"
+          });
+          setIsProfileComplete(true);
+        } else {
+          setUserProfile({
+            username: usernameFromEmail,
+            firstName: "",
+            lastName: "",
+            email: email,
+            phone: "",
+            address: "",
+            role: "user"
+          });
+        }
       }
       
-      console.log("Registration response:", data);
-      
-      // Determine if email confirmation is required
-      const confirmationRequired = !data.user?.email_confirmed_at;
-      
-      return {
-        ...data,
-        confirmationRequired,
-        message: confirmationRequired 
-          ? "Please check your email for a confirmation link to complete your registration." 
-          : "Registration completed successfully."
-      };
-      
+      return result;
     } catch (error: any) {
       console.error('Registration error:', error);
       throw error;
