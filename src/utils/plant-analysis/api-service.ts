@@ -16,7 +16,7 @@ export const analyzePlantImage = async (imageFile: File) => {
     // Validate and preprocess the image
     const isValid = await validateImageForAnalysis(imageFile);
     if (!isValid) {
-      toast.error("Image is not suitable for analysis. Please use a clearer plant image.");
+      toast.error("L'immagine non è adatta per l'analisi. Usa una foto di pianta più chiara.");
       return null;
     }
 
@@ -30,19 +30,24 @@ export const analyzePlantImage = async (imageFile: File) => {
     formData.append('image', optimizedImage);
     formData.append('optimized', 'true'); // Flag to indicate optimized image
 
-    toast.info("Analyzing your plant image...", {
+    toast.info("Analisi dell'immagine in corso...", {
       duration: 3000,
     });
 
     // Call the Supabase Edge Function with retry mechanism
     let attempts = 0;
-    const maxAttempts = 3;
+    const maxAttempts = 4; // Increased from 3 to 4 for better chance of success
     let data, error;
     
     while (attempts < maxAttempts) {
       try {
         attempts++;
-        console.log(`Plant analysis attempt ${attempts}/${maxAttempts}...`);
+        console.log(`Tentativo di analisi pianta ${attempts}/${maxAttempts}...`);
+        
+        // Add a small delay between retries to give the backend more time
+        if (attempts > 1) {
+          await new Promise(resolve => setTimeout(resolve, 1000 * attempts));
+        }
         
         const response = await supabase.functions.invoke('analyze-plant', {
           body: formData,
@@ -62,11 +67,10 @@ export const analyzePlantImage = async (imageFile: File) => {
         
         // Wait before retrying (exponential backoff)
         if (attempts < maxAttempts) {
-          await new Promise(resolve => setTimeout(resolve, 1000 * attempts));
-          toast.info(`Retrying analysis (attempt ${attempts + 1}/${maxAttempts})...`);
+          toast.info(`Nuovo tentativo di analisi (tentativo ${attempts + 1}/${maxAttempts})...`);
         }
       } catch (retryError) {
-        console.error(`Attempt ${attempts} error:`, retryError);
+        console.error(`Errore al tentativo ${attempts}:`, retryError);
         if (attempts === maxAttempts) {
           error = { message: (retryError as Error).message };
         }
@@ -74,37 +78,53 @@ export const analyzePlantImage = async (imageFile: File) => {
     }
 
     if (error) {
-      console.error('Error calling analyze-plant function:', error);
-      toast.error(`Analysis error: ${error.message || 'Unknown error'}`);
+      console.error('Errore nella chiamata alla funzione analyze-plant:', error);
+      toast.error(`Errore di analisi: ${error.message || 'Errore sconosciuto'}`);
       return null;
     }
 
-    console.log('Plant analysis result:', data);
+    console.log('Risultato analisi pianta:', data);
     
     // Handle different analysis outcomes
     if (data.isValidPlantImage === false) {
-      toast.error("The uploaded image does not appear to contain a plant. Please try with a different image.", {
+      toast.error("L'immagine caricata non sembra contenere una pianta. Prova con un'altra immagine.", {
         duration: 5000,
       });
     } else if (!data.isReliable) {
-      toast.warning("The analysis results have low confidence. Consider uploading a clearer image for better results.", {
+      toast.warning("I risultati dell'analisi hanno bassa confidenza. Considera di caricare un'immagine più chiara per risultati migliori.", {
         duration: 5000,
       });
     } else if (data.eppoRegulatedConcern) {
       // Special EPPO alert for regulated pests and diseases
-      toast.error(`ALERT: Possible detection of ${data.eppoRegulatedConcern.name}, a regulated pest/disease. Please report to local plant protection authorities.`, {
+      toast.error(`ALLERTA: Possibile rilevamento di ${data.eppoRegulatedConcern.name}, un parassita/malattia regolamentato. Si prega di segnalarlo alle autorità fitosanitarie locali.`, {
         duration: 8000,
       });
     } else {
-      toast.success("Plant analysis complete!", {
+      toast.success("Analisi della pianta completata!", {
         duration: 3000,
       });
     }
     
-    return data;
+    // Even if the data is not ideal, return it so the UI can display something
+    return data || {
+      label: "Pianta non identificata",
+      score: 0.4,
+      healthy: true,
+      plantPart: "whole plant",
+      dataSource: "Analisi di emergenza"
+    };
   } catch (err) {
-    console.error('Exception during plant analysis:', err);
-    toast.error(`Analysis error: ${(err as Error).message || 'Unknown error'}`);
-    return null;
+    console.error('Eccezione durante l\'analisi della pianta:', err);
+    toast.error(`Errore di analisi: ${(err as Error).message || 'Errore sconosciuto'}`);
+    
+    // Return fallback data to prevent UI from breaking
+    return {
+      label: "Errore di analisi",
+      score: 0.2,
+      healthy: null,
+      plantPart: "whole plant",
+      dataSource: "Fallback di emergenza",
+      error: (err as Error).message
+    };
   }
 };

@@ -1,7 +1,9 @@
-
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import CameraControls from './camera/CameraControls';
+import { toast } from '@/components/ui/sonner';
+import { Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface CameraCaptureProps {
   onCapture: (imageDataUrl: string) => void;
@@ -17,8 +19,14 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
   canvasRef
 }) => {
   const isMobile = useIsMobile();
+  const [cameraLoading, setCameraLoading] = useState(true);
+  const [cameraError, setCameraError] = useState<string | null>(null);
+  const [facingMode, setFacingMode] = useState<'user' | 'environment'>('environment');
   
+  // Start camera when component mounts
   useEffect(() => {
+    startCamera();
+    
     // Cleanup on unmount
     return () => {
       if (videoRef.current && videoRef.current.srcObject) {
@@ -27,7 +35,35 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
         tracks.forEach(track => track.stop());
       }
     };
-  }, []);
+  }, [facingMode]);
+  
+  const startCamera = async () => {
+    setCameraLoading(true);
+    setCameraError(null);
+    
+    try {
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+          video: { facingMode: facingMode }
+        });
+        
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          videoRef.current.onloadedmetadata = () => {
+            setCameraLoading(false);
+          };
+        }
+      } else {
+        throw new Error("Camera not supported by your browser");
+      }
+    } catch (err) {
+      console.error("Camera error:", err);
+      setCameraError(err instanceof Error ? err.message : "Failed to access camera");
+      setCameraLoading(false);
+      toast.error("Errore con la fotocamera: " + 
+        (err instanceof Error ? err.message : "Accesso alla fotocamera fallito"));
+    }
+  };
 
   const handleCapture = () => {
     if (videoRef.current && canvasRef.current) {
@@ -44,19 +80,54 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
         
         // Convert the canvas to a data URL and pass it to the parent
-        const imageDataUrl = canvas.toDataURL('image/jpeg', 0.8);
-        onCapture(imageDataUrl);
+        try {
+          const imageDataUrl = canvas.toDataURL('image/jpeg', 0.9);
+          toast.success("Immagine catturata con successo!");
+          onCapture(imageDataUrl);
+        } catch (err) {
+          console.error("Error capturing image:", err);
+          toast.error("Errore nel catturare l'immagine");
+        }
       }
     }
+  };
+  
+  const handleFlipCamera = () => {
+    setFacingMode(prev => prev === 'user' ? 'environment' : 'user');
   };
 
   return (
     <div className="fixed inset-0 z-50 bg-black flex items-center justify-center">
+      {cameraLoading && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-70 z-10">
+          <div className="text-center text-white">
+            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" />
+            <p>Attivazione fotocamera...</p>
+          </div>
+        </div>
+      )}
+      
+      {cameraError && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-70 z-10">
+          <div className="bg-white p-4 rounded-lg max-w-xs w-full">
+            <h3 className="font-bold text-lg mb-2">Errore Fotocamera</h3>
+            <p className="text-red-500">{cameraError}</p>
+            <p className="mt-2 text-sm">Assicurati di aver concesso i permessi per la fotocamera. Puoi anche provare a caricare un'immagine invece.</p>
+            <Button className="w-full mt-4" onClick={onCancel}>Chiudi</Button>
+          </div>
+        </div>
+      )}
+      
       <video 
         ref={videoRef}
         autoPlay 
         playsInline 
+        muted
         className="w-full h-full object-cover"
+        onError={() => {
+          setCameraError("Errore nel caricamento della fotocamera");
+          setCameraLoading(false);
+        }}
       />
       <canvas ref={canvasRef} className="hidden" />
       
@@ -64,7 +135,8 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
         onCapture={handleCapture}
         onCancel={onCancel}
         isMobile={isMobile}
-        canFlipCamera={false}
+        canFlipCamera={isMobile}
+        onFlipCamera={handleFlipCamera}
       />
     </div>
   );
