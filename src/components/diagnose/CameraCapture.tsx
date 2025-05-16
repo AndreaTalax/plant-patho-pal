@@ -1,5 +1,6 @@
 
 import React, { useEffect } from 'react';
+import { useIsMobile } from '@/hooks/use-mobile';
 import CameraControls from './camera/CameraControls';
 
 interface CameraCaptureProps {
@@ -15,6 +16,8 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
   videoRef,
   canvasRef
 }) => {
+  const isMobile = useIsMobile();
+  
   useEffect(() => {
     // Cleanup on unmount
     return () => {
@@ -60,6 +63,8 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
       <CameraControls 
         onCapture={handleCapture}
         onCancel={onCancel}
+        isMobile={isMobile}
+        canFlipCamera={false}
       />
     </div>
   );

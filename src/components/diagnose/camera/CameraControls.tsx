@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Camera, FlipCamera, X } from 'lucide-react';
+import { Camera, FlipHorizontal2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface CameraControlsProps {
@@ -45,7 +45,7 @@ const CameraControls: React.FC<CameraControlsProps> = ({
           className="text-white hover:bg-black hover:bg-opacity-30"
           onClick={onFlipCamera}
         >
-          <FlipCamera className="h-6 w-6" />
+          <FlipHorizontal2 className="h-6 w-6" />
         </Button>
       )}
       
