@@ -1,5 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
+import { User, Session } from '@supabase/supabase-js';
 
 // Funzione di registrazione utente
 export const signUp = async (email: string, password: string) => {
@@ -20,7 +21,20 @@ export const signUp = async (email: string, password: string) => {
             id: email === "talaiaandrea@gmail.com" ? "talaiaandrea-id" : 
                  email === "test@gmail.com" ? "test-user-id" : "premium-user-id",
             email_confirmed_at: new Date().toISOString(),
-          },
+            // Aggiungiamo i campi richiesti per il tipo User di Supabase
+            app_metadata: { provider: 'email' },
+            user_metadata: { role: email === "agrotecnicomarconigro@gmail.com" ? 'master' : 'user' },
+            aud: 'authenticated',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            phone: null,
+            confirmation_sent_at: new Date().toISOString(),
+            confirmed_at: new Date().toISOString(),
+            last_sign_in_at: new Date().toISOString(),
+            role: null,
+            identities: [],
+            factors: []
+          } as User,
           session: null
         }
       };
@@ -108,7 +122,7 @@ export const signIn = async (email: string, password: string) => {
       if (password === expectedPassword) {
         console.log('Login simulato per email nella whitelist:', email);
         
-        // Crea un oggetto mock per l'utente
+        // Crea un oggetto mock per l'utente che soddisfa l'interfaccia User
         let mockRole = 'user';
         let mockUserId = 'user-id';
         
@@ -121,26 +135,38 @@ export const signIn = async (email: string, password: string) => {
           mockUserId = 'test-user-id';
         }
         
+        // Mock di User completo con tutti i campi richiesti
+        const mockUser: User = {
+          id: mockUserId,
+          email: email,
+          user_metadata: { role: mockRole },
+          app_metadata: { provider: "email" },
+          aud: "authenticated",
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          phone: null,
+          confirmation_sent_at: new Date().toISOString(),
+          confirmed_at: new Date().toISOString(),
+          last_sign_in_at: new Date().toISOString(),
+          role: null,
+          email_confirmed_at: new Date().toISOString(),
+          identities: [],
+          factors: []
+        };
+        
+        // Mock di Session completo con tutti i campi richiesti
+        const mockSession: Session = {
+          access_token: "mock-token",
+          refresh_token: "mock-refresh-token",
+          expires_in: 3600,
+          expires_at: new Date().getTime() / 1000 + 3600,
+          token_type: "bearer",
+          user: mockUser
+        };
+        
         return {
-          user: {
-            id: mockUserId,
-            email: email,
-            user_metadata: {
-              role: mockRole
-            },
-            app_metadata: {
-              provider: "email"
-            },
-            aud: "authenticated"
-          },
-          session: {
-            access_token: "mock-token",
-            refresh_token: "mock-refresh-token",
-            user: {
-              id: mockUserId,
-              email: email
-            }
-          }
+          user: mockUser,
+          session: mockSession
         };
       } else {
         throw new Error("Invalid login credentials");
