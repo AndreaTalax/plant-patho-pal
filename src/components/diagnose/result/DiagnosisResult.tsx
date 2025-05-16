@@ -6,9 +6,9 @@ import PlantInfoCard from './PlantInfoCard';
 import ActionButtons from './ActionButtons';
 import AiServicesData from './AiServicesData';
 import EppoDataPanel from './EppoDataPanel';
-import { formatHuggingFaceResult } from '@/utils/plantAnalysisUtils';
+import { formatHuggingFaceResult } from '@/utils/plant-analysis';
 import { Loader2 } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from 'sonner';
 
 const DiagnosisResult: React.FC<DiagnosisResultProps> = ({

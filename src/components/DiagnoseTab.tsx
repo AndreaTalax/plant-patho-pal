@@ -3,7 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from '@/components/ui/sonner';
 import { modelInfo } from '@/utils/aiDiagnosisUtils';
 import { usePlantInfo } from '@/context/PlantInfoContext';
-import { analyzePlantImage, formatHuggingFaceResult, dataURLtoFile } from '@/utils/plantAnalysisUtils';
+import { 
+  analyzePlantImage, 
+  formatHuggingFaceResult, 
+  dataURLtoFile 
+} from '@/utils/plant-analysis';
 
 // Importing our components
 import PlantInfoForm, { PlantInfoFormValues } from './diagnose/PlantInfoForm';
