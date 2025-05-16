@@ -1,6 +1,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { preprocessImageForPlantDetection, validateImageForAnalysis } from "./image-utils";
 
 /**
  * Sends an image to the Supabase Edge Function for plant disease analysis
@@ -12,8 +13,18 @@ import { toast } from "sonner";
  */
 export const analyzePlantImage = async (imageFile: File) => {
   try {
+    // Validate and preprocess the image
+    const isValid = await validateImageForAnalysis(imageFile);
+    if (!isValid) {
+      toast.error("Image is not suitable for analysis. Please use a clearer plant image.");
+      return null;
+    }
+
+    // Apply any preprocessing to improve plant detection
+    const processedImage = await preprocessImageForPlantDetection(imageFile);
+    
     const formData = new FormData();
-    formData.append('image', imageFile);
+    formData.append('image', processedImage);
 
     toast.info("Analyzing your plant image...", {
       duration: 3000,
@@ -58,7 +69,7 @@ export const analyzePlantImage = async (imageFile: File) => {
 
     console.log('Plant analysis result:', data);
     
-    // If the image validation failed, show a specific message
+    // Handle different analysis outcomes
     if (data.isValidPlantImage === false) {
       toast.error("The uploaded image does not appear to contain a plant. Please try with a different image.", {
         duration: 5000,

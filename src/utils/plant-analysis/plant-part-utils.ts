@@ -32,6 +32,19 @@ export function getPlantPartFromLabel(label: string): string | null {
 }
 
 /**
+ * Determines if a plant part is likely to show disease symptoms
+ * @param plantPart The identified plant part
+ * @returns A boolean indicating if this part commonly shows disease
+ */
+export function isDiseasePronePlantPart(plantPart: string | null): boolean {
+  if (!plantPart) return false;
+  
+  // Parts that commonly show disease symptoms
+  const diseaseProneParts = ['leaf', 'stem', 'fruit', 'flower', 'branch'];
+  return diseaseProneParts.includes(plantPart);
+}
+
+/**
  * Simple utility function to capitalize the first letter of a string
  */
 export function capitalize(str: string): string {
