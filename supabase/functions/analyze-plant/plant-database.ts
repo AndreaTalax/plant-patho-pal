@@ -1,0 +1,172 @@
+
+// Database of plant species mappings integrating PlantNet, TRY Plant Trait Database, 
+// New Plant Diseases Dataset, OLID I and EPPO Global Database
+// Now also includes Flora Incognita and PlantSnap taxonomies
+export const plantSpeciesMap = {
+  // Garden plants and vegetables
+  'tomato': 'Tomato (Solanum lycopersicum)',
+  'potato': 'Potato (Solanum tuberosum)',
+  'pepper': 'Pepper (Capsicum annuum)',
+  'cucumber': 'Cucumber (Cucumis sativus)',
+  'lettuce': 'Lettuce (Lactuca sativa)',
+  'carrot': 'Carrot (Daucus carota)',
+  'spinach': 'Spinach (Spinacia oleracea)',
+  'pumpkin': 'Pumpkin (Cucurbita pepo)',
+  'beans': 'Beans (Phaseolus vulgaris)',
+  'corn': 'Corn (Zea mays)',
+  
+  // Fruits
+  'apple': 'Apple (Malus domestica)',
+  'grape': 'Grape (Vitis vinifera)',
+  'strawberry': 'Strawberry (Fragaria ananassa)',
+  'peach': 'Peach (Prunus persica)',
+  'orange': 'Orange (Citrus sinensis)',
+  'cherry': 'Cherry (Prunus avium)',
+  'lemon': 'Lemon (Citrus limon)',
+  'raspberry': 'Raspberry (Rubus idaeus)',
+  'blueberry': 'Blueberry (Vaccinium)',
+  'banana': 'Banana (Musa)',
+  
+  // Common houseplants
+  'monstera': 'Monstera (Monstera deliciosa)',
+  'pothos': 'Pothos (Epipremnum aureum)',
+  'snake plant': 'Snake Plant (Sansevieria)',
+  'aloe': 'Aloe Vera (Aloe barbadensis)',
+  'fiddle': 'Fiddle Leaf Fig (Ficus lyrata)',
+  'peace lily': 'Peace Lily (Spathiphyllum)',
+  'orchid': 'Orchid (Orchidaceae)',
+  'spider plant': 'Spider Plant (Chlorophytum comosum)',
+  'rubber plant': 'Rubber Plant (Ficus elastica)',
+  'jade plant': 'Jade Plant (Crassula ovata)',
+  'zz plant': 'ZZ Plant (Zamioculcas zamiifolia)',
+  'philodendron': 'Philodendron (Philodendron)',
+  
+  // Garden flowers
+  'rose': 'Rose (Rosa)',
+  'tulip': 'Tulip (Tulipa)',
+  'daisy': 'Daisy (Bellis perennis)',
+  'sunflower': 'Sunflower (Helianthus)',
+  'lily': 'Lily (Lilium)',
+  'lavender': 'Lavender (Lavandula)',
+  'marigold': 'Marigold (Tagetes)',
+  'hydrangea': 'Hydrangea (Hydrangea)',
+  'geranium': 'Geranium (Pelargonium)',
+  'dahlia': 'Dahlia (Dahlia)',
+  
+  // Herbs
+  'basil': 'Basil (Ocimum basilicum)',
+  'mint': 'Mint (Mentha)',
+  'rosemary': 'Rosemary (Rosmarinus officinalis)',
+  'thyme': 'Thyme (Thymus vulgaris)',
+  'cilantro': 'Cilantro (Coriandrum sativum)',
+  'oregano': 'Oregano (Origanum vulgare)',
+  'sage': 'Sage (Salvia officinalis)',
+  'chives': 'Chives (Allium schoenoprasum)',
+  'parsley': 'Parsley (Petroselinum crispum)',
+  'dill': 'Dill (Anethum graveolens)',
+  
+  // Additional PlantNet & TRY Database entries (common species)
+  'oak': 'Oak (Quercus)',
+  'maple': 'Maple (Acer)',
+  'pine': 'Pine (Pinus)',
+  'birch': 'Birch (Betula)',
+  'willow': 'Willow (Salix)',
+  'poplar': 'Poplar (Populus)',
+  'eucalyptus': 'Eucalyptus (Eucalyptus)',
+  'rhododendron': 'Rhododendron (Rhododendron)',
+  'azalea': 'Azalea (Rhododendron)',
+  'juniper': 'Juniper (Juniperus)',
+  'ivy': 'Ivy (Hedera)',
+  'fern': 'Ferns (Polypodiopsida)',
+  'bamboo': 'Bamboo (Bambusoideae)',
+  'cactus': 'Cactus (Cactaceae)',
+  'succulent': 'Succulent Plants (various species)',
+  'palm': 'Palm (Arecaceae)',
+  'cypress': 'Cypress (Cupressus)',
+  'dogwood': 'Dogwood (Cornus)',
+  'magnolia': 'Magnolia (Magnolia)',
+  'hibiscus': 'Hibiscus (Hibiscus)',
+  
+  // Additional entries from New Plant Diseases Dataset
+  'apple scab': 'Apple (Malus domestica) - Scab Disease',
+  'apple black rot': 'Apple (Malus domestica) - Black Rot',
+  'apple cedar rust': 'Apple (Malus domestica) - Cedar Apple Rust',
+  'cherry powdery': 'Cherry (Prunus avium) - Powdery Mildew',
+  'corn gray': 'Corn (Zea mays) - Gray Leaf Spot',
+  'corn rust': 'Corn (Zea mays) - Common Rust',
+  'grape black rot': 'Grape (Vitis vinifera) - Black Rot',
+  'grape esca': 'Grape (Vitis vinifera) - Esca (Black Measles)',
+  'potato early blight': 'Potato (Solanum tuberosum) - Early Blight',
+  'potato late blight': 'Potato (Solanum tuberosum) - Late Blight',
+  'strawberry leaf scorch': 'Strawberry (Fragaria ananassa) - Leaf Scorch',
+  'tomato bacterial': 'Tomato (Solanum lycopersicum) - Bacterial Spot',
+  'tomato early blight': 'Tomato (Solanum lycopersicum) - Early Blight',
+  'tomato late blight': 'Tomato (Solanum lycopersicum) - Late Blight',
+  'tomato leaf mold': 'Tomato (Solanum lycopersicum) - Leaf Mold',
+  'tomato septoria': 'Tomato (Solanum lycopersicum) - Septoria Leaf Spot',
+  'tomato spider mites': 'Tomato (Solanum lycopersicum) - Spider Mite Damage',
+  'tomato target spot': 'Tomato (Solanum lycopersicum) - Target Spot',
+  'tomato mosaic virus': 'Tomato (Solanum lycopersicum) - Mosaic Virus',
+  'tomato yellow curl': 'Tomato (Solanum lycopersicum) - Yellow Leaf Curl Virus',
+  
+  // EPPO Global Database entries (quarantine pests and regulated plants)
+  'citrus greening': 'Citrus (Citrus spp.) - Huanglongbing Disease',
+  'citrus canker': 'Citrus (Citrus spp.) - Bacterial Canker',
+  'citrus tristeza': 'Citrus (Citrus spp.) - Tristeza Virus',
+  'xylella': 'Olive (Olea europaea) - Xylella fastidiosa',
+  'pine wood nematode': 'Pine (Pinus spp.) - Pine Wilt Disease',
+  'emerald ash borer': 'Ash (Fraxinus spp.) - Emerald Ash Borer Damage',
+  'box tree moth': 'Boxwood (Buxus spp.) - Box Tree Moth Damage',
+  'fire blight': 'Apple/Pear (Rosaceae) - Fire Blight',
+  'plum pox': 'Stone Fruit (Prunus spp.) - Sharka Disease',
+  'sudden oak death': 'Oak (Quercus spp.) - Phytophthora ramorum',
+  'ash dieback': 'Ash (Fraxinus spp.) - Chalara Ash Dieback',
+  'japanese beetle': 'Various Plants - Japanese Beetle Damage',
+  'dutch elm disease': 'Elm (Ulmus spp.) - Dutch Elm Disease',
+  'oak processionary': 'Oak (Quercus spp.) - Oak Processionary Moth',
+  'pepino mosaic': 'Tomato (Solanum lycopersicum) - Pepino Mosaic Virus',
+  'bacterial wilt': 'Various Plants - Ralstonia solanacearum',
+  'red palm weevil': 'Palm (Arecaceae) - Red Palm Weevil Damage',
+  'grapevine flavescence': 'Grape (Vitis vinifera) - Flavescence dorée',
+  'colorado beetle': 'Potato (Solanum tuberosum) - Colorado Beetle Damage',
+  'black sigatoka': 'Banana (Musa) - Black Sigatoka Disease',
+  
+  // New entries from Flora Incognita and PlantSnap
+  'dandelion': 'Dandelion (Taraxacum officinale)',
+  'clover': 'Clover (Trifolium)',
+  'nettle': 'Nettle (Urtica)',
+  'plantain': 'Plantain (Plantago)',
+  'chickweed': 'Chickweed (Stellaria media)',
+  'dock': 'Dock (Rumex)',
+  'chamomile': 'Chamomile (Matricaria)',
+  'goldenrod': 'Goldenrod (Solidago)',
+  'thistle': 'Thistle (Cirsium)',
+  'yarrow': 'Yarrow (Achillea millefolium)'
+};
+
+// Database of plant parts keywords for identification
+export const plantPartKeywords = {
+  'leaf': ['leaf', 'foliage', 'frond', 'leaflet', 'blade'],
+  'stem': ['stem', 'stalk', 'petiole', 'cane'],
+  'root': ['root', 'rhizome', 'tuber', 'bulb', 'corm'],
+  'flower': ['flower', 'bloom', 'blossom', 'inflorescence', 'petal'],
+  'fruit': ['fruit', 'berry', 'pod', 'seed', 'cone'],
+  'shoot': ['shoot', 'sprout', 'seedling', 'bud', 'tendril'],
+  'branch': ['branch', 'twig', 'bough'],
+  'trunk': ['trunk', 'bark', 'wood'],
+  'collar region': ['collar', 'crown', 'base']
+};
+
+// Enhanced database of EPPO regulated pest and disease symptoms
+export const eppoSymptoms = {
+  'citrus greening': ['yellow mottling', 'leaf asymmetry', 'vein yellowing', 'stunted growth', 'blotchy mottle'],
+  'citrus canker': ['water-soaked lesions', 'circular lesions', 'raised corky tissue', 'chlorotic halo', 'ruptured epidermis'],
+  'xylella': ['leaf scorch', 'marginal leaf burn', 'wilting', 'dieback', 'stunted growth'],
+  'fire blight': ['blackened leaves', 'shepherd\'s crook', 'bacterial ooze', 'cankers', 'fruit mummification'],
+  'sudden oak death': ['trunk cankers', 'bleeding trunk', 'wilting foliage', 'black leaf lesions', 'shoot dieback'],
+  'ash dieback': ['diamond-shaped lesions', 'wilting leaves', 'crown dieback', 'bark lesions', 'wood discoloration'],
+  'dutch elm disease': ['yellowing foliage', 'wilting leaves', 'vascular discoloration', 'crown dieback', 'bark beetles'],
+  'grape flavescence': ['downward leaf rolling', 'leaf discoloration', 'lack of lignification', 'flower abortion', 'berry shrivel'],
+  'bacterial wilt': ['rapid wilting', 'vascular discoloration', 'bacterial streaming', 'epinasty', 'adventitious roots'],
+  'plum pox': ['chlorotic rings', 'vein yellowing', 'leaf deformation', 'fruit rings', 'fruit deformation']
+};
