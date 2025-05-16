@@ -82,14 +82,41 @@ export const extractPlantName = (label: string): string | null => {
 export const isPlantLabel = (label: string): boolean => {
   // Add more common houseplants to improve detection
   const plantLabels = [
+    // Basic plant terms
     "plant", "leaf", "leaves", "flower", "potted plant", "foliage", "shrub", "vegetation",
     "botanical", "flora", "garden", "herb", "houseplant", "tree", "succulent", "bloom",
     "petal", "stem", "root", "seedling", "bud", "shoot", "cutting", "bulb", "crop",
     "branch", "trunk", "bark", "flora", "woodland", "forest", "garden", "plant life",
-    // Additional common houseplants to improve detection
+    
+    // Common houseplant terms (expanded)
     "spider plant", "snake plant", "monstera", "fiddle leaf", "pothos", "philodendron",
     "fern", "aloe", "cactus", "peace lily", "orchid", "ivy", "dracaena", "palm",
-    "chlorophytum", "sansevieria", "hanging plant", "indoor plant", "house plant"
+    "chlorophytum", "sansevieria", "hanging plant", "indoor plant", "house plant",
+    
+    // Ornamental plants
+    "ficus", "rubber plant", "alocasia", "calathea", "maranta", "prayer plant",
+    "zz plant", "zamioculcas", "croton", "dieffenbachia", "anthurium", "bromeliad",
+    "schefflera", "peperomia", "chinese money plant", "yucca", "jade plant", "agave",
+    "boston fern", "bird of paradise", "strelitzia", "begonia", "asparagus fern", 
+    "umbrella plant", "wandering jew", "tradescantia",
+    
+    // Garden/urban plants
+    "rose", "lily", "tulip", "daffodil", "hydrangea", "lavender", "peony",
+    "chrysanthemum", "dahlia", "geranium", "hibiscus", "marigold", "pansy",
+    "violet", "zinnia", "azalea", "gardenia", "camellia",
+    
+    // Decor terms that might include plants
+    "flower pot", "planter", "vase", "terrarium", "greenhouse", "herbs", "botanical",
+    "botanical garden", "flower arrangement", "flower bed", "windowsill", "living wall",
+    "hanging basket", "vertical garden", "bonsai", "container garden",
+    
+    // Furniture that might include plants
+    "pot", "flowerpot", "plant stand", "window box", "herb garden", "plant shelf",
+    "plant table", "flower vase", "planter box",
+    
+    // Plant features
+    "green leaves", "variegated", "tropical", "succulent", "flowering", "evergreen",
+    "deciduous", "perennial", "annual", "biennial", "woody", "herbaceous"
   ];
   
   // Add New Plant Diseases Dataset specific plant terms
@@ -186,8 +213,8 @@ export async function verifyImageContainsPlant(
           continue;
         }
         
-        // Check the top 8 predictions for plant-related labels (increased from 5)
-        const topPredictions = result.slice(0, 8);
+        // Check the top 20 predictions for plant-related labels (increased from 8)
+        const topPredictions = result.slice(0, 20);
         const plantDetections = topPredictions.filter(prediction => {
           const label = prediction.label.toLowerCase();
           return isPlantLabel(label);
@@ -222,8 +249,8 @@ export async function verifyImageContainsPlant(
       }
     }
     
-    // Lower threshold from 0.3 to 0.15 to improve detection accuracy
-    if (bestResult && bestConfidence > 0.15) {
+    // Lower threshold from 0.15 to 0.08 to improve detection accuracy for harder-to-identify plants
+    if (bestResult && bestConfidence > 0.08) {
       return {
         isPlant: true,
         confidence: bestConfidence,
@@ -241,7 +268,26 @@ export async function verifyImageContainsPlant(
       };
     }
     
+    // Last resort - check for any green-dominant image, which likely contains plants
+    // This is a simple heuristic but can help with unusual plant photos
+    const isGreenDominant = await checkIfGreenDominant(imageArrayBuffer);
+    if (isGreenDominant) {
+      return {
+        isPlant: true,
+        confidence: 0.3, // Modest confidence for color-based detection
+        aiServices: [
+          ...aiServices,
+          {
+            serviceName: "Color Analysis",
+            result: true,
+            confidence: 0.3
+          }
+        ]
+      };
+    }
+    
     // Default to assuming it's not a plant if no models detected one with sufficient confidence
+    // and it's not primarily green
     return {
       isPlant: false,
       confidence: bestConfidence,
@@ -284,14 +330,73 @@ export async function isLeafImage(imageArrayBuffer: ArrayBuffer, huggingFaceToke
     }
     
     // Check if any of the top predictions include leaf-related terms
-    const leafTerms = ['leaf', 'leaves', 'foliage', 'frond'];
-    const topPredictions = result.slice(0, 5);
+    // Expanded leaf terms to catch more variations
+    const leafTerms = ['leaf', 'leaves', 'foliage', 'frond', 'greenery', 'leaflet', 
+                      'green leaf', 'plant leaf', 'flora', 'vegetation'];
+    const topPredictions = result.slice(0, 10); // Increased from 5 to 10
     
     return topPredictions.some(prediction => 
       leafTerms.some(term => prediction.label.toLowerCase().includes(term))
     );
   } catch (err) {
     console.error('Leaf verification error:', err.message);
+    return false;
+  }
+}
+
+// Simple function to check if an image is predominantly green (indicating likely plant material)
+async function checkIfGreenDominant(imageArrayBuffer: ArrayBuffer): Promise<boolean> {
+  try {
+    // Create temporary image element from array buffer
+    const blob = new Blob([imageArrayBuffer]);
+    const url = URL.createObjectURL(blob);
+    
+    return new Promise((resolve) => {
+      // Create offscreen canvas in Deno environment
+      // This is a very simple color analysis that could be enhanced
+      const img = new Image();
+      img.onload = function() {
+        try {
+          const canvas = new OffscreenCanvas(img.width, img.height);
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            resolve(false);
+            return;
+          }
+          
+          ctx.drawImage(img, 0, 0);
+          
+          // Sample pixels (not every pixel for performance)
+          const pixelSampleStep = Math.max(1, Math.floor(img.width * img.height / 5000));
+          let greenPixels = 0;
+          let totalPixels = 0;
+          
+          for (let y = 0; y < img.height; y += pixelSampleStep) {
+            for (let x = 0; x < img.width; x += pixelSampleStep) {
+              const pixel = ctx.getImageData(x, y, 1, 1).data;
+              // Check if pixel is predominantly green (green > red and green > blue)
+              if (pixel[1] > pixel[0] && pixel[1] > pixel[2]) {
+                greenPixels++;
+              }
+              totalPixels++;
+            }
+          }
+          
+          // If at least 20% of sampled pixels are green, consider it plant-related
+          const greenRatio = greenPixels / totalPixels;
+          resolve(greenRatio > 0.2);
+        } catch (e) {
+          console.error("Error in green analysis:", e);
+          resolve(false);
+        }
+      };
+      img.onerror = function() {
+        resolve(false);
+      };
+      img.src = url;
+    });
+  } catch (err) {
+    console.error("Error in green dominance check:", err);
     return false;
   }
 }

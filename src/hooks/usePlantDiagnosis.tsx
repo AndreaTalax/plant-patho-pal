@@ -1,8 +1,7 @@
-
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { toast } from '@/components/ui/sonner';
 import { PLANT_DISEASES } from '@/data/plantDiseases';
-import { analyzePlantImage, formatHuggingFaceResult, dataURLtoFile } from '@/utils/plant-analysis';
+import { analyzePlantImage, formatHuggingFaceResult, dataURLtoFile, resizeImageForOptimalDetection } from '@/utils/plant-analysis';
 import { DiagnosedDisease, AnalysisDetails } from '@/components/diagnose/types';
 
 export const usePlantDiagnosis = () => {
@@ -60,8 +59,13 @@ export const usePlantDiagnosis = () => {
         });
       }, 200);
 
-      // First verify if the image contains a plant
-      const isPlant = await verifyImageContainsPlant(imageFile);
+      // First optimize the image for better detection
+      console.log("Optimizing image for analysis...");
+      const optimizedImage = await resizeImageForOptimalDetection(imageFile);
+      console.log("Image optimization complete");
+      
+      // Then verify if the image contains a plant
+      const isPlant = await verifyImageContainsPlant(optimizedImage);
       clearInterval(verificationInterval);
       
       if (!isPlant) {
@@ -82,7 +86,9 @@ export const usePlantDiagnosis = () => {
       }, 300);
 
       // Perform analysis using our Edge Function
-      const result = await analyzePlantImage(imageFile);
+      console.log("Sending image for analysis...");
+      const result = await analyzePlantImage(optimizedImage);
+      console.log("Analysis result received:", result);
       
       clearInterval(progressInterval);
       setAnalysisProgress(100);
@@ -256,6 +262,11 @@ export const usePlantDiagnosis = () => {
     
     // Convert dataURL to File object for analysis
     const imageFile = dataURLtoFile(imageDataUrl, "camera-capture.jpg");
+    
+    // Log the capture for debugging
+    console.log("Image captured, size:", imageFile.size, "bytes");
+    console.log("Starting image analysis...");
+    
     analyzeUploadedImage(imageFile);
   };
 
@@ -263,6 +274,8 @@ export const usePlantDiagnosis = () => {
     const reader = new FileReader();
     reader.onload = (event) => {
       setUploadedImage(event.target?.result as string);
+      console.log("Image uploaded, size:", file.size, "bytes");
+      console.log("Starting image analysis...");
       analyzeUploadedImage(file);
     };
     reader.readAsDataURL(file);

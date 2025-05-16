@@ -1,7 +1,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { preprocessImageForPlantDetection, validateImageForAnalysis } from "./image-utils";
+import { preprocessImageForPlantDetection, validateImageForAnalysis, resizeImageForOptimalDetection } from "./image-utils";
 
 /**
  * Sends an image to the Supabase Edge Function for plant disease analysis
@@ -20,11 +20,15 @@ export const analyzePlantImage = async (imageFile: File) => {
       return null;
     }
 
-    // Apply any preprocessing to improve plant detection
+    // Apply preprocessing to improve plant detection
     const processedImage = await preprocessImageForPlantDetection(imageFile);
     
+    // Resize image to optimal dimensions for ML models
+    const optimizedImage = await resizeImageForOptimalDetection(processedImage);
+    
     const formData = new FormData();
-    formData.append('image', processedImage);
+    formData.append('image', optimizedImage);
+    formData.append('optimized', 'true'); // Flag to indicate optimized image
 
     toast.info("Analyzing your plant image...", {
       duration: 3000,
@@ -38,12 +42,20 @@ export const analyzePlantImage = async (imageFile: File) => {
     while (attempts < maxAttempts) {
       try {
         attempts++;
+        console.log(`Plant analysis attempt ${attempts}/${maxAttempts}...`);
+        
         const response = await supabase.functions.invoke('analyze-plant', {
           body: formData,
+          headers: {
+            'Accept': 'application/json',
+          },
         });
         
         data = response.data;
         error = response.error;
+        
+        // Log the response for debugging
+        console.log('Plant analysis response:', data);
         
         // If successful or got data with error, break
         if (!error || data) break;

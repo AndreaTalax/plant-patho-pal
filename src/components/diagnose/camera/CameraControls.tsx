@@ -1,34 +1,56 @@
 
 import React from 'react';
+import { Camera, FlipCamera, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Camera, ArrowLeft } from 'lucide-react';
 
 interface CameraControlsProps {
   onCapture: () => void;
   onCancel: () => void;
+  isMobile: boolean;
+  canFlipCamera: boolean;
+  onFlipCamera?: () => void;
 }
 
-const CameraControls: React.FC<CameraControlsProps> = ({ onCapture, onCancel }) => {
+const CameraControls: React.FC<CameraControlsProps> = ({
+  onCapture,
+  onCancel,
+  isMobile,
+  canFlipCamera = false,
+  onFlipCamera
+}) => {
   return (
-    <div className="absolute bottom-4 left-0 w-full flex justify-between px-4">
-      <Button 
-        variant="outline" 
-        size="icon" 
-        className="bg-white rounded-full h-12 w-12"
+    <div className="absolute bottom-0 left-0 right-0 p-4 flex justify-between items-center bg-black bg-opacity-40">
+      <Button
+        variant="ghost"
+        size="icon"
+        className="text-white hover:bg-black hover:bg-opacity-30"
         onClick={onCancel}
       >
-        <ArrowLeft className="h-5 w-5" />
+        <X className="h-6 w-6" />
       </Button>
-      
-      <Button 
-        className="bg-white text-black hover:bg-gray-200 rounded-full h-16 w-16 flex items-center justify-center border-4 border-drplant-green" 
-        size="icon"
+
+      <Button
+        variant="outline"
+        size="lg"
+        className="rounded-full border-2 border-white bg-transparent hover:bg-white hover:bg-opacity-20"
         onClick={onCapture}
       >
-        <Camera className="h-8 w-8" />
+        <Camera className="h-8 w-8 text-white" />
       </Button>
+
+      {isMobile && canFlipCamera && onFlipCamera && (
+        <Button
+          variant="ghost"
+          size="icon"
+          className="text-white hover:bg-black hover:bg-opacity-30"
+          onClick={onFlipCamera}
+        >
+          <FlipCamera className="h-6 w-6" />
+        </Button>
+      )}
       
-      <div className="w-12"></div> {/* Spacer for balance */}
+      {/* Spacer when flip camera isn't shown to maintain layout */}
+      {(!isMobile || !canFlipCamera) && <div className="w-10" />}
     </div>
   );
 };

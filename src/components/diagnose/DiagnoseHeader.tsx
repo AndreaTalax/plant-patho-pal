@@ -15,6 +15,9 @@ const DiagnoseHeader: React.FC<DiagnoseHeaderProps> = ({ showModelInfo, onToggle
           <span className="font-semibold mr-1">Powered by</span> 
           <span className="font-bold">PlantNet™ AI</span>
         </div>
+        <p className="text-sm text-gray-500 text-center mt-2 max-w-xs">
+          For best results, ensure your plant is well-lit and clearly visible in the frame.
+        </p>
       </div>
       
       <div className="w-full max-w-md flex justify-end mb-4">
