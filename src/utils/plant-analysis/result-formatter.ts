@@ -1,4 +1,3 @@
-
 import { getPlantPartFromLabel, capitalize, isPlantLabel } from './plant-part-utils';
 
 /**
@@ -22,15 +21,49 @@ export const formatHuggingFaceResult = (result: any) => {
       plantName: providedPlantName
     } = result;
     
-    // Determine plant name - use provided name if available
-    const plantName = providedPlantName || existingInsights?.plantName || 'Unknown Plant';
+    // Enhanced plant name detection - use provided name if available
+    // Then try to extract from label if no plant name is provided
+    let plantName = providedPlantName;
     
-    // Determine if plant is healthy - assume healthy if not explicitly marked as unhealthy
+    if (!plantName && label) {
+      // Try to extract plant name from label if not provided
+      const plantLabels = [
+        'tomato', 'potato', 'apple', 'corn', 'grape', 'strawberry',
+        'pepper', 'lettuce', 'monstera', 'aloe', 'cactus', 'fern', 
+        'ficus', 'jade', 'snake plant', 'rose', 'orchid', 'basil',
+        'mint', 'rosemary', 'lavender', 'cannabis', 'hemp', 
+        'sunflower', 'tulip', 'lily', 'bamboo', 'palm'
+      ];
+      
+      const labelLower = label.toLowerCase();
+      const matchedPlant = plantLabels.find(plant => labelLower.includes(plant));
+      
+      if (matchedPlant) {
+        plantName = capitalize(matchedPlant);
+      }
+    }
+    
+    // If still no plant name, use generic names based on classification
+    if (!plantName && existingInsights?.plantName) {
+      plantName = existingInsights.plantName;
+    } else if (!plantName) {
+      // Determine if this is likely a houseplant or outdoor plant
+      const houseplantKeywords = ['pot', 'indoor', 'house', 'potted'];
+      const isHouseplant = houseplantKeywords.some(keyword => 
+        label.toLowerCase().includes(keyword)
+      );
+      
+      plantName = isHouseplant ? 'Indoor Plant' : 'Garden Plant';
+    }
+    
+    // Determine if plant is healthy with improved accuracy
+    // If explicit health status was provided in the result, use that
+    // Otherwise, infer from label using expanded disease keywords
     const isHealthy = typeof result.healthy === 'boolean' 
       ? result.healthy 
-      : label.toLowerCase().includes('healthy') || !label.toLowerCase().match(/disease|infected|spot|blight|rot|rust|mildew/);
+      : !label.toLowerCase().match(/disease|infected|spot|blight|rot|rust|mildew|virus|bacteria|pest|damage|wilting|unhealthy|infected|deficiency|burned|chlorosis|necrosis|dying/);
     
-    // Determine the plant part from the label
+    // Determine the plant part from the label with improved accuracy
     const detectedPlantPart = result.plantPart || getPlantPartFromLabel(label) || 'whole plant';
     
     // Create or enhance multi-service insights
@@ -39,6 +72,7 @@ export const formatHuggingFaceResult = (result: any) => {
       isHealthy,
       plantName,
       plantPart: detectedPlantPart,
+      confidenceLevel: score > 0.8 ? 'high' : score > 0.5 ? 'medium' : 'low',
       huggingFaceResult: {
         label,
         score
@@ -46,9 +80,10 @@ export const formatHuggingFaceResult = (result: any) => {
     };
     
     // Always consider it a plant if we've gotten this far in the analysis
+    // But preserve any detailed verification information if available
     const isPlant = plantVerification?.isPlant || isPlantLabel(label) || true;
     
-    // Return formatted result
+    // Return formatted result with enhanced properties
     return {
       ...result,
       multiServiceInsights,
@@ -60,14 +95,16 @@ export const formatHuggingFaceResult = (result: any) => {
   } catch (error) {
     console.error('Error formatting HuggingFace result:', error);
     
-    // Return basic formatted result in case of error
+    // Return more informative basic formatted result in case of error
     return {
       label: result.label || 'Unknown',
       score: result.score || 0.5,
       multiServiceInsights: {
         isHealthy: true,
         plantName: 'Unknown Plant',
-        plantPart: 'whole plant'
+        plantPart: 'whole plant',
+        confidenceLevel: 'low',
+        errorDetails: error instanceof Error ? error.message : 'Unknown error'
       },
       plantVerification: {
         isPlant: true,

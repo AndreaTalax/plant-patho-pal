@@ -25,19 +25,25 @@ const Index = () => {
   }, [isMasterAccount, activeTab]);
 
   // Show welcome toast only once when component mounts
+  // and if it hasn't been shown in this session
   useEffect(() => {
     const hasShownWelcome = sessionStorage.getItem('welcomeShown');
     
     if (!hasShownWelcome) {
-      setShowWelcome(true);
-      toast.success("Benvenuto su Plant Patho Pal!", {
-        description: "Il tuo profilo è stato completato con successo.",
-        duration: 5000,
-        onDismiss: () => {
-          sessionStorage.setItem('welcomeShown', 'true');
-          setShowWelcome(false);
-        }
-      });
+      // Small delay to prevent initial render toast conflicts
+      const welcomeTimer = setTimeout(() => {
+        setShowWelcome(true);
+        toast.success("Benvenuto su Plant Patho Pal!", {
+          description: "Il tuo profilo è stato completato con successo.",
+          duration: 5000,
+          onDismiss: () => {
+            sessionStorage.setItem('welcomeShown', 'true');
+            setShowWelcome(false);
+          }
+        });
+      }, 1000);
+      
+      return () => clearTimeout(welcomeTimer);
     }
   }, []);
 

@@ -45,7 +45,7 @@ const EppoDataPanel: React.FC<EppoDataPanelProps> = ({ analysisDetails }) => {
       onClick={handleEppoSearch}
       disabled={loading}
     >
-      <span className="text-gray-600">
+      <span className={loading ? "text-gray-400" : "text-gray-600"}>
         {loading ? "Ricerca in corso..." : "Cerca dati EPPO ufficiali"}
       </span>
     </Button>
