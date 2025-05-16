@@ -1,188 +1,187 @@
 
-import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Eye, EyeOff, Check, X, Brain, AlertTriangle } from 'lucide-react';
+import React from 'react';
+import { Card } from "@/components/ui/card";
 import { AnalysisDetails } from '../types';
-import { toast } from 'sonner';
+import { Info, Leaf, AlertTriangle } from 'lucide-react';
 
 interface AiServicesDataProps {
   analysisDetails: AnalysisDetails | null;
   isAnalyzing: boolean;
 }
 
-const AiServicesData = ({ analysisDetails, isAnalyzing }: AiServicesDataProps) => {
-  const [showAiServices, setShowAiServices] = useState(false);
-  
-  // Check if we have AI service-specific results
-  const hasAiServiceData = analysisDetails?.plantVerification?.aiServices &&
-                         analysisDetails.plantVerification.aiServices.length > 0;
-
-  // Check if we have HuggingFace data
-  const hasHuggingFaceData = analysisDetails?.multiServiceInsights?.huggingFaceResult;
-  
-  // Check if we have EPPO regulated pest/disease data
-  const hasEppoData = analysisDetails?.eppoData || 
-                     analysisDetails?.multiServiceInsights?.eppoRegulated;
-
-  if ((!hasAiServiceData && !hasHuggingFaceData) || isAnalyzing) {
+const AiServicesData: React.FC<AiServicesDataProps> = ({ analysisDetails, isAnalyzing }) => {
+  if (!analysisDetails || isAnalyzing) {
     return null;
   }
 
-  const copyDiagnosisToClipboard = () => {
-    if (hasHuggingFaceData) {
-      const diagnosis = analysisDetails?.multiServiceInsights?.huggingFaceResult;
-      const diagnosisText = `Diagnosis: ${diagnosis?.label} (Confidence: ${Math.round((diagnosis?.score || 0) * 100)}%)`;
-      navigator.clipboard.writeText(diagnosisText)
-        .then(() => toast.success("Diagnosis copied to clipboard"))
-        .catch(() => toast.error("Unable to copy diagnosis"));
-    }
-  };
+  const insights = analysisDetails.multiServiceInsights;
+  
+  // Check if we have data from either Flora Incognita or PlantSnap
+  const hasFloraIncognita = !!insights?.floraIncognitaMatch;
+  const hasPlantSnap = !!insights?.plantSnapMatch;
 
   return (
-    <div className="mb-4">
-      <Button 
-        variant="outline" 
-        size="sm"
-        onClick={() => setShowAiServices(!showAiServices)}
-        className={`flex items-center gap-1.5 w-full ${showAiServices ? 'bg-green-50 text-green-700' : ''}`}
-      >
-        {showAiServices ? (
-          <>
-            <EyeOff className="h-4 w-4" /> Hide AI Services Data
-          </>
-        ) : (
-          <>
-            <Eye className="h-4 w-4" /> Show AI Services Data
-          </>
+    <Card className="p-4 bg-white shadow rounded-lg">
+      <div className="space-y-4">
+        <h3 className="text-xl font-semibold text-drplant-green flex items-center gap-2">
+          <Info className="h-5 w-5" />
+          AI Service Insights
+        </h3>
+        
+        {insights?.primaryService && (
+          <div className="mt-2">
+            <h4 className="font-medium text-gray-700">Primary Analysis Service</h4>
+            <div className="flex items-center mt-1">
+              <span className="bg-green-100 text-green-800 text-xs font-medium px-2.5 py-0.5 rounded">
+                {insights.primaryService}
+              </span>
+              {insights.agreementScore !== undefined && (
+                <span className="ml-2 text-sm text-gray-500">
+                  {insights.agreementScore}% confidence
+                </span>
+              )}
+            </div>
+            {insights.dataSource && (
+              <p className="text-xs text-gray-500 mt-1">Data Source: {insights.dataSource}</p>
+            )}
+          </div>
         )}
-      </Button>
-      
-      {showAiServices && (
-        <div className="mt-2 border rounded-lg p-2 text-xs bg-gray-50">
-          <h4 className="font-semibold mb-1">AI Services Results</h4>
-          
-          {/* EPPO Regulated Pest Warning if present */}
-          {hasEppoData && (
-            <div className="mt-2 mb-3 p-2 bg-red-50 border border-red-300 rounded-md text-red-800">
-              <div className="flex items-center gap-1.5 mb-1 font-semibold">
-                <AlertTriangle className="h-4 w-4 text-red-600" />
-                <span>EPPO Regulated Pest/Disease Alert</span>
+        
+        {/* Flora Incognita Results */}
+        {hasFloraIncognita && (
+          <div className="border-t pt-3 mt-3">
+            <h4 className="font-medium text-gray-700 flex items-center">
+              <Leaf className="h-4 w-4 mr-1.5 text-green-600" />
+              Flora Incognita Analysis
+            </h4>
+            <div className="mt-2 text-sm">
+              <div className="grid grid-cols-3 gap-2">
+                <div>
+                  <p className="text-gray-500">Species</p>
+                  <p className="font-medium">{insights.floraIncognitaMatch.species}</p>
+                </div>
+                <div>
+                  <p className="text-gray-500">Family</p>
+                  <p className="font-medium">{insights.floraIncognitaMatch.family}</p>
+                </div>
+                <div>
+                  <p className="text-gray-500">Confidence</p>
+                  <p className="font-medium">{Math.round(insights.floraIncognitaMatch.score * 100)}%</p>
+                </div>
               </div>
-              <p className="text-xs mb-1">
-                Potential detection of a quarantine pest or disease that may require reporting to local authorities.
+              <p className="text-xs text-gray-500 mt-2">Source: {insights.floraIncognitaMatch.source}</p>
+            </div>
+          </div>
+        )}
+        
+        {/* PlantSnap Results */}
+        {hasPlantSnap && (
+          <div className="border-t pt-3 mt-3">
+            <h4 className="font-medium text-gray-700 flex items-center">
+              <Leaf className="h-4 w-4 mr-1.5 text-blue-600" />
+              PlantSnap Analysis
+            </h4>
+            <div className="mt-2 text-sm">
+              <div className="grid grid-cols-3 gap-2">
+                <div>
+                  <p className="text-gray-500">Species</p>
+                  <p className="font-medium">{insights.plantSnapMatch.species}</p>
+                </div>
+                <div>
+                  <p className="text-gray-500">Family</p>
+                  <p className="font-medium">{insights.plantSnapMatch.family}</p>
+                </div>
+                <div>
+                  <p className="text-gray-500">Confidence</p>
+                  <p className="font-medium">{Math.round(insights.plantSnapMatch.score * 100)}%</p>
+                </div>
+              </div>
+              
+              {insights.plantSnapMatch.details?.common_names && insights.plantSnapMatch.details.common_names.length > 0 && (
+                <div className="mt-2">
+                  <p className="text-gray-500">Common Names</p>
+                  <p className="font-medium">{insights.plantSnapMatch.details.common_names.join(", ")}</p>
+                </div>
+              )}
+              
+              {(insights.plantSnapMatch.details?.edible !== undefined || 
+                insights.plantSnapMatch.details?.toxic !== undefined) && (
+                <div className="mt-2 flex gap-4">
+                  {insights.plantSnapMatch.details?.edible !== undefined && (
+                    <div>
+                      <p className="text-gray-500">Edible</p>
+                      <p className={`font-medium ${insights.plantSnapMatch.details.edible ? 'text-green-600' : 'text-gray-600'}`}>
+                        {insights.plantSnapMatch.details.edible ? 'Yes' : 'No'}
+                      </p>
+                    </div>
+                  )}
+                  
+                  {insights.plantSnapMatch.details?.toxic !== undefined && (
+                    <div>
+                      <p className="text-gray-500">Toxic</p>
+                      <p className={`font-medium ${insights.plantSnapMatch.details.toxic ? 'text-red-600' : 'text-gray-600'}`}>
+                        {insights.plantSnapMatch.details.toxic ? 'Yes' : 'No'}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+              
+              <p className="text-xs text-gray-500 mt-2">Source: {insights.plantSnapMatch.source}</p>
+            </div>
+          </div>
+        )}
+        
+        {/* Original HuggingFace/API Results */}
+        {insights?.huggingFaceResult && (
+          <div className={`${hasFloraIncognita || hasPlantSnap ? 'border-t pt-3 mt-3' : ''}`}>
+            <h4 className="font-medium text-gray-700">AI Model Classification</h4>
+            <div className="mt-2 text-sm">
+              <p>
+                <span className="text-gray-500">Result:</span>{' '}
+                <span className="font-medium">{insights.huggingFaceResult.label}</span>
               </p>
-              <div className="flex justify-between text-xs">
-                <span>Regulation status:</span>
+              <p>
+                <span className="text-gray-500">Confidence:</span>{' '}
                 <span className="font-medium">
-                  {analysisDetails?.eppoData?.regulationStatus || 'Quarantine pest/disease'}
+                  {Math.round(insights.huggingFaceResult.score * 100)}%
                 </span>
-              </div>
-              {analysisDetails?.eppoData?.infoLink && (
-                <div className="mt-1 text-center">
-                  <a 
-                    href={analysisDetails.eppoData.infoLink} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="text-red-700 underline text-xs"
-                  >
-                    EPPO Database Information
-                  </a>
-                </div>
-              )}
+              </p>
             </div>
-          )}
-          
-          {/* Prioritize HuggingFace data if present */}
-          {hasHuggingFaceData && (
-            <div className="mt-2 pt-2 border-t-2 border-blue-200 bg-blue-50 p-2 rounded mb-3">
-              <div className="flex justify-between items-center mb-1">
-                <h5 className="font-semibold text-blue-700">HuggingFace Analysis</h5>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="p-1 h-6" 
-                  onClick={copyDiagnosisToClipboard}
-                >
-                  <Brain className="h-3 w-3 text-blue-600" />
-                </Button>
-              </div>
-              <div className="flex justify-between">
-                <span>Detected:</span>
-                <span className="font-medium">{analysisDetails?.multiServiceInsights?.huggingFaceResult?.label}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Confidence:</span>
-                <span className="font-medium">
-                  {Math.round((analysisDetails?.multiServiceInsights?.huggingFaceResult?.score || 0) * 100)}%
-                </span>
-              </div>
-              <div className="text-xs text-blue-600 mt-1 italic">
-                Analysis performed using {analysisDetails?.multiServiceInsights?.dataSource || 'PlantNet-based model'}
-              </div>
-            </div>
-          )}
-          
-          {analysisDetails?.plantVerification?.aiServices?.map((service, index) => (
-            <div key={index} className="flex items-center justify-between">
-              <span>{service.serviceName}</span>
-              <div className="flex items-center gap-1">
-                {service.result ? (
-                  <Check className="h-3 w-3 text-green-600" />
-                ) : (
-                  <X className="h-3 w-3 text-red-600" />
-                )}
-                <span className={service.result ? "text-green-600" : "text-red-600"}>
-                  {Math.round(service.confidence * 100)}%
-                </span>
-              </div>
-            </div>
-          ))}
-          
-          {analysisDetails?.multiServiceInsights && !hasHuggingFaceData && (
-            <div className="mt-2 pt-2 border-t">
-              <div className="flex justify-between">
-                <span>Reliability Score:</span>
-                <span className="font-medium">{analysisDetails.multiServiceInsights.agreementScore}%</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Primary Service:</span>
-                <span className="font-medium">{analysisDetails.multiServiceInsights.primaryService}</span>
-              </div>
-              {analysisDetails.multiServiceInsights.dataSource && (
-                <div className="flex justify-between">
-                  <span>Data Source:</span>
-                  <span className="font-medium">{analysisDetails.multiServiceInsights.dataSource}</span>
+          </div>
+        )}
+        
+        {/* AI Services Used */}
+        {analysisDetails.plantVerification?.aiServices && analysisDetails.plantVerification.aiServices.length > 0 && (
+          <div className="border-t pt-3 mt-3">
+            <h4 className="font-medium text-gray-700">AI Services Used</h4>
+            <div className="mt-2 space-y-2">
+              {analysisDetails.plantVerification.aiServices.map((service, index) => (
+                <div key={index} className="flex items-center text-sm">
+                  <div className={`h-2 w-2 rounded-full mr-2 ${service.result ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                  <span>{service.serviceName}</span>
+                  {service.confidence > 0 && (
+                    <span className="ml-auto text-xs text-gray-500">
+                      {Math.round(service.confidence * 100)}% confidence
+                    </span>
+                  )}
                 </div>
-              )}
+              ))}
             </div>
-          )}
-          
-          {/* Display PlantixInsights if available */}
-          {analysisDetails?.plantixInsights && (
-            <div className="mt-2 pt-2 border-t">
-              <h5 className="font-semibold mb-1">Additional Insights</h5>
-              {analysisDetails.plantixInsights.severity && (
-                <div className="flex justify-between">
-                  <span>Severity:</span>
-                  <span className="font-medium">{analysisDetails.plantixInsights.severity}</span>
-                </div>
-              )}
-              {analysisDetails.plantixInsights.spreadRisk && (
-                <div className="flex justify-between">
-                  <span>Spread Risk:</span>
-                  <span className="font-medium">{analysisDetails.plantixInsights.spreadRisk}</span>
-                </div>
-              )}
-              {analysisDetails.plantixInsights.confidenceNote && (
-                <div className="text-xs italic mt-1 text-gray-600">
-                  {analysisDetails.plantixInsights.confidenceNote}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      )}
-    </div>
+          </div>
+        )}
+        
+        {/* Warning about reliability */}
+        {insights?.isReliable === false && (
+          <div className="mt-4 p-2 bg-amber-50 border border-amber-200 rounded-md flex items-start">
+            <AlertTriangle className="h-4 w-4 text-amber-500 mr-2 flex-shrink-0 mt-0.5" />
+            <p className="text-xs text-amber-700">
+              The analysis results have low confidence. Consider uploading a clearer image of the plant.
+            </p>
+          </div>
+        )}
+      </div>
+    </Card>
   );
 };
 

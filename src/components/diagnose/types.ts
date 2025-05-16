@@ -39,6 +39,25 @@ export interface AnalysisDetails {
       isQuarantine: boolean;
       warningLevel: string;
     } | null;
+    floraIncognitaMatch?: {
+      species: string;
+      genus: string;
+      family: string;
+      score: number;
+      source: string;
+    } | null;
+    plantSnapMatch?: {
+      species: string;
+      genus: string;
+      family: string;
+      score: number;
+      source: string;
+      details?: {
+        common_names?: string[];
+        edible?: boolean;
+        toxic?: boolean;
+      };
+    } | null;
   };
   alternativeDiagnoses: {
     disease: string;

@@ -4,8 +4,9 @@ import { toast } from "sonner";
 
 /**
  * Sends an image to the Supabase Edge Function for plant disease analysis
- * Using a PlantNet-inspired approach combined with TRY Plant Trait Database,
- * the New Plant Diseases Dataset, OLID I, and EPPO Global Database
+ * Using a combined approach with PlantSnap and Flora Incognita APIs alongside
+ * the PlantNet-inspired approach, TRY Plant Trait Database, New Plant Diseases Dataset,
+ * OLID I, and EPPO Global Database
  * @param imageFile The plant image file to analyze
  * @returns The analysis result from the image processing models
  */
@@ -18,10 +19,36 @@ export const analyzePlantImage = async (imageFile: File) => {
       duration: 3000,
     });
 
-    // Call the Supabase Edge Function
-    const { data, error } = await supabase.functions.invoke('analyze-plant', {
-      body: formData,
-    });
+    // Call the Supabase Edge Function with retry mechanism
+    let attempts = 0;
+    const maxAttempts = 3;
+    let data, error;
+    
+    while (attempts < maxAttempts) {
+      try {
+        attempts++;
+        const response = await supabase.functions.invoke('analyze-plant', {
+          body: formData,
+        });
+        
+        data = response.data;
+        error = response.error;
+        
+        // If successful or got data with error, break
+        if (!error || data) break;
+        
+        // Wait before retrying (exponential backoff)
+        if (attempts < maxAttempts) {
+          await new Promise(resolve => setTimeout(resolve, 1000 * attempts));
+          toast.info(`Retrying analysis (attempt ${attempts + 1}/${maxAttempts})...`);
+        }
+      } catch (retryError) {
+        console.error(`Attempt ${attempts} error:`, retryError);
+        if (attempts === maxAttempts) {
+          error = { message: (retryError as Error).message };
+        }
+      }
+    }
 
     if (error) {
       console.error('Error calling analyze-plant function:', error);
@@ -61,8 +88,9 @@ export const analyzePlantImage = async (imageFile: File) => {
 
 /**
  * Transforms the model result into a format compatible with our app
- * Using TRY Plant Trait Database for plants, New Plant Diseases Dataset/OLID I for leaf diseases,
- * and EPPO Global Database for regulated pests and diseases
+ * Integrating PlantSnap, Flora Incognita, TRY Plant Trait Database for plants, 
+ * New Plant Diseases Dataset/OLID I for leaf diseases, and EPPO Global Database 
+ * for regulated pests and diseases
  * @param modelResult The raw result from the image classification
  * @returns Analysis details formatted for our application
  */
@@ -122,10 +150,30 @@ export const formatHuggingFaceResult = (modelResult: any) => {
   const isEppoRegulated = modelResult.eppoRegulatedConcern !== undefined && 
                           modelResult.eppoRegulatedConcern !== null;
 
+  // Determine which service provided the best identification
+  let primaryIdentificationService = modelResult.primaryService || "";
+  
+  // Check if Flora Incognita or PlantSnap data is available
+  if (modelResult.floraIncognitaResult && modelResult.floraIncognitaResult.score > (modelResult.score || 0)) {
+    primaryIdentificationService = "Flora Incognita";
+  } else if (modelResult.plantSnapResult && modelResult.plantSnapResult.score > (modelResult.score || 0)) {
+    primaryIdentificationService = "PlantSnap";
+  } else if (isEppoRegulated) {
+    primaryIdentificationService = 'EPPO Regulatory Database';
+  } else if (isLeafAnalysis) {
+    primaryIdentificationService = 'Leaf Disease Classifier';
+  } else {
+    primaryIdentificationService = 'TRY-PlantNet Classifier';
+  }
+  
   // Create data source info based on what dataset was used
   let dataSource = modelResult.dataSource;
   if (!dataSource) {
-    if (isEppoRegulated) {
+    if (primaryIdentificationService === "Flora Incognita") {
+      dataSource = "Flora Incognita Plant Database";
+    } else if (primaryIdentificationService === "PlantSnap") {
+      dataSource = "PlantSnap Global Database";
+    } else if (isEppoRegulated) {
       dataSource = 'EPPO Global Database';
     } else if (isLeafAnalysis) {
       dataSource = 'New Plant Diseases Dataset + OLID I';
@@ -139,9 +187,7 @@ export const formatHuggingFaceResult = (modelResult: any) => {
     multiServiceInsights: {
       huggingFaceResult: mainPrediction,
       agreementScore: Math.round(mainPrediction.score * 100),
-      primaryService: isEppoRegulated ? 'EPPO Regulatory Database' :
-                     isLeafAnalysis ? 'Leaf Disease Classifier' : 
-                     'TRY-PlantNet Classifier',
+      primaryService: primaryIdentificationService,
       plantSpecies: speciesOnly,
       plantName: plantNameOnly,
       plantPart: plantPart,
@@ -151,7 +197,9 @@ export const formatHuggingFaceResult = (modelResult: any) => {
       isReliable: modelResult.isReliable !== undefined ? 
                  modelResult.isReliable : mainPrediction.score >= 0.6,
       dataSource: dataSource,
-      eppoRegulated: isEppoRegulated ? modelResult.eppoRegulatedConcern : null
+      eppoRegulated: isEppoRegulated ? modelResult.eppoRegulatedConcern : null,
+      floraIncognitaMatch: modelResult.floraIncognitaResult || null,
+      plantSnapMatch: modelResult.plantSnapResult || null
     },
     identifiedFeatures: isHealthy ? 
       [
@@ -181,7 +229,19 @@ export const formatHuggingFaceResult = (modelResult: any) => {
     plantVerification: modelResult.plantVerification || {
       isPlant: modelResult.isValidPlantImage !== undefined ? 
                modelResult.isValidPlantImage : true,
-      aiServices: [],
+      aiServices: [
+        ...(modelResult.plantVerification?.aiServices || []),
+        ...(modelResult.floraIncognitaResult ? [{
+          serviceName: 'Flora Incognita',
+          result: true,
+          confidence: modelResult.floraIncognitaResult.score || 0.8
+        }] : []),
+        ...(modelResult.plantSnapResult ? [{
+          serviceName: 'PlantSnap',
+          result: true,
+          confidence: modelResult.plantSnapResult.score || 0.8
+        }] : [])
+      ],
       dataSource: dataSource
     },
     plantixInsights: {
