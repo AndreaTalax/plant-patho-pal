@@ -9,7 +9,9 @@ export interface PlantInfoCardProps {
 }
 
 const PlantInfoCard: React.FC<PlantInfoCardProps> = ({ plantInfo, analysisDetails }) => {
-  const plantName = analysisDetails?.multiServiceInsights?.plantName || 'Unknown Plant';
+  // Utilizziamo sia plantName che plantSpecies per una migliore visualizzazione
+  const plantName = analysisDetails?.multiServiceInsights?.plantName || 'Pianta sconosciuta';
+  const plantSpecies = analysisDetails?.multiServiceInsights?.plantSpecies || plantName;
   
   return (
     <Card className="mb-4">
@@ -20,17 +22,17 @@ const PlantInfoCard: React.FC<PlantInfoCardProps> = ({ plantInfo, analysisDetail
         <div className="text-sm">
           {plantInfo && (
             <div className="grid grid-cols-2 gap-2">
-              <div>Environment:</div>
-              <div>{plantInfo.isIndoor ? 'Indoor' : 'Outdoor'}</div>
+              <div>Ambiente:</div>
+              <div>{plantInfo.isIndoor ? 'Interno' : 'Esterno'}</div>
               
-              <div>Watering frequency:</div>
-              <div>{plantInfo.wateringFrequency || 'Not specified'} times/week</div>
+              <div>Frequenza d'irrigazione:</div>
+              <div>{plantInfo.wateringFrequency || 'Non specificata'} volte/settimana</div>
               
-              <div>Species:</div>
-              <div>{analysisDetails?.multiServiceInsights?.plantSpecies || 'Unknown'}</div>
+              <div>Specie:</div>
+              <div>{plantSpecies || 'Sconosciuta'}</div>
               
-              <div>Plant part:</div>
-              <div>{analysisDetails?.multiServiceInsights?.plantPart || 'Whole plant'}</div>
+              <div>Parte della pianta:</div>
+              <div>{analysisDetails?.multiServiceInsights?.plantPart || 'Intera pianta'}</div>
             </div>
           )}
         </div>

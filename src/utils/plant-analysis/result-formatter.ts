@@ -1,5 +1,6 @@
 
 import { getPlantPartFromLabel, capitalize, isPlantLabel } from './plant-part-utils';
+import { plantSpeciesMap } from '../../data/plantDatabase';
 
 /**
  * Formats the raw analysis result into a more structured format
@@ -23,24 +24,39 @@ export const formatHuggingFaceResult = (result: any) => {
     } = result;
     
     // Enhanced plant name detection - use provided name if available
-    // Then try to extract from label if no plant name is provided
     let plantName = providedPlantName;
     
     if (!plantName && label) {
-      // Try to extract plant name from label if not provided
-      const plantLabels = [
-        'tomato', 'potato', 'apple', 'corn', 'grape', 'strawberry',
-        'pepper', 'lettuce', 'monstera', 'aloe', 'cactus', 'fern', 
-        'ficus', 'jade', 'snake plant', 'rose', 'orchid', 'basil',
-        'mint', 'rosemary', 'lavender', 'cannabis', 'hemp', 
-        'sunflower', 'tulip', 'lily', 'bamboo', 'palm'
-      ];
-      
+      // Migliorato l'algoritmo di estrazione del nome della pianta
+      // Prima cerca nelle mappature di plantSpeciesMap
       const labelLower = label.toLowerCase();
-      const matchedPlant = plantLabels.find(plant => labelLower.includes(plant));
+      for (const [key, value] of Object.entries(plantSpeciesMap || {})) {
+        if (labelLower.includes(key)) {
+          plantName = typeof value === 'string' ? value : key;
+          break;
+        }
+      }
       
-      if (matchedPlant) {
-        plantName = capitalize(matchedPlant);
+      // Se non trovato, cerca parole chiave comuni di piante
+      if (!plantName) {
+        const plantLabels = [
+          'tomato', 'potato', 'apple', 'corn', 'grape', 'strawberry',
+          'pepper', 'lettuce', 'monstera', 'aloe', 'cactus', 'fern', 
+          'ficus', 'jade', 'snake plant', 'rose', 'orchid', 'basil',
+          'mint', 'rosemary', 'lavender', 'cannabis', 'hemp', 
+          'sunflower', 'tulip', 'lily', 'bamboo', 'palm',
+          // Aggiunte più parole chiave in italiano
+          'pomodoro', 'patata', 'mela', 'mais', 'uva', 'fragola',
+          'peperone', 'lattuga', 'felce', 'rosa', 'basilico',
+          'menta', 'rosmarino', 'lavanda', 'girasole', 'tulipano',
+          'giglio', 'bambù', 'palma', 'fico', 'orchidea'
+        ];
+        
+        const matchedPlant = plantLabels.find(plant => labelLower.includes(plant));
+        
+        if (matchedPlant) {
+          plantName = capitalize(matchedPlant);
+        }
       }
     }
     
@@ -59,11 +75,10 @@ export const formatHuggingFaceResult = (result: any) => {
       }
     }
     
-    // Determine if plant is healthy with improved accuracy
-    // Default to assuming healthy unless explicitly stated as diseased
+    // Assume healthy unless explicitly stated as diseased
     const isHealthy = !label.toLowerCase().match(/disease|infected|spot|blight|rot|rust|mildew|virus|bacteria|pest|damage|wilting|unhealthy|infected|deficiency|burned|chlorosis|necrosis|dying/);
     
-    // Determine the plant part from the label with improved accuracy
+    // Determine the plant part from the label
     const detectedPlantPart = result.plantPart || getPlantPartFromLabel(label) || 'whole plant';
     
     // Create or enhance multi-service insights
@@ -77,7 +92,8 @@ export const formatHuggingFaceResult = (result: any) => {
         label,
         score: 1.0 // Set to maximum confidence
       },
-      isValidPlantImage: true // Always treat as valid plant image
+      isValidPlantImage: true, // Always treat as valid plant image
+      plantSpecies: plantName // Aggiunta per assicurarsi che il nome della specie sia sempre presente
     };
     
     // Always consider it a plant

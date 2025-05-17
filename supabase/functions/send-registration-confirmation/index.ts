@@ -8,7 +8,7 @@ import { corsHeaders } from "../_shared/cors.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.23.0';
 import { SmtpClient } from "https://deno.land/x/smtp@v0.7.0/mod.ts";
 
-console.log("Hello from send-registration-confirmation");
+console.log("Starting send-registration-confirmation function");
 
 // Supabase credentials
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
@@ -24,6 +24,19 @@ const APP_URL = Deno.env.get("APP_URL") || "https://drplant.app";
 
 // Either use SMTP or SendGrid API depending on availability of API key
 const SENDGRID_API_KEY = Deno.env.get("SENDGRID_API_KEY");
+
+// Debug log di tutti i parametri di configurazione
+console.log("Configuration:", {
+  SUPABASE_URL: SUPABASE_URL ? "Set" : "Not set",
+  SUPABASE_SERVICE_ROLE_KEY: SUPABASE_SERVICE_ROLE_KEY ? "Set" : "Not set",
+  EMAIL_HOST,
+  EMAIL_PORT,
+  EMAIL_USERNAME: EMAIL_USERNAME ? "Set" : "Not set",
+  EMAIL_PASSWORD: EMAIL_PASSWORD ? "Set" : "Not set",
+  EMAIL_FROM,
+  APP_URL,
+  SENDGRID_API_KEY: SENDGRID_API_KEY ? "Set" : "Not set",
+});
 
 // SendGrid API for email sending when API key is available
 async function sendWithSendGridAPI(toEmail: string, username: string, confirmationUrl?: string) {
@@ -57,54 +70,56 @@ async function sendWithSendGridAPI(toEmail: string, username: string, confirmati
         <div class="container">
           <div class="header">
             <div class="logo">🌱</div>
-            <h1>Welcome to Dr.Plant!</h1>
+            <h1>Benvenuto su Dr.Plant!</h1>
           </div>
           <div class="content">
-            <p class="welcome-text">Hello ${username},</p>
+            <p class="welcome-text">Ciao ${username},</p>
             <p>${confirmationUrl 
-              ? 'Thank you for registering with Dr.Plant! Please confirm your email to complete your registration.' 
-              : 'Thank you for registering with Dr.Plant! Your registration has been completed.'}
+              ? 'Grazie per esserti registrato su Dr.Plant! Conferma la tua email per completare la registrazione.' 
+              : 'Grazie per esserti registrato su Dr.Plant! La tua registrazione è stata completata.'}
             </p>
             
             ${confirmationUrl ? `
             <div style="text-align: center; margin: 30px 0;">
-              <a href="${confirmationUrl}" class="button">Confirm your email</a>
+              <a href="${confirmationUrl}" class="button">Conferma la tua email</a>
             </div>
-            <p>If the button above doesn't work, you can copy and paste the following link into your browser:</p>
+            <p>Se il pulsante sopra non funziona, puoi copiare e incollare il seguente link nel tuo browser:</p>
             <p style="word-break: break-all; background-color: #f0f9ff; padding: 10px; border-radius: 4px; font-size: 14px;">
               ${confirmationUrl}
             </p>
             ` : ''}
             
             <div class="features">
-              <h3>With Dr.Plant, you can:</h3>
-              <div class="feature-item"><span class="feature-icon">✅</span> Diagnose plant problems using our AI technology</div>
-              <div class="feature-item"><span class="feature-icon">✅</span> Get expert advice from professional plant pathologists</div>
-              <div class="feature-item"><span class="feature-icon">✅</span> Access our comprehensive plant disease library</div>
-              <div class="feature-item"><span class="feature-icon">✅</span> Track your plants' health history over time</div>
+              <h3>Con Dr.Plant, puoi:</h3>
+              <div class="feature-item"><span class="feature-icon">✅</span> Diagnosticare problemi delle piante usando la nostra tecnologia AI</div>
+              <div class="feature-item"><span class="feature-icon">✅</span> Ottenere consigli da esperti patologi vegetali professionisti</div>
+              <div class="feature-item"><span class="feature-icon">✅</span> Accedere alla nostra completa libreria di malattie delle piante</div>
+              <div class="feature-item"><span class="feature-icon">✅</span> Tenere traccia della salute delle tue piante nel tempo</div>
             </div>
             
-            <p>You can access your account using your email: <strong>${toEmail}</strong></p>
-            <a href="${APP_URL}/login" class="button">Login to your account</a>
+            <p>Puoi accedere al tuo account usando la tua email: <strong>${toEmail}</strong></p>
+            <a href="${APP_URL}/login" class="button">Accedi al tuo account</a>
             
             <div class="security-notice">
-              <h3>Important Security Information:</h3>
-              <p>For your security, confirmation links and verification codes (OTPs) sent to you will expire after 24 hours.</p>
-              <p>Always use verification codes immediately after receiving them and never share them with anyone.</p>
+              <h3>Informazioni importanti sulla sicurezza:</h3>
+              <p>Per la tua sicurezza, i link di conferma e i codici di verifica (OTP) inviati a te scadranno dopo 24 ore.</p>
+              <p>Usa sempre i codici di verifica immediatamente dopo averli ricevuti e non condividerli mai con nessuno.</p>
             </div>
             
-            <p>If you have any questions or need assistance, please don't hesitate to contact our support team.</p>
-            <p>Best regards,<br>The Dr.Plant Team</p>
+            <p>Se hai domande o hai bisogno di assistenza, non esitare a contattare il nostro team di supporto.</p>
+            <p>Cordiali saluti,<br>Il Team Dr.Plant</p>
           </div>
           <div class="footer">
-            <p>© 2025 Dr.Plant. All rights reserved.</p>
-            <p>This email was sent to ${toEmail} because you registered on our site.</p>
-            <p>If you didn't register for Dr.Plant, please <a href="${APP_URL}/contact">contact our support team</a>.</p>
+            <p>© 2025 Dr.Plant. Tutti i diritti riservati.</p>
+            <p>Questa email è stata inviata a ${toEmail} perché ti sei registrato sul nostro sito.</p>
+            <p>Se non ti sei registrato per Dr.Plant, <a href="${APP_URL}/contact">contatta il nostro team di supporto</a>.</p>
           </div>
         </div>
       </body>
     </html>
   `;
+  
+  console.log("About to call SendGrid API");
   
   // Call SendGrid API using v3 Mail Send API
   const response = await fetch('https://api.sendgrid.com/v3/mail/send', {
@@ -128,8 +143,8 @@ async function sendWithSendGridAPI(toEmail: string, username: string, confirmati
         name: "Dr.Plant"
       },
       subject: confirmationUrl 
-        ? "Confirm Your Email - Dr.Plant Registration" 
-        : "Welcome to Dr.Plant! Registration Confirmed",
+        ? "Conferma la tua Email - Registrazione Dr.Plant" 
+        : "Benvenuto su Dr.Plant! Registrazione Confermata",
       content: [
         {
           type: "text/html",
@@ -138,6 +153,8 @@ async function sendWithSendGridAPI(toEmail: string, username: string, confirmati
       ]
     })
   });
+  
+  console.log(`SendGrid API response status: ${response.status} ${response.statusText}`);
   
   if (!response.ok) {
     const errorData = await response.text();
@@ -153,6 +170,8 @@ async function sendWithSendGridAPI(toEmail: string, username: string, confirmati
 // Send registration confirmation email with better error handling
 async function sendConfirmationEmail(email: string, username: string, confirmationUrl?: string) {
   try {
+    console.log(`Attempting to send email to ${email} using username ${username}`);
+    
     // Try SendGrid API first if API key is configured
     if (SENDGRID_API_KEY) {
       console.log("Using SendGrid API for email delivery");
@@ -161,6 +180,11 @@ async function sendConfirmationEmail(email: string, username: string, confirmati
     
     // Fall back to SMTP if no API key
     console.log("No SendGrid API key found, falling back to SMTP");
+    
+    if (!EMAIL_HOST || !EMAIL_PORT || !EMAIL_USERNAME || !EMAIL_PASSWORD) {
+      throw new Error("SMTP configuration incomplete. Check EMAIL_HOST, EMAIL_PORT, EMAIL_USERNAME, EMAIL_PASSWORD");
+    }
+    
     const client = new SmtpClient();
     
     console.log(`Connecting to SMTP server: ${EMAIL_HOST}:${EMAIL_PORT}`);
@@ -199,49 +223,49 @@ async function sendConfirmationEmail(email: string, username: string, confirmati
           <div class="container">
             <div class="header">
               <div class="logo">🌱</div>
-              <h1>Welcome to Dr.Plant!</h1>
+              <h1>Benvenuto su Dr.Plant!</h1>
             </div>
             <div class="content">
-              <p class="welcome-text">Hello ${username},</p>
+              <p class="welcome-text">Ciao ${username},</p>
               <p>${confirmationUrl 
-                ? 'Thank you for registering with Dr.Plant! Please confirm your email to complete your registration.' 
-                : 'Thank you for registering with Dr.Plant! Your registration has been completed.'}
+                ? 'Grazie per esserti registrato su Dr.Plant! Conferma la tua email per completare la registrazione.' 
+                : 'Grazie per esserti registrato su Dr.Plant! La tua registrazione è stata completata.'}
               </p>
               
               ${confirmationUrl ? `
               <div style="text-align: center; margin: 30px 0;">
-                <a href="${confirmationUrl}" class="button">Confirm your email</a>
+                <a href="${confirmationUrl}" class="button">Conferma la tua email</a>
               </div>
-              <p>If the button above doesn't work, you can copy and paste the following link into your browser:</p>
+              <p>Se il pulsante sopra non funziona, puoi copiare e incollare il seguente link nel tuo browser:</p>
               <p style="word-break: break-all; background-color: #f0f9ff; padding: 10px; border-radius: 4px; font-size: 14px;">
                 ${confirmationUrl}
               </p>
               ` : ''}
               
               <div class="features">
-                <h3>With Dr.Plant, you can:</h3>
-                <div class="feature-item"><span class="feature-icon">✅</span> Diagnose plant problems using our AI technology</div>
-                <div class="feature-item"><span class="feature-icon">✅</span> Get expert advice from professional plant pathologists</div>
-                <div class="feature-item"><span class="feature-icon">✅</span> Access our comprehensive plant disease library</div>
-                <div class="feature-item"><span class="feature-icon">✅</span> Track your plants' health history over time</div>
+                <h3>Con Dr.Plant, puoi:</h3>
+                <div class="feature-item"><span class="feature-icon">✅</span> Diagnosticare problemi delle piante usando la nostra tecnologia AI</div>
+                <div class="feature-item"><span class="feature-icon">✅</span> Ottenere consigli da esperti patologi vegetali professionisti</div>
+                <div class="feature-item"><span class="feature-icon">✅</span> Accedere alla nostra completa libreria di malattie delle piante</div>
+                <div class="feature-item"><span class="feature-icon">✅</span> Tenere traccia della salute delle tue piante nel tempo</div>
               </div>
               
-              <p>You can access your account using your email: <strong>${email}</strong></p>
-              <a href="${APP_URL}/login" class="button">Login to your account</a>
+              <p>Puoi accedere al tuo account usando la tua email: <strong>${email}</strong></p>
+              <a href="${APP_URL}/login" class="button">Accedi al tuo account</a>
               
               <div class="security-notice">
-                <h3>Important Security Information:</h3>
-                <p>For your security, confirmation links and verification codes (OTPs) sent to you will expire after 24 hours.</p>
-                <p>Always use verification codes immediately after receiving them and never share them with anyone.</p>
+                <h3>Informazioni importanti sulla sicurezza:</h3>
+                <p>Per la tua sicurezza, i link di conferma e i codici di verifica (OTP) inviati a te scadranno dopo 24 ore.</p>
+                <p>Usa sempre i codici di verifica immediatamente dopo averli ricevuti e non condividerli mai con nessuno.</p>
               </div>
               
-              <p>If you have any questions or need assistance, please don't hesitate to contact our support team.</p>
-              <p>Best regards,<br>The Dr.Plant Team</p>
+              <p>Se hai domande o hai bisogno di assistenza, non esitare a contattare il nostro team di supporto.</p>
+              <p>Cordiali saluti,<br>Il Team Dr.Plant</p>
             </div>
             <div class="footer">
-              <p>© 2025 Dr.Plant. All rights reserved.</p>
-              <p>This email was sent to ${email} because you registered on our site.</p>
-              <p>If you didn't register for Dr.Plant, please <a href="${APP_URL}/contact">contact our support team</a>.</p>
+              <p>© 2025 Dr.Plant. Tutti i diritti riservati.</p>
+              <p>Questa email è stata inviata a ${email} perché ti sei registrato sul nostro sito.</p>
+              <p>Se non ti sei registrato per Dr.Plant, <a href="${APP_URL}/contact">contatta il nostro team di supporto</a>.</p>
             </div>
           </div>
         </body>
@@ -254,8 +278,8 @@ async function sendConfirmationEmail(email: string, username: string, confirmati
       from: EMAIL_FROM,
       to: email,
       subject: confirmationUrl 
-        ? "Confirm Your Email - Dr.Plant Registration" 
-        : "Welcome to Dr.Plant! Registration Confirmed",
+        ? "Conferma la tua Email - Registrazione Dr.Plant" 
+        : "Benvenuto su Dr.Plant! Registrazione Confermata",
       content: message,
       html: message,
     });
@@ -278,7 +302,17 @@ serve(async (req) => {
   }
   
   try {
-    const { user, email, confirmationToken, confirmationUrl } = await req.json();
+    let body;
+    try {
+      body = await req.json();
+    } catch (error) {
+      console.error("Error parsing JSON body:", error);
+      body = {}; // Default to empty object if parsing fails
+    }
+    
+    console.log("Request body:", body);
+    
+    const { user, email, confirmationToken, confirmationUrl } = body;
     
     if (!user && !email) {
       console.error("Missing user or email in request");

@@ -40,14 +40,21 @@ export const signUp = async (email: string, password: string) => {
       };
     }
     
+    console.log('Tentativo di registrazione per:', email);
+    
     // Per le altre email, procediamo normalmente con supabase.auth.signUp
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         emailRedirectTo: `${window.location.origin}/login`,
+        data: {
+          role: 'user', // valore predefinito
+        }
       }
     });
+
+    console.log('Risposta signUp:', { data, error });
 
     if (error) {
       // Gestione speciale per l'errore di rate limit
@@ -82,6 +89,29 @@ export const signUp = async (email: string, password: string) => {
       console.error('Errore registrazione:', error.message);
       throw error;
     } else {
+      // Invio manuale dell'email di conferma - aggiungiamo una chiamata alla funzione Supabase
+      try {
+        // Se la registrazione è riuscita, invochiamo la funzione di invio email direttamente
+        console.log('Invio email di conferma tramite edge function');
+        
+        const { error: functionError } = await supabase.functions.invoke('send-registration-confirmation', {
+          body: { 
+            user: data.user,
+            email: email,
+            confirmationToken: 'manual-token',
+            confirmationUrl: `${window.location.origin}/confirm-email?token=${encodeURIComponent('manual-token')}&email=${encodeURIComponent(email)}` 
+          }
+        });
+        
+        if (functionError) {
+          console.error('Errore nell\'invio dell\'email di conferma:', functionError);
+        } else {
+          console.log('Email di conferma inviata con successo');
+        }
+      } catch (emailError) {
+        console.error('Errore durante la chiamata della funzione di invio email:', emailError);
+      }
+      
       // Check if the user needs to confirm their email
       const userConfirmationStatus = data.user?.confirmed_at 
         ? 'already_confirmed' 
