@@ -32,10 +32,10 @@ const CameraControls: React.FC<CameraControlsProps> = ({
       <Button
         variant="outline"
         size="lg"
-        className="rounded-full border-2 border-white bg-transparent hover:bg-white hover:bg-opacity-20"
+        className="rounded-full w-16 h-16 border-4 border-white bg-transparent hover:bg-white hover:bg-opacity-20"
         onClick={onCapture}
       >
-        <Camera className="h-8 w-8 text-white" />
+        <span className="sr-only">Take photo</span>
       </Button>
 
       {isMobile && canFlipCamera && onFlipCamera && (

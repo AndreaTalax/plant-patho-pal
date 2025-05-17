@@ -60,8 +60,6 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
       console.error("Camera error:", err);
       setCameraError(err instanceof Error ? err.message : "Failed to access camera");
       setCameraLoading(false);
-      console.log("Errore con la fotocamera: " + 
-        (err instanceof Error ? err.message : "Accesso alla fotocamera fallito"));
     }
   };
 
@@ -82,11 +80,9 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
         // Convert the canvas to a data URL and pass it to the parent
         try {
           const imageDataUrl = canvas.toDataURL('image/jpeg', 0.9);
-          console.log("Immagine catturata con successo!");
           onCapture(imageDataUrl);
         } catch (err) {
           console.error("Error capturing image:", err);
-          console.log("Errore nel catturare l'immagine");
         }
       }
     }
@@ -102,7 +98,7 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
         <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-70 z-10">
           <div className="text-center text-white">
             <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" />
-            <p>Attivazione fotocamera...</p>
+            <p>Activating camera...</p>
           </div>
         </div>
       )}
@@ -110,10 +106,10 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
       {cameraError && (
         <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-70 z-10">
           <div className="bg-white p-4 rounded-lg max-w-xs w-full">
-            <h3 className="font-bold text-lg mb-2">Errore Fotocamera</h3>
+            <h3 className="font-bold text-lg mb-2">Camera Error</h3>
             <p className="text-red-500">{cameraError}</p>
-            <p className="mt-2 text-sm">Assicurati di aver concesso i permessi per la fotocamera. Puoi anche provare a caricare un'immagine invece.</p>
-            <Button className="w-full mt-4" onClick={onCancel}>Chiudi</Button>
+            <p className="mt-2 text-sm">Please ensure you've granted camera permissions. You can also try uploading an image instead.</p>
+            <Button className="w-full mt-4" onClick={onCancel}>Close</Button>
           </div>
         </div>
       )}
@@ -125,7 +121,7 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
         muted
         className="w-full h-full object-cover"
         onError={() => {
-          setCameraError("Errore nel caricamento della fotocamera");
+          setCameraError("Error loading camera");
           setCameraLoading(false);
         }}
       />

@@ -9,7 +9,7 @@ export interface PlantInfoCardProps {
 }
 
 const PlantInfoCard: React.FC<PlantInfoCardProps> = ({ plantInfo, analysisDetails }) => {
-  const plantName = analysisDetails?.multiServiceInsights?.plantName || plantInfo?.name || 'Unknown Plant';
+  const plantName = analysisDetails?.multiServiceInsights?.plantName || 'Unknown Plant';
   
   return (
     <Card className="mb-4">
@@ -25,6 +25,12 @@ const PlantInfoCard: React.FC<PlantInfoCardProps> = ({ plantInfo, analysisDetail
               
               <div>Watering frequency:</div>
               <div>{plantInfo.wateringFrequency || 'Not specified'} times/week</div>
+              
+              <div>Species:</div>
+              <div>{analysisDetails?.multiServiceInsights?.plantSpecies || 'Unknown'}</div>
+              
+              <div>Plant part:</div>
+              <div>{analysisDetails?.multiServiceInsights?.plantPart || 'Whole plant'}</div>
             </div>
           )}
         </div>

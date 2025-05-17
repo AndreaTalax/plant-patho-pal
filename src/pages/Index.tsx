@@ -14,7 +14,7 @@ type TabName = 'diagnose' | 'chat' | 'shop' | 'library' | 'profile';
 const Index = () => {
   const { isMasterAccount } = useAuth();
   const [activeTab, setActiveTab] = useState<TabName>(isMasterAccount ? 'chat' : 'diagnose');
-
+  
   // Reset active tab if user role changes (e.g., after login)
   useEffect(() => {
     if (isMasterAccount && activeTab === 'diagnose') {
