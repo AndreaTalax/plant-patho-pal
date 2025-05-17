@@ -1,408 +1,234 @@
-import { createContext, useContext, useState, ReactNode, useEffect } from "react";
-import { supabase, EXPERT_ID } from '@/integrations/supabase/client';
-import { Session, User } from "@supabase/supabase-js";
-import { signIn, signOut, signUp } from '@/integrations/supabase/auth';
 
-// Define type for user profile
-type UserProfile = {
-  username: string;
-  firstName: string;
-  lastName: string;
+// Update the AuthContext with additional user profile fields
+import React, { createContext, useState, useContext, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { User } from '@supabase/supabase-js';
+
+interface UserProfile {
+  id?: string;
   email: string;
-  phone: string;
-  address: string;
-  role: "user" | "master"; // Limited to these specific values
-};
+  firstName?: string;
+  lastName?: string;
+  birthDate?: string;
+  birthPlace?: string;
+  hasCompletedProfile?: boolean;
+  subscriptionPlan?: 'free' | 'premium';
+}
 
-type AuthContextType = {
-  isAuthenticated: boolean;
-  username: string;
+interface AuthContextType {
+  user: User | null;
   userProfile: UserProfile;
-  login: (email: string, password: string) => Promise<void>;
-  logout: () => void;
-  register: (email: string, password: string) => Promise<any>;
-  updateUsername: (newUsername: string) => void;
-  updatePassword: (newPassword: string) => void;
-  updateProfile: (field: keyof UserProfile, value: string) => void;
+  isAuthenticated: boolean;
   isProfileComplete: boolean;
   isMasterAccount: boolean;
-};
+  login: (email: string, password: string) => Promise<void>;
+  register: (email: string, password: string) => Promise<any>;
+  logout: () => Promise<void>;
+  updateProfile: (field: string, value: any) => void;
+}
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const AuthContext = createContext<AuthContextType>({
+  user: null,
+  userProfile: { email: '' },
+  isAuthenticated: false,
+  isProfileComplete: false,
+  isMasterAccount: false,
+  login: async () => {},
+  register: async () => {},
+  logout: async () => {},
+  updateProfile: () => {},
+});
 
-// Mock user data for development when Supabase is not configured
-const MOCK_USERS = [
-  {
-    email: "test@test.com",
-    password: "test123",
-    role: "user" as const
-  },
-  {
-    email: "test@gmail.com", // Added test user
-    password: "test123",
-    role: "user" as const
-  },
-  {
-    email: "talaiaandrea@gmail.com",
-    password: "ciao5",
-    role: "user" as const
-  },
-  {
-    email: "agrotecnicomarconigro@gmail.com",
-    password: "marconigro93",
-    role: "master" as const
-  }
-];
+export const useAuth = () => useContext(AuthContext);
 
-export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [username, setUsername] = useState("");
+export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
-  
-  const [userProfile, setUserProfile] = useState<UserProfile>({
-    username: "",
-    firstName: "",
-    lastName: "",
-    email: "",
-    phone: "",
-    address: "",
-    role: "user" as const
-  });
-  
+  const [userProfile, setUserProfile] = useState<UserProfile>({ email: '' });
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isProfileComplete, setIsProfileComplete] = useState(false);
   const [isMasterAccount, setIsMasterAccount] = useState(false);
-  
-  // Check for active session on load
+  const [loading, setLoading] = useState(true);
+
+  // Check if the user is already logged in
   useEffect(() => {
-    // Set up auth state listener FIRST
+    const fetchUser = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          setUser(user);
+          setUserProfile({
+            email: user.email || '',
+            id: user.id
+          });
+          setIsAuthenticated(true);
+          
+          // Check if this is the master account
+          setIsMasterAccount(user.email === 'expert@plantpathopal.com');
+          
+          // Fetch user profile data
+          const { data, error } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', user.id)
+            .single();
+            
+          if (data && !error) {
+            setUserProfile({
+              id: user.id,
+              email: user.email || '',
+              firstName: data.first_name,
+              lastName: data.last_name,
+              birthDate: data.birth_date,
+              birthPlace: data.birth_place,
+              hasCompletedProfile: !!(data.first_name && data.last_name && data.birth_date && data.birth_place),
+              subscriptionPlan: data.subscription_plan || 'free'
+            });
+            
+            setIsProfileComplete(!!(data.first_name && data.last_name && data.birth_date && data.birth_place));
+          } else {
+            // No profile data yet
+            setIsProfileComplete(false);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching user:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUser();
+
+    // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        setIsAuthenticated(!!session);
-        
-        if (session?.user) {
-          // Initialize user profile with data from session
-          const email = session.user.email || '';
-          const usernameFromEmail = email.split('@')[0];
+      async (event, session) => {
+        if (event === 'SIGNED_IN' && session?.user) {
+          setUser(session.user);
+          setUserProfile({
+            email: session.user.email || '',
+            id: session.user.id
+          });
+          setIsAuthenticated(true);
           
-          setUsername(usernameFromEmail);
-          setUserProfile(prev => ({ 
-            ...prev,
-            username: usernameFromEmail,
-            email: email
-          }));
+          // Check if this is the master account
+          setIsMasterAccount(session.user.email === 'expert@plantpathopal.com');
           
-          // Fetch user profile from database
-          setTimeout(() => {
-            fetchUserProfile(session.user.id);
-          }, 0);
+          // Fetch user profile data after sign in
+          const { data, error } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', session.user.id)
+            .single();
+            
+          if (data && !error) {
+            setUserProfile({
+              id: session.user.id,
+              email: session.user.email || '',
+              firstName: data.first_name,
+              lastName: data.last_name,
+              birthDate: data.birth_date,
+              birthPlace: data.birth_place,
+              hasCompletedProfile: !!(data.first_name && data.last_name && data.birth_date && data.birth_place),
+              subscriptionPlan: data.subscription_plan || 'free'
+            });
+            
+            setIsProfileComplete(!!(data.first_name && data.last_name && data.birth_date && data.birth_place));
+          } else {
+            // No profile data yet
+            setIsProfileComplete(false);
+          }
+        } else if (event === 'SIGNED_OUT') {
+          setUser(null);
+          setUserProfile({ email: '' });
+          setIsAuthenticated(false);
+          setIsMasterAccount(false);
+          setIsProfileComplete(false);
         }
       }
     );
-    
-    // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setIsAuthenticated(!!session);
-      
-      if (session?.user) {
-        // Initialize user profile with data from session
-        const email = session.user.email || '';
-        const usernameFromEmail = email.split('@')[0];
-        
-        setUsername(usernameFromEmail);
-        setUserProfile(prev => ({ 
-          ...prev,
-          username: usernameFromEmail,
-          email: email
-        }));
-        
-        // Fetch user profile from database
-        fetchUserProfile(session.user.id);
-      }
-    });
-    
+
     return () => {
       subscription.unsubscribe();
     };
   }, []);
-  
-  // Simplified profile fetching to avoid type recursion
-  const fetchUserProfile = async (userId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
-        
-      if (error) {
-        throw error;
-      }
-      
-      if (data) {
-        // Use explicit type casting to avoid deep recursion
-        const username = (data as any).username || (data as any).email?.split('@')[0] || '';
-        
-        setUsername(username);
-        setUserProfile({
-          username: username,
-          firstName: (data as any).first_name || '',
-          lastName: (data as any).last_name || '',
-          email: (data as any).email || user?.email || '',
-          phone: (data as any).phone || '',
-          address: (data as any).address || '',
-          role: ((data as any).role as "user" | "master") || 'user'
-        });
-        
-        setIsProfileComplete(!!(data as any).first_name && !!(data as any).last_name);
-        setIsMasterAccount((data as any).role === "master");
-      }
-    } catch (error) {
-      console.error('Error fetching user profile:', error);
-    }
-  };
-
-  useEffect(() => {
-    setIsProfileComplete(!!userProfile.firstName && !!userProfile.lastName);
-    setIsMasterAccount(userProfile.role === "master");
-  }, [userProfile.firstName, userProfile.lastName, userProfile.role]);
 
   const login = async (email: string, password: string) => {
-    try {
-      console.log("Attempting login with:", email);
-      
-      const data = await signIn(email, password);
-      
-      if (data && data.user) {
-        // Set authenticated state
-        setIsAuthenticated(true);
-        setUser(data.user);
-        
-        if (data.session) {
-          setSession(data.session);
-        }
-        
-        // Set up user profile
-        const usernameFromEmail = email.split('@')[0];
-        setUsername(usernameFromEmail);
-        
-        // Set initial profile data
-        setUserProfile(prev => ({ 
-          ...prev,
-          username: usernameFromEmail,
-          email: email,
-          role: email === "agrotecnicomarconigro@gmail.com" ? "master" : "user"
-        }));
-        
-        if (data.user.id) {
-          setTimeout(() => {
-            fetchUserProfile(data.user!.id);
-          }, 0);
-        }
-      }
-      
-      return Promise.resolve();
-    } catch (error) {
-      console.error('Login error:', error);
-      throw error;
-    }
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) throw error;
+  };
+
+  const register = async (email: string, password: string) => {
+    const { data, error } = await supabase.auth.signUp({ email, password });
+    if (error) throw error;
+    return data;
   };
 
   const logout = async () => {
-    await signOut();
-    setIsAuthenticated(false);
-    setUsername("");
-    setUser(null);
-    setSession(null);
-    setUserProfile({
-      username: "",
-      firstName: "",
-      lastName: "",
-      email: "",
-      phone: "",
-      address: "",
-      role: "user" as const
-    });
+    const { error } = await supabase.auth.signOut();
+    if (error) throw error;
   };
-  
-  const register = async (email: string, password: string) => {
+
+  const updateProfile = async (field: string, value: any) => {
+    if (!user) return;
+    
     try {
-      // First check if password meets Supabase minimum requirement
-      if (password.length < 6) {
-        throw new Error("weak_password: Password should be at least 6 characters.");
-      }
+      // Update local state
+      setUserProfile(prev => ({ ...prev, [field]: value }));
       
-      // Use our custom signUp function
-      const result = await signUp(email, password);
+      // Map field names to database column names
+      const fieldMapping: Record<string, string> = {
+        firstName: 'first_name',
+        lastName: 'last_name',
+        birthDate: 'birth_date',
+        birthPlace: 'birth_place',
+        hasCompletedProfile: 'has_completed_profile'
+      };
       
-      console.log("Registration response:", result);
+      const dbField = fieldMapping[field] || field;
       
-      // If registration was successful with a mocked account, log in immediately
-      if (result && !result.confirmationRequired && result.data?.user) {
-        setIsAuthenticated(true);
-        setUser(result.data.user as User);
-        
-        // Set up basic profile
-        const usernameFromEmail = email.split('@')[0];
-        setUsername(usernameFromEmail);
-        
-        // For pre-configured accounts, set up complete profiles
-        if (email === "talaiaandrea@gmail.com") {
-          setUserProfile({
-            username: "talaia",
-            firstName: "Andrea",
-            lastName: "Talaia",
-            email: email,
-            phone: "",
-            address: "",
-            role: "user"
-          });
-          setIsProfileComplete(true);
-        } else if (email === "agrotecnicomarconigro@gmail.com") {
-          setUserProfile({
-            username: "marconigro",
-            firstName: "Marco",
-            lastName: "Nigro",
-            email: email,
-            phone: "+39 123 456 7890",
-            address: "Via Roma 123, Milan, Italy",
-            role: "master"
-          });
-          setIsProfileComplete(true);
-          setIsMasterAccount(true);
-        } else if (email === "test@gmail.com") {
-          setUserProfile({
-            username: "testuser",
-            firstName: "Test",
-            lastName: "User",
-            email: email,
-            phone: "",
-            address: "",
-            role: "user"
-          });
-          setIsProfileComplete(true);
-        } else {
-          setUserProfile({
-            username: usernameFromEmail,
-            firstName: "",
-            lastName: "",
-            email: email,
-            phone: "",
-            address: "",
-            role: "user"
-          });
-        }
-      }
-      
-      return result;
-    } catch (error: any) {
-      console.error('Registration error:', error);
-      throw error;
-    }
-  };
-  
-  const updateUsername = (newUsername: string) => {
-    if (newUsername && user) {
-      setUsername(newUsername);
-      setUserProfile(prev => ({ ...prev, username: newUsername }));
-      
-      supabase
+      // Update in database
+      const { error } = await supabase
         .from('profiles')
-        .update({ username: newUsername })
-        .eq('id', user.id)
-        .then(({ error }) => {
-          if (error) {
-            console.error('Error updating username:', error);
-          }
-        });
-    }
-  };
-  
-  const updatePassword = async (newPassword: string) => {
-    try {
-      const { error } = await supabase.auth.updateUser({
-        password: newPassword
-      });
-      
+        .update({ [dbField]: value })
+        .eq('id', user.id);
+        
       if (error) {
+        console.error('Error updating profile:', error);
         throw error;
       }
       
-      console.log("Password updated successfully");
+      // Update profile completeness status
+      if (field === 'firstName' || field === 'lastName' || field === 'birthDate' || field === 'birthPlace') {
+        const isComplete = !!(
+          userProfile.firstName || (field === 'firstName' && value),
+          userProfile.lastName || (field === 'lastName' && value),
+          userProfile.birthDate || (field === 'birthDate' && value),
+          userProfile.birthPlace || (field === 'birthPlace' && value)
+        );
+        
+        setIsProfileComplete(isComplete);
+      }
     } catch (error) {
-      console.error("Error updating password:", error);
+      console.error('Error in updateProfile:', error);
       throw error;
     }
   };
-  
-  const updateProfile = async (field: keyof UserProfile, value: string) => {
-    if (field === 'role' && value !== 'user' && value !== 'master') {
-      console.error('Invalid role value. Must be "user" or "master"');
-      return;
-    }
-    
-    setUserProfile(prev => ({ 
-      ...prev, 
-      [field]: field === 'role' ? (value as "user" | "master") : value 
-    }));
-    
-    // If user is authenticated, update the profile in the database
-    if (user) {
-      try {
-        const updates: Record<string, any> = {};
-        
-        // Map UserProfile fields to database fields
-        if (field === 'firstName') updates['first_name'] = value;
-        else if (field === 'lastName') updates['last_name'] = value;
-        else if (field === 'username') updates['username'] = value;
-        else if (field === 'email') updates['email'] = value;
-        else if (field === 'phone') updates['phone'] = value;
-        else if (field === 'address') updates['address'] = value;
-        else if (field === 'role') updates['role'] = value;
-        
-        const { error } = await supabase
-          .from('profiles')
-          .update(updates)
-          .eq('id', user.id);
-          
-        if (error) {
-          throw error;
-        }
-      } catch (error) {
-        console.error('Error updating profile:', error);
-      }
-    }
+
+  const value = {
+    user,
+    userProfile,
+    isAuthenticated,
+    isProfileComplete,
+    isMasterAccount,
+    login,
+    register,
+    logout,
+    updateProfile,
   };
 
   return (
-    <AuthContext.Provider 
-      value={{ 
-        isAuthenticated, 
-        username, 
-        userProfile,
-        login, 
-        logout, 
-        register,
-        updateUsername, 
-        updatePassword,
-        updateProfile,
-        isProfileComplete,
-        isMasterAccount
-      }}
-    >
-      {children}
+    <AuthContext.Provider value={value}>
+      {!loading && children}
     </AuthContext.Provider>
   );
-};
-
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error("useAuth must be used within an AuthProvider");
-  }
-  return context;
 };

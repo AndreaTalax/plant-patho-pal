@@ -4,8 +4,8 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { useToast } from "@/hooks/use-toast"; // Updated import path
-import { User } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { User, Calendar, MapPin } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { 
   Form,
@@ -22,6 +22,8 @@ import * as z from "zod";
 const profileSchema = z.object({
   firstName: z.string().min(1, { message: "Il nome è obbligatorio" }),
   lastName: z.string().min(1, { message: "Il cognome è obbligatorio" }),
+  birthDate: z.string().min(1, { message: "La data di nascita è obbligatoria" }),
+  birthPlace: z.string().min(1, { message: "Il luogo di nascita è obbligatorio" }),
 });
 
 type ProfileFormValues = z.infer<typeof profileSchema>;
@@ -37,6 +39,8 @@ const CompleteProfile = () => {
     defaultValues: {
       firstName: userProfile.firstName || "",
       lastName: userProfile.lastName || "",
+      birthDate: userProfile.birthDate || "",
+      birthPlace: userProfile.birthPlace || "",
     },
   });
 
@@ -46,6 +50,9 @@ const CompleteProfile = () => {
     try {
       updateProfile("firstName", values.firstName);
       updateProfile("lastName", values.lastName);
+      updateProfile("birthDate", values.birthDate);
+      updateProfile("birthPlace", values.birthPlace);
+      updateProfile("hasCompletedProfile", true);
       
       toast({
         title: "Profilo completato",
@@ -107,6 +114,45 @@ const CompleteProfile = () => {
                       <FormLabel>Cognome</FormLabel>
                       <FormControl>
                         <Input {...field} placeholder="Inserisci il tuo cognome" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="birthDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Data di nascita</FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <Input 
+                            {...field} 
+                            type="date" 
+                            placeholder="Seleziona la data di nascita"
+                          />
+                          <Calendar className="absolute right-3 top-3 h-4 w-4 text-gray-400 pointer-events-none" />
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="birthPlace"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Luogo di nascita</FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <Input 
+                            {...field} 
+                            placeholder="Inserisci il luogo di nascita" 
+                          />
+                          <MapPin className="absolute right-3 top-3 h-4 w-4 text-gray-400 pointer-events-none" />
+                        </div>
                       </FormControl>
                       <FormMessage />
                     </FormItem>

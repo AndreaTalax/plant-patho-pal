@@ -91,4 +91,20 @@ export interface AnalysisDetails {
   sistemaDigitaleFoglia?: boolean;
   analysisTechnology?: string;
   recommendedAdditionalTests?: string[];
+  symptoms?: string;
+}
+
+export interface UserProfile {
+  firstName: string;
+  lastName: string;
+  birthDate: string;
+  birthPlace: string;
+  email: string;
+  hasCompletedProfile: boolean;
+}
+
+export interface SubscriptionPlan {
+  type: 'free' | 'premium';
+  features: string[];
+  aiDiagnosisEnabled: boolean;
 }
