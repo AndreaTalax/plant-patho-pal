@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,13 +8,21 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { toast } from "sonner";
 import { Leaf, LockKeyhole, Mail } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import { signIn } from "@/integrations/supabase/auth";
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, isAuthenticated } = useAuth();
+
+  // Redirect to home if already authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/', { replace: true });
+    }
+  }, [isAuthenticated, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,17 +43,37 @@ const Login = () => {
     }
 
     try {
-      // Handle all user logins
-      await login(email, password);
-      
-      // Show success message before navigation
-      toast.success("Login successful", {
-        description: "Welcome to your account!",
-        dismissible: true
-      });
-      
-      // Navigate after showing toast
-      navigate("/");
+      // Special case for test@gmail.com
+      if (email.toLowerCase() === "test@gmail.com" && password === "test123") {
+        // Use direct signIn for whitelisted account
+        const authData = await signIn(email, password);
+        
+        if (authData) {
+          // Show success message before navigation
+          toast.success("Login successful", {
+            description: "Welcome to your account!",
+            dismissible: true
+          });
+          
+          // Navigate with slight delay to ensure auth state is updated
+          setTimeout(() => {
+            navigate("/", { replace: true });
+          }, 100);
+          return;
+        }
+      } else {
+        // Handle all other user logins
+        await login(email, password);
+        
+        // Show success message before navigation
+        toast.success("Login successful", {
+          description: "Welcome to your account!",
+          dismissible: true
+        });
+        
+        // Navigate after showing toast
+        navigate("/", { replace: true });
+      }
       
     } catch (error: any) {
       console.error("Login error:", error);
