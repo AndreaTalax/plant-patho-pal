@@ -1,4 +1,3 @@
-
 export interface DiagnosedDisease {
   id: string;
   name: string;
@@ -18,88 +17,76 @@ export interface DiagnosisResultProps {
   onStartNewAnalysis: () => void;
 }
 
-export interface AnalysisDetails {
-  identifiedFeatures: string[];
-  multiServiceInsights?: {
-    huggingFaceResult?: {
-      label: string;
-      score: number;
-    };
-    agreementScore?: number;
-    primaryService?: string;
-    plantSpecies?: string;
-    plantName?: string;
-    plantPart?: string;
-    isHealthy?: boolean;
-    isValidPlantImage?: boolean;
-    isReliable?: boolean;
-    dataSource?: string;
-    eppoRegulated?: {
-      name: string;
-      isQuarantine: boolean;
-      warningLevel: string;
-    } | null;
-    floraIncognitaMatch?: {
-      species: string;
-      genus: string;
-      family: string;
-      score: number;
-      source: string;
-    } | null;
-    plantSnapMatch?: {
-      species: string;
-      genus: string;
-      family: string;
-      score: number;
-      source: string;
-      details?: {
-        common_names?: string[];
-        edible?: boolean;
-        toxic?: boolean;
-      };
-    } | null;
+export interface LeafAnalysisResult {
+  leafArea?: number | null;
+  leafColor?: string | null;
+  patternDetected?: string | null;
+  diseaseConfidence?: number;
+  healthStatus?: 'healthy' | 'diseased' | 'stressed' | 'unknown';
+  leafType?: string | null;
+  details?: Record<string, any>;
+}
+
+export interface MultiServiceInsights {
+  huggingFaceResult?: {
+    label: string;
+    score: number;
   };
-  alternativeDiagnoses: {
+  agreementScore?: number;
+  primaryService?: string;
+  plantSpecies?: string;
+  plantName?: string;
+  plantPart?: string;
+  isHealthy?: boolean;
+  isValidPlantImage?: boolean;
+  isReliable?: boolean;
+  dataSource?: string;
+  detectedPlantType?: string | null;
+  eppoRegulated?: any;
+  floraIncognitaMatch?: any;
+  plantSnapMatch?: any;
+  leafAnalysis?: LeafAnalysisResult;
+  advancedLeafAnalysis?: boolean;
+  leafDiagnosticCapabilities?: string[];
+}
+
+export interface AnalysisDetails {
+  multiServiceInsights?: MultiServiceInsights;
+  identifiedFeatures?: string[];
+  alternativeDiagnoses?: Array<{
     disease: string;
     probability: number;
-  }[];
-  recommendedAdditionalTests?: string[];
-  thermalMap?: string;
+  }>;
   leafVerification?: {
     isLeaf: boolean;
-    leafPercentage?: number;
-    partName?: string;
-    confidence?: number;
-    boundingBox?: {
-      x: number;
-      y: number;
-      width: number;
-      height: number;
-    };
+    partName: string | null;
+    confidence: number | null;
+    boundingBox: any | null;
   };
   plantVerification?: {
     isPlant: boolean;
-    confidence?: number;
-    message?: string;
-    aiServices?: {
+    detectedPlantType?: string | null;
+    aiServices?: Array<{
       serviceName: string;
       result: boolean;
       confidence: number;
-    }[];
+    }>;
     dataSource?: string;
   };
   plantixInsights?: {
-    severity?: string;
-    progressStage?: string;
-    spreadRisk?: string;
-    environmentalFactors?: string[];
-    reliability?: string;
-    confidenceNote?: string;
+    severity: string;
+    progressStage: string;
+    spreadRisk: string;
+    environmentalFactors: string[];
+    reliability: string;
+    confidenceNote: string;
   };
   eppoData?: {
     regulationStatus: string;
     reportAdvised: boolean;
     warningLevel: string;
-    infoLink?: string;
+    infoLink: string;
   } | null;
+  sistemaDigitaleFoglia?: boolean;
+  analysisTechnology?: string;
 }

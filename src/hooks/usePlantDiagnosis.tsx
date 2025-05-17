@@ -58,7 +58,7 @@ export const usePlantDiagnosis = () => {
         setDiagnosisResult(`Rilevato ${randomDisease.name} su ${plantName} con alta confidenza.`);
         
         // Creazione dei dettagli di analisi con il nome della pianta
-        const analysisDetails = {
+        const analysisDetails: AnalysisDetails = {
           multiServiceInsights: {
             huggingFaceResult: {
               label: randomDisease.name,
@@ -72,7 +72,27 @@ export const usePlantDiagnosis = () => {
             isHealthy: false,
             isValidPlantImage: true,
             isReliable: true,
-            dataSource: 'TRY Plant Trait Database'
+            dataSource: 'TRY Plant Trait Database',
+            // Add leaf analysis data for Sistema Digitale Foglia
+            leafAnalysis: {
+              leafColor: 'green',
+              patternDetected: 'leaf spots',
+              diseaseConfidence: 0.95,
+              healthStatus: 'diseased',
+              leafType: 'Compound',
+              details: {
+                symptomDescription: 'Spots with chlorotic halos',
+                symptomCategory: 'fungal disease'
+              }
+            },
+            advancedLeafAnalysis: true,
+            leafDiagnosticCapabilities: [
+              'Pattern recognition',
+              'Chlorosis detection',
+              'Necrosis identification',
+              'Disease progression analysis',
+              'Nutrient deficiency recognition'
+            ]
           },
           identifiedFeatures: [
             "Corrispondenza pattern", 
@@ -83,6 +103,8 @@ export const usePlantDiagnosis = () => {
           alternativeDiagnoses: PLANT_DISEASES.filter(d => d.id !== randomDisease.id)
             .slice(0, 3)
             .map(d => ({ disease: d.id, probability: 0.8 })),
+          sistemaDigitaleFoglia: true,
+          analysisTechnology: 'Sistema Digitale Foglia'
         };
         
         setAnalysisDetails(analysisDetails);
@@ -110,7 +132,14 @@ export const usePlantDiagnosis = () => {
           plantName: plantName,
           plantSpecies: plantName,
           isHealthy: false,
-          isValidPlantImage: true
+          isValidPlantImage: true,
+          // Add emergency leaf analysis data
+          leafAnalysis: {
+            healthStatus: 'unknown',
+            diseaseConfidence: 0.7,
+            leafColor: 'variable'
+          },
+          advancedLeafAnalysis: false
         },
         identifiedFeatures: [
           "Riconoscimento pattern", 
