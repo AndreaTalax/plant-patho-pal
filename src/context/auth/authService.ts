@@ -28,7 +28,8 @@ export const authService = {
       birthPlace: 'birth_place',
       hasCompletedProfile: 'has_completed_profile',
       phone: 'phone',
-      address: 'address'
+      address: 'address',
+      username: 'username' // Ensure username is properly mapped
     };
     
     const dbField = fieldMapping[field] || field;

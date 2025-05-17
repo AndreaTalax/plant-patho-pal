@@ -1,4 +1,3 @@
-
 export interface DiagnosedDisease {
   id: string;
   name: string;
@@ -109,8 +108,9 @@ export interface UserProfile {
   email: string;
   birthDate: string;
   birthPlace: string;
+  username?: string; // Added username property
   hasCompletedProfile?: boolean;
-  subscriptionPlan?: string; // Changed from 'free' | 'premium' to string to accept any value from the database
+  subscriptionPlan?: string;
   phone?: string;
   address?: string;
 }

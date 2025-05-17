@@ -149,6 +149,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       await authService.updateUsername(user.id, username);
       
       // Update local state with the new username
+      // Since username is now part of UserProfile type, this is valid
       const updatedProfile: UserProfile = { ...userProfile, username };
       setUserProfile(updatedProfile);
     } catch (error) {

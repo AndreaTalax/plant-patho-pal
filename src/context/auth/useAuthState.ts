@@ -62,6 +62,7 @@ export const useAuthState = (): AuthState & {
               lastName: data.last_name || '',
               birthDate: data.birth_date || '',
               birthPlace: data.birth_place || '',
+              username: data.username || '', // Add username field here
               hasCompletedProfile: !!(data.first_name && data.last_name && data.birth_date && data.birth_place),
               subscriptionPlan: data.subscription_plan || 'free',
               phone: data.phone || '',
