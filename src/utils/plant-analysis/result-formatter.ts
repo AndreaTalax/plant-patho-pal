@@ -1,22 +1,9 @@
 
 import { getPlantPartFromLabel, capitalize, isPlantLabel } from './plant-part-utils';
 import { plantSpeciesMap } from '../../data/plantDatabase';
-// Import eppoSymptoms from the correct location or define it locally
-// Since we can't find eppoSymptoms in aiDiagnosisUtils, let's define it locally
-
-// Database of EPPO regulated pest and disease symptoms
-const eppoSymptoms = {
-  'citrus greening': ['yellow mottling', 'leaf asymmetry', 'vein yellowing', 'stunted growth', 'blotchy mottle'],
-  'citrus canker': ['water-soaked lesions', 'circular lesions', 'raised corky tissue', 'chlorotic halo', 'ruptured epidermis'],
-  'xylella': ['leaf scorch', 'marginal leaf burn', 'wilting', 'dieback', 'stunted growth'],
-  'fire blight': ['blackened leaves', 'shepherd\'s crook', 'bacterial ooze', 'cankers', 'fruit mummification'],
-  'sudden oak death': ['trunk cankers', 'bleeding trunk', 'wilting foliage', 'black leaf lesions', 'shoot dieback'],
-  'ash dieback': ['diamond-shaped lesions', 'wilting leaves', 'crown dieback', 'bark lesions', 'wood discoloration'],
-  'dutch elm disease': ['yellowing foliage', 'wilting leaves', 'vascular discoloration', 'crown dieback', 'bark beetles'],
-  'grape flavescence': ['downward leaf rolling', 'leaf discoloration', 'lack of lignification', 'flower abortion', 'berry shrivel'],
-  'bacterial wilt': ['rapid wilting', 'vascular discoloration', 'bacterial streaming', 'epinasty', 'adventitious roots'],
-  'plum pox': ['chlorotic rings', 'vein yellowing', 'leaf deformation', 'fruit rings', 'fruit deformation']
-};
+import { extractPlantName, detectPlantType } from './plant-name-extractor';
+import { isPlantHealthy } from './health-detection';
+import { checkForEppoRelation } from './eppo-utils';
 
 /**
  * Formats the raw analysis result into a more structured format
@@ -53,65 +40,21 @@ export const formatHuggingFaceResult = (result: any) => {
         plantType = plantDetection.detectedType;
         plantName = plantDetection.name || capitalize(plantType);
       } else {
-        // Migliorato l'algoritmo di estrazione del nome della pianta
-        // Prima cerca nelle mappature di plantSpeciesMap
-        for (const [key, value] of Object.entries(plantSpeciesMap || {})) {
-          if (labelLower.includes(key)) {
-            plantName = typeof value === 'string' ? value : key;
-            break;
-          }
-        }
-      }
-      
-      // Se non trovato, cerca parole chiave comuni di piante
-      if (!plantName) {
-        const plantLabels = [
-          'tomato', 'potato', 'apple', 'corn', 'grape', 'strawberry',
-          'pepper', 'lettuce', 'monstera', 'aloe', 'cactus', 'fern', 
-          'ficus', 'jade', 'snake plant', 'rose', 'orchid', 'basil',
-          'mint', 'rosemary', 'lavender', 'cannabis', 'hemp', 
-          'sunflower', 'tulip', 'lily', 'bamboo', 'palm',
-          // Aggiunte più parole chiave in italiano
-          'pomodoro', 'patata', 'mela', 'mais', 'uva', 'fragola',
-          'peperone', 'lattuga', 'felce', 'rosa', 'basilico',
-          'menta', 'rosmarino', 'lavanda', 'girasole', 'tulipano',
-          'giglio', 'bambù', 'palma', 'fico', 'orchidea'
-        ];
+        // Extract plant name from label using our utility
+        plantName = extractPlantName(label, plantSpeciesMap);
         
-        const matchedPlant = plantLabels.find(plant => labelLower.includes(plant));
-        
-        if (matchedPlant) {
-          plantName = capitalize(matchedPlant);
-          // Try to determine plant type from matched name
-          if (matchedPlant === 'palm' || matchedPlant === 'palma') plantType = 'palm';
-          else if (matchedPlant === 'cactus') plantType = 'succulent';
-          else if (matchedPlant === 'monstera' || matchedPlant === 'ficus') plantType = 'houseplant';
-          else if (['tomato', 'potato', 'pepper', 'corn'].includes(matchedPlant)) plantType = 'vegetable';
-          else if (['rose', 'tulip', 'lily', 'orchid'].includes(matchedPlant)) plantType = 'flowering';
+        // If we found a plant name but no type, try to detect the type
+        if (plantName && !plantType) {
+          plantType = detectPlantType(plantName);
         }
-      }
-    }
-    
-    // If still no plant name, extract from any part of the label
-    if (!plantName) {
-      // Try to identify common plant families
-      const possiblePlantWords = label.split(/[\s,_-]+/).filter((word: string) => 
-        word.length > 3 && !word.match(/disease|infected|spot|blight|rot|rust|mildew|virus/i)
-      );
-      
-      if (possiblePlantWords.length > 0) {
-        // Use the most likely word as plant name
-        plantName = capitalize(possiblePlantWords[0]);
-      } else {
-        plantName = 'Plant';
       }
     }
     
     // Check for EPPO database specific diseases and pests
-    const eppoRelated = checkForEppoRelation(label.toLowerCase());
+    const eppoRelated = checkForEppoRelation(label);
     
-    // Assume healthy unless explicitly stated as diseased
-    const isHealthy = !eppoRelated && !label.toLowerCase().match(/disease|infected|spot|blight|rot|rust|mildew|virus|bacteria|pest|damage|wilting|unhealthy|infected|deficiency|burned|chlorosis|necrosis|dying/);
+    // Determine if plant is healthy
+    const isHealthy = !eppoRelated && isPlantHealthy(label);
     
     // Determine the plant part from the label
     const detectedPlantPart = result.plantPart || getPlantPartFromLabel(label) || 'whole plant';
@@ -170,50 +113,3 @@ export const formatHuggingFaceResult = (result: any) => {
     };
   }
 };
-
-/**
- * Checks if the analysis result might be related to an EPPO regulated pest or disease
- */
-function checkForEppoRelation(label: string): { term: string, category: 'pest' | 'disease' | 'plant' } | null {
-  // List of EPPO regulated pests
-  const eppoPests = [
-    'xylella', 'japanese beetle', 'emerald ash borer', 'box tree moth', 
-    'red palm weevil', 'pine processionary', 'asian longhorn beetle', 
-    'colorado beetle', 'coleottero', 'insetto'
-  ];
-  
-  // List of EPPO regulated diseases
-  const eppoDiseases = [
-    'citrus greening', 'huanglongbing', 'citrus canker', 'fire blight', 
-    'sudden oak death', 'dutch elm', 'ash dieback', 'plum pox', 'sharka',
-    'bacterial wilt', 'ralstonia', 'potato ring rot', 'grapevine flavescence',
-    'black sigatoka', 'tristeza', 'tomato brown', 'cancrena'
-  ];
-  
-  // Check for pests
-  for (const pest of eppoPests) {
-    if (label.includes(pest)) {
-      return { term: pest, category: 'pest' };
-    }
-  }
-  
-  // Check for diseases
-  for (const disease of eppoDiseases) {
-    if (label.includes(disease)) {
-      return { term: disease, category: 'disease' };
-    }
-  }
-  
-  // Look for symptoms associated with EPPO diseases
-  for (const [disease, symptoms] of Object.entries(eppoSymptoms || {})) {
-    if (Array.isArray(symptoms)) {
-      for (const symptom of symptoms) {
-        if (label.includes(symptom.toLowerCase())) {
-          return { term: disease, category: 'disease' };
-        }
-      }
-    }
-  }
-  
-  return null;
-}
