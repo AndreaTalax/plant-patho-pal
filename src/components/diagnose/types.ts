@@ -110,7 +110,7 @@ export interface UserProfile {
   birthDate: string;
   birthPlace: string;
   hasCompletedProfile?: boolean;
-  subscriptionPlan?: 'free' | 'premium';
+  subscriptionPlan?: string; // Changed from 'free' | 'premium' to string to match database value
   phone?: string;
   address?: string;
 }
