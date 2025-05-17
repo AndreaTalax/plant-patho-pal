@@ -23,9 +23,6 @@ const PlantInfoCard: React.FC<PlantInfoCardProps> = ({ plantInfo, analysisDetail
               <div>Environment:</div>
               <div>{plantInfo.isIndoor ? 'Indoor' : 'Outdoor'}</div>
               
-              <div>Light exposure:</div>
-              <div>{plantInfo.inSunlight ? 'Sunny' : 'Shaded'}</div>
-              
               <div>Watering frequency:</div>
               <div>{plantInfo.wateringFrequency || 'Not specified'} times/week</div>
             </div>
