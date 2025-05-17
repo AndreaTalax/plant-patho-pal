@@ -1,5 +1,5 @@
 
-import { useAuth } from '@/context/AuthContext';
+import { useAuth } from '@/context/auth'; // Updated import path
 import ExpertChatView from './chat/ExpertChatView';
 import UserChatView from './chat/UserChatView';
 
