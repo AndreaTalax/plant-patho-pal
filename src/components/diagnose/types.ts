@@ -25,6 +25,7 @@ export interface DiagnosisResultProps {
   analysisData: any;
   isAnalyzing: boolean;
   onStartNewAnalysis: () => void;
+  onChatWithExpert?: () => void;
 }
 
 export interface LeafAnalysisResult {

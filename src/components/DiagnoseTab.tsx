@@ -110,7 +110,10 @@ const DiagnoseTab = () => {
   // Function to notify plant pathologist with all information
   const notifyExpert = async (imageFile?: File, imageDataUrl?: string) => {
     try {
-      if (!userProfile?.id) {
+      // Check for user authentication
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
         console.error("User not logged in");
         toast.error("Devi accedere per contattare il fitopatologo", {
           duration: 3000
@@ -137,7 +140,7 @@ const DiagnoseTab = () => {
       const { data: consultationData, error: consultationError } = await supabase
         .from('expert_consultations')
         .insert({
-          user_id: userProfile.id,
+          user_id: user.id,
           symptoms: plantInfo.symptoms,
           image_url: imageUrl,
           plant_info: {
@@ -165,7 +168,7 @@ const DiagnoseTab = () => {
         const { data: notifyData, error: notifyError } = await supabase.functions.invoke('notify-expert', {
           body: { 
             consultationId,
-            userId: userProfile.id,
+            userId: user.id,
             imageUrl,
             symptoms: plantInfo.symptoms,
             plantInfo: {

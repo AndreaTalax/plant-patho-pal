@@ -24,7 +24,7 @@ interface DiagnosisStagesProps {
   onCapture: (imageDataUrl: string) => void;
   onCancelCamera: () => void;
   onStartNewAnalysis: () => void;
-  onChatWithExpert?: () => void; // Added this prop
+  onChatWithExpert?: () => void;
 }
 
 const DiagnosisStages: React.FC<DiagnosisStagesProps> = ({
@@ -43,7 +43,7 @@ const DiagnosisStages: React.FC<DiagnosisStagesProps> = ({
   onCapture,
   onCancelCamera,
   onStartNewAnalysis,
-  onChatWithExpert // Added this prop
+  onChatWithExpert
 }) => {
   const { plantInfo } = usePlantInfo();
 
@@ -97,6 +97,7 @@ const DiagnosisStages: React.FC<DiagnosisStagesProps> = ({
         analysisData={diagnosedDisease}
         isAnalyzing={isAnalyzing}
         onStartNewAnalysis={onStartNewAnalysis}
+        onChatWithExpert={onChatWithExpert}
       />
     );
   }
