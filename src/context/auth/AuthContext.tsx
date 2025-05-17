@@ -5,6 +5,7 @@ import { AuthContextType } from './types';
 import { useAuthState } from './useAuthState';
 import { authService } from './authService';
 import { supabase } from '@/integrations/supabase/client';
+import { UserProfile } from '@/components/diagnose/types';
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
@@ -44,14 +45,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       async (event, session) => {
         if (event === 'SIGNED_IN' && session?.user) {
           setUser(session.user);
-          setUserProfile({
+          
+          const initialProfile: UserProfile = {
             email: session.user.email || '',
             firstName: '',
             lastName: '',
             birthDate: '',
             birthPlace: '',
             id: session.user.id
-          });
+          };
+          
+          setUserProfile(initialProfile);
           setIsAuthenticated(true);
           
           // Check if this is the master account
@@ -60,7 +64,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           // Fetch user profile data after sign in
           const profileData = await authService.getProfileData(session.user.id);
           if (profileData) {
-            const updatedProfile = {
+            const updatedProfile: UserProfile = {
               ...profileData,
               email: session.user.email || ''
             };
@@ -78,13 +82,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           }
         } else if (event === 'SIGNED_OUT') {
           setUser(null);
-          setUserProfile({ 
+          const emptyProfile: UserProfile = { 
             email: '', 
             firstName: '', 
             lastName: '', 
             birthDate: '',
             birthPlace: '' 
-          });
+          };
+          setUserProfile(emptyProfile);
           setIsAuthenticated(false);
           setIsMasterAccount(false);
           setIsProfileComplete(false);
@@ -113,8 +118,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     if (!user) return;
     
     try {
-      // Update local state
-      setUserProfile(prev => ({ ...prev, [field]: value }));
+      // Update local state with the new profile
+      const updatedProfile: UserProfile = { ...userProfile, [field]: value };
+      setUserProfile(updatedProfile);
       
       // Update in database
       await authService.updateProfile(user.id, field, value);
@@ -122,10 +128,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       // Update profile completeness status
       if (field === 'firstName' || field === 'lastName' || field === 'birthDate' || field === 'birthPlace') {
         const isComplete = !!(
-          userProfile.firstName || (field === 'firstName' && value),
-          userProfile.lastName || (field === 'lastName' && value),
-          userProfile.birthDate || (field === 'birthDate' && value),
-          userProfile.birthPlace || (field === 'birthPlace' && value)
+          updatedProfile.firstName,
+          updatedProfile.lastName,
+          updatedProfile.birthDate,
+          updatedProfile.birthPlace
         );
         
         setIsProfileComplete(isComplete);
@@ -142,8 +148,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       await authService.updateUsername(user.id, username);
       
-      // Update local state
-      setUserProfile(prev => ({ ...prev, username }));
+      // Update local state with the new username
+      const updatedProfile: UserProfile = { ...userProfile, username };
+      setUserProfile(updatedProfile);
     } catch (error) {
       console.error('Error in updateUsername:', error);
       throw error;
