@@ -34,15 +34,16 @@ const AuthStatusLogger = () => {
 
 // Protected route component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { isAuthenticated, isProfileComplete, isMasterAccount } = useAuth();
+  const { isAuthenticated, isProfileComplete, isMasterAccount, isAdminAccount } = useAuth();
+  const location = useLocation();
   
   if (!isAuthenticated) {
     console.log("User not authenticated, redirecting to login");
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/login" replace state={{ from: location }} />;
   }
   
-  // Skip profile completion check for master accounts
-  if (!isProfileComplete && !isMasterAccount) {
+  // Skip profile completion check for master or admin accounts
+  if (!isProfileComplete && !isMasterAccount && !isAdminAccount) {
     console.log("Profile not complete, redirecting to complete profile");
     return <Navigate to="/complete-profile" replace />;
   }
@@ -52,16 +53,16 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
 // Profile completion route - only accessible when authenticated but profile not complete
 const ProfileCompletionRoute = ({ children }: { children: React.ReactNode }) => {
-  const { isAuthenticated, isProfileComplete, isMasterAccount } = useAuth();
+  const { isAuthenticated, isProfileComplete, isMasterAccount, isAdminAccount } = useAuth();
   
   if (!isAuthenticated) {
     console.log("User not authenticated, redirecting to login");
     return <Navigate to="/login" replace />;
   }
   
-  // Skip profile completion for master accounts
-  if (isProfileComplete || isMasterAccount) {
-    console.log("Profile complete or master account, redirecting to home");
+  // Skip profile completion for master or admin accounts
+  if (isProfileComplete || isMasterAccount || isAdminAccount) {
+    console.log("Profile complete or privileged account, redirecting to home");
     return <Navigate to="/" replace />;
   }
   
@@ -71,10 +72,13 @@ const ProfileCompletionRoute = ({ children }: { children: React.ReactNode }) => 
 // Public route - redirects to home if already authenticated
 const PublicRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated } = useAuth();
+  const location = useLocation();
   
   if (isAuthenticated) {
     console.log("User already authenticated, redirecting to home");
-    return <Navigate to="/" replace />;
+    // Get the redirect path from state or default to home
+    const from = location.state?.from?.pathname || '/';
+    return <Navigate to={from} replace />;
   }
   
   return <>{children}</>;

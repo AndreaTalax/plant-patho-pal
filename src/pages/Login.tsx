@@ -17,11 +17,11 @@ const Login = () => {
   const navigate = useNavigate();
   const { login, isAuthenticated } = useAuth();
 
-  // Reindirizzamento automatico se l'utente è già autenticato
+  // Redirect if already authenticated
   useEffect(() => {
     if (isAuthenticated) {
       console.log("User already authenticated, redirecting to home");
-      navigate("/");
+      navigate("/", { replace: true });
     }
   }, [isAuthenticated, navigate]);
 
@@ -57,11 +57,9 @@ const Login = () => {
             dismissible: true
           });
           
-          // Navigate after showing toast
+          // Navigate immediately to home after successful login
           console.log("Navigating to home after admin login");
-          setTimeout(() => {
-            navigate("/");
-          }, 100);
+          navigate("/", { replace: true });
           return;
         }
       }
@@ -75,11 +73,9 @@ const Login = () => {
         dismissible: true
       });
       
-      // Navigate after showing toast
+      // Navigate immediately to home after showing toast
       console.log("Navigating to home after standard login");
-      setTimeout(() => {
-        navigate("/");
-      }, 100);
+      navigate("/", { replace: true });
       
     } catch (error: any) {
       console.error("Login error:", error);
