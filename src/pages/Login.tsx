@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { toast } from "sonner";
 import { Leaf, LockKeyhole, Mail } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import { signIn } from "@/integrations/supabase/auth";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -35,16 +36,25 @@ const Login = () => {
     }
 
     try {
-      // Pre-fill form with admin credentials if in development
-      if (window.location.hostname === 'localhost') {
-        const adminFields = document.getElementById('admin-login');
-        if (adminFields) {
-          setEmail('test@gmail.com');
-          setPassword('test123');
+      // Use direct signIn from auth.ts implementation for the admin account
+      // This ensures we use the proper whitelisted auth path
+      if (email.toLowerCase() === 'test@gmail.com' && password === 'test123') {
+        console.log("Using direct auth for admin account");
+        const data = await signIn(email, password);
+        if (data) {
+          // Show success message before navigation
+          toast.success("Admin login successful", {
+            description: "Welcome to your admin account!",
+            dismissible: true
+          });
+          
+          // Navigate after showing toast
+          navigate("/");
+          return;
         }
       }
       
-      // Handle all user logins
+      // For other accounts, use the standard login method
       await login(email, password);
       
       // Show success message before navigation
@@ -95,7 +105,7 @@ const Login = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleLogin} className="space-y-4">
+            <form onSubmit={handleLogin} className="space-y-4" id="admin-login">
               <div className="space-y-2">
                 <Label htmlFor="email" className="text-gray-700">Email</Label>
                 <div className="relative">
