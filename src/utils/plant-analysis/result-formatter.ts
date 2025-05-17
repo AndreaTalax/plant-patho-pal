@@ -5,6 +5,7 @@ import { extractPlantName, detectPlantType } from './plant-name-extractor';
 import { isPlantHealthy } from './health-detection';
 import { checkForEppoRelation } from './eppo-utils';
 import { eppoSymptoms } from './eppo-symptoms';
+import { analyzeLeafCharacteristics, enhanceLeafDiseaseClassification } from './leaf-analysis';
 
 /**
  * Formats the raw analysis result into a more structured format
@@ -60,6 +61,12 @@ export const formatHuggingFaceResult = (result: any) => {
     // Determine the plant part from the label
     const detectedPlantPart = result.plantPart || getPlantPartFromLabel(label) || 'whole plant';
     
+    // Apply Sistema Digitale Foglia analysis for leaves
+    let leafAnalysisResults = null;
+    if (detectedPlantPart === 'leaf' || label.toLowerCase().includes('leaf') || label.toLowerCase().includes('foglia')) {
+      leafAnalysisResults = analyzeLeafCharacteristics(result, label, score);
+    }
+    
     // Create or enhance multi-service insights
     const multiServiceInsights = {
       ...existingInsights,
@@ -78,8 +85,17 @@ export const formatHuggingFaceResult = (result: any) => {
         isEppoRegulated: true,
         suggestedSearch: eppoRelated.term,
         category: eppoRelated.category
-      } : null
+      } : null,
+      // Add Sistema Digitale Foglia analysis results if available
+      leafAnalysis: leafAnalysisResults,
+      // Flag to indicate advanced leaf analysis was performed
+      advancedLeafAnalysis: !!leafAnalysisResults
     };
+    
+    // If this is a leaf analysis, enhance it with Sistema Digitale Foglia
+    const enhancedMultiServiceInsights = detectedPlantPart === 'leaf' ? 
+      enhanceLeafDiseaseClassification(label, multiServiceInsights) : 
+      multiServiceInsights;
     
     // Always consider it a plant
     const isPlant = true;
@@ -87,11 +103,14 @@ export const formatHuggingFaceResult = (result: any) => {
     // Return formatted result with enhanced properties
     return {
       ...result,
-      multiServiceInsights,
+      multiServiceInsights: enhancedMultiServiceInsights,
       plantVerification: {
         ...plantVerification,
         isPlant
-      }
+      },
+      // Add Sistema Digitale Foglia indicator
+      sistemaDigitaleFoglia: detectedPlantPart === 'leaf',
+      analysisTechnology: detectedPlantPart === 'leaf' ? 'Sistema Digitale Foglia' : 'Standard Plant Analysis'
     };
   } catch (error) {
     console.error('Error formatting result:', error);

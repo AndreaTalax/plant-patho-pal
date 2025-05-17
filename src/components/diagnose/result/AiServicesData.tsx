@@ -19,6 +19,9 @@ const AiServicesData: React.FC<AiServicesDataProps> = ({ analysisDetails, isAnal
   // Check if we have data from either Flora Incognita or PlantSnap
   const hasFloraIncognita = !!insights?.floraIncognitaMatch;
   const hasPlantSnap = !!insights?.plantSnapMatch;
+  
+  // Check if we have Sistema Digitale Foglia analysis
+  const hasLeafAnalysis = !!insights?.leafAnalysis || !!insights?.advancedLeafAnalysis;
 
   return (
     <Card className="p-4 bg-white shadow rounded-lg">
@@ -43,6 +46,74 @@ const AiServicesData: React.FC<AiServicesDataProps> = ({ analysisDetails, isAnal
             </div>
             {insights.dataSource && (
               <p className="text-xs text-gray-500 mt-1">Data Source: {insights.dataSource}</p>
+            )}
+          </div>
+        )}
+        
+        {/* Sistema Digitale Foglia Analysis Results */}
+        {hasLeafAnalysis && (
+          <div className="bg-green-50 p-3 rounded-lg border border-green-100 mt-3">
+            <h4 className="font-medium text-green-800 flex items-center">
+              <Leaf className="h-4 w-4 mr-1.5 text-green-600" />
+              Sistema Digitale Foglia Analysis
+            </h4>
+            
+            {insights.leafAnalysis && (
+              <div className="mt-2 text-sm grid grid-cols-2 gap-x-4 gap-y-2">
+                <div>
+                  <p className="text-gray-500">Leaf Health</p>
+                  <p className={`font-medium ${
+                    insights.leafAnalysis.healthStatus === 'healthy' ? 'text-green-600' : 
+                    insights.leafAnalysis.healthStatus === 'diseased' ? 'text-red-600' : 
+                    'text-amber-600'
+                  }`}>
+                    {insights.leafAnalysis.healthStatus === 'healthy' ? 'Healthy' : 
+                     insights.leafAnalysis.healthStatus === 'diseased' ? 'Diseased' : 
+                     insights.leafAnalysis.healthStatus === 'stressed' ? 'Stressed' : 'Unknown'}
+                  </p>
+                </div>
+                
+                {insights.leafAnalysis.leafColor && (
+                  <div>
+                    <p className="text-gray-500">Leaf Color</p>
+                    <p className="font-medium">{insights.leafAnalysis.leafColor}</p>
+                  </div>
+                )}
+                
+                {insights.leafAnalysis.patternDetected && (
+                  <div className="col-span-2">
+                    <p className="text-gray-500">Pattern Detected</p>
+                    <p className="font-medium">{insights.leafAnalysis.patternDetected}</p>
+                  </div>
+                )}
+                
+                {insights.leafAnalysis.leafType && (
+                  <div>
+                    <p className="text-gray-500">Leaf Type</p>
+                    <p className="font-medium">{insights.leafAnalysis.leafType}</p>
+                  </div>
+                )}
+                
+                {insights.leafAnalysis.details?.symptomDescription && (
+                  <div className="col-span-2 mt-1">
+                    <p className="text-gray-500">Symptom Details</p>
+                    <p className="font-medium text-xs">{insights.leafAnalysis.details.symptomDescription}</p>
+                  </div>
+                )}
+              </div>
+            )}
+            
+            {insights.leafDiagnosticCapabilities && (
+              <div className="mt-2 text-xs text-green-700">
+                <p className="font-medium">Advanced Capabilities:</p>
+                <div className="flex flex-wrap gap-1 mt-1">
+                  {insights.leafDiagnosticCapabilities.map((capability: string, idx: number) => (
+                    <span key={idx} className="bg-green-100 text-green-800 px-2 py-0.5 rounded">
+                      {capability}
+                    </span>
+                  ))}
+                </div>
+              </div>
             )}
           </div>
         )}

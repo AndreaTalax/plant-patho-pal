@@ -10,3 +10,6 @@ export { isPlantHealthy } from './health-detection';
 export { extractPlantName, detectPlantType } from './plant-name-extractor';
 export { checkForEppoRelation } from './eppo-utils';
 export { eppoSymptoms } from './eppo-symptoms';
+
+// Export the new Sistema Digitale Foglia leaf analysis functionality
+export { analyzeLeafCharacteristics, enhanceLeafDiseaseClassification } from './leaf-analysis';
