@@ -10,13 +10,13 @@ interface ImageCaptureMethodsProps {
 const ImageCaptureMethods = ({ onTakePhoto, onUploadPhoto }: ImageCaptureMethodsProps) => {
   return (
     <div className="space-y-6">
-      {/* Main action buttons - Moved higher with larger size and more emphasis */}
-      <div className="grid grid-cols-1 gap-4 mb-4">
+      {/* Main action buttons - More prominent position at the top */}
+      <div className="sticky top-0 z-10 bg-white pb-4 -mt-2 pt-2">
         <Button 
           onClick={onTakePhoto}
-          className="flex items-center justify-center gap-2 py-6 text-lg font-medium text-white bg-drplant-green hover:bg-drplant-green/90 shadow-lg"
+          className="w-full flex items-center justify-center gap-2 py-7 text-lg font-medium text-white bg-drplant-green hover:bg-drplant-green/90 shadow-lg"
         >
-          <Camera className="h-7 w-7" />
+          <Camera className="h-8 w-8" />
           <span>Scatta una foto della pianta</span>
         </Button>
       </div>

@@ -8,46 +8,48 @@ schemas = ["public", "storage", "graphql_public"]
 
 [db]
 port = 54322
-
-[studio]
-port = 54323
-
-[inbucket]
-port = 54324
-
-[auth]
-enabled = true
-port = 9999
-
-[storage]
-enabled = true
+shadow_port = 54320
+major_version = 15
 
 [realtime]
 enabled = true
 
-[analytics]
+[studio]
 enabled = true
-port = 54327
+port = 54323
+api_url = "http://localhost"
 
-[vector]
+[inbucket]
 enabled = true
-port = 54328
+port = 54324
+
+[storage]
+enabled = true
+
+[auth]
+enabled = true
+site_url = "http://localhost:3000"
+
+[analytics]
+enabled = false
+
+[experimental]
+multipurpose_postgres = true
 
 [functions.analyze-plant]
-verify_jwt = false
-
-[functions.configure-auth-settings]
 verify_jwt = false
 
 [functions.eppo-api]
 verify_jwt = false
 
-[functions.send-registration-confirmation]
+[functions.configure-auth-settings]
 verify_jwt = false
+
+[functions.send-registration-confirmation]
+verify_jwt = true
 
 [functions.send-specialist-notification]
 verify_jwt = false
 
 [functions.update-conversation-last-message-trigger]
 verify_jwt = false
-

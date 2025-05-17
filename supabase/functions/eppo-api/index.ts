@@ -20,9 +20,7 @@ serve(async (req) => {
 
   try {
     // Ottieni parametri dalla richiesta
-    const url = new URL(req.url);
-    const endpoint = url.searchParams.get('endpoint');
-    const query = url.searchParams.get('query');
+    const { endpoint, query } = await req.json();
     
     if (!endpoint) {
       return new Response(

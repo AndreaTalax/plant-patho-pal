@@ -24,6 +24,11 @@ const DiagnoseTab = () => {
   // Dismiss any stuck toast notifications when component mounts
   useEffect(() => {
     toast.dismiss();
+    
+    // Clean up function to dismiss toasts when unmounting
+    return () => {
+      toast.dismiss();
+    };
   }, []);
   
   const {
@@ -40,7 +45,8 @@ const DiagnoseTab = () => {
   const handleImageUploadEvent = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!plantInfo.infoComplete) {
       toast.warning("Please enter plant information before continuing", {
-        dismissible: true
+        dismissible: true,
+        duration: 3000
       });
       return;
     }
@@ -54,7 +60,8 @@ const DiagnoseTab = () => {
   const takePicture = () => {
     if (!plantInfo.infoComplete) {
       toast.warning("Please enter plant information before continuing", {
-        dismissible: true
+        dismissible: true,
+        duration: 3000
       });
       return;
     }
@@ -78,13 +85,15 @@ const DiagnoseTab = () => {
       .catch(err => {
         console.error("Error accessing camera:", err);
         toast.error("Could not access camera. Please check permissions.", {
-          dismissible: true
+          dismissible: true,
+          duration: 4000
         });
         setShowCamera(false);
       });
     } else {
       toast.error("Camera not supported in your browser or device", {
-        dismissible: true
+        dismissible: true,
+        duration: 4000
       });
       setShowCamera(false);
     }
@@ -96,6 +105,14 @@ const DiagnoseTab = () => {
       wateringFrequency: data.wateringFrequency,
       infoComplete: true
     });
+    
+    // After completing plant info, automatically scroll to the next section
+    setTimeout(() => {
+      window.scrollTo({
+        top: window.scrollY + 200,
+        behavior: 'smooth'
+      });
+    }, 300);
   };
 
   const handleCaptureImage = (imageDataUrl: string) => {

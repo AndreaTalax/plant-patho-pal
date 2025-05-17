@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
 import { corsHeaders } from "../_shared/cors.ts";
@@ -24,6 +25,7 @@ const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
 const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 const floraIncognitaKey = Deno.env.get("FLORA_INCOGNITA_API_KEY");
 const plantSnapKey = Deno.env.get("PLANTSNAP_API_KEY");
+const eppoApiKey = Deno.env.get("EPPO_API_KEY");
 
 // Main handler function
 serve(async (req) => {
@@ -82,15 +84,17 @@ serve(async (req) => {
     console.log(`Detected plant type from verification: ${detectedPlantType || 'Unknown'}`);
     
     // Analyze with Flora Incognita and PlantSnap in parallel
-    const [floraIncognitaResultPromise, plantSnapResultPromise, isLeafPromise] = await Promise.allSettled([
+    const [floraIncognitaResultPromise, plantSnapResultPromise, isLeafPromise, eppoCheckPromise] = await Promise.allSettled([
       analyzeWithFloraIncognita(imageArrayBuffer, floraIncognitaKey),
       analyzeWithPlantSnap(imageArrayBuffer, plantSnapKey),
-      isLeafImage(imageArrayBuffer, huggingFaceToken)
+      isLeafImage(imageArrayBuffer, huggingFaceToken),
+      checkForEppoConcerns(imageArrayBuffer, huggingFaceToken)
     ]);
     
     const floraIncognitaResult = floraIncognitaResultPromise.status === 'fulfilled' ? floraIncognitaResultPromise.value : null;
     const plantSnapResult = plantSnapResultPromise.status === 'fulfilled' ? plantSnapResultPromise.value : null;
     const isLeaf = isLeafPromise.status === 'fulfilled' ? isLeafPromise.value : false;
+    const eppoCheck = eppoCheckPromise.status === 'fulfilled' ? eppoCheckPromise.value : null;
     
     // Choose plant-type specific model if available
     let plantTypeModels = {}; 
@@ -188,6 +192,16 @@ serve(async (req) => {
       detectedPlantType // Add detected plant type
     );
     
+    // Check if we have EPPO concerns
+    if (eppoCheck && eppoCheck.hasEppoConcern) {
+      formattedData.eppoRegulatedConcern = {
+        name: eppoCheck.concernName,
+        code: eppoCheck.eppoCode,
+        type: eppoCheck.concernType,
+        regulatoryStatus: eppoCheck.regulatoryStatus
+      };
+    }
+    
     // Create the final analysis result
     const finalAnalysisResult = formatAnalysisResult(
       analysisResult, 
@@ -196,7 +210,8 @@ serve(async (req) => {
       floraIncognitaResult, 
       plantSnapResult, 
       formattedData,
-      detectedPlantType // Add detected plant type
+      detectedPlantType, // Add detected plant type
+      eppoCheck
     );
 
     // Initialize Supabase client with service role key to bypass RLS
@@ -241,7 +256,8 @@ serve(async (req) => {
           plantPart: finalAnalysisResult.plantPart,
           healthy: finalAnalysisResult.healthy,
           isLeaf: isLeaf,
-          eppoRegulated: finalAnalysisResult.eppoRegulatedConcern !== null
+          eppoRegulated: finalAnalysisResult.eppoRegulatedConcern !== null,
+          detectedPlantType: detectedPlantType
         },
         user_id: userId
       });
@@ -257,7 +273,8 @@ serve(async (req) => {
       label: finalAnalysisResult.label,
       score: finalAnalysisResult.score,
       healthy: finalAnalysisResult.healthy,
-      dataSource: finalAnalysisResult.dataSource
+      dataSource: finalAnalysisResult.dataSource,
+      plantType: detectedPlantType
     })}`);
 
     // Prepare the result before sending
@@ -265,7 +282,8 @@ serve(async (req) => {
       JSON.stringify({
         ...finalAnalysisResult,
         message: insertError ? "Plant analysis completed but not saved" : "Plant analysis completed and saved",
-        dataSource: finalAnalysisResult.dataSource
+        dataSource: finalAnalysisResult.dataSource,
+        eppoIntegrated: true
       }),
       {
         status: 200,
