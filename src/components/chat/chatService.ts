@@ -2,17 +2,19 @@
 import { 
   supabase, 
   EXPERT_ID, 
-  isNotNullOrUndefined, 
-  asUUID, 
   DbMessage, 
   DbConversation,
   DbConversationInsert,
   DbMessageInsert,
-  DbConversationUpdate,
+  DbConversationUpdate
+} from '@/integrations/supabase/client';
+import {
+  isNotNullOrUndefined,
+  asUUID,
   asFilterValue,
   asDbInsert,
   asDbUpdate
-} from '@/integrations/supabase/client';
+} from '@/integrations/supabase/utils';
 import type { 
   DatabaseConversation, 
   DatabaseMessage, 
