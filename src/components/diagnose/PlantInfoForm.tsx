@@ -1,118 +1,90 @@
 
 import { useState } from 'react';
-import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { toast } from '@/components/ui/sonner';
-import { usePlantInfo } from '@/context/PlantInfoContext';
-import { useForm } from 'react-hook-form';
-import * as z from 'zod';
-import { zodResolver } from '@hookform/resolvers/zod';
+import { Card } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
-// Form schema for plant information
-const plantInfoSchema = z.object({
-  isIndoor: z.boolean().default(false),
-  inSunlight: z.boolean().default(false),
-  wateringFrequency: z.string().min(1, { message: "Inserisci quante volte innaffi la pianta a settimana" }),
-});
-
-export type PlantInfoFormValues = z.infer<typeof plantInfoSchema>;
+export interface PlantInfoFormValues {
+  isIndoor: boolean;
+  wateringFrequency: string;
+}
 
 interface PlantInfoFormProps {
   onComplete: (data: PlantInfoFormValues) => void;
 }
 
 const PlantInfoForm = ({ onComplete }: PlantInfoFormProps) => {
-  const { plantInfo, setPlantInfo } = usePlantInfo();
-  
-  const form = useForm<PlantInfoFormValues>({
-    resolver: zodResolver(plantInfoSchema),
-    defaultValues: {
-      isIndoor: plantInfo.isIndoor,
-      inSunlight: plantInfo.inSunlight,
-      wateringFrequency: plantInfo.wateringFrequency || "",
-    },
+  const [formData, setFormData] = useState<PlantInfoFormValues>({
+    isIndoor: false,
+    wateringFrequency: '2',
   });
-  
-  const onSubmitPlantInfo = (data: PlantInfoFormValues) => {
-    console.log("Plant information submitted:", data);
-    setPlantInfo({...data, infoComplete: true});
-    toast.success("Informazioni sulla pianta salvate con successo!");
-    onComplete(data);
+
+  const handleCheckboxChange = (name: keyof PlantInfoFormValues) => {
+    setFormData(prev => ({ ...prev, [name]: !prev[name] }));
   };
-  
+
+  const handleSelectChange = (value: string) => {
+    setFormData(prev => ({ ...prev, wateringFrequency: value }));
+  };
+
+  const handleSubmit = () => {
+    onComplete(formData);
+  };
+
   return (
     <Card className="bg-white p-6 shadow-md rounded-2xl">
-      <h3 className="text-xl font-semibold mb-4 text-center">Informazioni sulla Pianta</h3>
-      <p className="text-gray-600 mb-6 text-center">
-        Prima di procedere con la diagnosi, fornisci alcune informazioni essenziali sulla tua pianta
-      </p>
-      
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmitPlantInfo)} className="space-y-6">
-          <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-            <FormControl>
-              <Checkbox 
-                checked={form.watch("isIndoor")} 
-                onCheckedChange={(checked) => form.setValue("isIndoor", !!checked)}
-              />
-            </FormControl>
-            <div className="space-y-1 leading-none">
-              <FormLabel>La pianta si trova all'interno dell'abitazione</FormLabel>
-              <FormDescription>
-                Indica se la pianta è coltivata in ambiente interno
-              </FormDescription>
-            </div>
-          </FormItem>
+      <div className="space-y-6">
+        <div>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">Informazioni sulla pianta</h3>
+          <p className="text-sm text-gray-500 mb-4">
+            Per ottenere una diagnosi più accurata, fornisci alcune informazioni sulla tua pianta.
+            Questi dettagli ci aiuteranno a comprendere meglio la sua situazione.
+          </p>
+        </div>
+
+        <div className="space-y-4">
+          <div className="flex items-center space-x-2">
+            <Checkbox 
+              id="isIndoor" 
+              checked={formData.isIndoor} 
+              onCheckedChange={() => handleCheckboxChange('isIndoor')}
+            />
+            <Label htmlFor="isIndoor" className="text-sm font-medium cursor-pointer">
+              La pianta è in casa (ambiente chiuso)
+            </Label>
+          </div>
           
-          <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-            <FormControl>
-              <Checkbox 
-                checked={form.watch("inSunlight")} 
-                onCheckedChange={(checked) => form.setValue("inSunlight", !!checked)}
-              />
-            </FormControl>
-            <div className="space-y-1 leading-none">
-              <FormLabel>La pianta è esposta alla luce del sole</FormLabel>
-              <FormDescription>
-                Indica se la pianta riceve luce solare diretta
-              </FormDescription>
-            </div>
-          </FormItem>
-          
-          <FormField
-            control={form.control}
-            name="wateringFrequency"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Frequenza di irrigazione (volte a settimana)</FormLabel>
-                <FormControl>
-                  <Input
-                    placeholder="Es. 2"
-                    type="number"
-                    min="0"
-                    {...field}
-                  />
-                </FormControl>
-                <FormDescription>
-                  Indica quante volte a settimana innaffi la pianta
-                </FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          
-          <Button 
-            type="submit" 
-            className="w-full bg-drplant-green hover:bg-drplant-green-dark"
-          >
-            Salva Informazioni
-          </Button>
-        </form>
-      </Form>
+          <div className="space-y-2">
+            <Label htmlFor="wateringFrequency" className="text-sm font-medium">
+              Frequenza di irrigazione (volte a settimana)
+            </Label>
+            <Select 
+              value={formData.wateringFrequency} 
+              onValueChange={handleSelectChange}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Seleziona frequenza" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="1">1 volta</SelectItem>
+                <SelectItem value="2">2 volte</SelectItem>
+                <SelectItem value="3">3 volte</SelectItem>
+                <SelectItem value="4">4 o più volte</SelectItem>
+                <SelectItem value="0">Raramente / Mai</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <Button 
+          onClick={handleSubmit} 
+          className="w-full mt-4 bg-drplant-green hover:bg-drplant-green/90"
+        >
+          Continua
+        </Button>
+      </div>
     </Card>
   );
 };

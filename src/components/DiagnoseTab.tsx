@@ -1,7 +1,6 @@
 
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { toast } from '@/components/ui/sonner';
 import { modelInfo } from '@/utils/aiDiagnosisUtils';
 import { usePlantInfo } from '@/context/PlantInfoContext';
 import { usePlantDiagnosis } from '@/hooks/usePlantDiagnosis';
@@ -34,7 +33,7 @@ const DiagnoseTab = () => {
 
   const handleImageUploadEvent = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!plantInfo.infoComplete) {
-      toast.error("Please enter plant information before continuing");
+      console.log("Please enter plant information before continuing");
       return;
     }
     
@@ -46,7 +45,7 @@ const DiagnoseTab = () => {
 
   const takePicture = () => {
     if (!plantInfo.infoComplete) {
-      toast.error("Please enter plant information before continuing");
+      console.log("Please enter plant information before continuing");
       return;
     }
     
@@ -63,16 +62,16 @@ const DiagnoseTab = () => {
           if (stream) {
             stopCameraStream(); // Clean up any existing stream
           }
-          toast.success("Camera activated successfully");
+          console.log("Camera activated successfully");
         }
       })
       .catch(err => {
         console.error("Error accessing camera:", err);
-        toast.error("Could not access camera. Please check permissions.");
+        console.log("Could not access camera. Please check permissions.");
         setShowCamera(false);
       });
     } else {
-      toast.error("Camera not supported in your browser or device");
+      console.log("Camera not supported in your browser or device");
       setShowCamera(false);
     }
   };
@@ -80,7 +79,6 @@ const DiagnoseTab = () => {
   const handlePlantInfoSubmit = (data: PlantInfoFormValues) => {
     setPlantInfo({
       isIndoor: data.isIndoor,
-      inSunlight: data.inSunlight,
       wateringFrequency: data.wateringFrequency,
       infoComplete: true
     });

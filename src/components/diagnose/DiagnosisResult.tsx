@@ -55,18 +55,15 @@ const DiagnosisResult = ({
   // Check if we have a thermal map
   const hasThermalMap = analysisDetails?.thermalMap && !isAnalyzing;
   
+  // Get plant name from analytics or use a default
+  const plantName = analysisDetails?.multiServiceInsights?.plantName || analysisDetails?.plantName || "Pianta";
+  
   // Check if multi-service identified a plant species
-  const plantSpecies = analysisDetails?.multiServiceInsights?.plantSpecies;
+  const plantSpecies = analysisDetails?.multiServiceInsights?.plantSpecies || plantName;
   
   // Check if we have AI service-specific results
   const hasAiServiceData = analysisDetails?.plantVerification?.aiServices &&
                            analysisDetails.plantVerification.aiServices.length > 0;
-
-  // Check if the image is valid (contains a plant)
-  const isValidPlantImage = analysisDetails?.multiServiceInsights?.isValidPlantImage !== false;
-
-  // Check if the analysis has a reliable confidence score
-  const hasReliableConfidence = diagnosedDisease && diagnosedDisease.confidence >= 0.6;
 
   return (
     <Card className="bg-white p-6 shadow-md rounded-2xl w-full max-w-2xl">
@@ -85,23 +82,6 @@ const DiagnosisResult = ({
                 <Badge className="bg-drplant-green text-white flex items-center gap-1 py-1.5">
                   <Leaf className="h-3 w-3" />
                   <span className="text-xs">{plantSpecies}</span>
-                </Badge>
-              </div>
-            )}
-            
-            {/* Leaf verification overlay */}
-            {analysisDetails?.leafVerification && !isAnalyzing && analysisDetails.leafVerification.isLeaf && analysisDetails.leafVerification.boundingBox && (
-              <div 
-                className="absolute border-2 border-green-500"
-                style={{
-                  top: `${analysisDetails.leafVerification.boundingBox.y}px`,
-                  left: `${analysisDetails.leafVerification.boundingBox.x}px`,
-                  width: `${analysisDetails.leafVerification.boundingBox.width}px`,
-                  height: `${analysisDetails.leafVerification.boundingBox.height}px`
-                }}
-              >
-                <Badge className="absolute top-0 right-0 translate-x-1/2 -translate-y-1/2 bg-green-500">
-                  Leaf {analysisDetails.leafVerification.leafPercentage}%
                 </Badge>
               </div>
             )}
@@ -137,11 +117,6 @@ const DiagnosisResult = ({
                   </>
                 )}
               </Button>
-              {showThermalMap && (
-                <p className="text-xs text-gray-500 mt-1">
-                  Red areas indicate possible disease locations
-                </p>
-              )}
             </div>
           )}
           
@@ -189,8 +164,8 @@ const DiagnosisResult = ({
                   {analysisDetails.multiServiceInsights && (
                     <div className="mt-2 pt-2 border-t">
                       <div className="flex justify-between">
-                        <span>Agreement Score:</span>
-                        <span className="font-medium">{analysisDetails.multiServiceInsights.agreementScore}%</span>
+                        <span>Nome pianta rilevato:</span>
+                        <span className="font-medium">{plantName}</span>
                       </div>
                       <div className="flex justify-between">
                         <span>Primary Service:</span>
@@ -211,12 +186,12 @@ const DiagnosisResult = ({
                 <span>{plantInfo.isIndoor ? "Indoor" : "Outdoor"}</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-gray-600">Light exposure: </span>
-                <span>{plantInfo.inSunlight ? "Sunny" : "Shaded"}</span>
-              </div>
-              <div className="flex items-center gap-2">
                 <span className="text-gray-600">Watering: </span>
                 <span>{plantInfo.wateringFrequency} times/week</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-gray-600">Plant name: </span>
+                <span className="font-medium">{plantName}</span>
               </div>
             </div>
           </div>
@@ -229,7 +204,7 @@ const DiagnosisResult = ({
             >
               New Diagnosis
             </Button>
-            {diagnosisResult && diagnosedDisease && hasReliableConfidence && (
+            {diagnosisResult && diagnosedDisease && (
               <Button 
                 className="flex-1 bg-drplant-blue hover:bg-drplant-blue-dark"
                 onClick={navigateToChat}
@@ -252,65 +227,20 @@ const DiagnosisResult = ({
                 Multiple AI services are analyzing your plant
               </p>
             </div>
-          ) : !isValidPlantImage ? (
-            <div className="bg-red-50 text-red-600 p-4 rounded-lg mb-4">
-              <h3 className="text-lg font-semibold mb-2">No Plant Detected</h3>
-              <p className="mb-4">
-                The uploaded image does not appear to contain a plant. To get an accurate analysis, please upload an image
-                that clearly shows a plant.
-              </p>
-              <Button 
-                variant="destructive" 
-                className="w-full"
-                onClick={resetDiagnosis}
-              >
-                Try Again
-              </Button>
-            </div>
           ) : diagnosisResult && diagnosedDisease ? (
             <div className="h-full">
-              {!hasReliableConfidence && (
-                <div className="bg-amber-50 text-amber-600 p-4 rounded-lg mb-4">
-                  <h3 className="text-md font-semibold mb-1">Low Confidence Analysis</h3>
-                  <p className="text-sm mb-2">
-                    The image isn't clear enough for a reliable diagnosis. Our system has made a best guess, but we recommend
-                    uploading a clearer image of the affected plant area.
-                  </p>
-                </div>
-              )}
-              
               <div className="flex items-center gap-2 mb-4">
                 <Badge className="bg-amber-500">{Math.round(diagnosedDisease.confidence * 100)}% Confidence</Badge>
-                {diagnosedDisease.confidence > 0.9 ? (
-                  <Badge className="bg-green-500">High Reliability</Badge>
-                ) : diagnosedDisease.confidence > 0.7 ? (
-                  <Badge className="bg-yellow-500">Medium Reliability</Badge>
-                ) : (
-                  <Badge className="bg-red-500">Low Reliability</Badge>
-                )}
               </div>
               
-              {hasReliableConfidence ? (
-                <DiagnosisTabs
-                  disease={diagnosedDisease}
-                  analysisDetails={analysisDetails}
-                  activeTab={activeResultTab}
-                  onTabChange={setActiveResultTab}
-                  onNavigateToLibrary={navigateToLibrary}
-                  onNavigateToShop={navigateToShop}
-                />
-              ) : (
-                <div className="p-4 border rounded-lg">
-                  <h3 className="font-medium mb-2">Possible Issue: {diagnosedDisease.name}</h3>
-                  <p className="text-sm text-gray-600 mb-4">{diagnosedDisease.description}</p>
-                  <Button 
-                    onClick={resetDiagnosis} 
-                    className="w-full bg-drplant-blue hover:bg-drplant-blue-dark"
-                  >
-                    Try a New Photo
-                  </Button>
-                </div>
-              )}
+              <DiagnosisTabs
+                disease={diagnosedDisease}
+                analysisDetails={analysisDetails}
+                activeTab={activeResultTab}
+                onTabChange={setActiveResultTab}
+                onNavigateToLibrary={navigateToLibrary}
+                onNavigateToShop={navigateToShop}
+              />
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center py-4 h-full">

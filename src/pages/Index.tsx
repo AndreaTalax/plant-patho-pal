@@ -8,14 +8,12 @@ import LibraryTab from '@/components/LibraryTab';
 import ProfileTab from '@/components/ProfileTab';
 import BottomNavigation from '@/components/BottomNavigation';
 import { useAuth } from '@/context/AuthContext';
-import { toast } from '@/components/ui/sonner';
 
 type TabName = 'diagnose' | 'chat' | 'shop' | 'library' | 'profile';
 
 const Index = () => {
   const { isMasterAccount } = useAuth();
   const [activeTab, setActiveTab] = useState<TabName>(isMasterAccount ? 'chat' : 'diagnose');
-  const [showWelcome, setShowWelcome] = useState(false);
 
   // Reset active tab if user role changes (e.g., after login)
   useEffect(() => {
@@ -23,29 +21,6 @@ const Index = () => {
       setActiveTab('chat');
     }
   }, [isMasterAccount, activeTab]);
-
-  // Show welcome toast only once when component mounts
-  // and if it hasn't been shown in this session
-  useEffect(() => {
-    const hasShownWelcome = sessionStorage.getItem('welcomeShown');
-    
-    if (!hasShownWelcome) {
-      // Small delay to prevent initial render toast conflicts
-      const welcomeTimer = setTimeout(() => {
-        setShowWelcome(true);
-        toast.success("Benvenuto su Plant Patho Pal!", {
-          description: "Il tuo profilo è stato completato con successo.",
-          duration: 5000,
-          onDismiss: () => {
-            sessionStorage.setItem('welcomeShown', 'true');
-            setShowWelcome(false);
-          }
-        });
-      }, 1000);
-      
-      return () => clearTimeout(welcomeTimer);
-    }
-  }, []);
 
   // Add event listener for tab switching
   useEffect(() => {

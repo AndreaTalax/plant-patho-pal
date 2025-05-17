@@ -7,7 +7,6 @@ import { PlantInfoFormValues } from './PlantInfoForm';
 interface PlantInfoSummaryProps {
   plantInfo: {
     isIndoor: boolean;
-    inSunlight: boolean;
     wateringFrequency: string;
   };
   onEdit: () => void;
@@ -22,10 +21,6 @@ const PlantInfoSummary = ({ plantInfo, onEdit }: PlantInfoSummaryProps) => {
           <div className="flex items-center gap-2">
             <Checkbox checked={plantInfo.isIndoor} disabled />
             <span>All'interno dell'abitazione</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Checkbox checked={plantInfo.inSunlight} disabled />
-            <span>Esposta alla luce del sole</span>
           </div>
           <div className="flex items-center gap-2">
             <span className="font-medium">Irrigazione: </span>

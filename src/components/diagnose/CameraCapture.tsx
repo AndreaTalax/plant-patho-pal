@@ -1,7 +1,7 @@
+
 import React, { useEffect, useState } from 'react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import CameraControls from './camera/CameraControls';
-import { toast } from '@/components/ui/sonner';
 import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -60,7 +60,7 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
       console.error("Camera error:", err);
       setCameraError(err instanceof Error ? err.message : "Failed to access camera");
       setCameraLoading(false);
-      toast.error("Errore con la fotocamera: " + 
+      console.log("Errore con la fotocamera: " + 
         (err instanceof Error ? err.message : "Accesso alla fotocamera fallito"));
     }
   };
@@ -82,11 +82,11 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
         // Convert the canvas to a data URL and pass it to the parent
         try {
           const imageDataUrl = canvas.toDataURL('image/jpeg', 0.9);
-          toast.success("Immagine catturata con successo!");
+          console.log("Immagine catturata con successo!");
           onCapture(imageDataUrl);
         } catch (err) {
           console.error("Error capturing image:", err);
-          toast.error("Errore nel catturare l'immagine");
+          console.log("Errore nel catturare l'immagine");
         }
       }
     }

@@ -3,7 +3,6 @@ import { createContext, useContext, useState, ReactNode } from "react";
 
 type PlantInfo = {
   isIndoor: boolean;
-  inSunlight: boolean;
   wateringFrequency: string;
   infoComplete: boolean;
 };
@@ -16,7 +15,6 @@ type PlantInfoContextType = {
 
 const defaultPlantInfo: PlantInfo = {
   isIndoor: false,
-  inSunlight: false,
   wateringFrequency: "",
   infoComplete: false,
 };
@@ -24,20 +22,15 @@ const defaultPlantInfo: PlantInfo = {
 const PlantInfoContext = createContext<PlantInfoContextType | undefined>(undefined);
 
 export const PlantInfoProvider = ({ children }: { children: ReactNode }) => {
-  const [plantInfo, setPlantInfoState] = useState<PlantInfo>(() => {
-    const savedInfo = localStorage.getItem("plant-info");
-    return savedInfo ? JSON.parse(savedInfo) : defaultPlantInfo;
-  });
+  const [plantInfo, setPlantInfoState] = useState<PlantInfo>(defaultPlantInfo);
 
   const setPlantInfo = (info: Partial<PlantInfo>) => {
     const newInfo = { ...plantInfo, ...info };
     setPlantInfoState(newInfo);
-    localStorage.setItem("plant-info", JSON.stringify(newInfo));
   };
 
   const resetPlantInfo = () => {
     setPlantInfoState(defaultPlantInfo);
-    localStorage.removeItem("plant-info");
   };
 
   return (

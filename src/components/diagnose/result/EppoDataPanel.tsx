@@ -3,7 +3,6 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { AnalysisDetails } from '../types';
 import { eppoApiService } from '@/utils/eppoApiService';
-import { toast } from '@/components/ui/sonner';
 
 interface EppoDataPanelProps {
   analysisDetails: AnalysisDetails | null;
@@ -14,7 +13,7 @@ const EppoDataPanel: React.FC<EppoDataPanelProps> = ({ analysisDetails }) => {
   
   const handleEppoSearch = async () => {
     if (!analysisDetails?.multiServiceInsights?.plantName) {
-      toast.error("Nome della pianta non disponibile per la ricerca");
+      console.log("Nome della pianta non disponibile per la ricerca");
       return;
     }
     
@@ -24,14 +23,13 @@ const EppoDataPanel: React.FC<EppoDataPanelProps> = ({ analysisDetails }) => {
       const results = await eppoApiService.searchPlants(plantName);
       
       if (results && results.length > 0) {
-        toast.success(`Trovati ${results.length} risultati per "${plantName}" nel database EPPO`);
+        console.log(`Trovati ${results.length} risultati per "${plantName}" nel database EPPO`);
         // Here you would typically open a modal or navigate to results page
       } else {
-        toast.info(`Nessun risultato trovato per "${plantName}" nel database EPPO`);
+        console.log(`Nessun risultato trovato per "${plantName}" nel database EPPO`);
       }
     } catch (error) {
       console.error("Errore nella ricerca EPPO:", error);
-      toast.error("Errore durante la ricerca nel database EPPO");
     } finally {
       setLoading(false);
     }
