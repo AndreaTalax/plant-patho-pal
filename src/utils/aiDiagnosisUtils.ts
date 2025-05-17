@@ -1,4 +1,3 @@
-
 // Model information for plant disease diagnosis with PlantNet integration
 export interface ModelInfo {
   name: string;
@@ -622,7 +621,12 @@ const analyzeHealthyPlant = (plantName, confidence, plantPart = 'leaf') => {
         reliability: 'high',
         confidenceNote: `This plant's ${plantPart} appears to be in good health with no signs of disease`
       },
-      eppoData: null
+      eppoData: null,
+      recommendedAdditionalTests: [
+        'Regular monitoring',
+        'Seasonal health check',
+        'Preventative treatments'
+      ]
     }
   };
 };

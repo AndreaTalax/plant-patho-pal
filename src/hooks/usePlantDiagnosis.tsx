@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from 'react';
 import { PLANT_DISEASES } from '@/data/plantDiseases';
 import { formatHuggingFaceResult, dataURLtoFile } from '@/utils/plant-analysis';
@@ -102,9 +101,19 @@ export const usePlantDiagnosis = () => {
           ],
           alternativeDiagnoses: PLANT_DISEASES.filter(d => d.id !== randomDisease.id)
             .slice(0, 3)
-            .map(d => ({ disease: d.id, probability: 0.8 })),
+            .map(d => ({ 
+              disease: d.id, 
+              probability: 0.1 + Math.random() * 0.2
+            })),
           sistemaDigitaleFoglia: true,
-          analysisTechnology: 'Sistema Digitale Foglia'
+          analysisTechnology: 'Sistema Digitale Foglia',
+          // Add recommended additional tests
+          recommendedAdditionalTests: [
+            'Soil pH test',
+            'Nutrient deficiency analysis',
+            'Microscopic examination',
+            'Laboratory culture test'
+          ]
         };
         
         setAnalysisDetails(analysisDetails);
@@ -150,6 +159,11 @@ export const usePlantDiagnosis = () => {
         alternativeDiagnoses: PLANT_DISEASES.filter(d => d.id !== emergencyDisease.id)
           .slice(0, 2)
           .map(d => ({ disease: d.id, probability: 0.9 })),
+        recommendedAdditionalTests: [
+          'Visual inspection by expert',
+          'Laboratory testing',
+          'Soil analysis'
+        ]
       });
       
       setIsAnalyzing(false);

@@ -1,3 +1,4 @@
+
 export interface DiagnosedDisease {
   id: string;
   name: string;
@@ -89,4 +90,5 @@ export interface AnalysisDetails {
   } | null;
   sistemaDigitaleFoglia?: boolean;
   analysisTechnology?: string;
+  recommendedAdditionalTests?: string[];
 }
