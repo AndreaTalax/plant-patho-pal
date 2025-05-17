@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from 'react';
 import { PLANT_DISEASES } from '@/data/plantDiseases';
 import { formatHuggingFaceResult, dataURLtoFile } from '@/utils/plant-analysis';
@@ -166,16 +165,23 @@ export const usePlantDiagnosis = () => {
       
       // Example emergency products
       const emergencyProducts = [
-        "Fungicida universale",
-        "Biostimolante vegetale",
-        "Soluzione nutritiva completa"
+        {
+          name: "Fungicida universale",
+          description: "Trattamento generale per malattie fungine",
+          price: 19.99
+        },
+        {
+          name: "Kit diagnostico terreno",
+          description: "Analisi completa del terreno",
+          price: 12.50
+        }
       ];
       
       setDiagnosisResult(`Risultato analisi: ${emergencyDisease.name}`);
       setDiagnosedDisease({
         ...emergencyDisease,
         confidence: 0.6,  // 60% confidence
-        products: emergencyProducts
+        products: ["Fungicida universale", "Biostimolante vegetale", "Soluzione nutritiva completa"]
       });
       
       setAnalysisDetails({
@@ -206,18 +212,7 @@ export const usePlantDiagnosis = () => {
           'Laboratory testing',
           'Soil analysis'
         ],
-        recommendedProducts: [
-          {
-            name: "Fungicida universale",
-            description: "Trattamento generale per malattie fungine",
-            price: 19.99
-          },
-          {
-            name: "Kit diagnostico terreno",
-            description: "Analisi completa del terreno",
-            price: 12.50
-          }
-        ]
+        recommendedProducts: emergencyProducts
       });
       
       setIsAnalyzing(false);

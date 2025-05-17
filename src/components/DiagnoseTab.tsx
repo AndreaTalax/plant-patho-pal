@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { modelInfo } from '@/utils/aiDiagnosisUtils';
@@ -8,6 +7,7 @@ import { PlantInfoFormValues } from './diagnose/PlantInfoForm';
 import { toast } from 'sonner';
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from '@/context/AuthContext';
+import { dataURLtoFile } from '@/utils/file-utils';
 
 // Importing our components
 import DiagnoseHeader from './diagnose/DiagnoseHeader';
@@ -44,20 +44,24 @@ const DiagnoseTab = () => {
     }
   }, [userProfile, navigate]);
 
-  // Mock function to check subscription status - replace with actual implementation
+  // Check subscription status
   useEffect(() => {
     // This would be an API call to check subscription in a real scenario
     const checkSubscription = async () => {
       try {
         // Example: get user subscription from database
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('subscription_plan')
-          .eq('id', userProfile?.id)
-          .single();
+        if (userProfile?.id) {
+          const { data, error } = await supabase
+            .from('profiles')
+            .select('subscription_plan')
+            .eq('id', userProfile.id)
+            .single();
 
-        if (!error && data) {
-          setUserSubscriptionPlan(data.subscription_plan === 'premium' ? 'premium' : 'free');
+          if (!error && data) {
+            setUserSubscriptionPlan(data.subscription_plan === 'premium' ? 'premium' : 'free');
+          } else {
+            setUserSubscriptionPlan('free');
+          }
         }
       } catch (error) {
         console.error('Error checking subscription:', error);
@@ -208,8 +212,7 @@ const DiagnoseTab = () => {
     });
 
     try {
-      // This would send the data to the fitopatologo
-      // Example: Save diagnosis request to database
+      // Create the expert consultation
       const { error } = await supabase
         .from('expert_consultations')
         .insert({
@@ -219,11 +222,11 @@ const DiagnoseTab = () => {
           plant_info: {
             isIndoor: plantInfo.isIndoor,
             wateringFrequency: plantInfo.wateringFrequency
-          },
-          status: 'pending'
+          }
         });
 
       if (error) {
+        console.error("Error creating consultation:", error);
         throw error;
       }
 

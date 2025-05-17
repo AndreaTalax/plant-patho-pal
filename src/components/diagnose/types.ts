@@ -91,16 +91,28 @@ export interface AnalysisDetails {
   sistemaDigitaleFoglia?: boolean;
   analysisTechnology?: string;
   recommendedAdditionalTests?: string[];
+  recommendedProducts?: Array<{
+    id?: string;
+    name: string;
+    description?: string;
+    price?: number;
+    rating?: number;
+    image?: string;
+  }>;
   symptoms?: string;
 }
 
 export interface UserProfile {
+  id?: string;
   firstName: string;
   lastName: string;
+  email: string;
   birthDate: string;
   birthPlace: string;
-  email: string;
-  hasCompletedProfile: boolean;
+  hasCompletedProfile?: boolean;
+  subscriptionPlan?: 'free' | 'premium';
+  phone?: string;
+  address?: string;
 }
 
 export interface SubscriptionPlan {

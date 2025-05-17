@@ -3,17 +3,7 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User } from '@supabase/supabase-js';
-
-interface UserProfile {
-  id?: string;
-  email: string;
-  firstName?: string;
-  lastName?: string;
-  birthDate?: string;
-  birthPlace?: string;
-  hasCompletedProfile?: boolean;
-  subscriptionPlan?: 'free' | 'premium';
-}
+import { UserProfile } from '@/components/diagnose/types';
 
 interface AuthContextType {
   user: User | null;
@@ -25,11 +15,13 @@ interface AuthContextType {
   register: (email: string, password: string) => Promise<any>;
   logout: () => Promise<void>;
   updateProfile: (field: string, value: any) => void;
+  updateUsername: (username: string) => Promise<void>;
+  updatePassword: (password: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
-  userProfile: { email: '' },
+  userProfile: { email: '', firstName: '', lastName: '', birthDate: '', birthPlace: '' },
   isAuthenticated: false,
   isProfileComplete: false,
   isMasterAccount: false,
@@ -37,13 +29,21 @@ const AuthContext = createContext<AuthContextType>({
   register: async () => {},
   logout: async () => {},
   updateProfile: () => {},
+  updateUsername: async () => {},
+  updatePassword: async () => {},
 });
 
 export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [userProfile, setUserProfile] = useState<UserProfile>({ email: '' });
+  const [userProfile, setUserProfile] = useState<UserProfile>({ 
+    email: '', 
+    firstName: '', 
+    lastName: '', 
+    birthDate: '',
+    birthPlace: ''
+  });
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isProfileComplete, setIsProfileComplete] = useState(false);
   const [isMasterAccount, setIsMasterAccount] = useState(false);
@@ -58,6 +58,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           setUser(user);
           setUserProfile({
             email: user.email || '',
+            firstName: '',
+            lastName: '',
+            birthDate: '',
+            birthPlace: '',
             id: user.id
           });
           setIsAuthenticated(true);
@@ -76,12 +80,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             setUserProfile({
               id: user.id,
               email: user.email || '',
-              firstName: data.first_name,
-              lastName: data.last_name,
-              birthDate: data.birth_date,
-              birthPlace: data.birth_place,
+              firstName: data.first_name || '',
+              lastName: data.last_name || '',
+              birthDate: data.birth_date || '',
+              birthPlace: data.birth_place || '',
               hasCompletedProfile: !!(data.first_name && data.last_name && data.birth_date && data.birth_place),
-              subscriptionPlan: data.subscription_plan || 'free'
+              subscriptionPlan: data.subscription_plan || 'free',
+              phone: data.phone || '',
+              address: data.address || ''
             });
             
             setIsProfileComplete(!!(data.first_name && data.last_name && data.birth_date && data.birth_place));
@@ -106,6 +112,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           setUser(session.user);
           setUserProfile({
             email: session.user.email || '',
+            firstName: '',
+            lastName: '',
+            birthDate: '',
+            birthPlace: '',
             id: session.user.id
           });
           setIsAuthenticated(true);
@@ -124,12 +134,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             setUserProfile({
               id: session.user.id,
               email: session.user.email || '',
-              firstName: data.first_name,
-              lastName: data.last_name,
-              birthDate: data.birth_date,
-              birthPlace: data.birth_place,
+              firstName: data.first_name || '',
+              lastName: data.last_name || '',
+              birthDate: data.birth_date || '',
+              birthPlace: data.birth_place || '',
               hasCompletedProfile: !!(data.first_name && data.last_name && data.birth_date && data.birth_place),
-              subscriptionPlan: data.subscription_plan || 'free'
+              subscriptionPlan: data.subscription_plan || 'free',
+              phone: data.phone || '',
+              address: data.address || ''
             });
             
             setIsProfileComplete(!!(data.first_name && data.last_name && data.birth_date && data.birth_place));
@@ -139,7 +151,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           }
         } else if (event === 'SIGNED_OUT') {
           setUser(null);
-          setUserProfile({ email: '' });
+          setUserProfile({ 
+            email: '', 
+            firstName: '', 
+            lastName: '', 
+            birthDate: '',
+            birthPlace: '' 
+          });
           setIsAuthenticated(false);
           setIsMasterAccount(false);
           setIsProfileComplete(false);
@@ -181,7 +199,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         lastName: 'last_name',
         birthDate: 'birth_date',
         birthPlace: 'birth_place',
-        hasCompletedProfile: 'has_completed_profile'
+        hasCompletedProfile: 'has_completed_profile',
+        phone: 'phone',
+        address: 'address'
       };
       
       const dbField = fieldMapping[field] || field;
@@ -214,6 +234,45 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
+  const updateUsername = async (username: string) => {
+    if (!user) return;
+    
+    try {
+      // Update in database
+      const { error } = await supabase
+        .from('profiles')
+        .update({ username })
+        .eq('id', user.id);
+        
+      if (error) {
+        console.error('Error updating username:', error);
+        throw error;
+      }
+      
+      // Update local state
+      setUserProfile(prev => ({ ...prev, username }));
+    } catch (error) {
+      console.error('Error in updateUsername:', error);
+      throw error;
+    }
+  };
+  
+  const updatePassword = async (password: string) => {
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password
+      });
+      
+      if (error) {
+        console.error('Error updating password:', error);
+        throw error;
+      }
+    } catch (error) {
+      console.error('Error in updatePassword:', error);
+      throw error;
+    }
+  };
+
   const value = {
     user,
     userProfile,
@@ -224,6 +283,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     register,
     logout,
     updateProfile,
+    updateUsername,
+    updatePassword
   };
 
   return (

@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useToast } from "@/hooks/use-toast"; // Updated import path
+import { useToast } from "@/hooks/use-toast"; 
 import { useAuth } from "@/context/AuthContext";
 
 interface ChangeCredentialsModalProps {
@@ -19,7 +19,7 @@ const ChangeCredentialsModal = ({ open, onOpenChange }: ChangeCredentialsModalPr
   const { toast } = useToast();
   const { updateUsername, updatePassword } = useAuth();
 
-  const handleSave = () => {
+  const handleSave = async () => {
     let hasError = false;
 
     if (username && username.length < 3) {
@@ -50,24 +50,32 @@ const ChangeCredentialsModal = ({ open, onOpenChange }: ChangeCredentialsModalPr
     }
 
     if (!hasError) {
-      if (username) {
-        updateUsername(username);
-      }
-      
-      if (password) {
-        updatePassword(password);
-      }
+      try {
+        if (username) {
+          await updateUsername(username);
+        }
+        
+        if (password) {
+          await updatePassword(password);
+        }
 
-      toast({
-        title: "Credenziali aggiornate",
-        description: "Le tue credenziali sono state aggiornate con successo.",
-      });
+        toast({
+          title: "Credenziali aggiornate",
+          description: "Le tue credenziali sono state aggiornate con successo.",
+        });
 
-      // Reset form
-      setUsername("");
-      setPassword("");
-      setConfirmPassword("");
-      onOpenChange(false);
+        // Reset form
+        setUsername("");
+        setPassword("");
+        setConfirmPassword("");
+        onOpenChange(false);
+      } catch (error) {
+        toast({
+          variant: "destructive",
+          title: "Errore",
+          description: "Si è verificato un errore durante l'aggiornamento delle credenziali.",
+        });
+      }
     }
   };
 
