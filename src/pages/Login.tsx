@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { useToast } from "@/hooks/use-toast"; // Updated import path
+import { toast } from "sonner";
 import { Leaf, LockKeyhole, Mail } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 
@@ -14,19 +14,21 @@ const Login = () => {
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
-  const { toast } = useToast();
   const { login } = useAuth();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Clear any previous toast notifications
+    toast.dismiss();
+    
     setIsLoading(true);
 
     // Simple validation
     if (!email || !password) {
-      toast({
-        variant: "destructive",
-        title: "Error",
+      toast.error("Error", {
         description: "Please enter both email and password",
+        dismissible: true
       });
       setIsLoading(false);
       return;
@@ -36,14 +38,20 @@ const Login = () => {
       // Handle all user logins
       await login(email, password);
       
-      // Navigate directly without toast - fixes freezing issue
+      // Show success message before navigation
+      toast.success("Login successful", {
+        description: "Welcome to your account!",
+        dismissible: true
+      });
+      
+      // Navigate after showing toast
       navigate("/");
       
-    } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Login failed",
+    } catch (error: any) {
+      console.error("Login error:", error);
+      toast.error("Login failed", {
         description: "Invalid credentials. Please try again.",
+        dismissible: true
       });
     } finally {
       setIsLoading(false);

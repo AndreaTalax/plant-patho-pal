@@ -243,6 +243,7 @@ export const resendConfirmationEmail = async (email: string) => {
       };
     }
     
+    // Per le altre email, prima tentiamo l'invio tramite l'API standard di Supabase
     const { data, error } = await supabase.auth.resend({
       type: 'signup',
       email,
@@ -255,8 +256,34 @@ export const resendConfirmationEmail = async (email: string) => {
           message: "Troppe richieste di email per questo indirizzo. Attendi prima di richiedere un'altra email di conferma."
         };
       }
-      console.error('Errore invio email di conferma:', error.message);
-      throw error;
+      
+      console.warn('Errore resend standard:', error.message);
+      
+      // Se l'API standard fallisce, proviamo con la nostra edge function
+      try {
+        console.log('Tentativo di invio tramite edge function');
+        const { error: functionError } = await supabase.functions.invoke('send-registration-confirmation', {
+          body: { 
+            email: email,
+            confirmationToken: 'resend-token',
+            confirmationUrl: `${window.location.origin}/confirm-email?token=${encodeURIComponent('resend-token')}&email=${encodeURIComponent(email)}` 
+          }
+        });
+        
+        if (functionError) {
+          console.error('Errore nell\'invio dell\'email tramite edge function:', functionError);
+          throw functionError;
+        }
+        
+        console.log('Email di conferma inviata con successo tramite edge function');
+        return { 
+          success: true, 
+          message: "Abbiamo inviato una nuova email di conferma. Controlla la tua casella di posta."
+        };
+      } catch (edgeFunctionError) {
+        console.error('Errore irreversibile nell\'invio dell\'email:', edgeFunctionError);
+        throw error; // Lanciamo l'errore originale di Supabase
+      }
     }
     
     return { 
