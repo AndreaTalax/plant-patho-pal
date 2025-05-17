@@ -45,6 +45,9 @@ export const formatHuggingFaceResult = (result: any) => {
     let plantType = result.detectedPlantType || null;
     
     if (!plantName && label) {
+      // Convert label to lowercase for case-insensitive matching
+      const labelLower = label.toLowerCase();
+      
       // Check if we have a detected plant type from specialized models
       if (plantDetection && plantDetection.detectedType) {
         plantType = plantDetection.detectedType;
@@ -52,7 +55,6 @@ export const formatHuggingFaceResult = (result: any) => {
       } else {
         // Migliorato l'algoritmo di estrazione del nome della pianta
         // Prima cerca nelle mappature di plantSpeciesMap
-        const labelLower = label.toLowerCase();
         for (const [key, value] of Object.entries(plantSpeciesMap || {})) {
           if (labelLower.includes(key)) {
             plantName = typeof value === 'string' ? value : key;
