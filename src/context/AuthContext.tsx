@@ -11,7 +11,6 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isProfileComplete: boolean;
   isMasterAccount: boolean;
-  isAdminAccount: boolean; // New flag to check if user is admin
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string) => Promise<any>;
   logout: () => Promise<void>;
@@ -26,7 +25,6 @@ const AuthContext = createContext<AuthContextType>({
   isAuthenticated: false,
   isProfileComplete: false,
   isMasterAccount: false,
-  isAdminAccount: false, // Add default value
   login: async () => {},
   register: async () => {},
   logout: async () => {},
@@ -49,7 +47,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isProfileComplete, setIsProfileComplete] = useState(false);
   const [isMasterAccount, setIsMasterAccount] = useState(false);
-  const [isAdminAccount, setIsAdminAccount] = useState(false); // New state for admin account
   const [loading, setLoading] = useState(true);
 
   // Check if the user is already logged in
@@ -71,9 +68,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           
           // Check if this is the master account
           setIsMasterAccount(user.email === 'expert@plantpathopal.com');
-          
-          // Check if this is the admin account
-          setIsAdminAccount(user.email === 'test@gmail.com');
           
           // Fetch user profile data
           const { data, error } = await supabase
@@ -129,9 +123,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           // Check if this is the master account
           setIsMasterAccount(session.user.email === 'expert@plantpathopal.com');
           
-          // Check if this is the admin account
-          setIsAdminAccount(session.user.email === 'test@gmail.com');
-          
           // Fetch user profile data after sign in
           const { data, error } = await supabase
             .from('profiles')
@@ -169,7 +160,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           });
           setIsAuthenticated(false);
           setIsMasterAccount(false);
-          setIsAdminAccount(false); // Reset admin status on logout
           setIsProfileComplete(false);
         }
       }
@@ -289,7 +279,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     isAuthenticated,
     isProfileComplete,
     isMasterAccount,
-    isAdminAccount, // Expose admin status to context
     login,
     register,
     logout,

@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,22 +8,13 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { toast } from "sonner";
 import { Leaf, LockKeyhole, Mail } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-import { signIn } from "@/integrations/supabase/auth";
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
-  const { login, isAuthenticated } = useAuth();
-
-  // Redirect if already authenticated
-  useEffect(() => {
-    if (isAuthenticated) {
-      console.log("User already authenticated, redirecting to home");
-      navigate("/", { replace: true });
-    }
-  }, [isAuthenticated, navigate]);
+  const { login } = useAuth();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,27 +35,7 @@ const Login = () => {
     }
 
     try {
-      // Use direct signIn from auth.ts implementation for the admin account
-      // This ensures we use the proper whitelisted auth path
-      if (email.toLowerCase() === 'test@gmail.com' && password === 'test123') {
-        console.log("Using direct auth for admin account");
-        const data = await signIn(email, password);
-        console.log("Admin login result:", data);
-        if (data) {
-          // Show success message before navigation
-          toast.success("Admin login successful", {
-            description: "Welcome to your admin account!",
-            dismissible: true
-          });
-          
-          // Navigate immediately to home after successful login
-          console.log("Navigating to home after admin login");
-          navigate("/", { replace: true });
-          return;
-        }
-      }
-      
-      // For other accounts, use the standard login method
+      // Handle all user logins
       await login(email, password);
       
       // Show success message before navigation
@@ -73,9 +44,8 @@ const Login = () => {
         dismissible: true
       });
       
-      // Navigate immediately to home after showing toast
-      console.log("Navigating to home after standard login");
-      navigate("/", { replace: true });
+      // Navigate after showing toast
+      navigate("/");
       
     } catch (error: any) {
       console.error("Login error:", error);
@@ -86,12 +56,6 @@ const Login = () => {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  // For demo convenience, pre-populate the admin fields
-  const fillAdminLogin = () => {
-    setEmail("test@gmail.com");
-    setPassword("test123");
   };
 
   return (
@@ -116,7 +80,7 @@ const Login = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleLogin} className="space-y-4" id="admin-login">
+            <form onSubmit={handleLogin} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email" className="text-gray-700">Email</Label>
                 <div className="relative">
@@ -160,11 +124,7 @@ const Login = () => {
             </div>
             <div className="text-center w-full text-xs text-gray-400">
               <p>Demo accounts:</p>
-              <p>Admin user: <Button 
-                variant="link" 
-                className="p-0 h-auto text-xs" 
-                onClick={fillAdminLogin}
-              >test@gmail.com / test123</Button></p>
+              <p>Regular user: test@gmail.com / test123</p>
               <p>Plant pathologist: agrotecnicomarconigro@gmail.com / marconigro93</p>
             </div>
           </CardFooter>
