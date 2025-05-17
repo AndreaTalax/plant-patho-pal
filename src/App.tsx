@@ -4,10 +4,12 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { AuthProvider, useAuth } from "./context/auth";
+import { AuthProvider, useAuth } from "./context/AuthContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import { PlantInfoProvider } from "./context/PlantInfoContext";
 import Index from "./pages/Index";
+import Login from "./pages/Login";
+import SignUp from "./pages/SignUp";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import AboutUs from "./pages/AboutUs";
@@ -22,7 +24,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated, isProfileComplete, isMasterAccount } = useAuth();
   
   if (!isAuthenticated) {
-    return <Navigate to="/complete-profile" replace />;
+    return <Navigate to="/login" replace />;
   }
   
   // Skip profile completion check for master accounts
@@ -33,12 +35,16 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
-// Profile completion route - accessible even without authentication
+// Profile completion route - only accessible when authenticated but profile not complete
 const ProfileCompletionRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated, isProfileComplete, isMasterAccount } = useAuth();
   
-  // Skip profile completion for master accounts and users with complete profile
-  if (isAuthenticated && (isProfileComplete || isMasterAccount)) {
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+  
+  // Skip profile completion for master accounts
+  if (isProfileComplete || isMasterAccount) {
     return <Navigate to="/" replace />;
   }
   
@@ -48,6 +54,8 @@ const ProfileCompletionRoute = ({ children }: { children: React.ReactNode }) => 
 const AppRoutes = () => {
   return (
     <Routes>
+      <Route path="/login" element={<Login />} />
+      <Route path="/signup" element={<SignUp />} />
       <Route path="/auth" element={<Auth />} />
       <Route path="/complete-profile" element={
         <ProfileCompletionRoute>
@@ -74,7 +82,7 @@ const AppRoutes = () => {
           <Contact />
         </ProtectedRoute>
       } />
-      <Route path="*" element={<Navigate to="/complete-profile" replace />} />
+      <Route path="*" element={<NotFound />} />
     </Routes>
   );
 };

@@ -6,7 +6,6 @@ import PlantInfoCard from './PlantInfoCard';
 import ActionButtons from './ActionButtons';
 import AiServicesData from './AiServicesData';
 import EppoDataPanel from './EppoDataPanel';
-import ProductRecommendations from './ProductRecommendations';
 import { formatHuggingFaceResult } from '@/utils/plant-analysis';
 import { Loader2 } from 'lucide-react';
 import { supabase } from "@/integrations/supabase/client";
@@ -21,7 +20,6 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
 }) => {
   const [saveLoading, setSaveLoading] = useState(false);
   const [analysisDetails, setAnalysisDetails] = useState<AnalysisDetails | null>(null);
-  const [showProductRecommendations, setShowProductRecommendations] = useState(true);
 
   // Process raw analysis data when it becomes available
   useState(() => {
@@ -55,8 +53,7 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
           malattia: analysisData.healthy ? 'Sana' : analysisData.label,
           accuratezza: analysisData.score,
           user_id: user.id,
-          risultati_completi: analysisData,
-          symptoms: analysisDetails?.symptoms || ""
+          risultati_completi: analysisData
         });
       
       if (error) {
@@ -97,15 +94,6 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
         analysisDetails={analysisDetails}
       />
       
-      {analysisDetails?.symptoms && (
-        <div className="bg-white p-4 rounded-xl shadow-md">
-          <h3 className="text-md font-medium mb-2 text-drplant-blue-dark">Sintomi riportati:</h3>
-          <p className="text-gray-700 text-sm italic bg-gray-50 p-3 rounded-lg border border-gray-100">
-            "{analysisDetails.symptoms}"
-          </p>
-        </div>
-      )}
-      
       <EppoDataPanel 
         analysisDetails={analysisDetails}
       />
@@ -114,12 +102,6 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
         analysisDetails={analysisDetails}
         isAnalyzing={isAnalyzing}
       />
-      
-      {showProductRecommendations && analysisDetails?.recommendedProducts && (
-        <ProductRecommendations 
-          products={analysisDetails.recommendedProducts} 
-        />
-      )}
       
       <ActionButtons 
         onStartNewAnalysis={onStartNewAnalysis}

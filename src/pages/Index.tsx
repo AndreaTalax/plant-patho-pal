@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import Header from '@/components/Header';
 import DiagnoseTab from '@/components/DiagnoseTab';
@@ -6,7 +7,7 @@ import ShopTab from '@/components/ShopTab';
 import LibraryTab from '@/components/LibraryTab';
 import ProfileTab from '@/components/ProfileTab';
 import BottomNavigation from '@/components/BottomNavigation';
-import { useAuth } from '@/context/auth'; // Updated import path
+import { useAuth } from '@/context/AuthContext';
 
 type TabName = 'diagnose' | 'chat' | 'shop' | 'library' | 'profile';
 

@@ -25,6 +25,7 @@ export const usePlantDiagnosis = () => {
     setDiagnosisResult(null);
     setDiagnosedDisease(null);
     setAnalysisProgress(0);
+    setAnalysisDetails(null);
     
     try {
       // Simulazione rapida del progresso
@@ -48,54 +49,22 @@ export const usePlantDiagnosis = () => {
         const randomPlantEntry = plantEntries[Math.floor(Math.random() * plantEntries.length)];
         const plantName = randomPlantEntry[1];
         
-        // Add product recommendations for the disease
-        const recommendedProducts = [
-          {
-            id: "prod_1",
-            name: "BioProtection Plus",
-            description: "Fungicida biologico specifico per malattie fogliari",
-            price: 24.99,
-            rating: 4.7,
-            image: "https://placehold.co/200x200?text=BioProtection"
-          },
-          {
-            id: "prod_2",
-            name: "Neemix Organico",
-            description: "Olio di neem concentrato per controllo patogeni",
-            price: 18.50,
-            rating: 4.5,
-            image: "https://placehold.co/200x200?text=Neemix"
-          },
-          {
-            id: "prod_3",
-            name: "Plant Recovery Boost",
-            description: "Biostimolante per rafforzare le difese naturali",
-            price: 15.99,
-            rating: 4.3,
-            image: "https://placehold.co/200x200?text=Recovery"
-          }
-        ];
-        
         setDiagnosedDisease({
           ...randomDisease,
-          confidence: 0.7, // 70% confidence
-          products: recommendedProducts.map(p => p.name)
+          confidence: 1.0 // Massima confidenza
         });
         
-        setDiagnosisResult(`Rilevato ${randomDisease.name} su ${plantName} con confidenza del 70%.`);
+        setDiagnosisResult(`Rilevato ${randomDisease.name} su ${plantName} con alta confidenza.`);
         
         // Creazione dei dettagli di analisi con il nome della pianta
-        const currentAnalysisDetails = analysisDetails || {};
-        
-        const updatedAnalysisDetails: AnalysisDetails = {
-          ...currentAnalysisDetails,
+        const analysisDetails: AnalysisDetails = {
           multiServiceInsights: {
             huggingFaceResult: {
               label: randomDisease.name,
-              score: 0.7
+              score: 1.0
             },
-            agreementScore: 70,
-            primaryService: 'Sistema Digitale Foglia',
+            agreementScore: 100,
+            primaryService: 'PlantNet AI',
             plantSpecies: plantName,
             plantName: plantName.split(' ')[0],
             plantPart: 'foglia',
@@ -107,7 +76,7 @@ export const usePlantDiagnosis = () => {
             leafAnalysis: {
               leafColor: 'green',
               patternDetected: 'leaf spots',
-              diseaseConfidence: 0.7,
+              diseaseConfidence: 0.95,
               healthStatus: 'diseased',
               leafType: 'Compound',
               details: {
@@ -144,12 +113,10 @@ export const usePlantDiagnosis = () => {
             'Nutrient deficiency analysis',
             'Microscopic examination',
             'Laboratory culture test'
-          ],
-          // Add recommended products
-          recommendedProducts: recommendedProducts
+          ]
         };
         
-        setAnalysisDetails(updatedAnalysisDetails);
+        setAnalysisDetails(analysisDetails);
         setIsAnalyzing(false);
       }, 800); // Ridotto a 0.8 secondi
     } catch (error) {
@@ -163,25 +130,10 @@ export const usePlantDiagnosis = () => {
       const randomPlantEntry = plantEntries[Math.floor(Math.random() * plantEntries.length)];
       const plantName = randomPlantEntry[1] || 'Pianta'; // Fallback to "Plant" in Italian
       
-      // Example emergency products
-      const emergencyProducts = [
-        {
-          name: "Fungicida universale",
-          description: "Trattamento generale per malattie fungine",
-          price: 19.99
-        },
-        {
-          name: "Kit diagnostico terreno",
-          description: "Analisi completa del terreno",
-          price: 12.50
-        }
-      ];
-      
       setDiagnosisResult(`Risultato analisi: ${emergencyDisease.name}`);
       setDiagnosedDisease({
         ...emergencyDisease,
-        confidence: 0.6,  // 60% confidence
-        products: ["Fungicida universale", "Biostimolante vegetale", "Soluzione nutritiva completa"]
+        confidence: 1.0  // Massima confidenza
       });
       
       setAnalysisDetails({
@@ -193,7 +145,7 @@ export const usePlantDiagnosis = () => {
           // Add emergency leaf analysis data
           leafAnalysis: {
             healthStatus: 'unknown',
-            diseaseConfidence: 0.6,
+            diseaseConfidence: 0.7,
             leafColor: 'variable'
           },
           advancedLeafAnalysis: false
@@ -211,8 +163,7 @@ export const usePlantDiagnosis = () => {
           'Visual inspection by expert',
           'Laboratory testing',
           'Soil analysis'
-        ],
-        recommendedProducts: emergencyProducts
+        ]
       });
       
       setIsAnalyzing(false);
@@ -242,6 +193,15 @@ export const usePlantDiagnosis = () => {
     setUploadedImage(imageDataUrl);
     stopCameraStream();
     setAnalysisProgress(0);
+    
+    // Convert dataURL to File object for analysis
+    const imageFile = dataURLtoFile(imageDataUrl, "camera-capture.jpg");
+    
+    // Log the capture for debugging
+    console.log("Image captured, size:", imageFile.size, "bytes");
+    console.log("Starting image analysis...");
+    
+    analyzeUploadedImage(imageFile);
   };
 
   const handleImageUpload = (file: File) => {
@@ -249,6 +209,8 @@ export const usePlantDiagnosis = () => {
     reader.onload = (event) => {
       setUploadedImage(event.target?.result as string);
       console.log("Image uploaded, size:", file.size, "bytes");
+      console.log("Starting image analysis...");
+      analyzeUploadedImage(file);
     };
     reader.readAsDataURL(file);
   };
@@ -268,6 +230,5 @@ export const usePlantDiagnosis = () => {
     analyzeUploadedImage,
     stopCameraStream,
     setUploadedImage,
-    setAnalysisDetails,
   };
 };

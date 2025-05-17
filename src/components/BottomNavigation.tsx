@@ -1,5 +1,6 @@
+
 import { Camera, MessageCircle, ShoppingBag, Leaf, User } from 'lucide-react';
-import { useAuth } from '@/context/auth';
+import { useAuth } from '@/context/AuthContext';
 
 type TabName = 'diagnose' | 'chat' | 'shop' | 'library' | 'profile';
 
