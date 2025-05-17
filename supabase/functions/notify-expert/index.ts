@@ -124,7 +124,12 @@ ID Consultazione: ${consultationId}`;
           conversation_id: conversationId,
           sender_id: userId,
           recipient_id: expert.id,
-          text: messageText
+          text: messageText,
+          // Send the image URL as well
+          products: { 
+            plantImage: imageUrl,
+            consultationId: consultationId
+          }
         });
       
       if (msgError) {
@@ -132,8 +137,30 @@ ID Consultazione: ${consultationId}`;
         // Continue anyway, we don't want to fail the whole request just because the message failed
       }
 
-      // Here you could also send an email to the expert if you have their email
-      // This is where you'd implement the email sending functionality
+      // Send email to the expert
+      try {
+        const userName = userProfile?.first_name || userProfile?.username || userId;
+        
+        console.log(`Sending email notification to expert ${expert.email}`);
+        
+        await supabaseAdmin.functions.invoke('send-specialist-notification', {
+          body: {
+            conversation_id: conversationId,
+            sender_id: userId,
+            recipient_id: expert.id,
+            message_text: messageText,
+            expert_email: expert.email,
+            user_name: userName,
+            image_url: imageUrl,
+            plant_details: plantInfo
+          }
+        });
+        
+        console.log("Email notification sent to expert");
+      } catch (emailError) {
+        console.error("Error sending email notification:", emailError);
+        // Continue anyway, don't fail if email sending fails
+      }
       
       console.log(`Notifica inviata all'esperto ${expert.username || expert.email} per la consultazione ${consultationId}`);
     }

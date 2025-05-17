@@ -19,7 +19,16 @@ serve(async (req) => {
 
   try {
     // Ottieni dati dalla richiesta
-    const { conversation_id, sender_id, recipient_id, message_text } = await req.json();
+    const { 
+      conversation_id, 
+      sender_id, 
+      recipient_id, 
+      message_text,
+      expert_email,
+      user_name,
+      image_url,
+      plant_details
+    } = await req.json();
 
     // Verifica che i dati richiesti siano presenti
     if (!conversation_id || !sender_id || !recipient_id || !message_text) {
@@ -60,14 +69,7 @@ serve(async (req) => {
       // Continuiamo comunque anche se non troviamo il profilo
     }
 
-    const senderName = senderProfile?.username || senderProfile?.email || "Un utente";
-
-    // Qui puoi implementare l'invio di notifiche, ad esempio:
-    // - Email al destinatario
-    // - Notifica push
-    // - WebSockets per aggiornamenti in tempo reale
-
-    console.log(`Notifica inviata per messaggio da ${senderName} a ${recipientProfile?.username || recipient_id}`);
+    const senderName = senderProfile?.username || senderProfile?.email || user_name || "Un utente";
 
     // Aggiorna la conversazione con l'ultimo messaggio
     const { error: updateError } = await supabaseAdmin
@@ -83,6 +85,104 @@ serve(async (req) => {
       console.error("Errore nell'aggiornamento della conversazione:", updateError);
       // Continuiamo comunque anche se l'aggiornamento fallisce
     }
+
+    // Invia email al fitopatologo se abbiamo l'indirizzo email
+    if (expert_email) {
+      try {
+        console.log(`Invio email al fitopatologo: ${expert_email}`);
+
+        // Qui puoi utilizzare il servizio email di tua preferenza
+        // Per esempio, SendGrid, SMTP diretto, ecc.
+        
+        // Prepara l'HTML dell'email
+        const emailHtml = `
+        <html>
+          <head>
+            <style>
+              body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+              .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+              .header { background-color: #4CAF50; color: white; padding: 10px; text-align: center; }
+              .content { padding: 20px; background-color: #f9f9f9; }
+              .footer { font-size: 12px; text-align: center; margin-top: 30px; color: #666; }
+              img.plant-image { max-width: 100%; height: auto; border: 1px solid #ddd; border-radius: 4px; margin: 15px 0; }
+              .info-box { background-color: #e8f5e9; border-left: 4px solid #4CAF50; padding: 10px; margin: 15px 0; }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <div class="header">
+                <h1>Nuova Richiesta di Diagnosi</h1>
+              </div>
+              <div class="content">
+                <p>Caro Fitopatologo,</p>
+                <p>Hai ricevuto una nuova richiesta di diagnosi da <strong>${senderName}</strong>.</p>
+                
+                <div class="info-box">
+                  <h3>Sintomi riportati:</h3>
+                  <p>${message_text.split('Sintomi:')[1]?.split('\n\n')[0] || 'Non specificati'}</p>
+                  
+                  <h3>Dettagli pianta:</h3>
+                  <ul>
+                    ${plant_details ? `
+                      <li>Ambiente: ${plant_details.isIndoor ? 'Interno' : 'Esterno'}</li>
+                      <li>Frequenza irrigazione: ${plant_details.wateringFrequency} volte a settimana</li>
+                      <li>Esposizione luce: ${plant_details.lightExposure}</li>
+                    ` : '<li>Nessun dettaglio disponibile</li>'}
+                  </ul>
+                </div>
+
+                ${image_url ? `
+                <h3>Immagine della pianta:</h3>
+                <img src="${image_url}" alt="Immagine della pianta" class="plant-image">
+                ` : '<p>Nessuna immagine fornita.</p>'}
+
+                <p>Puoi rispondere direttamente dalla piattaforma Dr. Plant accedendo alla sezione chat.</p>
+              </div>
+              <div class="footer">
+                <p>Questa è un'email automatica. Per favore non rispondere direttamente a questa email.</p>
+                <p>© ${new Date().getFullYear()} Dr. Plant - Tutti i diritti riservati</p>
+              </div>
+            </div>
+          </body>
+        </html>
+        `;
+
+        // Invia l'email usando la funzione appropriata
+        // Per ora stiamo solo simulando l'invio dell'email, aggiorna con il tuo metodo di invio
+        console.log(`Email HTML generata per ${expert_email}`);
+        console.log(`Simulazione invio email a ${expert_email} completata`);
+
+        // Uncomment and implement this when you have an email service set up
+        // This is an example if you're using SendGrid:
+        /*
+        const apiKey = Deno.env.get("SENDGRID_API_KEY");
+        const res = await fetch("https://api.sendgrid.com/v3/mail/send", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify({
+            personalizations: [{ to: [{ email: expert_email }] }],
+            from: { email: "noreply@drplant.it", name: "Dr. Plant" },
+            subject: `Nuova richiesta di diagnosi da ${senderName}`,
+            content: [{ type: "text/html", value: emailHtml }],
+          }),
+        });
+        
+        if (!res.ok) {
+          const errorText = await res.text();
+          console.error("Errore nell'invio dell'email:", errorText);
+          throw new Error(`SendGrid API returned ${res.status}: ${errorText}`);
+        }
+        */
+      } catch (emailError) {
+        console.error("Errore nell'invio dell'email:", emailError);
+        // Continuiamo comunque anche se l'invio dell'email fallisce
+      }
+    }
+
+    console.log(`Notifica inviata per messaggio da ${senderName} a ${recipientProfile?.username || recipient_id}`);
 
     return new Response(
       JSON.stringify({ 

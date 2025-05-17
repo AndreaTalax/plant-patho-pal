@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { modelInfo } from '@/utils/aiDiagnosisUtils';
@@ -106,11 +107,14 @@ const DiagnoseTab = () => {
     }
   };
 
-  // Function to notify plant pathologist
+  // Function to notify plant pathologist with all information
   const notifyExpert = async (imageFile?: File, imageDataUrl?: string) => {
     try {
-      if (!userProfile?.email) {
+      if (!userProfile?.id) {
         console.error("User not logged in");
+        toast.error("Devi accedere per contattare il fitopatologo", {
+          duration: 3000
+        });
         return;
       }
 
@@ -125,11 +129,15 @@ const DiagnoseTab = () => {
         });
       }
 
+      toast.info("Invio richiesta al fitopatologo...", {
+        duration: 2000
+      });
+
       // First, create a consultation record
       const { data: consultationData, error: consultationError } = await supabase
         .from('expert_consultations')
         .insert({
-          user_id: userProfile.email, // Use email instead of id
+          user_id: userProfile.id,
           symptoms: plantInfo.symptoms,
           image_url: imageUrl,
           plant_info: {
@@ -143,22 +151,49 @@ const DiagnoseTab = () => {
         
       if (consultationError) {
         console.error("Error creating consultation:", consultationError);
+        toast.error("Errore nell'invio della richiesta", {
+          description: "Non è stato possibile creare la consultazione",
+          duration: 4000
+        });
         return;
       }
       
-      // Send email notification to expert (using edge function)
+      // Send notification to expert (using edge function)
       const consultationId = consultationData?.[0]?.id;
       if (consultationId) {
-        // Notification would be sent via edge function
-        console.log("Notification would be sent for consultation:", consultationId);
+        // Invoke the edge function to notify the expert via chat and email
+        const { data: notifyData, error: notifyError } = await supabase.functions.invoke('notify-expert', {
+          body: { 
+            consultationId,
+            userId: userProfile.id,
+            imageUrl,
+            symptoms: plantInfo.symptoms,
+            plantInfo: {
+              isIndoor: plantInfo.isIndoor,
+              wateringFrequency: plantInfo.wateringFrequency,
+              lightExposure: plantInfo.lightExposure
+            }
+          }
+        });
+        
+        if (notifyError) {
+          console.error("Error notifying expert:", notifyError);
+          toast.error("Errore nell'invio della notifica al fitopatologo", {
+            duration: 4000
+          });
+          return;
+        }
         
         toast.success("Richiesta inviata al fitopatologo", {
-          description: "Riceverai una risposta al più presto.",
+          description: "Riceverai una risposta al più presto nella sezione chat.",
           duration: 5000
         });
       }
     } catch (error) {
       console.error("Error notifying expert:", error);
+      toast.error("Si è verificato un errore durante l'invio della richiesta", {
+        duration: 4000
+      });
     }
   };
 

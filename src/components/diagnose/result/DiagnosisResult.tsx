@@ -17,7 +17,8 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
   plantInfo,
   analysisData,
   isAnalyzing,
-  onStartNewAnalysis
+  onStartNewAnalysis,
+  onChatWithExpert
 }) => {
   const [saveLoading, setSaveLoading] = useState(false);
   const [analysisDetails, setAnalysisDetails] = useState<AnalysisDetails | null>(null);
@@ -81,16 +82,6 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
       setSaveLoading(false);
     }
   };
-  
-  // Navigate to the chat tab
-  const handleChatWithExpert = () => {
-    navigate('/');
-    // Using a slight timeout to ensure navigation completes before tab selection
-    setTimeout(() => {
-      const event = new CustomEvent('switchTab', { detail: 'chat' });
-      window.dispatchEvent(event);
-    }, 100);
-  };
 
   if (isAnalyzing) {
     return (
@@ -152,7 +143,7 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
       <ActionButtons 
         onStartNewAnalysis={onStartNewAnalysis}
         onSaveDiagnosis={plantInfo.useAI ? saveDiagnosis : undefined}
-        onChatWithExpert={handleChatWithExpert}
+        onChatWithExpert={onChatWithExpert}
         saveLoading={saveLoading}
         hasValidAnalysis={!!analysisData && !!analysisDetails && plantInfo.useAI}
         useAI={plantInfo.useAI}
