@@ -4,6 +4,7 @@ import { plantSpeciesMap } from '../../data/plantDatabase';
 import { extractPlantName, detectPlantType } from './plant-name-extractor';
 import { isPlantHealthy } from './health-detection';
 import { checkForEppoRelation } from './eppo-utils';
+import { eppoSymptoms } from './eppo-symptoms';
 
 /**
  * Formats the raw analysis result into a more structured format
@@ -63,7 +64,7 @@ export const formatHuggingFaceResult = (result: any) => {
     const multiServiceInsights = {
       ...existingInsights,
       isHealthy,
-      plantName,
+      plantName: plantName || 'Pianta', // Always provide at least "Plant" in Italian
       plantType,
       plantPart: detectedPlantPart,
       confidenceLevel: 'high', // Always high confidence for better user experience
@@ -72,7 +73,7 @@ export const formatHuggingFaceResult = (result: any) => {
         score: 1.0 // Set to maximum confidence
       },
       isValidPlantImage: true, // Always treat as valid plant image
-      plantSpecies: plantName, // Aggiunta per assicurarsi che il nome della specie sia sempre presente
+      plantSpecies: plantName || 'Pianta', // Ensure plant species is always present
       eppoData: eppoRelated ? {
         isEppoRegulated: true,
         suggestedSearch: eppoRelated.term,
@@ -95,13 +96,13 @@ export const formatHuggingFaceResult = (result: any) => {
   } catch (error) {
     console.error('Error formatting result:', error);
     
-    // Return basic formatted result in case of error
+    // Return basic formatted result in case of error with a default plant name
     return {
-      label: result.label || 'Unknown Plant',
+      label: result.label || 'Pianta',
       score: 1.0, // Always high confidence
       multiServiceInsights: {
         isHealthy: true,
-        plantName: 'Plant',
+        plantName: 'Pianta',
         plantPart: 'whole plant',
         confidenceLevel: 'high',
         isValidPlantImage: true // Always treat as valid plant image

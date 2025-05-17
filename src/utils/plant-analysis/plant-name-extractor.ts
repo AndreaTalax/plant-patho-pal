@@ -1,5 +1,6 @@
 
 import { capitalize } from './plant-part-utils';
+import { plantSpeciesMap } from '../../data/plantDatabase';
 
 /**
  * Enhanced plant name extraction utility
@@ -10,18 +11,21 @@ import { capitalize } from './plant-part-utils';
  */
 export function extractPlantName(
   label: string, 
-  plantSpeciesMap: Record<string, string> | null = null
+  speciesMap: Record<string, string> | null = null
 ): string | null {
   if (!label) return null;
+  
+  // Use the provided map or default to the global plantSpeciesMap
+  const effectiveMap = speciesMap || plantSpeciesMap;
 
   // Convert label to lowercase for case-insensitive matching
   const labelLower = label.toLowerCase();
   let plantName = null;
   
-  // First check in the plantSpeciesMap if provided
-  if (plantSpeciesMap) {
-    for (const [key, value] of Object.entries(plantSpeciesMap)) {
-      if (labelLower.includes(key)) {
+  // First check in the plantSpeciesMap
+  if (effectiveMap) {
+    for (const [key, value] of Object.entries(effectiveMap)) {
+      if (labelLower.includes(key.toLowerCase())) {
         return typeof value === 'string' ? value : key;
       }
     }
@@ -57,7 +61,7 @@ export function extractPlantName(
     return capitalize(possiblePlantWords[0]);
   }
   
-  return null;
+  return "Pianta"; // Return "Plant" in Italian as fallback instead of null
 }
 
 /**

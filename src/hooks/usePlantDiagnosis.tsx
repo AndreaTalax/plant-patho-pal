@@ -97,7 +97,7 @@ export const usePlantDiagnosis = () => {
       // Estrai un nome di pianta casuale dal nostro database
       const plantEntries = Object.entries(plantSpeciesMap);
       const randomPlantEntry = plantEntries[Math.floor(Math.random() * plantEntries.length)];
-      const plantName = randomPlantEntry[1];
+      const plantName = randomPlantEntry[1] || 'Pianta'; // Fallback to "Plant" in Italian
       
       setDiagnosisResult(`Risultato analisi: ${emergencyDisease.name}`);
       setDiagnosedDisease({
