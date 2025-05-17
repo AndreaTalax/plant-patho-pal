@@ -39,8 +39,8 @@ const CompleteProfile = () => {
     defaultValues: {
       firstName: userProfile?.firstName || "",
       lastName: userProfile?.lastName || "",
-      birthDate: userProfile?.birthDate || "",
-      birthPlace: userProfile?.birthPlace || "",
+      birthDate: "",
+      birthPlace: "",
     },
   });
 
@@ -50,8 +50,12 @@ const CompleteProfile = () => {
     try {
       updateProfile("firstName", values.firstName);
       updateProfile("lastName", values.lastName);
-      updateProfile("birthDate", values.birthDate);
-      updateProfile("birthPlace", values.birthPlace);
+      
+      // Using custom fields for birthDate and birthPlace
+      updateProfile("customFields", {
+        birthDate: values.birthDate,
+        birthPlace: values.birthPlace
+      });
       
       toast({
         title: "Profilo completato",

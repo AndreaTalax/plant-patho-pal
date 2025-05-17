@@ -1,7 +1,7 @@
 
 import React, { createContext, useState, useContext } from 'react';
 
-interface PlantInfo {
+export interface PlantInfo {
   isIndoor: boolean;
   wateringFrequency: string;
   lightExposure: string;

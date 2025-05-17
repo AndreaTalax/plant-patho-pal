@@ -130,7 +130,7 @@ const DiagnoseTab = () => {
       const { data: consultationData, error: consultationError } = await supabase
         .from('expert_consultations')
         .insert({
-          user_id: userProfile.id,
+          user_id: userProfile.email, // Use email instead of id
           symptoms: plantInfo.symptoms,
           image_url: imageUrl,
           plant_info: {
