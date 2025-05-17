@@ -1,6 +1,7 @@
 
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Save, AlertCircle, MessageCircle, Loader2, RefreshCw } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 interface ActionButtonsProps {
   onStartNewAnalysis: () => void;
@@ -19,6 +20,22 @@ const ActionButtons = ({
   hasValidAnalysis,
   useAI = false
 }: ActionButtonsProps) => {
+  // Add navigate hook for direct navigation when needed
+  const navigate = useNavigate();
+  
+  const handleChatWithExpert = () => {
+    if (onChatWithExpert) {
+      onChatWithExpert();
+    } else {
+      // Fallback direct navigation if callback not provided
+      navigate('/');
+      setTimeout(() => {
+        const event = new CustomEvent('switchTab', { detail: 'chat' });
+        window.dispatchEvent(event);
+      }, 100);
+    }
+  };
+
   return (
     <div className="space-y-3 pt-2">
       {useAI && hasValidAnalysis && onSaveDiagnosis && (
@@ -44,7 +61,7 @@ const ActionButtons = ({
       {!useAI && (
         <Button
           className="w-full bg-drplant-blue-dark hover:bg-drplant-blue-darker flex items-center justify-center gap-2"
-          onClick={onChatWithExpert}
+          onClick={handleChatWithExpert}
         >
           <MessageCircle className="h-4 w-4" />
           <span>Vai alla chat con il fitopatologo</span>

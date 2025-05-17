@@ -10,6 +10,7 @@ import { formatHuggingFaceResult } from '@/utils/plant-analysis';
 import { Loader2, Info } from 'lucide-react';
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from 'sonner';
+import { useNavigate } from 'react-router-dom';
 
 const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
   imageSrc,
@@ -20,6 +21,7 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
 }) => {
   const [saveLoading, setSaveLoading] = useState(false);
   const [analysisDetails, setAnalysisDetails] = useState<AnalysisDetails | null>(null);
+  const navigate = useNavigate();
 
   // Process raw analysis data when it becomes available
   useState(() => {
@@ -78,6 +80,16 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
       toast.error("Si è verificato un errore durante il salvataggio");
       setSaveLoading(false);
     }
+  };
+  
+  // Navigate to the chat tab
+  const handleChatWithExpert = () => {
+    navigate('/');
+    // Using a slight timeout to ensure navigation completes before tab selection
+    setTimeout(() => {
+      const event = new CustomEvent('switchTab', { detail: 'chat' });
+      window.dispatchEvent(event);
+    }, 100);
   };
 
   if (isAnalyzing) {
@@ -139,7 +151,8 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
       
       <ActionButtons 
         onStartNewAnalysis={onStartNewAnalysis}
-        onSaveDiagnosis={saveDiagnosis}
+        onSaveDiagnosis={plantInfo.useAI ? saveDiagnosis : undefined}
+        onChatWithExpert={handleChatWithExpert}
         saveLoading={saveLoading}
         hasValidAnalysis={!!analysisData && !!analysisDetails && plantInfo.useAI}
         useAI={plantInfo.useAI}

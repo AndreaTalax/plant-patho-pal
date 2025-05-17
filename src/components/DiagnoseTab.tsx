@@ -256,6 +256,7 @@ const DiagnoseTab = () => {
           onCapture={handleCaptureImage}
           onCancelCamera={handleCancelCamera}
           onStartNewAnalysis={resetDiagnosis}
+          onChatWithExpert={navigateToChat}
         />
       </div>
       
