@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, ReactNode, useEffect } from "react";
 import { supabase, EXPERT_ID } from '@/integrations/supabase/client';
 import { Session, User } from "@supabase/supabase-js";
-import { signIn, signOut, signUp } from '@/integrations/supabase/supabaseClient';
+import { signIn, signOut, signUp } from '@/integrations/supabase/auth';
 
 // Define type for user profile
 type UserProfile = {
