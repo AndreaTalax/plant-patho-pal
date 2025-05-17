@@ -53,7 +53,9 @@ const DiagnoseTab = () => {
 
   const takePicture = () => {
     if (!plantInfo.infoComplete) {
-      console.log("Please enter plant information before continuing");
+      toast.warning("Please enter plant information before continuing", {
+        dismissible: true
+      });
       return;
     }
     
@@ -75,11 +77,15 @@ const DiagnoseTab = () => {
       })
       .catch(err => {
         console.error("Error accessing camera:", err);
-        console.log("Could not access camera. Please check permissions.");
+        toast.error("Could not access camera. Please check permissions.", {
+          dismissible: true
+        });
         setShowCamera(false);
       });
     } else {
-      console.log("Camera not supported in your browser or device");
+      toast.error("Camera not supported in your browser or device", {
+        dismissible: true
+      });
       setShowCamera(false);
     }
   };

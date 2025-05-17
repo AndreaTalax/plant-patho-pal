@@ -117,6 +117,7 @@ export const formatHuggingFaceResult = (modelResult: any) => {
 
   // Use the plant name from the result if available
   const plantName = modelResult.plantName || null;
+  const detectedPlantType = modelResult.detectedPlantType || null;
   let plantNameOnly;
   let speciesOnly;
   
@@ -166,38 +167,80 @@ export const formatHuggingFaceResult = (modelResult: any) => {
   const isEppoRegulated = modelResult.eppoRegulatedConcern !== undefined && 
                           modelResult.eppoRegulatedConcern !== null;
 
-  // Determine which service provided the best identification
-  let primaryIdentificationService = modelResult.primaryService || "";
+  // Determine analysis service and data source based on plant type
+  let primaryIdentificationService = "";
+  let dataSource = "";
   
-  // Check if Flora Incognita or PlantSnap data is available
-  if (modelResult.floraIncognitaResult && modelResult.floraIncognitaResult.score > (modelResult.score || 0)) {
-    primaryIdentificationService = "Flora Incognita";
-  } else if (modelResult.plantSnapResult && modelResult.plantSnapResult.score > (modelResult.score || 0)) {
-    primaryIdentificationService = "PlantSnap";
-  } else if (isEppoRegulated) {
-    primaryIdentificationService = 'EPPO Regulatory Database';
-  } else if (isLeafAnalysis) {
-    primaryIdentificationService = 'Leaf Disease Classifier';
+  // Enhanced service determination - use detected plant type if available
+  if (detectedPlantType) {
+    switch(detectedPlantType) {
+      case 'palm':
+        primaryIdentificationService = "Palm Identification Service";
+        dataSource = "Palm Species Database";
+        break;
+      case 'succulent':
+        primaryIdentificationService = "Succulent Recognition";
+        dataSource = "Global Succulent Database";
+        break;
+      case 'herb':
+        primaryIdentificationService = "Herb Identification";
+        dataSource = "Medicinal & Culinary Herb Database";
+        break;
+      case 'houseplant':
+        primaryIdentificationService = "Indoor Plant Classifier";
+        dataSource = "Houseplant Collection";
+        break;
+      case 'flowering':
+        primaryIdentificationService = "Flower Recognition";
+        dataSource = "Flowering Plant Database";
+        break;
+      case 'vegetable':
+        primaryIdentificationService = "Crop Analysis";
+        dataSource = "Agricultural Crop Database";
+        break;
+      case 'tree':
+        primaryIdentificationService = "Tree Identification";
+        dataSource = "Global Tree Database";
+        break;
+      default:
+        // Check other services as before
+        if (modelResult.floraIncognitaResult && modelResult.floraIncognitaResult.score > (modelResult.score || 0)) {
+          primaryIdentificationService = "Flora Incognita";
+          dataSource = "Flora Incognita Plant Database";
+        } else if (modelResult.plantSnapResult && modelResult.plantSnapResult.score > (modelResult.score || 0)) {
+          primaryIdentificationService = "PlantSnap";
+          dataSource = "PlantSnap Global Database";
+        } else if (isEppoRegulated) {
+          primaryIdentificationService = 'EPPO Regulatory Database';
+          dataSource = 'EPPO Global Database';
+        } else if (isLeafAnalysis) {
+          primaryIdentificationService = 'Leaf Disease Classifier';
+          dataSource = 'New Plant Diseases Dataset + OLID I';
+        } else {
+          primaryIdentificationService = 'TRY-PlantNet Classifier';
+          dataSource = 'TRY Plant Trait Database + PlantNet';
+        }
+    }
   } else {
-    primaryIdentificationService = 'TRY-PlantNet Classifier';
-  }
-  
-  // Create data source info based on what dataset was used
-  let dataSource = modelResult.dataSource;
-  if (!dataSource) {
-    if (primaryIdentificationService === "Flora Incognita") {
+    // Use the original logic if no specific plant type was detected
+    if (modelResult.floraIncognitaResult && modelResult.floraIncognitaResult.score > (modelResult.score || 0)) {
+      primaryIdentificationService = "Flora Incognita";
       dataSource = "Flora Incognita Plant Database";
-    } else if (primaryIdentificationService === "PlantSnap") {
+    } else if (modelResult.plantSnapResult && modelResult.plantSnapResult.score > (modelResult.score || 0)) {
+      primaryIdentificationService = "PlantSnap";
       dataSource = "PlantSnap Global Database";
     } else if (isEppoRegulated) {
+      primaryIdentificationService = 'EPPO Regulatory Database';
       dataSource = 'EPPO Global Database';
     } else if (isLeafAnalysis) {
+      primaryIdentificationService = 'Leaf Disease Classifier';
       dataSource = 'New Plant Diseases Dataset + OLID I';
     } else {
+      primaryIdentificationService = 'TRY-PlantNet Classifier';
       dataSource = 'TRY Plant Trait Database + PlantNet';
     }
   }
-
+  
   // Create a formatted analysis details object
   return {
     multiServiceInsights: {
@@ -213,6 +256,7 @@ export const formatHuggingFaceResult = (modelResult: any) => {
       isReliable: modelResult.isReliable !== undefined ? 
                  modelResult.isReliable : mainPrediction.score >= 0.6,
       dataSource: dataSource,
+      detectedPlantType: detectedPlantType, // Add detected plant type
       eppoRegulated: isEppoRegulated ? modelResult.eppoRegulatedConcern : null,
       floraIncognitaMatch: modelResult.floraIncognitaResult || null,
       plantSnapMatch: modelResult.plantSnapResult || null
@@ -233,8 +277,9 @@ export const formatHuggingFaceResult = (modelResult: any) => {
       [
         `${capitalize(plantPart || 'Plant')} with signs of ${mainPrediction.label}`,
         'Patterns recognized by the AI model',
+        detectedPlantType ? `Identified as ${detectedPlantType} type plant` : null,
         isLeafAnalysis ? 'Leaf analysis completed using specialized disease datasets' : 'Plant analysis completed'
-      ],
+      ].filter(Boolean), // Remove null items
     alternativeDiagnoses: isHealthy ? [] : alternativeDiagnoses,
     leafVerification: modelResult.leafVerification || {
       isLeaf: plantPart === 'leaf',
@@ -245,6 +290,7 @@ export const formatHuggingFaceResult = (modelResult: any) => {
     plantVerification: modelResult.plantVerification || {
       isPlant: modelResult.isValidPlantImage !== undefined ? 
                modelResult.isValidPlantImage : true,
+      detectedPlantType: detectedPlantType, // Add detected plant type
       aiServices: [
         ...(modelResult.plantVerification?.aiServices || []),
         ...(modelResult.floraIncognitaResult ? [{
@@ -272,9 +318,11 @@ export const formatHuggingFaceResult = (modelResult: any) => {
         'Analysis identifies potential regulated pest/disease from EPPO Global Database' :
         isHealthy ? 
         'Plant appears healthy with high confidence' : 
-        isLeafAnalysis ?
-          'Diagnosis based on New Plant Diseases Dataset and OLID I, specialized for leaf diseases' :
-          'Diagnosis based on TRY-PlantNet analysis, consider expert consultation'
+        detectedPlantType ?
+          `Diagnosis based on specialized ${detectedPlantType} plant analysis` :
+          isLeafAnalysis ?
+            'Diagnosis based on New Plant Diseases Dataset and OLID I, specialized for leaf diseases' :
+            'Diagnosis based on TRY-PlantNet analysis, consider expert consultation'
     },
     eppoData: isEppoRegulated ? {
       regulationStatus: 'Quarantine pest/disease',

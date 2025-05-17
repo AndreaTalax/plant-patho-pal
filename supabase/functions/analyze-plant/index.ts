@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
 import { corsHeaders } from "../_shared/cors.ts";
@@ -78,6 +77,10 @@ serve(async (req) => {
       });
     }
     
+    // Store the detected plant type if available
+    const detectedPlantType = plantVerification.detectedPlantType;
+    console.log(`Detected plant type from verification: ${detectedPlantType || 'Unknown'}`);
+    
     // Analyze with Flora Incognita and PlantSnap in parallel
     const [floraIncognitaResultPromise, plantSnapResultPromise, isLeafPromise] = await Promise.allSettled([
       analyzeWithFloraIncognita(imageArrayBuffer, floraIncognitaKey),
@@ -89,8 +92,52 @@ serve(async (req) => {
     const plantSnapResult = plantSnapResultPromise.status === 'fulfilled' ? plantSnapResultPromise.value : null;
     const isLeaf = isLeafPromise.status === 'fulfilled' ? isLeafPromise.value : false;
     
+    // Choose plant-type specific model if available
+    let plantTypeModels = {}; 
+    if (detectedPlantType) {
+      // Select specialized models based on detected plant type
+      switch(detectedPlantType) {
+        case 'palm':
+          plantTypeModels = {
+            primary: 'Xenova/palm-identification-v1',
+            secondary: 'Xenova/tropical-plant-diseases'
+          };
+          break;
+        case 'succulent':
+          plantTypeModels = {
+            primary: 'Xenova/succulent-identification',
+            secondary: 'google/vit-base-patch16-224'
+          };
+          break;
+        case 'houseplant':
+          plantTypeModels = {
+            primary: 'Xenova/houseplant-identification',
+            secondary: 'microsoft/resnet-50'
+          };
+          break;
+        case 'vegetable':
+          plantTypeModels = {
+            primary: 'Xenova/vegetable-disease-classification',
+            secondary: 'facebook/deit-base-patch16-224'
+          };
+          break;
+        case 'flowering':
+          plantTypeModels = {
+            primary: 'Xenova/flower-classification-v1',
+            secondary: 'google/vit-base-patch16-224'
+          };
+          break;
+        // Add more specialized models as needed
+      }
+    }
+    
     // Analyze the image using Hugging Face models
-    const { result, errorMessages } = await analyzeImageWithModels(imageArrayBuffer, huggingFaceToken, isLeaf);
+    const { result, errorMessages } = await analyzeImageWithModels(
+      imageArrayBuffer, 
+      huggingFaceToken, 
+      isLeaf,
+      plantTypeModels
+    );
     
     // If all models failed but we have either Flora Incognita or PlantSnap results,
     // we can still provide some analysis
@@ -137,7 +184,8 @@ serve(async (req) => {
       isLeaf, 
       floraIncognitaResult, 
       plantSnapResult,
-      analysisResult.isReliable !== undefined ? analysisResult.isReliable : true
+      analysisResult.isReliable !== undefined ? analysisResult.isReliable : true,
+      detectedPlantType // Add detected plant type
     );
     
     // Create the final analysis result
@@ -147,7 +195,8 @@ serve(async (req) => {
       isLeaf, 
       floraIncognitaResult, 
       plantSnapResult, 
-      formattedData
+      formattedData,
+      detectedPlantType // Add detected plant type
     );
 
     // Initialize Supabase client with service role key to bypass RLS

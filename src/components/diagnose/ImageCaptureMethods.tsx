@@ -10,52 +10,53 @@ interface ImageCaptureMethodsProps {
 const ImageCaptureMethods = ({ onTakePhoto, onUploadPhoto }: ImageCaptureMethodsProps) => {
   return (
     <div className="space-y-6">
+      {/* Main action buttons - Moved higher with larger size and more emphasis */}
+      <div className="grid grid-cols-1 gap-4 mb-4">
+        <Button 
+          onClick={onTakePhoto}
+          className="flex items-center justify-center gap-2 py-6 text-lg font-medium text-white bg-drplant-green hover:bg-drplant-green/90 shadow-lg"
+        >
+          <Camera className="h-7 w-7" />
+          <span>Scatta una foto della pianta</span>
+        </Button>
+      </div>
+      
       <div className="bg-white p-6 rounded-2xl shadow-md">
-        <h3 className="text-lg font-medium text-gray-900 mb-4">Capture Plant Image</h3>
+        <h3 className="text-lg font-medium text-gray-900 mb-4">Altri metodi</h3>
         
-        <div className="grid grid-cols-2 gap-4 mb-6">
-          <Button 
-            onClick={onTakePhoto}
-            className="flex flex-col items-center gap-2 h-auto py-4 text-white bg-drplant-green hover:bg-drplant-green/90"
-          >
-            <Camera className="h-6 w-6" />
-            <span>Take Photo</span>
-          </Button>
-          
-          <Button
-            onClick={onUploadPhoto}
-            variant="outline"
-            className="flex flex-col items-center gap-2 h-auto py-4 hover:bg-drplant-green/10"
-          >
-            <Upload className="h-6 w-6" />
-            <span>Upload Image</span>
-          </Button>
-        </div>
+        <Button
+          onClick={onUploadPhoto}
+          variant="outline"
+          className="w-full flex items-center justify-center gap-2 py-4 hover:bg-drplant-green/10"
+        >
+          <Upload className="h-6 w-6" />
+          <span>Carica un'immagine dalla galleria</span>
+        </Button>
 
-        <div className="bg-blue-50 rounded-md p-4">
+        <div className="bg-blue-50 rounded-md p-4 mt-6">
           <h4 className="text-sm font-medium text-blue-700 mb-2 flex items-center gap-1">
             <Image className="h-4 w-4" /> 
-            Supported Plant Parts
+            Parti di piante supportate
           </h4>
           
           <div className="grid grid-cols-3 gap-2">
             <div className="flex items-center gap-1 text-xs text-blue-600">
-              <Leaf className="h-3 w-3" /> Leaves
+              <Leaf className="h-3 w-3" /> Foglie
             </div>
             <div className="flex items-center gap-1 text-xs text-blue-600">
-              <GitBranch className="h-3 w-3" /> Stems
+              <GitBranch className="h-3 w-3" /> Steli
             </div>
             <div className="flex items-center gap-1 text-xs text-blue-600">
-              <Sprout className="h-3 w-3" /> Roots
+              <Sprout className="h-3 w-3" /> Radici
             </div>
             <div className="flex items-center gap-1 text-xs text-blue-600">
-              <Flower className="h-3 w-3" /> Flowers
+              <Flower className="h-3 w-3" /> Fiori
             </div>
             <div className="flex items-center gap-1 text-xs text-blue-600">
-              <Sprout className="h-3 w-3" /> Shoots
+              <Sprout className="h-3 w-3" /> Germogli
             </div>
             <div className="flex items-center gap-1 text-xs text-blue-600">
-              <GitBranch className="h-3 w-3" /> Branches
+              <GitBranch className="h-3 w-3" /> Rami
             </div>
           </div>
         </div>
