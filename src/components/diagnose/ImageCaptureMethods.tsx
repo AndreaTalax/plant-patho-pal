@@ -33,7 +33,29 @@ const ImageCaptureMethods = ({ onTakePhoto, onUploadPhoto }: ImageCaptureMethods
           <span>Carica un'immagine dalla galleria</span>
         </Button>
 
-        <div className="bg-blue-50 rounded-md p-4 mt-6">
+        <div className="bg-amber-50 rounded-md p-4 mt-6">
+          <h4 className="text-sm font-medium text-amber-700 mb-2 flex items-center gap-1">
+            <Image className="h-4 w-4" /> 
+            Come fotografare correttamente la pianta
+          </h4>
+          
+          <ul className="space-y-2 text-xs text-amber-600">
+            <li className="flex items-start gap-2">
+              <span className="bg-amber-200 text-amber-800 rounded-full h-4 w-4 flex items-center justify-center mt-0.5">✓</span>
+              <span>Fotografa l'intera pianta, compreso il vaso e il terreno</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="bg-amber-200 text-amber-800 rounded-full h-4 w-4 flex items-center justify-center mt-0.5">✓</span>
+              <span>Se è in piena terra, includi il terreno circostante</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="bg-amber-200 text-amber-800 rounded-full h-4 w-4 flex items-center justify-center mt-0.5">✓</span>
+              <span>Assicurati che l'immagine sia ben illuminata e nitida</span>
+            </li>
+          </ul>
+        </div>
+        
+        <div className="bg-blue-50 rounded-md p-4 mt-4">
           <h4 className="text-sm font-medium text-blue-700 mb-2 flex items-center gap-1">
             <Image className="h-4 w-4" /> 
             Parti di piante supportate

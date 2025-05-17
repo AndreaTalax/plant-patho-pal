@@ -6,6 +6,8 @@ import { usePlantInfo } from '@/context/PlantInfoContext';
 import { usePlantDiagnosis } from '@/hooks/usePlantDiagnosis';
 import { PlantInfoFormValues } from './diagnose/PlantInfoForm';
 import { toast } from 'sonner';
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from '@/context/AuthContext';
 
 // Importing our components
 import DiagnoseHeader from './diagnose/DiagnoseHeader';
@@ -14,6 +16,7 @@ import ModelInfoPanel from './diagnose/ModelInfoPanel';
 
 const DiagnoseTab = () => {
   const { plantInfo, setPlantInfo } = usePlantInfo();
+  const { userProfile } = useAuth();
   const [showCamera, setShowCamera] = useState(false);
   const [showModelInfo, setShowModelInfo] = useState(false);
   
@@ -42,9 +45,9 @@ const DiagnoseTab = () => {
     stopCameraStream
   } = usePlantDiagnosis();
 
-  const handleImageUploadEvent = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUploadEvent = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!plantInfo.infoComplete) {
-      toast.warning("Please enter plant information before continuing", {
+      toast.warning("Inserisci prima le informazioni sulla pianta", {
         dismissible: true,
         duration: 3000
       });
@@ -54,12 +57,17 @@ const DiagnoseTab = () => {
     const file = e.target.files?.[0];
     if (file) {
       handleImageUpload(file);
+      
+      // Notify expert if not using AI
+      if (!plantInfo.useAI) {
+        await notifyExpert(file);
+      }
     }
   };
 
   const takePicture = () => {
     if (!plantInfo.infoComplete) {
-      toast.warning("Please enter plant information before continuing", {
+      toast.warning("Inserisci prima le informazioni sulla pianta", {
         dismissible: true,
         duration: 3000
       });
@@ -84,14 +92,14 @@ const DiagnoseTab = () => {
       })
       .catch(err => {
         console.error("Error accessing camera:", err);
-        toast.error("Could not access camera. Please check permissions.", {
+        toast.error("Impossibile accedere alla fotocamera. Verifica i permessi.", {
           dismissible: true,
           duration: 4000
         });
         setShowCamera(false);
       });
     } else {
-      toast.error("Camera not supported in your browser or device", {
+      toast.error("Fotocamera non supportata nel tuo browser o dispositivo", {
         dismissible: true,
         duration: 4000
       });
@@ -99,10 +107,69 @@ const DiagnoseTab = () => {
     }
   };
 
+  // Function to notify plant pathologist
+  const notifyExpert = async (imageFile?: File, imageDataUrl?: string) => {
+    try {
+      if (!userProfile?.email) {
+        console.error("User not logged in");
+        return;
+      }
+
+      let imageUrl = imageDataUrl;
+      
+      // If we have a file but not a data URL, convert the file to data URL
+      if (imageFile && !imageDataUrl) {
+        const reader = new FileReader();
+        imageUrl = await new Promise((resolve) => {
+          reader.onload = (e) => resolve(e.target?.result as string);
+          reader.readAsDataURL(imageFile);
+        });
+      }
+
+      // First, create a consultation record
+      const { data: consultationData, error: consultationError } = await supabase
+        .from('expert_consultations')
+        .insert({
+          user_id: userProfile.id,
+          symptoms: plantInfo.symptoms,
+          image_url: imageUrl,
+          plant_info: {
+            isIndoor: plantInfo.isIndoor,
+            wateringFrequency: plantInfo.wateringFrequency,
+            lightExposure: plantInfo.lightExposure
+          },
+          status: 'pending'
+        })
+        .select();
+        
+      if (consultationError) {
+        console.error("Error creating consultation:", consultationError);
+        return;
+      }
+      
+      // Send email notification to expert (using edge function)
+      const consultationId = consultationData?.[0]?.id;
+      if (consultationId) {
+        // Notification would be sent via edge function
+        console.log("Notification would be sent for consultation:", consultationId);
+        
+        toast.success("Richiesta inviata al fitopatologo", {
+          description: "Riceverai una risposta al più presto.",
+          duration: 5000
+        });
+      }
+    } catch (error) {
+      console.error("Error notifying expert:", error);
+    }
+  };
+
   const handlePlantInfoSubmit = (data: PlantInfoFormValues) => {
     setPlantInfo({
       isIndoor: data.isIndoor,
       wateringFrequency: data.wateringFrequency,
+      lightExposure: data.lightExposure,
+      symptoms: data.symptoms,
+      useAI: data.useAI || false,
       infoComplete: true
     });
     
@@ -115,9 +182,14 @@ const DiagnoseTab = () => {
     }, 300);
   };
 
-  const handleCaptureImage = (imageDataUrl: string) => {
+  const handleCaptureImage = async (imageDataUrl: string) => {
     setShowCamera(false);
     captureImage(imageDataUrl);
+    
+    // Notify expert if not using AI
+    if (!plantInfo.useAI) {
+      await notifyExpert(undefined, imageDataUrl);
+    }
   };
 
   const handleCancelCamera = () => {
@@ -179,7 +251,7 @@ const DiagnoseTab = () => {
           videoRef={videoRef}
           canvasRef={canvasRef}
           onPlantInfoComplete={handlePlantInfoSubmit}
-          onPlantInfoEdit={() => setPlantInfo({ infoComplete: false })}
+          onPlantInfoEdit={() => setPlantInfo({ ...plantInfo, infoComplete: false })}
           onTakePhoto={takePicture}
           onUploadPhoto={() => document.getElementById('file-upload')?.click()}
           onCapture={handleCaptureImage}
@@ -192,7 +264,7 @@ const DiagnoseTab = () => {
       <input
         id="file-upload"
         type="file"
-        accept="image/*"
+        accept="image/*,video/*"
         className="hidden"
         onChange={handleImageUploadEvent}
       />

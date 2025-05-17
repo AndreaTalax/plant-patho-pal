@@ -1,8 +1,10 @@
+
 import { useState, useRef, useEffect } from 'react';
 import { PLANT_DISEASES } from '@/data/plantDiseases';
 import { formatHuggingFaceResult, dataURLtoFile } from '@/utils/plant-analysis';
 import { DiagnosedDisease, AnalysisDetails } from '@/components/diagnose/types';
 import { plantSpeciesMap } from '@/data/plantDatabase';
+import { MOCK_PRODUCTS } from '@/components/chat/types';
 
 export const usePlantDiagnosis = () => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -49,10 +51,18 @@ export const usePlantDiagnosis = () => {
         const randomPlantEntry = plantEntries[Math.floor(Math.random() * plantEntries.length)];
         const plantName = randomPlantEntry[1];
         
-        setDiagnosedDisease({
+        // Aggiungi prodotti consigliati (2-3 prodotti casuali)
+        const recommendedProducts = MOCK_PRODUCTS
+          .sort(() => 0.5 - Math.random()) // Mescola casualmente
+          .slice(0, Math.floor(Math.random() * 2) + 2); // Prendi 2-3 prodotti
+        
+        const disease = {
           ...randomDisease,
-          confidence: 1.0 // Massima confidenza
-        });
+          confidence: 0.65 + Math.random() * 0.1, // 65-75% di confidenza
+          products: recommendedProducts.map(p => p.name), // Aggiunge i nomi dei prodotti consigliati
+        };
+        
+        setDiagnosedDisease(disease);
         
         setDiagnosisResult(`Rilevato ${randomDisease.name} su ${plantName} con alta confidenza.`);
         
@@ -61,9 +71,9 @@ export const usePlantDiagnosis = () => {
           multiServiceInsights: {
             huggingFaceResult: {
               label: randomDisease.name,
-              score: 1.0
+              score: disease.confidence
             },
-            agreementScore: 100,
+            agreementScore: Math.round(disease.confidence * 100),
             primaryService: 'PlantNet AI',
             plantSpecies: plantName,
             plantName: plantName.split(' ')[0],
@@ -76,7 +86,7 @@ export const usePlantDiagnosis = () => {
             leafAnalysis: {
               leafColor: 'green',
               patternDetected: 'leaf spots',
-              diseaseConfidence: 0.95,
+              diseaseConfidence: disease.confidence,
               healthStatus: 'diseased',
               leafType: 'Compound',
               details: {
@@ -107,12 +117,14 @@ export const usePlantDiagnosis = () => {
             })),
           sistemaDigitaleFoglia: true,
           analysisTechnology: 'Sistema Digitale Foglia',
+          // Add recommended products
+          recommendedProducts: recommendedProducts,
           // Add recommended additional tests
           recommendedAdditionalTests: [
-            'Soil pH test',
-            'Nutrient deficiency analysis',
-            'Microscopic examination',
-            'Laboratory culture test'
+            'Analisi del pH del suolo',
+            'Analisi delle carenze nutritive',
+            'Esame microscopico',
+            'Test di coltura in laboratorio'
           ]
         };
         
@@ -130,10 +142,16 @@ export const usePlantDiagnosis = () => {
       const randomPlantEntry = plantEntries[Math.floor(Math.random() * plantEntries.length)];
       const plantName = randomPlantEntry[1] || 'Pianta'; // Fallback to "Plant" in Italian
       
+      // Aggiungi prodotti consigliati (1-2 prodotti casuali)
+      const recommendedProducts = MOCK_PRODUCTS
+        .sort(() => 0.5 - Math.random()) // Mescola casualmente
+        .slice(0, Math.floor(Math.random() * 2) + 1); // Prendi 1-2 prodotti
+      
       setDiagnosisResult(`Risultato analisi: ${emergencyDisease.name}`);
       setDiagnosedDisease({
         ...emergencyDisease,
-        confidence: 1.0  // Massima confidenza
+        confidence: 0.65, // 65% di confidenza
+        products: recommendedProducts.map(p => p.name) // Aggiunge i nomi dei prodotti consigliati
       });
       
       setAnalysisDetails({
@@ -145,7 +163,7 @@ export const usePlantDiagnosis = () => {
           // Add emergency leaf analysis data
           leafAnalysis: {
             healthStatus: 'unknown',
-            diseaseConfidence: 0.7,
+            diseaseConfidence: 0.65,
             leafColor: 'variable'
           },
           advancedLeafAnalysis: false
@@ -158,11 +176,12 @@ export const usePlantDiagnosis = () => {
         ],
         alternativeDiagnoses: PLANT_DISEASES.filter(d => d.id !== emergencyDisease.id)
           .slice(0, 2)
-          .map(d => ({ disease: d.id, probability: 0.9 })),
+          .map(d => ({ disease: d.id, probability: 0.3 })),
+        recommendedProducts: recommendedProducts,
         recommendedAdditionalTests: [
-          'Visual inspection by expert',
-          'Laboratory testing',
-          'Soil analysis'
+          'Ispezione visiva da parte di un esperto',
+          'Test di laboratorio',
+          'Analisi del suolo'
         ]
       });
       

@@ -1,4 +1,6 @@
 
+import { Product } from '../chat/types';
+
 export interface DiagnosedDisease {
   id: string;
   name: string;
@@ -12,7 +14,14 @@ export interface DiagnosedDisease {
 
 export interface DiagnosisResultProps {
   imageSrc: string;
-  plantInfo: any;
+  plantInfo: {
+    isIndoor: boolean;
+    wateringFrequency: string;
+    lightExposure: string;
+    symptoms: string;
+    useAI?: boolean;
+    name?: string;
+  };
   analysisData: any;
   isAnalyzing: boolean;
   onStartNewAnalysis: () => void;
@@ -90,5 +99,6 @@ export interface AnalysisDetails {
   } | null;
   sistemaDigitaleFoglia?: boolean;
   analysisTechnology?: string;
+  recommendedProducts?: Product[];
   recommendedAdditionalTests?: string[];
 }

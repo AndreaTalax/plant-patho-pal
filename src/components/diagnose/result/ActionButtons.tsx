@@ -1,49 +1,79 @@
 
-import React from 'react';
-import { Button } from '@/components/ui/button';
-import { Loader2, RefreshCw, Save } from 'lucide-react';
+import { Button } from "@/components/ui/button";
+import { ArrowRight, Save, AlertCircle, MessageCircle, Loader2, RefreshCw } from "lucide-react";
 
-export interface ActionButtonsProps {
+interface ActionButtonsProps {
   onStartNewAnalysis: () => void;
-  onSaveDiagnosis: () => Promise<void>;
-  saveLoading: boolean;
+  onSaveDiagnosis?: () => void;
+  onChatWithExpert?: () => void;
+  saveLoading?: boolean;
   hasValidAnalysis: boolean;
+  useAI?: boolean;
 }
 
-const ActionButtons: React.FC<ActionButtonsProps> = ({ 
-  onStartNewAnalysis,
-  onSaveDiagnosis,
-  saveLoading,
-  hasValidAnalysis
-}) => {
+const ActionButtons = ({ 
+  onStartNewAnalysis, 
+  onSaveDiagnosis, 
+  onChatWithExpert, 
+  saveLoading = false,
+  hasValidAnalysis,
+  useAI = false
+}: ActionButtonsProps) => {
   return (
-    <div className="flex flex-wrap gap-2 mt-4">
-      <Button 
-        variant="outline" 
-        onClick={onStartNewAnalysis}
-        className="flex-1"
-      >
-        <RefreshCw className="mr-2 h-4 w-4" />
-        Nuova analisi
-      </Button>
+    <div className="space-y-3 pt-2">
+      {useAI && hasValidAnalysis && onSaveDiagnosis && (
+        <Button 
+          onClick={onSaveDiagnosis}
+          className="w-full bg-drplant-blue hover:bg-drplant-blue-dark flex items-center justify-center gap-2"
+          disabled={saveLoading}
+        >
+          {saveLoading ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span>Salvando...</span>
+            </>
+          ) : (
+            <>
+              <Save className="h-4 w-4" />
+              <span>Salva questa diagnosi</span>
+            </>
+          )}
+        </Button>
+      )}
+
+      {!useAI && (
+        <Button
+          className="w-full bg-drplant-blue-dark hover:bg-drplant-blue-darker flex items-center justify-center gap-2"
+          onClick={onChatWithExpert}
+        >
+          <MessageCircle className="h-4 w-4" />
+          <span>Vai alla chat con il fitopatologo</span>
+        </Button>
+      )}
       
       <Button 
-        onClick={onSaveDiagnosis}
-        disabled={saveLoading || !hasValidAnalysis}
-        className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+        onClick={onStartNewAnalysis} 
+        variant="outline"
+        className="w-full flex items-center justify-center gap-2"
       >
-        {saveLoading ? (
-          <>
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            Salvataggio...
-          </>
-        ) : (
-          <>
-            <Save className="mr-2 h-4 w-4" />
-            Salva diagnosi
-          </>
-        )}
+        <RefreshCw className="h-4 w-4" />
+        <span>Inizia nuova analisi</span>
       </Button>
+      
+      {useAI && (
+        <div className="flex items-center justify-center pt-4 pb-2">
+          <div className="px-4 py-2 bg-amber-50 rounded-full border border-amber-200 text-xs text-amber-700 flex items-center">
+            <AlertCircle className="h-3.5 w-3.5 text-amber-500 mr-1.5" />
+            <span>Per una diagnosi definitiva, consulta sempre un esperto</span>
+          </div>
+        </div>
+      )}
+      
+      {!useAI && (
+        <p className="text-xs text-center text-gray-500 pt-2">
+          La tua richiesta è stata inviata al fitopatologo. Riceverai una risposta al più presto nella sezione Chat.
+        </p>
+      )}
     </div>
   );
 };

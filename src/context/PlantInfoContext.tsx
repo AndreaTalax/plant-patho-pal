@@ -1,46 +1,36 @@
 
-import { createContext, useContext, useState, ReactNode } from "react";
+import React, { createContext, useState, useContext } from 'react';
 
-type PlantInfo = {
+interface PlantInfo {
   isIndoor: boolean;
   wateringFrequency: string;
+  lightExposure: string;
+  symptoms: string;
+  useAI: boolean;
   infoComplete: boolean;
-};
+}
 
-type PlantInfoContextType = {
+interface PlantInfoContextType {
   plantInfo: PlantInfo;
-  setPlantInfo: (info: Partial<PlantInfo>) => void;
-  resetPlantInfo: () => void;
-};
+  setPlantInfo: React.Dispatch<React.SetStateAction<PlantInfo>>;
+}
 
-const defaultPlantInfo: PlantInfo = {
+const initialPlantInfo: PlantInfo = {
   isIndoor: false,
-  wateringFrequency: "",
+  wateringFrequency: '',
+  lightExposure: '',
+  symptoms: '',
+  useAI: false,
   infoComplete: false,
 };
 
 const PlantInfoContext = createContext<PlantInfoContextType | undefined>(undefined);
 
-export const PlantInfoProvider = ({ children }: { children: ReactNode }) => {
-  const [plantInfo, setPlantInfoState] = useState<PlantInfo>(defaultPlantInfo);
-
-  const setPlantInfo = (info: Partial<PlantInfo>) => {
-    const newInfo = { ...plantInfo, ...info };
-    setPlantInfoState(newInfo);
-  };
-
-  const resetPlantInfo = () => {
-    setPlantInfoState(defaultPlantInfo);
-  };
+export const PlantInfoProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [plantInfo, setPlantInfo] = useState<PlantInfo>(initialPlantInfo);
 
   return (
-    <PlantInfoContext.Provider
-      value={{
-        plantInfo,
-        setPlantInfo,
-        resetPlantInfo,
-      }}
-    >
+    <PlantInfoContext.Provider value={{ plantInfo, setPlantInfo }}>
       {children}
     </PlantInfoContext.Provider>
   );
@@ -49,7 +39,7 @@ export const PlantInfoProvider = ({ children }: { children: ReactNode }) => {
 export const usePlantInfo = () => {
   const context = useContext(PlantInfoContext);
   if (context === undefined) {
-    throw new Error("usePlantInfo must be used within a PlantInfoProvider");
+    throw new Error('usePlantInfo must be used within a PlantInfoProvider');
   }
   return context;
 };

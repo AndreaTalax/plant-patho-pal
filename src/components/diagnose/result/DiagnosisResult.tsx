@@ -7,7 +7,7 @@ import ActionButtons from './ActionButtons';
 import AiServicesData from './AiServicesData';
 import EppoDataPanel from './EppoDataPanel';
 import { formatHuggingFaceResult } from '@/utils/plant-analysis';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Info } from 'lucide-react';
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from 'sonner';
 
@@ -50,10 +50,18 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
         .from('diagnosi_piante')
         .insert({
           immagine_nome: plantInfo?.name || 'Pianta non identificata',
-          malattia: analysisData.healthy ? 'Sana' : analysisData.label,
-          accuratezza: analysisData.score,
+          malattia: analysisData.healthy ? 'Sana' : analysisData.name,
+          accuratezza: analysisData.confidence,
           user_id: user.id,
-          risultati_completi: analysisData
+          risultati_completi: {
+            ...analysisData,
+            plantInfo: {
+              isIndoor: plantInfo.isIndoor,
+              wateringFrequency: plantInfo.wateringFrequency,
+              lightExposure: plantInfo.lightExposure,
+              symptoms: plantInfo.symptoms
+            }
+          }
         });
       
       if (error) {
@@ -94,20 +102,47 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
         analysisDetails={analysisDetails}
       />
       
-      <EppoDataPanel 
-        analysisDetails={analysisDetails}
-      />
-      
-      <AiServicesData 
-        analysisDetails={analysisDetails}
-        isAnalyzing={isAnalyzing}
-      />
+      {plantInfo.useAI && analysisData && (
+        <>
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+            <div className="flex items-start space-x-3">
+              <Info className="h-5 w-5 text-amber-600 mt-0.5" />
+              <div>
+                <h3 className="text-sm font-medium text-amber-800">Diagnosi AI - Limitazioni di accuratezza:</h3>
+                <ul className="mt-2 space-y-1 text-xs text-amber-700">
+                  <li className="flex items-center space-x-2">
+                    <span className="inline-block w-16 font-medium">60-75%</span>
+                    <span>Diagnosi basata su immagine (se la foto è chiara e mostra bene i sintomi)</span>
+                  </li>
+                  <li className="flex items-center space-x-2">
+                    <span className="inline-block w-16 font-medium">&lt;50%</span>
+                    <span>Precisione se non supportata da esami di laboratorio</span>
+                  </li>
+                </ul>
+                <p className="mt-2 text-xs text-amber-800 font-medium">
+                  Per una diagnosi più accurata, ti consigliamo di consultare un fitopatologo esperto
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          <EppoDataPanel 
+            analysisDetails={analysisDetails}
+          />
+          
+          <AiServicesData 
+            analysisDetails={analysisDetails}
+            isAnalyzing={isAnalyzing}
+          />
+        </>
+      )}
       
       <ActionButtons 
         onStartNewAnalysis={onStartNewAnalysis}
         onSaveDiagnosis={saveDiagnosis}
         saveLoading={saveLoading}
-        hasValidAnalysis={!!analysisData && !!analysisDetails}
+        hasValidAnalysis={!!analysisData && !!analysisDetails && plantInfo.useAI}
+        useAI={plantInfo.useAI}
       />
     </div>
   );

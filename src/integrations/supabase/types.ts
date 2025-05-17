@@ -72,6 +72,36 @@ export type Database = {
         }
         Relationships: []
       }
+      expert_consultations: {
+        Row: {
+          created_at: string | null
+          id: string
+          image_url: string | null
+          plant_info: Json | null
+          status: string | null
+          symptoms: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          image_url?: string | null
+          plant_info?: Json | null
+          status?: string | null
+          symptoms?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          image_url?: string | null
+          plant_info?: Json | null
+          status?: string | null
+          symptoms?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       messages: {
         Row: {
           conversation_id: string
@@ -116,6 +146,8 @@ export type Database = {
       profiles: {
         Row: {
           address: string | null
+          birth_date: string | null
+          birth_place: string | null
           created_at: string
           email: string | null
           first_name: string | null
@@ -123,11 +155,14 @@ export type Database = {
           last_name: string | null
           phone: string | null
           role: string | null
+          subscription_plan: string | null
           updated_at: string
           username: string | null
         }
         Insert: {
           address?: string | null
+          birth_date?: string | null
+          birth_place?: string | null
           created_at?: string
           email?: string | null
           first_name?: string | null
@@ -135,11 +170,14 @@ export type Database = {
           last_name?: string | null
           phone?: string | null
           role?: string | null
+          subscription_plan?: string | null
           updated_at?: string
           username?: string | null
         }
         Update: {
           address?: string | null
+          birth_date?: string | null
+          birth_place?: string | null
           created_at?: string
           email?: string | null
           first_name?: string | null
@@ -147,6 +185,7 @@ export type Database = {
           last_name?: string | null
           phone?: string | null
           role?: string | null
+          subscription_plan?: string | null
           updated_at?: string
           username?: string | null
         }

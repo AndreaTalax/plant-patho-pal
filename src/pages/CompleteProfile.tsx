@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { useToast } from "@/hooks/use-toast"; // Updated import path
+import { useToast } from "@/hooks/use-toast";
 import { User } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { 
@@ -22,6 +22,8 @@ import * as z from "zod";
 const profileSchema = z.object({
   firstName: z.string().min(1, { message: "Il nome è obbligatorio" }),
   lastName: z.string().min(1, { message: "Il cognome è obbligatorio" }),
+  birthDate: z.string().min(1, { message: "La data di nascita è obbligatoria" }),
+  birthPlace: z.string().min(1, { message: "Il luogo di nascita è obbligatorio" }),
 });
 
 type ProfileFormValues = z.infer<typeof profileSchema>;
@@ -35,8 +37,10 @@ const CompleteProfile = () => {
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
-      firstName: userProfile.firstName || "",
-      lastName: userProfile.lastName || "",
+      firstName: userProfile?.firstName || "",
+      lastName: userProfile?.lastName || "",
+      birthDate: userProfile?.birthDate || "",
+      birthPlace: userProfile?.birthPlace || "",
     },
   });
 
@@ -46,6 +50,8 @@ const CompleteProfile = () => {
     try {
       updateProfile("firstName", values.firstName);
       updateProfile("lastName", values.lastName);
+      updateProfile("birthDate", values.birthDate);
+      updateProfile("birthPlace", values.birthPlace);
       
       toast({
         title: "Profilo completato",
@@ -91,7 +97,7 @@ const CompleteProfile = () => {
                   name="firstName"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Nome</FormLabel>
+                      <FormLabel>Nome *</FormLabel>
                       <FormControl>
                         <Input {...field} placeholder="Inserisci il tuo nome" />
                       </FormControl>
@@ -104,9 +110,35 @@ const CompleteProfile = () => {
                   name="lastName"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Cognome</FormLabel>
+                      <FormLabel>Cognome *</FormLabel>
                       <FormControl>
                         <Input {...field} placeholder="Inserisci il tuo cognome" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="birthDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Data di nascita *</FormLabel>
+                      <FormControl>
+                        <Input {...field} type="date" placeholder="Inserisci la tua data di nascita" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="birthPlace"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Luogo di nascita *</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="Inserisci il tuo luogo di nascita" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

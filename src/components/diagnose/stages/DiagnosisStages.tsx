@@ -66,7 +66,9 @@ const DiagnosisStages: React.FC<DiagnosisStagesProps> = ({
         <PlantInfoSummary 
           plantInfo={{
             isIndoor: plantInfo.isIndoor,
-            wateringFrequency: plantInfo.wateringFrequency
+            wateringFrequency: plantInfo.wateringFrequency,
+            lightExposure: plantInfo.lightExposure,
+            symptoms: plantInfo.symptoms
           }}
           onEdit={onPlantInfoEdit}
         />
@@ -85,7 +87,10 @@ const DiagnosisStages: React.FC<DiagnosisStagesProps> = ({
         imageSrc={uploadedImage || ''}
         plantInfo={{
           isIndoor: plantInfo.isIndoor,
-          wateringFrequency: plantInfo.wateringFrequency
+          wateringFrequency: plantInfo.wateringFrequency,
+          lightExposure: plantInfo.lightExposure,
+          symptoms: plantInfo.symptoms,
+          useAI: plantInfo.useAI
         }}
         analysisData={diagnosedDisease}
         isAnalyzing={isAnalyzing}
