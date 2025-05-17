@@ -12,11 +12,15 @@ import { toast } from "sonner";
  */
 export const analyzePlantImage = async (imageFile: File) => {
   try {
+    // Dismiss any existing toasts to prevent stuck notifications
+    toast.dismiss();
+    
     const formData = new FormData();
     formData.append('image', imageFile);
 
     toast.info("Analyzing your plant image...", {
       duration: 3000,
+      dismissible: true, // Make sure toasts are dismissible
     });
 
     // Call the Supabase Edge Function with retry mechanism
@@ -40,7 +44,9 @@ export const analyzePlantImage = async (imageFile: File) => {
         // Wait before retrying (exponential backoff)
         if (attempts < maxAttempts) {
           await new Promise(resolve => setTimeout(resolve, 1000 * attempts));
-          toast.info(`Retrying analysis (attempt ${attempts + 1}/${maxAttempts})...`);
+          toast.info(`Retrying analysis (attempt ${attempts + 1}/${maxAttempts})...`, {
+            dismissible: true
+          });
         }
       } catch (retryError) {
         console.error(`Attempt ${attempts} error:`, retryError);
@@ -52,7 +58,10 @@ export const analyzePlantImage = async (imageFile: File) => {
 
     if (error) {
       console.error('Error calling analyze-plant function:', error);
-      toast.error(`Analysis error: ${error.message || 'Unknown error'}`);
+      toast.error(`Analysis error: ${error.message || 'Unknown error'}`, {
+        duration: 5000,
+        dismissible: true
+      });
       return null;
     }
 
@@ -62,26 +71,33 @@ export const analyzePlantImage = async (imageFile: File) => {
     if (data.isValidPlantImage === false) {
       toast.error("The uploaded image does not appear to contain a plant. Please try with a different image.", {
         duration: 5000,
+        dismissible: true
       });
     } else if (!data.isReliable) {
       toast.warning("The analysis results have low confidence. Consider uploading a clearer image for better results.", {
         duration: 5000,
+        dismissible: true
       });
     } else if (data.eppoRegulatedConcern) {
       // Special EPPO alert for regulated pests and diseases
       toast.error(`ALERT: Possible detection of ${data.eppoRegulatedConcern.name}, a regulated pest/disease. Please report to local plant protection authorities.`, {
         duration: 8000,
+        dismissible: true
       });
     } else {
       toast.success("Plant analysis complete!", {
         duration: 3000,
+        dismissible: true
       });
     }
     
     return data;
   } catch (err) {
     console.error('Exception during plant analysis:', err);
-    toast.error(`Analysis error: ${(err as Error).message || 'Unknown error'}`);
+    toast.error(`Analysis error: ${(err as Error).message || 'Unknown error'}`, {
+      duration: 5000,
+      dismissible: true
+    });
     return null;
   }
 };

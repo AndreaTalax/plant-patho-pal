@@ -1,10 +1,11 @@
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { modelInfo } from '@/utils/aiDiagnosisUtils';
 import { usePlantInfo } from '@/context/PlantInfoContext';
 import { usePlantDiagnosis } from '@/hooks/usePlantDiagnosis';
 import { PlantInfoFormValues } from './diagnose/PlantInfoForm';
+import { toast } from 'sonner';
 
 // Importing our components
 import DiagnoseHeader from './diagnose/DiagnoseHeader';
@@ -20,6 +21,11 @@ const DiagnoseTab = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const navigate = useNavigate();
   
+  // Dismiss any stuck toast notifications when component mounts
+  useEffect(() => {
+    toast.dismiss();
+  }, []);
+  
   const {
     isAnalyzing,
     uploadedImage,
@@ -33,7 +39,9 @@ const DiagnoseTab = () => {
 
   const handleImageUploadEvent = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!plantInfo.infoComplete) {
-      console.log("Please enter plant information before continuing");
+      toast.warning("Please enter plant information before continuing", {
+        dismissible: true
+      });
       return;
     }
     
