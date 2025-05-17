@@ -52,10 +52,10 @@ const CompleteProfile = () => {
       updateProfile("firstName", values.firstName);
       updateProfile("lastName", values.lastName);
       
-      // For birth date and place, update them directly if the fields exist in UserProfile
-      // or store them separately if they don't
-      updateProfile("birth_date", values.birthDate);  
-      updateProfile("birth_place", values.birthPlace);
+      // For birth date and place, we need to match the property names in the UserProfile type
+      // In this case, we need to use "birthDate" and "birthPlace" instead of "birth_date" and "birth_place"
+      updateProfile("birthDate", values.birthDate);  
+      updateProfile("birthPlace", values.birthPlace);
       
       toast({
         title: "Profilo completato",

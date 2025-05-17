@@ -12,6 +12,8 @@ type UserProfile = {
   phone: string;
   address: string;
   role: "user" | "master"; // Limited to these specific values
+  birthDate?: string; // Add birthDate field
+  birthPlace?: string; // Add birthPlace field
 };
 
 type AuthContextType = {
@@ -67,7 +69,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     email: "",
     phone: "",
     address: "",
-    role: "user" as const
+    role: "user" as const,
+    birthDate: "",
+    birthPlace: ""
   });
   
   const [isProfileComplete, setIsProfileComplete] = useState(false);
@@ -155,7 +159,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           email: (data as any).email || user?.email || '',
           phone: (data as any).phone || '',
           address: (data as any).address || '',
-          role: ((data as any).role as "user" | "master") || 'user'
+          role: ((data as any).role as "user" | "master") || 'user',
+          birthDate: (data as any).birth_date || '',
+          birthPlace: (data as any).birth_place || ''
         });
         
         setIsProfileComplete(!!(data as any).first_name && !!(data as any).last_name);
@@ -225,7 +231,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       email: "",
       phone: "",
       address: "",
-      role: "user" as const
+      role: "user" as const,
+      birthDate: "",
+      birthPlace: ""
     });
   };
   
@@ -259,7 +267,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             email: email,
             phone: "",
             address: "",
-            role: "user"
+            role: "user",
+            birthDate: "",
+            birthPlace: ""
           });
           setIsProfileComplete(true);
         } else if (email === "agrotecnicomarconigro@gmail.com") {
@@ -270,7 +280,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             email: email,
             phone: "+39 123 456 7890",
             address: "Via Roma 123, Milan, Italy",
-            role: "master"
+            role: "master",
+            birthDate: "",
+            birthPlace: ""
           });
           setIsProfileComplete(true);
           setIsMasterAccount(true);
@@ -282,7 +294,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             email: email,
             phone: "",
             address: "",
-            role: "user"
+            role: "user",
+            birthDate: "",
+            birthPlace: ""
           });
           setIsProfileComplete(true);
         } else {
@@ -293,7 +307,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             email: email,
             phone: "",
             address: "",
-            role: "user"
+            role: "user",
+            birthDate: "",
+            birthPlace: ""
           });
         }
       }
@@ -363,6 +379,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         else if (field === 'phone') updates['phone'] = value;
         else if (field === 'address') updates['address'] = value;
         else if (field === 'role') updates['role'] = value;
+        else if (field === 'birthDate') updates['birth_date'] = value;
+        else if (field === 'birthPlace') updates['birth_place'] = value;
         
         const { error } = await supabase
           .from('profiles')
