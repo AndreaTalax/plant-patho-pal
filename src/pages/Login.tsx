@@ -35,6 +35,15 @@ const Login = () => {
     }
 
     try {
+      // Pre-fill form with admin credentials if in development
+      if (window.location.hostname === 'localhost') {
+        const adminFields = document.getElementById('admin-login');
+        if (adminFields) {
+          setEmail('test@gmail.com');
+          setPassword('test123');
+        }
+      }
+      
       // Handle all user logins
       await login(email, password);
       
@@ -56,6 +65,12 @@ const Login = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // For demo convenience, pre-populate the admin fields
+  const fillAdminLogin = () => {
+    setEmail("test@gmail.com");
+    setPassword("test123");
   };
 
   return (
@@ -124,7 +139,11 @@ const Login = () => {
             </div>
             <div className="text-center w-full text-xs text-gray-400">
               <p>Demo accounts:</p>
-              <p>Regular user: test@gmail.com / test123</p>
+              <p>Admin user: <Button 
+                variant="link" 
+                className="p-0 h-auto text-xs" 
+                onClick={fillAdminLogin}
+              >test@gmail.com / test123</Button></p>
               <p>Plant pathologist: agrotecnicomarconigro@gmail.com / marconigro93</p>
             </div>
           </CardFooter>
