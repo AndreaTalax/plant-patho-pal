@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,7 +15,15 @@ const Login = () => {
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, isAuthenticated } = useAuth();
+
+  // Reindirizzamento automatico se l'utente è già autenticato
+  useEffect(() => {
+    if (isAuthenticated) {
+      console.log("User already authenticated, redirecting to home");
+      navigate("/");
+    }
+  }, [isAuthenticated, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,6 +49,7 @@ const Login = () => {
       if (email.toLowerCase() === 'test@gmail.com' && password === 'test123') {
         console.log("Using direct auth for admin account");
         const data = await signIn(email, password);
+        console.log("Admin login result:", data);
         if (data) {
           // Show success message before navigation
           toast.success("Admin login successful", {
@@ -49,7 +58,10 @@ const Login = () => {
           });
           
           // Navigate after showing toast
-          navigate("/");
+          console.log("Navigating to home after admin login");
+          setTimeout(() => {
+            navigate("/");
+          }, 100);
           return;
         }
       }
@@ -64,7 +76,10 @@ const Login = () => {
       });
       
       // Navigate after showing toast
-      navigate("/");
+      console.log("Navigating to home after standard login");
+      setTimeout(() => {
+        navigate("/");
+      }, 100);
       
     } catch (error: any) {
       console.error("Login error:", error);
