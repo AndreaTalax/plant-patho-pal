@@ -44,7 +44,14 @@ const PlantInfoForm = ({ onComplete }: PlantInfoFormProps) => {
   });
 
   const handleSubmit = (values: z.infer<typeof formSchema>) => {
-    onComplete(values);
+    // Ensure useAI is not undefined before passing it to onComplete
+    onComplete({
+      isIndoor: values.isIndoor,
+      wateringFrequency: values.wateringFrequency,
+      lightExposure: values.lightExposure,
+      symptoms: values.symptoms,
+      useAI: values.useAI || false,
+    });
   };
 
   return (

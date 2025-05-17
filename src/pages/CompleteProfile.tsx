@@ -48,14 +48,14 @@ const CompleteProfile = () => {
     setIsLoading(true);
 
     try {
+      // Update the profile fields directly
       updateProfile("firstName", values.firstName);
       updateProfile("lastName", values.lastName);
       
-      // Using custom fields for birthDate and birthPlace
-      updateProfile("customFields", {
-        birthDate: values.birthDate,
-        birthPlace: values.birthPlace
-      });
+      // For birth date and place, update them directly if the fields exist in UserProfile
+      // or store them separately if they don't
+      updateProfile("birth_date", values.birthDate);  
+      updateProfile("birth_place", values.birthPlace);
       
       toast({
         title: "Profilo completato",

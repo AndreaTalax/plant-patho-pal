@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { modelInfo } from '@/utils/aiDiagnosisUtils';
@@ -169,7 +168,7 @@ const DiagnoseTab = () => {
       wateringFrequency: data.wateringFrequency,
       lightExposure: data.lightExposure,
       symptoms: data.symptoms,
-      useAI: data.useAI || false,
+      useAI: data.useAI,
       infoComplete: true
     });
     
