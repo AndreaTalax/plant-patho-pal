@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { modelInfo } from '@/utils/aiDiagnosisUtils';
@@ -147,6 +148,7 @@ const DiagnoseTab = () => {
           description: "Nome, cognome, data e luogo di nascita sono obbligatori",
           duration: 4000
         });
+        navigate('/complete-profile');
         return;
       }
 

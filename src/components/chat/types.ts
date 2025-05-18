@@ -1,3 +1,4 @@
+
 import type { Database } from '@/integrations/supabase/types';
 import { DbMessage, DbConversation } from '@/integrations/supabase/client';
 
