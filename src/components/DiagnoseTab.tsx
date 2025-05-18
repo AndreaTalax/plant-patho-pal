@@ -8,6 +8,7 @@ import { PlantInfoFormValues } from './diagnose/PlantInfoForm';
 import { toast } from 'sonner';
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from '@/context/AuthContext';
+import { AuthRequiredDialog } from './auth/AuthRequiredDialog';
 
 // Importing our components
 import DiagnoseHeader from './diagnose/DiagnoseHeader';
@@ -16,9 +17,14 @@ import ModelInfoPanel from './diagnose/ModelInfoPanel';
 
 const DiagnoseTab = () => {
   const { plantInfo, setPlantInfo } = usePlantInfo();
-  const { userProfile } = useAuth();
+  const { userProfile, isAuthenticated } = useAuth();
   const [showCamera, setShowCamera] = useState(false);
   const [showModelInfo, setShowModelInfo] = useState(false);
+  const [showAuthDialog, setShowAuthDialog] = useState(false);
+  const [authDialogConfig, setAuthDialogConfig] = useState({
+    title: "Devi accedere",
+    description: "Per utilizzare questa funzionalità devi accedere al tuo account."
+  });
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -65,7 +71,27 @@ const DiagnoseTab = () => {
         // If AI is selected, proceed with AI analysis
         handleImageUpload(file);
       } else {
-        // If AI is not selected, notify expert directly
+        // If AI is not selected, check authentication first
+        if (!isAuthenticated) {
+          setAuthDialogConfig({
+            title: "Devi accedere per contattare il fitopatologo",
+            description: "Per inviare la tua richiesta al fitopatologo devi prima accedere."
+          });
+          setShowAuthDialog(true);
+          return;
+        }
+        
+        // Check if user profile is complete
+        if (!userProfile.firstName || !userProfile.lastName || !userProfile.birthDate || !userProfile.birthPlace) {
+          toast.error("Completa il tuo profilo prima di inviare una richiesta", {
+            description: "Nome, cognome, data e luogo di nascita sono obbligatori",
+            duration: 4000
+          });
+          navigate('/complete-profile');
+          return;
+        }
+        
+        // If authenticated and profile complete, notify expert
         await notifyExpert(file, tempUrl);
       }
     }
@@ -117,6 +143,15 @@ const DiagnoseTab = () => {
   const notifyExpert = async (imageFile?: File, imageDataUrl?: string) => {
     try {
       // Check for user authentication
+      if (!isAuthenticated) {
+        setAuthDialogConfig({
+          title: "Devi accedere per contattare il fitopatologo",
+          description: "Per inviare la tua richiesta al fitopatologo devi prima accedere."
+        });
+        setShowAuthDialog(true);
+        return;
+      }
+      
       const { data: { user } } = await supabase.auth.getUser();
       
       if (!user) {
@@ -266,7 +301,27 @@ const DiagnoseTab = () => {
       // If AI is selected, process the image with AI
       captureImage(imageDataUrl);
     } else {
-      // If AI is not selected, send directly to the expert
+      // If AI is not selected, check authentication first
+      if (!isAuthenticated) {
+        setAuthDialogConfig({
+          title: "Devi accedere per contattare il fitopatologo",
+          description: "Per inviare la tua richiesta al fitopatologo devi prima accedere."
+        });
+        setShowAuthDialog(true);
+        return;
+      }
+      
+      // Check if user profile is complete before sending to expert
+      if (!userProfile.firstName || !userProfile.lastName || !userProfile.birthDate || !userProfile.birthPlace) {
+        toast.error("Completa il tuo profilo prima di inviare una richiesta", {
+          description: "Nome, cognome, data e luogo di nascita sono obbligatori",
+          duration: 4000
+        });
+        navigate('/complete-profile');
+        return;
+      }
+      
+      // If authenticated and profile complete, send directly to the expert
       await notifyExpert(undefined, imageDataUrl);
     }
   };
@@ -277,6 +332,16 @@ const DiagnoseTab = () => {
   };
 
   const navigateToChat = () => {
+    // Check authentication before navigating
+    if (!isAuthenticated) {
+      setAuthDialogConfig({
+        title: "Devi accedere per accedere alla chat",
+        description: "Per visualizzare le conversazioni con il fitopatologo devi prima accedere."
+      });
+      setShowAuthDialog(true);
+      return;
+    }
+    
     navigate('/');
     // Using a slight timeout to ensure navigation completes before tab selection
     setTimeout(() => {
@@ -347,6 +412,14 @@ const DiagnoseTab = () => {
         accept="image/*,video/*"
         className="hidden"
         onChange={handleImageUploadEvent}
+      />
+      
+      {/* Authentication Dialog */}
+      <AuthRequiredDialog 
+        isOpen={showAuthDialog}
+        onClose={() => setShowAuthDialog(false)}
+        title={authDialogConfig.title}
+        description={authDialogConfig.description}
       />
     </div>
   );

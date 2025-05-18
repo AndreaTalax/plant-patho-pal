@@ -2,6 +2,9 @@
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Save, AlertCircle, MessageCircle, Loader2, RefreshCw } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/context/AuthContext";
+import { useState } from "react";
+import { AuthRequiredDialog } from "@/components/auth/AuthRequiredDialog";
 
 interface ActionButtonsProps {
   onStartNewAnalysis: () => void;
@@ -20,10 +23,16 @@ const ActionButtons = ({
   hasValidAnalysis,
   useAI = false
 }: ActionButtonsProps) => {
-  // Add navigate hook for direct navigation when needed
+  const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
+  const [showAuthDialog, setShowAuthDialog] = useState(false);
   
   const handleChatWithExpert = () => {
+    if (!isAuthenticated) {
+      setShowAuthDialog(true);
+      return;
+    }
+    
     if (onChatWithExpert) {
       onChatWithExpert();
     } else {
@@ -91,6 +100,13 @@ const ActionButtons = ({
           La tua richiesta è stata inviata al fitopatologo. Riceverai una risposta al più presto nella sezione Chat.
         </p>
       )}
+      
+      <AuthRequiredDialog 
+        isOpen={showAuthDialog}
+        onClose={() => setShowAuthDialog(false)}
+        title="Devi accedere per contattare il fitopatologo"
+        description="Per visualizzare le conversazioni con il fitopatologo devi prima accedere."
+      />
     </div>
   );
 };
