@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from 'react';
 import { PLANT_DISEASES } from '@/data/plantDiseases';
 import { formatHuggingFaceResult, dataURLtoFile } from '@/utils/plant-analysis';
@@ -80,7 +79,6 @@ export const usePlantDiagnosis = () => {
             plantPart: 'foglia',
             isHealthy: false,
             isValidPlantImage: true,
-            isReliable: true,
             dataSource: 'TRY Plant Trait Database',
             // Add leaf analysis data for Sistema Digitale Foglia
             leafAnalysis: {

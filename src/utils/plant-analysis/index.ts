@@ -1,15 +1,15 @@
 
-// Export all the utility functions from the modules
-export { analyzePlantImage } from './api-service';
-export { dataURLtoFile, preprocessImageForPlantDetection, validateImageForAnalysis, resizeImageForOptimalDetection } from './image-utils';
-export { formatHuggingFaceResult } from './result-formatter';
-export { getPlantPartFromLabel, capitalize } from './plant-part-utils';
+// Re-export functions from other files for easier imports
+export * from './api-service';
+export * from './eppo-utils';
+export * from './health-detection';
+export * from './image-utils';
+export * from './leaf-analysis';
+export * from './plant-name-extractor';
+export * from './plant-part-utils';
+export * from './result-formatter';
 
-// Export from the new modular files
-export { isPlantHealthy } from './health-detection';
-export { extractPlantName, detectPlantType } from './plant-name-extractor';
-export { checkForEppoRelation } from './eppo-utils';
-export { eppoSymptoms } from './eppo-symptoms';
-
-// Export the new Sistema Digitale Foglia leaf analysis functionality
-export { analyzeLeafCharacteristics, enhanceLeafDiseaseClassification } from './leaf-analysis';
+// Utility function to format percentage values
+export const formatPercentage = (value: number): string => {
+  return `${Math.round(value * 100)}%`;
+};

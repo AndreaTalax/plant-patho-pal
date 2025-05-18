@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -6,17 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { MessageCircle, Loader2, Eye, EyeOff, Thermometer, Leaf, Check, X } from 'lucide-react';
 import DiagnosisTabs from './DiagnosisTabs';
 import { PlantInfoFormValues } from './PlantInfoForm';
-
-interface DiagnosedDisease {
-  id: string;
-  name: string;
-  description: string;
-  causes: string;
-  treatments: string[];
-  products: string[];
-  confidence: number;
-  resources: string[];
-}
+import { DiagnosedDisease } from './types';
 
 interface DiagnosisResultProps {
   uploadedImage: string;
