@@ -40,11 +40,11 @@ export const useUserChat = (userId: string) => {
         const messagesForConversation = messagesData.map(msg => convertToUIMessage(msg));
         
         if (!messagesForConversation || messagesForConversation.length === 0) {
-          // Add initial greeting message if no messages exist
+          // Add only an offline message if no messages exist
           setMessages([{ 
             id: '1', 
             sender: 'expert', 
-            text: 'Good morning! I am Marco Nigro, a plant pathologist specialized in plant diagnosis and treatment. How can I help you today?', 
+            text: 'Il fitopatologo risponderà al più presto alla tua richiesta.', 
             time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) 
           }]);
         } else {

@@ -67,8 +67,6 @@ const DiagnoseTab = () => {
       } else {
         // If AI is not selected, notify expert directly
         await notifyExpert(file, tempUrl);
-        // Set the current stage to result
-        // We don't need to analyze anything, but we want to show the "sent to pathologist" screen
       }
     }
   };
@@ -140,10 +138,6 @@ const DiagnoseTab = () => {
         });
       }
 
-      toast.info("Invio richiesta al fitopatologo...", {
-        duration: 2000
-      });
-
       // First, create a consultation record
       const { data: consultationData, error: consultationError } = await supabase
         .from('expert_consultations')
@@ -182,23 +176,16 @@ const DiagnoseTab = () => {
             plantInfo: {
               isIndoor: plantInfo.isIndoor,
               wateringFrequency: plantInfo.wateringFrequency,
-              lightExposure: plantInfo.lightExposure
+              lightExposure: plantInfo.lightExposure,
+              symptoms: plantInfo.symptoms
             }
           }
         });
         
         if (notifyError) {
           console.error("Error notifying expert:", notifyError);
-          toast.error("Errore nell'invio della notifica al fitopatologo", {
-            duration: 4000
-          });
           return;
         }
-        
-        toast.success("Richiesta inviata al fitopatologo", {
-          description: "Riceverai una risposta al più presto nella sezione chat.",
-          duration: 5000
-        });
       }
     } catch (error) {
       console.error("Error notifying expert:", error);

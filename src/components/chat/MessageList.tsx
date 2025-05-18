@@ -60,6 +60,31 @@ const MessageList = ({ messages, isExpertView = false }: MessageListProps) => {
                 ))}
               </div>
             )}
+            
+            {message.plantImage && (
+              <div className="mt-2 bg-white p-1 rounded-lg">
+                <img 
+                  src={message.plantImage} 
+                  alt="Immagine pianta" 
+                  className="w-full h-auto rounded max-h-48 object-cover" 
+                />
+              </div>
+            )}
+            
+            {message.plantDetails && (
+              <div className="mt-2 bg-white/90 p-2 rounded-lg text-xs text-gray-700">
+                <p className="font-medium mb-1">Dettagli pianta:</p>
+                <ul className="space-y-1">
+                  <li><span className="font-medium">Ambiente:</span> {message.plantDetails.isIndoor ? 'Interno' : 'Esterno'}</li>
+                  <li><span className="font-medium">Irrigazione:</span> {message.plantDetails.wateringFrequency} volte/settimana</li>
+                  <li><span className="font-medium">Luce:</span> {message.plantDetails.lightExposure}</li>
+                  {message.plantDetails.symptoms && (
+                    <li><span className="font-medium">Sintomi:</span> {message.plantDetails.symptoms}</li>
+                  )}
+                </ul>
+              </div>
+            )}
+            
             <div className={`text-xs mt-1 ${
               isExpertView 
                 ? message.sender === 'expert' ? 'text-green-100' : 'text-gray-500'

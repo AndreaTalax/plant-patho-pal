@@ -1,4 +1,3 @@
-
 import type { Database } from '@/integrations/supabase/types';
 import { DbMessage, DbConversation } from '@/integrations/supabase/client';
 
@@ -13,10 +12,17 @@ export interface Product {
 
 export interface Message {
   id: string;
-  sender: string;
+  sender: 'user' | 'expert';
   text: string;
   time: string;
   products?: Product[];
+  plantImage?: string; // URL of the plant image
+  plantDetails?: {
+    isIndoor: boolean;
+    wateringFrequency: string;
+    lightExposure: string;
+    symptoms?: string;
+  };
 }
 
 // Using the helper types from client.ts but with our own customizations

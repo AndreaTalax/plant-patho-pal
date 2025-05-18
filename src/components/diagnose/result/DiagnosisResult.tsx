@@ -107,35 +107,15 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
       
       {plantInfo.useAI && analysisData && (
         <>
-          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-            <div className="flex items-start space-x-3">
-              <Info className="h-5 w-5 text-amber-600 mt-0.5" />
-              <div>
-                <h3 className="text-sm font-medium text-amber-800">Diagnosi AI - Limitazioni di accuratezza:</h3>
-                <ul className="mt-2 space-y-1 text-xs text-amber-700">
-                  <li className="flex items-center space-x-2">
-                    <span className="inline-block w-16 font-medium">60-75%</span>
-                    <span>Diagnosi basata su immagine (se la foto è chiara e mostra bene i sintomi)</span>
-                  </li>
-                  <li className="flex items-center space-x-2">
-                    <span className="inline-block w-16 font-medium">&lt;50%</span>
-                    <span>Precisione se non supportata da esami di laboratorio</span>
-                  </li>
-                </ul>
-                <p className="mt-2 text-xs text-amber-800 font-medium">
-                  Per una diagnosi più accurata, ti consigliamo di consultare un fitopatologo esperto
-                </p>
-              </div>
-            </div>
-          </div>
-          
           <EppoDataPanel 
             analysisDetails={analysisDetails}
+            userInput={plantInfo.symptoms}
           />
           
           <AiServicesData 
             analysisDetails={analysisDetails}
             isAnalyzing={isAnalyzing}
+            plantSymptoms={plantInfo.symptoms}
           />
         </>
       )}

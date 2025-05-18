@@ -125,10 +125,16 @@ ID Consultazione: ${consultationId}`;
           sender_id: userId,
           recipient_id: expert.id,
           text: messageText,
-          // Send the image URL as well
+          // Include the plant image and details directly in the message
           products: { 
             plantImage: imageUrl,
-            consultationId: consultationId
+            consultationId: consultationId,
+            plantDetails: {
+              isIndoor: plantInfo.isIndoor,
+              wateringFrequency: plantInfo.wateringFrequency,
+              lightExposure: plantInfo.lightExposure,
+              symptoms: symptoms
+            }
           }
         });
       
