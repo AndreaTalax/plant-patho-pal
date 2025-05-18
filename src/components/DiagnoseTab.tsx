@@ -42,7 +42,8 @@ const DiagnoseTab = () => {
     resetDiagnosis,
     captureImage,
     handleImageUpload,
-    stopCameraStream
+    stopCameraStream,
+    setUploadedImage
   } = usePlantDiagnosis();
 
   const handleImageUploadEvent = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -56,11 +57,18 @@ const DiagnoseTab = () => {
     
     const file = e.target.files?.[0];
     if (file) {
-      handleImageUpload(file);
+      // Create a temporary URL for the uploaded image
+      const tempUrl = URL.createObjectURL(file);
+      setUploadedImage(tempUrl);
       
-      // Notify expert if not using AI
-      if (!plantInfo.useAI) {
-        await notifyExpert(file);
+      if (plantInfo.useAI) {
+        // If AI is selected, proceed with AI analysis
+        handleImageUpload(file);
+      } else {
+        // If AI is not selected, notify expert directly
+        await notifyExpert(file, tempUrl);
+        // Set the current stage to result
+        // We don't need to analyze anything, but we want to show the "sent to pathologist" screen
       }
     }
   };
@@ -221,10 +229,15 @@ const DiagnoseTab = () => {
 
   const handleCaptureImage = async (imageDataUrl: string) => {
     setShowCamera(false);
-    captureImage(imageDataUrl);
     
-    // Notify expert if not using AI
-    if (!plantInfo.useAI) {
+    // Store the captured image
+    setUploadedImage(imageDataUrl);
+    
+    if (plantInfo.useAI) {
+      // If AI is selected, process the image with AI
+      captureImage(imageDataUrl);
+    } else {
+      // If AI is not selected, send directly to the expert
       await notifyExpert(undefined, imageDataUrl);
     }
   };
