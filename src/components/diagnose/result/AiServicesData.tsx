@@ -35,7 +35,7 @@ const AiServicesData = ({ analysisDetails, isAnalyzing, plantSymptoms }: AiServi
                         
     const hasLeafProblems = plantSymptoms.toLowerCase().includes('foglie') || 
                          plantSymptoms.toLowerCase().includes('macchie') ||
-                         plantSymptoms.toLowerCase().includes('foglie');
+                         plantSymptoms.toLowerCase().includes('foglia');
     
     let explanation = '';
     
@@ -45,7 +45,7 @@ const AiServicesData = ({ analysisDetails, isAnalyzing, plantSymptoms }: AiServi
       // Add preventive advice
       explanation += 'Per mantenere la pianta in salute, assicurati di: \n\n';
       explanation += '- Mantenere un regime di irrigazione adeguato alle esigenze della specie\n';
-      explanation += '- Garantire un'esposizione alla luce appropriata\n';
+      explanation += '- Garantire un\'esposizione alla luce appropriata\n';
       explanation += '- Controllare regolarmente la presenza di parassiti o segni di malattia';
       
     } else {
