@@ -85,6 +85,18 @@ const MessageList = ({ messages, isExpertView = false }: MessageListProps) => {
               </div>
             )}
             
+            {message.userDetails && (
+              <div className="mt-2 bg-white/90 p-2 rounded-lg text-xs text-gray-700">
+                <p className="font-medium mb-1">Informazioni utente:</p>
+                <ul className="space-y-1">
+                  <li><span className="font-medium">Nome:</span> {message.userDetails.firstName || 'Non specificato'}</li>
+                  <li><span className="font-medium">Cognome:</span> {message.userDetails.lastName || 'Non specificato'}</li>
+                  <li><span className="font-medium">Data di nascita:</span> {message.userDetails.birthDate || 'Non specificata'}</li>
+                  <li><span className="font-medium">Luogo di nascita:</span> {message.userDetails.birthPlace || 'Non specificato'}</li>
+                </ul>
+              </div>
+            )}
+            
             <div className={`text-xs mt-1 ${
               isExpertView 
                 ? message.sender === 'expert' ? 'text-green-100' : 'text-gray-500'

@@ -27,7 +27,8 @@ serve(async (req) => {
       expert_email,
       user_name,
       image_url,
-      plant_details
+      plant_details,
+      user_details
     } = await req.json();
 
     // Verifica che i dati richiesti siano presenti
@@ -44,6 +45,9 @@ serve(async (req) => {
     }
 
     console.log(`Nuovo messaggio in conversazione ${conversation_id}: da ${sender_id} a ${recipient_id}`);
+    if (user_details) {
+      console.log(`Dettagli utente: ${user_details.firstName} ${user_details.lastName}`);
+    }
 
     // Ottieni il profilo del destinatario per maggiori informazioni
     const { data: recipientProfile, error: recipientError } = await supabaseAdmin
@@ -69,7 +73,9 @@ serve(async (req) => {
       // Continuiamo comunque anche se non troviamo il profilo
     }
 
-    const senderName = senderProfile?.username || senderProfile?.email || user_name || "Un utente";
+    const senderName = user_details ? 
+      `${user_details.firstName} ${user_details.lastName}` : 
+      senderProfile?.username || senderProfile?.email || user_name || "Un utente";
 
     // Aggiorna la conversazione con l'ultimo messaggio
     const { error: updateError } = await supabaseAdmin
@@ -91,9 +97,6 @@ serve(async (req) => {
       try {
         console.log(`Invio email al fitopatologo: ${expert_email}`);
 
-        // Qui puoi utilizzare il servizio email di tua preferenza
-        // Per esempio, SendGrid, SMTP diretto, ecc.
-        
         // Prepara l'HTML dell'email
         const emailHtml = `
         <html>
@@ -106,6 +109,7 @@ serve(async (req) => {
               .footer { font-size: 12px; text-align: center; margin-top: 30px; color: #666; }
               img.plant-image { max-width: 100%; height: auto; border: 1px solid #ddd; border-radius: 4px; margin: 15px 0; }
               .info-box { background-color: #e8f5e9; border-left: 4px solid #4CAF50; padding: 10px; margin: 15px 0; }
+              .user-info-box { background-color: #e3f2fd; border-left: 4px solid #2196F3; padding: 10px; margin: 15px 0; }
             </style>
           </head>
           <body>
@@ -116,6 +120,16 @@ serve(async (req) => {
               <div class="content">
                 <p>Caro Fitopatologo,</p>
                 <p>Hai ricevuto una nuova richiesta di diagnosi da <strong>${senderName}</strong>.</p>
+                
+                <div class="user-info-box">
+                  <h3>Informazioni Utente:</h3>
+                  <ul>
+                    <li><strong>Nome:</strong> ${user_details?.firstName || 'Non specificato'}</li>
+                    <li><strong>Cognome:</strong> ${user_details?.lastName || 'Non specificato'}</li>
+                    <li><strong>Data di nascita:</strong> ${user_details?.birthDate || 'Non specificata'}</li>
+                    <li><strong>Luogo di nascita:</strong> ${user_details?.birthPlace || 'Non specificato'}</li>
+                  </ul>
+                </div>
                 
                 <div class="info-box">
                   <h3>Sintomi riportati:</h3>

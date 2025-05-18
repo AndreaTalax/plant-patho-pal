@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { modelInfo } from '@/utils/aiDiagnosisUtils';
@@ -127,6 +126,30 @@ const DiagnoseTab = () => {
         return;
       }
 
+      // Get user profile information
+      const { data: userProfile, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+      
+      if (profileError) {
+        console.error("Error fetching user profile:", profileError);
+        toast.error("Errore nel recupero del profilo utente", {
+          duration: 3000
+        });
+        return;
+      }
+      
+      // Check if user has completed their profile
+      if (!userProfile.first_name || !userProfile.last_name || !userProfile.birth_date || !userProfile.birth_place) {
+        toast.error("Completa il tuo profilo prima di inviare una richiesta", {
+          description: "Nome, cognome, data e luogo di nascita sono obbligatori",
+          duration: 4000
+        });
+        return;
+      }
+
       let imageUrl = imageDataUrl;
       
       // If we have a file but not a data URL, convert the file to data URL
@@ -166,6 +189,8 @@ const DiagnoseTab = () => {
       // Send notification to expert (using edge function)
       const consultationId = consultationData?.[0]?.id;
       if (consultationId) {
+        toast.info("Invio richiesta in corso...", { duration: 2000 });
+        
         // Invoke the edge function to notify the expert via chat and email
         const { data: notifyData, error: notifyError } = await supabase.functions.invoke('notify-expert', {
           body: { 
@@ -184,8 +209,23 @@ const DiagnoseTab = () => {
         
         if (notifyError) {
           console.error("Error notifying expert:", notifyError);
+          toast.error("Errore nell'invio della notifica all'esperto", { duration: 3000 });
           return;
         }
+        
+        toast.success("Richiesta inviata con successo!", {
+          description: "Il fitopatologo risponderà al più presto",
+          duration: 4000
+        });
+        
+        // Automatically navigate to the chat tab
+        setTimeout(() => {
+          navigate('/');
+          setTimeout(() => {
+            const event = new CustomEvent('switchTab', { detail: 'chat' });
+            window.dispatchEvent(event);
+          }, 100);
+        }, 2000);
       }
     } catch (error) {
       console.error("Error notifying expert:", error);

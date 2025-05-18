@@ -47,6 +47,8 @@ serve(async (req) => {
       );
     }
 
+    console.log("User profile retrieved:", userProfile);
+
     // Get all experts (users with role = 'expert')
     const { data: experts, error: expertsError } = await supabaseAdmin
       .from('profiles')
@@ -104,7 +106,13 @@ serve(async (req) => {
       conversationId = newConversation.id;
     }
     
-    // Create a message with the diagnosis information
+    // Format user profile information
+    const userName = userProfile?.first_name || "Utente";
+    const userLastName = userProfile?.last_name || "";
+    const userBirthDate = userProfile?.birth_date || "Non specificata";
+    const userBirthPlace = userProfile?.birth_place || "Non specificato";
+    
+    // Create a message with the diagnosis information and user details
     if (conversationId) {
       const messageText = `Nuova richiesta di diagnosi:
       
@@ -115,9 +123,15 @@ Dettagli pianta:
 - Frequenza irrigazione: ${plantInfo.wateringFrequency} volte a settimana
 - Esposizione luce: ${plantInfo.lightExposure}
 
+Informazioni utente:
+- Nome: ${userName}
+- Cognome: ${userLastName}
+- Data di nascita: ${userBirthDate}
+- Luogo di nascita: ${userBirthPlace}
+
 ID Consultazione: ${consultationId}`;
       
-      // Create message
+      // Create message with user info and plant image
       const { error: msgError } = await supabaseAdmin
         .from('messages')
         .insert({
@@ -134,6 +148,12 @@ ID Consultazione: ${consultationId}`;
               wateringFrequency: plantInfo.wateringFrequency,
               lightExposure: plantInfo.lightExposure,
               symptoms: symptoms
+            },
+            userDetails: {
+              firstName: userName,
+              lastName: userLastName,
+              birthDate: userBirthDate,
+              birthPlace: userBirthPlace
             }
           }
         });
@@ -145,8 +165,6 @@ ID Consultazione: ${consultationId}`;
 
       // Send email to the expert
       try {
-        const userName = userProfile?.first_name || userProfile?.username || userId;
-        
         console.log(`Sending email notification to expert ${expert.email}`);
         
         await supabaseAdmin.functions.invoke('send-specialist-notification', {
@@ -156,9 +174,15 @@ ID Consultazione: ${consultationId}`;
             recipient_id: expert.id,
             message_text: messageText,
             expert_email: expert.email,
-            user_name: userName,
+            user_name: userName + " " + userLastName,
             image_url: imageUrl,
-            plant_details: plantInfo
+            plant_details: plantInfo,
+            user_details: {
+              firstName: userName,
+              lastName: userLastName,
+              birthDate: userBirthDate,
+              birthPlace: userBirthPlace
+            }
           }
         });
         

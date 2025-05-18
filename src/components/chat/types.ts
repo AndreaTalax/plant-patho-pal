@@ -19,9 +19,15 @@ export interface Message {
   plantImage?: string; // URL of the plant image
   plantDetails?: {
     isIndoor: boolean;
-    wateringFrequency: string;
+    wateringFrequency: number;
     lightExposure: string;
     symptoms?: string;
+  };
+  userDetails?: {
+    firstName: string;
+    lastName: string;
+    birthDate: string;
+    birthPlace: string;
   };
 }
 
