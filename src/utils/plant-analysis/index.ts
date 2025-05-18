@@ -5,7 +5,8 @@ export * from './eppo-utils';
 export * from './health-detection';
 export * from './image-utils';
 export * from './leaf-analysis';
-export * from './plant-name-extractor';
+// Explicitly re-export from plant-name-extractor to avoid ambiguity
+export { detectPlantType } from './plant-name-extractor';
 export * from './plant-part-utils';
 export * from './result-formatter';
 
