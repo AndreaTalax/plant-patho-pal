@@ -25,7 +25,7 @@ const SignUp = () => {
       setRegisteredEmail(values.email);
       
       // If result contains confirmationRequired flag (coming from our modified function)
-      if (result && typeof result === 'object') {
+      if (result && typeof result === 'object' && 'confirmationRequired' in result) {
         setEmailSent(true);
         
         if (result.confirmationRequired) {

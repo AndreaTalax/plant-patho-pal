@@ -4,7 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { AuthProvider } from "./context/AuthContext";
+import { AuthProvider, useAuth } from "./context/AuthContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import { PlantInfoProvider } from "./context/PlantInfoContext";
 import Index from "./pages/Index";
@@ -19,25 +19,7 @@ import CompleteProfile from "./pages/CompleteProfile";
 
 const queryClient = new QueryClient();
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <ThemeProvider>
-        <BrowserRouter>
-          <AuthProvider>
-            <PlantInfoProvider>
-              <AppRoutes />
-            </PlantInfoProvider>
-          </AuthProvider>
-        </BrowserRouter>
-      </ThemeProvider>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
-
-// Protected route component using imported AuthContext
+// Protected route component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated, isProfileComplete, isMasterAccount } = useAuth();
   
@@ -69,7 +51,6 @@ const ProfileCompletionRoute = ({ children }: { children: React.ReactNode }) => 
   return <>{children}</>;
 };
 
-// Move AppRoutes component after all necessary imports and context definitions
 const AppRoutes = () => {
   return (
     <Routes>
@@ -106,7 +87,22 @@ const AppRoutes = () => {
   );
 };
 
-// Need to import useAuth at the top after moving the AppRoutes component
-import { useAuth } from "./context/AuthContext";
+const App = () => (
+  <QueryClientProvider client={queryClient}>
+    <TooltipProvider>
+      <Toaster />
+      <Sonner />
+      <ThemeProvider>
+        <AuthProvider>
+          <PlantInfoProvider>
+            <BrowserRouter>
+              <AppRoutes />
+            </BrowserRouter>
+          </PlantInfoProvider>
+        </AuthProvider>
+      </ThemeProvider>
+    </TooltipProvider>
+  </QueryClientProvider>
+);
 
 export default App;

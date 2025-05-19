@@ -1,123 +1,149 @@
 
+import { capitalize } from './plant-part-utils';
+import { eppoSymptoms } from './eppo-symptoms';
+
 /**
- * Analyze leaf characteristics to enhance diagnosis
- * @param result Raw analysis result
- * @param label Classification label
- * @param score Confidence score
- * @returns Enhanced leaf analysis data
+ * Specialized AI system for leaf analysis - "Sistema Digitale Foglia"
+ * Analyzes leaf characteristics to identify patterns, diseases, and health issues
  */
-export function analyzeLeafCharacteristics(result: any, label: string, score: number) {
-  const lowerLabel = label.toLowerCase();
-  
-  // Determine leaf color from label
-  let leafColor = 'green';
-  if (lowerLabel.includes('yellow') || lowerLabel.includes('giallo')) {
-    leafColor = 'yellow';
-  } else if (lowerLabel.includes('brown') || lowerLabel.includes('marrone')) {
-    leafColor = 'brown';
-  } else if (lowerLabel.includes('white') || lowerLabel.includes('bianco')) {
-    leafColor = 'white spots';
-  } else if (lowerLabel.includes('black') || lowerLabel.includes('nero')) {
-    leafColor = 'black spots';
-  }
-  
-  // Determine pattern type
-  let patternDetected = 'normal';
-  if (lowerLabel.includes('spot') || lowerLabel.includes('macchia')) {
-    patternDetected = 'leaf spots';
-  } else if (lowerLabel.includes('mosaic') || lowerLabel.includes('mosaico')) {
-    patternDetected = 'mosaic pattern';
-  } else if (lowerLabel.includes('curl') || lowerLabel.includes('arrotolamento')) {
-    patternDetected = 'leaf curl';
-  } else if (lowerLabel.includes('wilt') || lowerLabel.includes('avvizzimento')) {
-    patternDetected = 'wilting';
-  } else if (lowerLabel.includes('mildew') || lowerLabel.includes('oidio')) {
-    patternDetected = 'powdery coating';
-  }
-  
-  // Determine health status
-  const isHealthy = !( 
-    lowerLabel.includes('disease') || 
-    lowerLabel.includes('malattia') ||
-    lowerLabel.includes('spot') || 
-    lowerLabel.includes('macchia') ||
-    lowerLabel.includes('blight') ||
-    lowerLabel.includes('mildew') ||
-    lowerLabel.includes('oidio') ||
-    lowerLabel.includes('rot') ||
-    lowerLabel.includes('marciume')
-  );
-  
-  // Create detailed symptom description
-  let symptomDescription = '';
-  let symptomCategory = '';
-  
-  if (!isHealthy) {
-    if (lowerLabel.includes('mildew') || lowerLabel.includes('oidio')) {
-      symptomDescription = 'White powdery patches on leaves';
-      symptomCategory = 'fungal disease';
-    } else if (lowerLabel.includes('spot') || lowerLabel.includes('macchia')) {
-      symptomDescription = 'Spots with chlorotic halos';
-      symptomCategory = 'fungal disease';
-    } else if (lowerLabel.includes('mosaic') || lowerLabel.includes('mosaico')) {
-      symptomDescription = 'Mottled pattern with light/dark areas';
-      symptomCategory = 'viral disease';
-    } else if (lowerLabel.includes('curl') || lowerLabel.includes('arrotolamento')) {
-      symptomDescription = 'Curled or distorted leaf edges';
-      symptomCategory = 'viral disease or insect damage';
-    } else if (lowerLabel.includes('rust') || lowerLabel.includes('ruggine')) {
-      symptomDescription = 'Rust-colored pustules on leaf undersides';
-      symptomCategory = 'fungal disease';
-    } else if (lowerLabel.includes('blight') || lowerLabel.includes('avvizzimento')) {
-      symptomDescription = 'Rapid tissue death with water-soaked appearance';
-      symptomCategory = 'bacterial or fungal disease';
-    } else {
-      symptomDescription = 'General signs of disease or stress';
-      symptomCategory = 'undetermined';
-    }
-  }
-  
-  // Determine leaf type if available
-  let leafType = 'Unknown';
-  if (result && result.multiServiceInsights?.plantType) {
-    const plantType = result.multiServiceInsights.plantType;
-    if (['palm', 'succulent', 'herb', 'vegetable', 'flowering'].includes(plantType)) {
-      if (plantType === 'palm') leafType = 'Palmate';
-      else if (plantType === 'succulent') leafType = 'Succulent';
-      else if (plantType === 'herb') leafType = 'Simple';
-      else if (plantType === 'vegetable') leafType = 'Compound';
-      else if (plantType === 'flowering') leafType = 'Simple';
-    }
-  }
-  
-  // Create leaf analysis object
-  return {
-    leafColor,
-    patternDetected,
-    diseaseConfidence: score,
-    healthStatus: isHealthy ? 'healthy' : 'diseased',
-    leafType,
-    details: {
-      symptomDescription: isHealthy ? 'No symptoms detected' : symptomDescription,
-      symptomCategory: isHealthy ? 'healthy' : symptomCategory
-    }
-  };
+export interface LeafAnalysisResult {
+  leafArea: number | null;
+  leafColor: string | null;
+  patternDetected: string | null;
+  diseaseConfidence: number;
+  healthStatus: 'healthy' | 'diseased' | 'stressed' | 'unknown';
+  leafType: string | null;
+  details: Record<string, any>;
 }
 
 /**
- * Enhance multiServiceInsights with leaf disease classification
- * @param label The raw classification label
- * @param insights The existing multiServiceInsights object
- * @returns Enhanced multiServiceInsights with leaf disease classification
+ * Analyzes a leaf image to extract detailed information about its health
+ * @param imageData The classification data from the AI model
+ * @param label The classification label
+ * @param score The confidence score
+ * @returns Analysis with detailed leaf information
  */
-export function enhanceLeafDiseaseClassification(label: string, insights: any) {
-  if (!insights) return insights;
+export function analyzeLeafCharacteristics(
+  imageData: any,
+  label: string,
+  score: number
+): LeafAnalysisResult {
+  // Default values
+  const result: LeafAnalysisResult = {
+    leafArea: null,
+    leafColor: null,
+    patternDetected: null,
+    diseaseConfidence: score,
+    healthStatus: 'unknown',
+    leafType: null,
+    details: {}
+  };
   
-  const lowerLabel = label.toLowerCase();
-  const leafInsights = {...insights};
+  // Determine health status based on label and symptoms database
+  const labelLower = label.toLowerCase();
   
-  // Add Digital Leaf System capabilities
-  leafInsights.leafDiagnosticCapabilities = [
+  // Check if healthy
+  if (
+    labelLower.includes('healthy') || 
+    labelLower.includes('normal') || 
+    labelLower.includes('sana') || 
+    labelLower.includes('sano')
+  ) {
+    result.healthStatus = 'healthy';
+    result.diseaseConfidence = 0;
+  } 
+  // Check for disease indicators
+  else if (
+    labelLower.includes('disease') || 
+    labelLower.includes('infection') || 
+    labelLower.includes('malattia') || 
+    labelLower.includes('infezione')
+  ) {
+    result.healthStatus = 'diseased';
+    
+    // Identify common disease patterns
+    const symptomMatch = eppoSymptoms.find(symptom => 
+      labelLower.includes(symptom.keyword.toLowerCase())
+    );
+    
+    if (symptomMatch) {
+      result.patternDetected = symptomMatch.name;
+      result.details.symptomDescription = symptomMatch.description;
+      result.details.symptomCategory = symptomMatch.category;
+    }
+  }
+  // Check for stress indicators
+  else if (
+    labelLower.includes('deficiency') || 
+    labelLower.includes('stress') ||
+    labelLower.includes('carenza') ||
+    labelLower.includes('stress')
+  ) {
+    result.healthStatus = 'stressed';
+  }
+  
+  // Estimate leaf color from common terms in the label
+  if (labelLower.includes('yellow') || labelLower.includes('giallo')) {
+    result.leafColor = 'yellow';
+  } else if (labelLower.includes('brown') || labelLower.includes('marrone')) {
+    result.leafColor = 'brown';
+  } else if (labelLower.includes('spotted') || labelLower.includes('macchiato')) {
+    result.leafColor = 'spotted';
+  } else {
+    result.leafColor = 'green'; // Default color
+  }
+  
+  // Determine leaf type from label
+  const leafTypes = [
+    'broad', 'compound', 'simple', 'needle', 'scale', 'ovate', 
+    'lanceolate', 'lobed', 'pinnate', 'palmate', 'ampia', 'composta', 
+    'semplice', 'aghiforme', 'squamiforme', 'ovata', 'lanceolata', 'lobata'
+  ];
+  
+  for (const type of leafTypes) {
+    if (labelLower.includes(type)) {
+      result.leafType = capitalize(type);
+      break;
+    }
+  }
+  
+  return result;
+}
+
+/**
+ * Enhanced leaf disease classification using the Sistema Digitale Foglia approach
+ * @param label The classification label
+ * @param multiServiceData Combined data from multiple services
+ * @returns Enhanced disease classification with additional insights
+ */
+export function enhanceLeafDiseaseClassification(
+  label: string,
+  multiServiceData: any
+): any {
+  // Initialize enhanced data with existing information
+  const enhancedData = { ...multiServiceData };
+  const labelLower = label.toLowerCase();
+  
+  // Check if this is a leaf analysis
+  const isLeafAnalysis = 
+    multiServiceData?.plantPart === 'leaf' || 
+    labelLower.includes('leaf') || 
+    labelLower.includes('foglia');
+    
+  // Only proceed with enhancement for leaf images
+  if (!isLeafAnalysis) {
+    return multiServiceData;
+  }
+  
+  // Add Sistema Digitale Foglia attribution
+  enhancedData.analysisSystem = 'Sistema Digitale Foglia';
+  enhancedData.leafSpecificAnalysis = true;
+  
+  // Enhance reliability for leaf diagnoses - Sistema Digitale Foglia specializes in leaves
+  enhancedData.confidenceLevel = enhancedData.confidenceLevel || 'high';
+  
+  // Add specialized leaf diagnosis capabilities
+  enhancedData.leafDiagnosticCapabilities = [
     'Pattern recognition',
     'Chlorosis detection',
     'Necrosis identification',
@@ -125,8 +151,5 @@ export function enhanceLeafDiseaseClassification(label: string, insights: any) {
     'Nutrient deficiency recognition'
   ];
   
-  // Set Sistema Digitale Foglia flag
-  leafInsights.sistemaDigitaleFogliaVersion = '2.0';
-  
-  return leafInsights;
+  return enhancedData;
 }

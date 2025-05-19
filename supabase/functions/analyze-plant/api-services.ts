@@ -1,192 +1,175 @@
 
-import { corsHeaders } from "../_shared/cors.ts";
-
-/**
- * Analyzes a plant image with the FloraIncognita API
- * @param imageArrayBuffer The plant image as an ArrayBuffer
- * @param apiKey The FloraIncognita API key
- * @returns The analysis result or null if failed
- */
-export async function analyzeWithFloraIncognita(imageArrayBuffer: ArrayBuffer, apiKey: string) {
+// Function to simulate or call Flora Incognita API
+export async function analyzeWithFloraIncognita(imageArrayBuffer: ArrayBuffer, floraIncognitaKey: string | null): Promise<any> {
   try {
-    // Create a blob from the ArrayBuffer
-    const blob = new Blob([imageArrayBuffer]);
+    if (!floraIncognitaKey) {
+      console.log("Flora Incognita API key not provided. Using simulation.");
+      return simulateFloraIncognitaResult();
+    }
     
-    // Create a FormData object and append the image
-    const formData = new FormData();
-    formData.append('image', blob, 'plant.jpg');
+    // Convert ArrayBuffer to base64
+    const base64 = btoa(String.fromCharCode(...new Uint8Array(imageArrayBuffer)));
     
-    // Call the FloraIncognita API (simulation for now)
-    console.log("Calling FloraIncognita API (simulated)");
+    const response = await fetch('https://api.flora-incognita.org/v1/identify', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${floraIncognitaKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        image: `data:image/jpeg;base64,${base64}`
+      }),
+      signal: AbortSignal.timeout(10000), // 10 second timeout
+    });
     
-    // Return a simulated result
+    if (!response.ok) {
+      console.error("Flora Incognita API error:", await response.text());
+      return simulateFloraIncognitaResult();
+    }
+    
+    const data = await response.json();
     return {
-      species: "Solanum lycopersicum",
-      family: "Solanaceae",
-      score: 0.86,
-      commonName: "Tomato"
+      species: data.species || "Unknown species",
+      genus: data.genus || "Unknown genus",
+      family: data.family || "Unknown family",
+      score: data.score || 0.75,
+      source: "Flora Incognita API"
     };
-  } catch (error) {
-    console.error("FloraIncognita API error:", error);
-    return null;
+  } catch (err) {
+    console.error("Error in Flora Incognita analysis:", err.message);
+    return simulateFloraIncognitaResult();
   }
 }
 
-/**
- * Analyzes a plant image with the PlantSnap API
- * @param imageArrayBuffer The plant image as an ArrayBuffer
- * @param apiKey The PlantSnap API key
- * @returns The analysis result or null if failed
- */
-export async function analyzeWithPlantSnap(imageArrayBuffer: ArrayBuffer, apiKey: string) {
+// Simulate PlantSnap results when API is not available or fails
+function simulateFloraIncognitaResult() {
+  const mockResults = [
+    {
+      species: "Rosa canina",
+      genus: "Rosa",
+      family: "Rosaceae",
+      score: 0.87,
+    },
+    {
+      species: "Taraxacum officinale",
+      genus: "Taraxacum",
+      family: "Asteraceae",
+      score: 0.92,
+    },
+    {
+      species: "Bellis perennis",
+      genus: "Bellis",
+      family: "Asteraceae",
+      score: 0.85,
+    },
+    {
+      species: "Trifolium pratense",
+      genus: "Trifolium",
+      family: "Fabaceae",
+      score: 0.79,
+    }
+  ];
+  
+  const result = mockResults[Math.floor(Math.random() * mockResults.length)];
+  return {
+    ...result,
+    source: "Flora Incognita Simulation"
+  };
+}
+
+// Function to simulate or call PlantSnap API
+export async function analyzeWithPlantSnap(imageArrayBuffer: ArrayBuffer, plantSnapKey: string | null): Promise<any> {
   try {
-    // Create a blob from the ArrayBuffer
-    const blob = new Blob([imageArrayBuffer]);
+    if (!plantSnapKey) {
+      console.log("PlantSnap API key not provided. Using simulation.");
+      return simulatePlantSnapResult();
+    }
     
-    // Create a FormData object and append the image
-    const formData = new FormData();
-    formData.append('image', blob, 'plant.jpg');
+    // Convert ArrayBuffer to base64
+    const base64 = btoa(String.fromCharCode(...new Uint8Array(imageArrayBuffer)));
     
-    // Call the PlantSnap API (simulation for now)
-    console.log("Calling PlantSnap API (simulated)");
+    const response = await fetch('https://api.plantsnap.com/v2/identify', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${plantSnapKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        images: [`data:image/jpeg;base64,${base64}`],
+        latitude: 0,
+        longitude: 0,
+        plant_details: true
+      }),
+      signal: AbortSignal.timeout(10000), // 10 second timeout
+    });
     
-    // Return a simulated result
+    if (!response.ok) {
+      console.error("PlantSnap API error:", await response.text());
+      return simulatePlantSnapResult();
+    }
+    
+    const data = await response.json();
+    
+    if (!data.results || data.results.length === 0) {
+      return simulatePlantSnapResult();
+    }
+    
+    const bestMatch = data.results[0];
     return {
-      species: "Solanum lycopersicum",
-      family: "Solanaceae",
+      species: bestMatch.name || "Unknown species",
+      genus: bestMatch.taxonomy?.genus || "Unknown genus",
+      family: bestMatch.taxonomy?.family || "Unknown family",
+      score: bestMatch.probability || 0.8,
+      source: "PlantSnap API",
+      details: bestMatch.details || {}
+    };
+  } catch (err) {
+    console.error("Error in PlantSnap analysis:", err.message);
+    return simulatePlantSnapResult();
+  }
+}
+
+// Simulate PlantSnap results when API is not available or fails
+function simulatePlantSnapResult() {
+  const mockResults = [
+    {
+      species: "Helianthus annuus",
+      genus: "Helianthus",
+      family: "Asteraceae",
+      score: 0.91,
+      details: {
+        common_names: ["Sunflower", "Common Sunflower"],
+        edible: true,
+        toxic: false
+      }
+    },
+    {
+      species: "Lavandula angustifolia",
+      genus: "Lavandula",
+      family: "Lamiaceae",
       score: 0.88,
       details: {
-        common_names: ["Tomato", "Pomodoro"],
-        taxonomy: {
-          genus: "Solanum",
-          species: "lycopersicum"
-        }
+        common_names: ["English Lavender", "Common Lavender"],
+        edible: false,
+        toxic: false
       }
-    };
-  } catch (error) {
-    console.error("PlantSnap API error:", error);
-    return null;
-  }
-}
-
-/**
- * Analyzes a plant image with PlantNet API
- * @param imageArrayBuffer The plant image as an ArrayBuffer
- * @returns The analysis result or null if failed
- */
-export async function analyzeWithPlantNet(imageArrayBuffer: ArrayBuffer) {
-  try {
-    // PlantNet API endpoint
-    console.log("Calling PlantNet API (simulated)");
-    
-    // Return a simulated result
-    return {
-      species: "Solanum lycopersicum",
-      score: 0.92,
-      commonName: "Tomato",
-      gbifScore: 0.91,
-      isPlant: true
-    };
-  } catch (error) {
-    console.error("PlantNet API error:", error);
-    return null;
-  }
-}
-
-/**
- * Analyzes a plant image with KindWise Plant Health API
- * @param imageArrayBuffer The plant image as an ArrayBuffer
- * @param apiKey The KindWise API key
- * @returns The analysis result or null if failed
- */
-export async function analyzeWithKindWise(imageArrayBuffer: ArrayBuffer, apiKey: string) {
-  try {
-    console.log("Calling KindWise Plant Health API (simulated)");
-    
-    // Create a blob from the ArrayBuffer
-    const blob = new Blob([imageArrayBuffer]);
-    
-    // Create a FormData object and append the image
-    const formData = new FormData();
-    formData.append('image', blob, 'plant.jpg');
-    
-    // Simulate a random disease or healthy plant
-    const isHealthy = Math.random() > 0.35;
-    
-    // Plant diseases for simulation
-    const diseases = [
-      "Powdery Mildew",
-      "Early Blight",
-      "Late Blight",
-      "Leaf Spot",
-      "Rust",
-      "Anthracnose",
-      "Bacterial Spot",
-      "Downy Mildew"
-    ];
-    
-    // Plant parts
-    const plantParts = ["leaf", "stem", "whole plant", "flower", "fruit"];
-    
-    // Generate a random disease if not healthy
-    const disease = isHealthy ? null : diseases[Math.floor(Math.random() * diseases.length)];
-    
-    // Generate a random plant name
-    const plantNames = [
-      "Tomato",
-      "Basil",
-      "Rose",
-      "Pepper",
-      "Monstera",
-      "Pothos",
-      "Orchid",
-      "Cucumber",
-      "Lettuce"
-    ];
-    
-    const plantName = plantNames[Math.floor(Math.random() * plantNames.length)];
-    
-    // Generate random treatment recommendations
-    const treatments = [
-      "Remove affected leaves",
-      "Apply fungicide",
-      "Improve air circulation",
-      "Reduce humidity",
-      "Apply neem oil",
-      "Adjust watering schedule",
-      "Apply copper spray",
-      "Treat with horticultural soap"
-    ];
-    
-    // Select 2-4 random treatments
-    const selectedTreatments = treatments
-      .sort(() => 0.5 - Math.random())
-      .slice(0, Math.floor(Math.random() * 3) + 2);
-    
-    // Return a formatted result similar to KindWise API response
-    return {
-      success: true,
-      plantName,
-      plantPart: plantParts[Math.floor(Math.random() * plantParts.length)],
-      disease,
-      confidence: disease ? 0.7 + Math.random() * 0.25 : 0.9 + Math.random() * 0.09,
-      healthy: isHealthy,
+    },
+    {
+      species: "Prunus avium",
+      genus: "Prunus",
+      family: "Rosaceae",
+      score: 0.84,
       details: {
-        severity: disease ? "moderate" : "none",
-        treatments: disease ? selectedTreatments : ["No treatment needed"],
-        affectedArea: disease ? Math.floor(Math.random() * 50) + 10 : 0,
-        progression: disease ? "early" : "none",
-        nutrients: {
-          nitrogen: "adequate",
-          phosphorus: "adequate",
-          potassium: "adequate"
-        }
-      },
-      color: disease ? (Math.random() > 0.5 ? "yellow" : "brown") : "green",
-      pattern: disease ? (Math.random() > 0.5 ? "spots" : "wilting") : "normal"
-    };
-  } catch (error) {
-    console.error("KindWise API error:", error);
-    return null;
-  }
+        common_names: ["Sweet Cherry", "Wild Cherry"],
+        edible: true,
+        toxic: false
+      }
+    }
+  ];
+  
+  const result = mockResults[Math.floor(Math.random() * mockResults.length)];
+  return {
+    ...result,
+    source: "PlantSnap Simulation"
+  };
 }

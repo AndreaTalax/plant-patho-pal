@@ -20,14 +20,14 @@ export const analyzePlantImage = async (imageFile: File) => {
       return null;
     }
 
-    // Apply preprocessing to improve plant detection - we have to pass the File object here
-    const optimizedImageFile = await preprocessImageForPlantDetection(imageFile);
+    // Apply preprocessing to improve plant detection
+    const processedImage = await preprocessImageForPlantDetection(imageFile);
     
-    // Resize image to optimal dimensions for ML models - we have to pass the File object here
-    const finalImageFile = await resizeImageForOptimalDetection(optimizedImageFile);
+    // Resize image to optimal dimensions for ML models
+    const optimizedImage = await resizeImageForOptimalDetection(processedImage);
     
     const formData = new FormData();
-    formData.append('image', finalImageFile);
+    formData.append('image', optimizedImage);
     formData.append('optimized', 'true'); // Flag to indicate optimized image
 
     toast.info("Analisi dell'immagine in corso...", {

@@ -1,7 +1,6 @@
-import { v4 as uuidv4 } from 'uuid';
+
 import { supabase } from '@/integrations/supabase/client';
 import { User, Session } from '@supabase/supabase-js';
-import { randomUUID } from 'crypto';
 
 // Function for user registration
 export const signUp = async (email: string, password: string) => {
@@ -12,9 +11,6 @@ export const signUp = async (email: string, password: string) => {
     if (whitelistedEmails.includes(email.toLowerCase())) {
       console.log('Email in whitelist, simulating registration for:', email);
       
-      // Generate proper UUIDs for simulated users
-      const mockUserId = uuidv4();
-      
       // Simulate successful registration without actually calling Supabase
       return {
         confirmationRequired: false,
@@ -22,7 +18,8 @@ export const signUp = async (email: string, password: string) => {
         data: {
           user: {
             email: email,
-            id: mockUserId,
+            id: email === "talaiaandrea@gmail.com" ? "talaiaandrea-id" : 
+                 email === "test@gmail.com" ? "test-user-id" : "premium-user-id",
             email_confirmed_at: new Date().toISOString(),
             // Adding required fields for the Supabase User type
             app_metadata: { provider: 'email' },
@@ -81,21 +78,8 @@ export const signUp = async (email: string, password: string) => {
           data: {
             user: {
               email: email,
-              id: uuidv4(),
+              id: `${email.split('@')[0]}-mock-id`,
               email_confirmed_at: new Date().toISOString(),
-              // Adding required fields for the Supabase User type
-              app_metadata: { provider: 'email' },
-              user_metadata: { role: 'user' },
-              aud: 'authenticated',
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-              phone: null,
-              confirmation_sent_at: new Date().toISOString(),
-              confirmed_at: new Date().toISOString(),
-              last_sign_in_at: new Date().toISOString(),
-              role: null,
-              identities: [],
-              factors: []
             },
             session: null
           }
@@ -168,24 +152,20 @@ export const signIn = async (email: string, password: string) => {
       if (password === expectedPassword) {
         console.log('Simulated login for whitelisted email:', email);
         
-        // Generate proper UUIDs for simulated users
-        // Instead of using hardcoded strings like 'test-user-id', use valid UUIDs
-        let mockUserId: string = uuidv4();
+        // Create a mock object for the user that meets the User interface
         let mockRole = 'user';
-        
-        // Store generated UUID in localStorage to maintain consistency between sessions
-        const storedUserId = localStorage.getItem(`mockuser-${email}`);
-        if (storedUserId) {
-          mockUserId = storedUserId;
-        } else {
-          localStorage.setItem(`mockuser-${email}`, mockUserId);
-        }
+        let mockUserId = 'user-id';
         
         if (email === "agrotecnicomarconigro@gmail.com") {
           mockRole = 'master';
+          mockUserId = 'premium-user-id';
+        } else if (email === "talaiaandrea@gmail.com") {
+          mockUserId = 'talaiaandrea-id';
+        } else if (email === "test@gmail.com") {
+          mockUserId = 'test-user-id';
         }
         
-        // Complete User mock with all required fields and valid UUID
+        // Complete User mock with all required fields
         const mockUser: User = {
           id: mockUserId,
           email: email,

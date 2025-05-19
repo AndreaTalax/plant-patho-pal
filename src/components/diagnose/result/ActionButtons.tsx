@@ -1,136 +1,112 @@
 
-import React from 'react';
-import { Button } from '@/components/ui/button';
-import { MessageCircle, RefreshCw } from 'lucide-react';
-import { useAuth } from '@/context/AuthContext';
-import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
-
-interface PlantInfo {
-  isIndoor: boolean;
-  wateringFrequency: number;
-  lightExposure: string;
-  symptoms?: string;
-}
+import { Button } from "@/components/ui/button";
+import { ArrowRight, Save, AlertCircle, MessageCircle, Loader2, RefreshCw } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/context/AuthContext";
+import { useState } from "react";
+import { AuthRequiredDialog } from "@/components/auth/AuthRequiredDialog";
 
 interface ActionButtonsProps {
   onStartNewAnalysis: () => void;
+  onSaveDiagnosis?: () => void;
   onChatWithExpert?: () => void;
+  saveLoading?: boolean;
   hasValidAnalysis: boolean;
   useAI?: boolean;
-  plantImage?: string;
-  plantInfo?: PlantInfo;
 }
 
-const ActionButtons: React.FC<ActionButtonsProps> = ({
-  onStartNewAnalysis,
-  onChatWithExpert,
+const ActionButtons = ({ 
+  onStartNewAnalysis, 
+  onSaveDiagnosis, 
+  onChatWithExpert, 
+  saveLoading = false,
   hasValidAnalysis,
-  useAI = true,
-  plantImage,
-  plantInfo
-}) => {
-  const { isAuthenticated, userProfile } = useAuth();
+  useAI = false
+}: ActionButtonsProps) => {
+  const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
-
-  const handleChatWithExpert = async () => {
+  const [showAuthDialog, setShowAuthDialog] = useState(false);
+  
+  const handleChatWithExpert = () => {
     if (!isAuthenticated) {
-      navigate('/auth');
+      setShowAuthDialog(true);
       return;
-    }
-
-    // Check if user profile is complete
-    if (!userProfile.firstName || !userProfile.lastName) {
-      navigate('/complete-profile');
-      return;
-    }
-
-    if (plantImage && plantInfo && !useAI) {
-      try {
-        // Get current user
-        const { data: { user } } = await supabase.auth.getUser();
-        
-        if (!user) {
-          console.error("User not logged in");
-          navigate('/auth');
-          return;
-        }
-
-        // Create consultation record
-        const { data: consultationData, error: consultationError } = await supabase
-          .from('expert_consultations')
-          .insert({
-            user_id: user.id,
-            symptoms: plantInfo.symptoms,
-            image_url: plantImage,
-            plant_info: {
-              isIndoor: plantInfo.isIndoor,
-              wateringFrequency: plantInfo.wateringFrequency,
-              lightExposure: plantInfo.lightExposure
-            },
-            status: 'pending'
-          })
-          .select();
-          
-        if (consultationError) {
-          console.error("Error creating consultation:", consultationError);
-          return;
-        }
-        
-        // Send notification to expert
-        const consultationId = consultationData?.[0]?.id;
-        if (consultationId) {
-          // Invoke the edge function to notify the expert
-          const { error: notifyError } = await supabase.functions.invoke('notify-expert', {
-            body: { 
-              consultationId,
-              userId: user.id,
-              imageUrl: plantImage,
-              symptoms: plantInfo.symptoms,
-              plantInfo: {
-                isIndoor: plantInfo.isIndoor,
-                wateringFrequency: plantInfo.wateringFrequency,
-                lightExposure: plantInfo.lightExposure,
-                symptoms: plantInfo.symptoms
-              }
-            }
-          });
-          
-          if (notifyError) {
-            console.error("Error notifying expert:", notifyError);
-          }
-        }
-      } catch (error) {
-        console.error("Error contacting expert:", error);
-      }
     }
     
-    // Call the onChatWithExpert function if provided
     if (onChatWithExpert) {
       onChatWithExpert();
+    } else {
+      // Fallback direct navigation if callback not provided
+      navigate('/');
+      setTimeout(() => {
+        const event = new CustomEvent('switchTab', { detail: 'chat' });
+        window.dispatchEvent(event);
+      }, 100);
     }
   };
 
   return (
-    <div className="flex gap-2 mt-4">
-      <Button 
-        variant="outline" 
-        className="flex-1"
-        onClick={onStartNewAnalysis}
-      >
-        <RefreshCw className="mr-2 h-4 w-4" />
-        <span>New Analysis</span>
-      </Button>
-      
-      {hasValidAnalysis && (
+    <div className="space-y-3 pt-2">
+      {useAI && hasValidAnalysis && onSaveDiagnosis && (
         <Button 
-          className="flex-1 bg-drplant-blue hover:bg-drplant-blue-dark"
-          onClick={handleChatWithExpert}
+          onClick={onSaveDiagnosis}
+          className="w-full bg-drplant-blue hover:bg-drplant-blue-dark flex items-center justify-center gap-2"
+          disabled={saveLoading}
         >
-          <MessageCircle className="mr-2 h-4 w-4" />
-          <span>Ask Expert</span>
+          {saveLoading ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span>Salvando...</span>
+            </>
+          ) : (
+            <>
+              <Save className="h-4 w-4" />
+              <span>Salva questa diagnosi</span>
+            </>
+          )}
         </Button>
       )}
+
+      {!useAI && (
+        <Button
+          className="w-full bg-drplant-blue-dark hover:bg-drplant-blue-darker flex items-center justify-center gap-2"
+          onClick={handleChatWithExpert}
+        >
+          <MessageCircle className="h-4 w-4" />
+          <span>Vai alla chat con il fitopatologo</span>
+        </Button>
+      )}
+      
+      <Button 
+        onClick={onStartNewAnalysis} 
+        variant="outline"
+        className="w-full flex items-center justify-center gap-2"
+      >
+        <RefreshCw className="h-4 w-4" />
+        <span>Inizia nuova analisi</span>
+      </Button>
+      
+      {useAI && (
+        <div className="flex items-center justify-center pt-4 pb-2">
+          <div className="px-4 py-2 bg-amber-50 rounded-full border border-amber-200 text-xs text-amber-700 flex items-center">
+            <AlertCircle className="h-3.5 w-3.5 text-amber-500 mr-1.5" />
+            <span>Per una diagnosi definitiva, consulta sempre un esperto</span>
+          </div>
+        </div>
+      )}
+      
+      {!useAI && (
+        <p className="text-xs text-center text-gray-500 pt-2">
+          La tua richiesta è stata inviata al fitopatologo. Riceverai una risposta al più presto nella sezione Chat.
+        </p>
+      )}
+      
+      <AuthRequiredDialog 
+        isOpen={showAuthDialog}
+        onClose={() => setShowAuthDialog(false)}
+        title="Devi accedere per contattare il fitopatologo"
+        description="Per visualizzare le conversazioni con il fitopatologo devi prima accedere."
+      />
     </div>
   );
 };

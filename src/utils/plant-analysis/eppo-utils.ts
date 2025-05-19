@@ -1,61 +1,57 @@
 
+/**
+ * Utilities for working with the EPPO database and regulated pest/disease identification
+ */
 import { eppoSymptoms } from './eppo-symptoms';
 
 /**
- * Check if a classification label matches known EPPO regulated pests/diseases
- * @param label The model classification label
- * @returns Object with match information if related to EPPO, null otherwise
+ * Checks if the analysis result might be related to an EPPO regulated pest or disease
+ * @param label The classification label from the model
+ * @returns Information about the EPPO relation if found, null otherwise
  */
-export function checkForEppoRelation(label: string): {term: string, category: string} | null {
-  if (!label) return null;
-  
-  const lowerLabel = label.toLowerCase();
-  
-  // List of terms related to EPPO regulated pests and diseases
-  const eppoTerms = [
-    {term: 'xylella', category: 'bacteria'},
-    {term: 'xylella fastidiosa', category: 'bacteria'},
-    {term: 'huanglongbing', category: 'bacteria'},
-    {term: 'citrus greening', category: 'bacteria'},
-    {term: 'fire blight', category: 'bacteria'},
-    {term: 'erwinia amylovora', category: 'bacteria'},
-    {term: 'bacterium tumefaciens', category: 'bacteria'},
-    {term: 'crown gall', category: 'bacteria'},
-    {term: 'candidatus liberibacter', category: 'bacteria'},
-    {term: 'ralstonia solanacearum', category: 'bacteria'},
-    {term: 'bacterial wilt', category: 'bacteria'},
-    {term: 'clavibacter', category: 'bacteria'},
-    {term: 'pine wood nematode', category: 'nematode'},
-    {term: 'bursaphelenchus', category: 'nematode'},
-    {term: 'globodera', category: 'nematode'},
-    {term: 'meloidogyne', category: 'nematode'},
-    {term: 'phytophthora ramorum', category: 'oomycete'},
-    {term: 'sudden oak death', category: 'oomycete'},
-    {term: 'japanese beetle', category: 'insect'},
-    {term: 'popillia japonica', category: 'insect'},
-    {term: 'anoplophora', category: 'insect'},
-    {term: 'asian longhorn', category: 'insect'},
-    {term: 'emerald ash borer', category: 'insect'},
-    {term: 'agrilus planipennis', category: 'insect'},
-    {term: 'citrus longhorn', category: 'insect'},
-    {term: 'box tree moth', category: 'insect'},
-    {term: 'spotted lanternfly', category: 'insect'},
-    {term: 'lycorma delicatula', category: 'insect'},
-    {term: 'fall armyworm', category: 'insect'},
-    {term: 'spodoptera frugiperda', category: 'insect'},
-    {term: 'red palm weevil', category: 'insect'},
-    {term: 'rhynchophorus ferrugineus', category: 'insect'},
-    {term: 'tomato brown rugose', category: 'virus'},
-    {term: 'tobrf', category: 'virus'},
-    {term: 'tomato yellow leaf curl', category: 'virus'},
-    {term: 'tylcv', category: 'virus'},
-    {term: 'plum pox virus', category: 'virus'},
-    {term: 'sharka', category: 'virus'}
+export function checkForEppoRelation(
+  label: string
+): { term: string, category: 'pest' | 'disease' | 'plant' } | null {
+  // Ensure label is lowercase for case-insensitive matching
+  const labelLower = label.toLowerCase();
+
+  // List of EPPO regulated pests
+  const eppoPests = [
+    'xylella', 'japanese beetle', 'emerald ash borer', 'box tree moth', 
+    'red palm weevil', 'pine processionary', 'asian longhorn beetle', 
+    'colorado beetle', 'coleottero', 'insetto'
   ];
   
-  for (const eppoEntry of eppoTerms) {
-    if (lowerLabel.includes(eppoEntry.term)) {
-      return eppoEntry;
+  // List of EPPO regulated diseases
+  const eppoDiseases = [
+    'citrus greening', 'huanglongbing', 'citrus canker', 'fire blight', 
+    'sudden oak death', 'dutch elm', 'ash dieback', 'plum pox', 'sharka',
+    'bacterial wilt', 'ralstonia', 'potato ring rot', 'grapevine flavescence',
+    'black sigatoka', 'tristeza', 'tomato brown', 'cancrena'
+  ];
+  
+  // Check for pests
+  for (const pest of eppoPests) {
+    if (labelLower.includes(pest)) {
+      return { term: pest, category: 'pest' };
+    }
+  }
+  
+  // Check for diseases
+  for (const disease of eppoDiseases) {
+    if (labelLower.includes(disease)) {
+      return { term: disease, category: 'disease' };
+    }
+  }
+  
+  // Look for symptoms associated with EPPO diseases
+  for (const [disease, symptoms] of Object.entries(eppoSymptoms)) {
+    if (Array.isArray(symptoms)) {
+      for (const symptom of symptoms) {
+        if (labelLower.includes(symptom.toLowerCase())) {
+          return { term: disease, category: 'disease' };
+        }
+      }
     }
   }
   

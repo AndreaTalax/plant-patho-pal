@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { modelInfo } from '@/utils/aiDiagnosisUtils';
@@ -7,6 +8,7 @@ import { PlantInfoFormValues } from './diagnose/PlantInfoForm';
 import { toast } from 'sonner';
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from '@/context/AuthContext';
+import { AuthRequiredDialog } from './auth/AuthRequiredDialog';
 
 // Importing our components
 import DiagnoseHeader from './diagnose/DiagnoseHeader';
@@ -18,6 +20,11 @@ const DiagnoseTab = () => {
   const { userProfile, isAuthenticated } = useAuth();
   const [showCamera, setShowCamera] = useState(false);
   const [showModelInfo, setShowModelInfo] = useState(false);
+  const [showAuthDialog, setShowAuthDialog] = useState(false);
+  const [authDialogConfig, setAuthDialogConfig] = useState({
+    title: "Devi accedere",
+    description: "Per utilizzare questa funzionalità devi accedere al tuo account."
+  });
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -56,39 +63,36 @@ const DiagnoseTab = () => {
     
     const file = e.target.files?.[0];
     if (file) {
-      try {
-        // Create a temporary URL for the uploaded image
-        const tempUrl = URL.createObjectURL(file);
-        setUploadedImage(tempUrl);
-        
-        if (plantInfo.useAI) {
-          // If AI is selected, proceed with AI analysis
-          handleImageUpload(file);
-        } else {
-          // If AI is not selected and user not authenticated, redirect to login
-          if (!isAuthenticated) {
-            navigate('/auth');
-            return;
-          }
-          
-          // Check if user profile is complete
-          if (!userProfile.firstName || !userProfile.lastName || !userProfile.birthDate || !userProfile.birthPlace) {
-            toast.error("Completa il tuo profilo prima di inviare una richiesta", {
-              description: "Nome, cognome, data e luogo di nascita sono obbligatori",
-              duration: 4000
-            });
-            navigate('/complete-profile');
-            return;
-          }
-          
-          // If authenticated and profile complete, notify expert
-          await notifyExpert(file, tempUrl);
+      // Create a temporary URL for the uploaded image
+      const tempUrl = URL.createObjectURL(file);
+      setUploadedImage(tempUrl);
+      
+      if (plantInfo.useAI) {
+        // If AI is selected, proceed with AI analysis
+        handleImageUpload(file);
+      } else {
+        // If AI is not selected, check authentication first
+        if (!isAuthenticated) {
+          setAuthDialogConfig({
+            title: "Devi accedere per contattare il fitopatologo",
+            description: "Per inviare la tua richiesta al fitopatologo devi prima accedere."
+          });
+          setShowAuthDialog(true);
+          return;
         }
-      } catch (error) {
-        console.error("Errore durante il caricamento dell'immagine:", error);
-        toast.error("Si è verificato un errore nel caricamento dell'immagine", {
-          duration: 3000
-        });
+        
+        // Check if user profile is complete
+        if (!userProfile.firstName || !userProfile.lastName || !userProfile.birthDate || !userProfile.birthPlace) {
+          toast.error("Completa il tuo profilo prima di inviare una richiesta", {
+            description: "Nome, cognome, data e luogo di nascita sono obbligatori",
+            duration: 4000
+          });
+          navigate('/complete-profile');
+          return;
+        }
+        
+        // If authenticated and profile complete, notify expert
+        await notifyExpert(file, tempUrl);
       }
     }
   };
@@ -140,7 +144,11 @@ const DiagnoseTab = () => {
     try {
       // Check for user authentication
       if (!isAuthenticated) {
-        navigate('/auth');
+        setAuthDialogConfig({
+          title: "Devi accedere per contattare il fitopatologo",
+          description: "Per inviare la tua richiesta al fitopatologo devi prima accedere."
+        });
+        setShowAuthDialog(true);
         return;
       }
       
@@ -151,7 +159,6 @@ const DiagnoseTab = () => {
         toast.error("Devi accedere per contattare il fitopatologo", {
           duration: 3000
         });
-        navigate('/auth');
         return;
       }
 
@@ -285,40 +292,37 @@ const DiagnoseTab = () => {
   };
 
   const handleCaptureImage = async (imageDataUrl: string) => {
-    try {
-      setShowCamera(false);
-      
-      // Store the captured image
-      setUploadedImage(imageDataUrl);
-      
-      if (plantInfo.useAI) {
-        // If AI is selected, process the image with AI
-        captureImage(imageDataUrl);
-      } else {
-        // If AI is not selected and user not authenticated, redirect to login
-        if (!isAuthenticated) {
-          navigate('/auth');
-          return;
-        }
-        
-        // Check if user profile is complete before sending to expert
-        if (!userProfile.firstName || !userProfile.lastName || !userProfile.birthDate || !userProfile.birthPlace) {
-          toast.error("Completa il tuo profilo prima di inviare una richiesta", {
-            description: "Nome, cognome, data e luogo di nascita sono obbligatori",
-            duration: 4000
-          });
-          navigate('/complete-profile');
-          return;
-        }
-        
-        // If authenticated and profile complete, send directly to the expert
-        await notifyExpert(undefined, imageDataUrl);
+    setShowCamera(false);
+    
+    // Store the captured image
+    setUploadedImage(imageDataUrl);
+    
+    if (plantInfo.useAI) {
+      // If AI is selected, process the image with AI
+      captureImage(imageDataUrl);
+    } else {
+      // If AI is not selected, check authentication first
+      if (!isAuthenticated) {
+        setAuthDialogConfig({
+          title: "Devi accedere per contattare il fitopatologo",
+          description: "Per inviare la tua richiesta al fitopatologo devi prima accedere."
+        });
+        setShowAuthDialog(true);
+        return;
       }
-    } catch (error) {
-      console.error("Errore durante l'acquisizione dell'immagine:", error);
-      toast.error("Si è verificato un errore nell'acquisizione dell'immagine", {
-        duration: 3000
-      });
+      
+      // Check if user profile is complete before sending to expert
+      if (!userProfile.firstName || !userProfile.lastName || !userProfile.birthDate || !userProfile.birthPlace) {
+        toast.error("Completa il tuo profilo prima di inviare una richiesta", {
+          description: "Nome, cognome, data e luogo di nascita sono obbligatori",
+          duration: 4000
+        });
+        navigate('/complete-profile');
+        return;
+      }
+      
+      // If authenticated and profile complete, send directly to the expert
+      await notifyExpert(undefined, imageDataUrl);
     }
   };
 
@@ -330,30 +334,34 @@ const DiagnoseTab = () => {
   const navigateToChat = () => {
     // Check authentication before navigating
     if (!isAuthenticated) {
-      navigate('/auth');
+      setAuthDialogConfig({
+        title: "Devi accedere per accedere alla chat",
+        description: "Per visualizzare le conversazioni con il fitopatologo devi prima accedere."
+      });
+      setShowAuthDialog(true);
       return;
     }
     
-    // Navigate to chat tab with user's plant information and image
     navigate('/');
-    
-    // Prepare data for chat
-    const plantData = {
-      image: uploadedImage,
-      plantInfo: {
-        isIndoor: plantInfo.isIndoor,
-        wateringFrequency: plantInfo.wateringFrequency,
-        lightExposure: plantInfo.lightExposure,
-        symptoms: plantInfo.symptoms
-      }
-    };
-    
-    // Store data temporarily for chat view
-    sessionStorage.setItem('plantDataForChat', JSON.stringify(plantData));
-    
     // Using a slight timeout to ensure navigation completes before tab selection
     setTimeout(() => {
       const event = new CustomEvent('switchTab', { detail: 'chat' });
+      window.dispatchEvent(event);
+    }, 100);
+  };
+
+  const navigateToShop = (productId?: string) => {
+    navigate('/');
+    setTimeout(() => {
+      const event = new CustomEvent('switchTab', { detail: 'shop' });
+      window.dispatchEvent(event);
+    }, 100);
+  };
+
+  const navigateToLibrary = (resourceId?: string) => {
+    navigate('/');
+    setTimeout(() => {
+      const event = new CustomEvent('switchTab', { detail: 'library' });
       window.dispatchEvent(event);
     }, 100);
   };
@@ -404,6 +412,14 @@ const DiagnoseTab = () => {
         accept="image/*,video/*"
         className="hidden"
         onChange={handleImageUploadEvent}
+      />
+      
+      {/* Authentication Dialog */}
+      <AuthRequiredDialog 
+        isOpen={showAuthDialog}
+        onClose={() => setShowAuthDialog(false)}
+        title={authDialogConfig.title}
+        description={authDialogConfig.description}
       />
     </div>
   );

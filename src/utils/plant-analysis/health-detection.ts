@@ -1,40 +1,33 @@
 
 /**
- * Check if a plant appears healthy based on label
- * @param label The model classification label
- * @returns boolean indicating if the plant is healthy
+ * Determines if the plant appears healthy based on the label
+ * @param label The classification label from the model
+ * @returns True if the plant appears healthy, false otherwise
  */
 export function isPlantHealthy(label: string): boolean {
-  if (!label) return false;
+  if (!label) return true; // Default to healthy if no label
   
-  const lowerLabel = label.toLowerCase();
+  const labelLower = label.toLowerCase();
   
-  // Check for health indicators in multiple languages
-  const healthyIndicators = [
-    'healthy', 'normal', 'good', 'sano', 'normale', 'buono', 'salutare',
-    'no disease', 'no pest', 'nessuna malattia', 'nessun parassita'
+  // Words indicating disease or problems
+  const unhealthyTerms = [
+    'disease', 'infected', 'spot', 'blight', 'rot', 'rust', 'mildew', 
+    'virus', 'bacteria', 'pest', 'damage', 'wilting', 'unhealthy', 
+    'deficiency', 'burned', 'chlorosis', 'necrosis', 'dying'
   ];
   
-  // Check for disease indicators in multiple languages
-  const diseaseIndicators = [
-    'disease', 'infection', 'pest', 'malattia', 'infezione', 'parassita',
-    'blight', 'mildew', 'spot', 'rot', 'rust', 'mold', 'virus', 
-    'fungus', 'bacteria', 'damaged', 'dying', 'dead',
-    'muffa', 'ruggine', 'marciume', 'danneggiat', 'morente', 'morto'
-  ];
+  // Check if any unhealthy term is in the label
+  for (const term of unhealthyTerms) {
+    if (labelLower.includes(term)) {
+      return false;
+    }
+  }
   
-  // If we have explicit health indicators, trust those
-  const hasHealthIndicator = healthyIndicators.some(indicator => lowerLabel.includes(indicator));
-  const hasDiseaseIndicator = diseaseIndicators.some(indicator => lowerLabel.includes(indicator));
-  
-  if (hasHealthIndicator && !hasDiseaseIndicator) {
+  // Check for explicit health indication
+  if (labelLower.includes('healthy') || labelLower.includes('normal')) {
     return true;
   }
   
-  if (hasDiseaseIndicator) {
-    return false;
-  }
-  
-  // Default to assuming not healthy if we can't determine (safer option)
-  return false;
+  // Default to healthy if no unhealthy indicators found
+  return true;
 }

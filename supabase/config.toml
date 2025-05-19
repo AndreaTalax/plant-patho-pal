@@ -1,5 +1,55 @@
 
-project_id = "your-project-id"
+project_id = "otdmqmpxukifoxjlgzmq"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "storage", "graphql_public"]
+
+[db]
+port = 54322
+shadow_port = 54320
+major_version = 15
+
+[realtime]
+enabled = true
+
+[studio]
+enabled = true
+port = 54323
+api_url = "http://localhost"
+
+[inbucket]
+enabled = true
+port = 54324
+
+[storage]
+enabled = true
+
+[auth]
+enabled = true
+site_url = "http://localhost:3000"
+
+[analytics]
+enabled = false
+
+[experimental]
+multipurpose_postgres = true
 
 [functions.analyze-plant]
+verify_jwt = false
+
+[functions.eppo-api]
+verify_jwt = false
+
+[functions.configure-auth-settings]
+verify_jwt = false
+
+[functions.send-registration-confirmation]
+verify_jwt = true
+
+[functions.send-specialist-notification]
+verify_jwt = false
+
+[functions.update-conversation-last-message-trigger]
 verify_jwt = false

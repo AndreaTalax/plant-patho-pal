@@ -1,7 +1,7 @@
 
 import { useState } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { signUp, signIn } from '@/integrations/supabase/auth';
+import { signUp, signIn } from '@/integrations/supabase/supabaseClient';
 import { toast } from 'sonner';
 import { AuthEmailConfirmation } from './AuthEmailConfirmation';
 import { AuthFormFields } from './AuthFormFields';

@@ -1,87 +1,77 @@
 
 /**
- * EPPO database symptoms for regulated pests and diseases
+ * Database of EPPO regulated pest and disease symptoms
+ * This serves as a reference for identifying potential regulated issues
  */
-export const eppoSymptoms = {
-  'xylella fastidiosa': {
-    name: 'Xylella fastidiosa',
-    symptoms: [
-      'Leaf scorch starting at leaf margins',
-      'Widespread leaf browning and desiccation',
-      'Sudden branch or plant dieback',
-      'Reduced fruit production',
-      'Shortened internodes and stunted growth',
-      'Wilting and collapse in severe cases',
-      'Often sector-specific symptoms in woody plants'
-    ],
-    regulatoryStatus: 'EPPO A2 List - quarantine pest',
-    reportRequired: true
+export const eppoSymptoms = [
+  {
+    keyword: 'citrus greening',
+    name: 'Citrus Greening',
+    description: 'A serious bacterial disease affecting citrus trees',
+    category: 'bacterial disease',
+    symptoms: ['yellow mottling', 'leaf asymmetry', 'vein yellowing', 'stunted growth', 'blotchy mottle']
   },
-  'huanglongbing': {
-    name: 'Citrus Greening (Huanglongbing)',
-    symptoms: [
-      'Yellow shoot development (giving the disease its name)',
-      'Blotchy, mottled leaves with asymmetric chlorosis',
-      'Stunted trees with sparse foliage',
-      'Twig dieback',
-      'Small, misshapen fruit with thick rind',
-      'Fruit remains green even when ripe',
-      'Poor fruit taste, highly acidic and bitter'
-    ],
-    regulatoryStatus: 'EPPO A1 List - quarantine pest',
-    reportRequired: true
+  {
+    keyword: 'citrus canker',
+    name: 'Citrus Canker',
+    description: 'A bacterial disease causing lesions on citrus fruit, leaves, and stems',
+    category: 'bacterial disease',
+    symptoms: ['water-soaked lesions', 'circular lesions', 'raised corky tissue', 'chlorotic halo', 'ruptured epidermis']
   },
-  'fire blight': {
+  {
+    keyword: 'xylella',
+    name: 'Xylella Fastidiosa',
+    description: 'A bacterial pathogen affecting multiple host plants',
+    category: 'bacterial disease',
+    symptoms: ['leaf scorch', 'marginal leaf burn', 'wilting', 'dieback', 'stunted growth']
+  },
+  {
+    keyword: 'fire blight',
     name: 'Fire Blight',
-    symptoms: [
-      'Wilting and blackening of blossoms and leaves',
-      'Shepherd\'s crook appearance of wilted shoots',
-      'Amber-colored bacterial ooze on infected tissue',
-      'Water-soaked appearance of infected tissue',
-      'Blackened, sunken cankers on branches',
-      'Fruit turns black/brown and remains attached to tree',
-      'Internal browning of infected wood'
-    ],
-    regulatoryStatus: 'EPPO A2 List - quarantine pest',
-    reportRequired: true
+    description: 'A destructive bacterial disease affecting apple, pear and related species',
+    category: 'bacterial disease',
+    symptoms: ['blackened leaves', 'shepherd\'s crook', 'bacterial ooze', 'cankers', 'fruit mummification']
   },
-  'pine wood nematode': {
-    name: 'Pine Wood Nematode',
-    symptoms: [
-      'Rapid wilting of needles',
-      'Needles turn yellow then brown/reddish',
-      'Reduced resin flow',
-      'Rapid tree death, often within weeks',
-      'Blue-stain fungus in wood',
-      'Dead trees throughout forest stands'
-    ],
-    regulatoryStatus: 'EPPO A2 List - quarantine pest',
-    reportRequired: true
+  {
+    keyword: 'sudden oak death',
+    name: 'Sudden Oak Death',
+    description: 'A disease caused by Phytophthora ramorum affecting oak trees',
+    category: 'fungal disease',
+    symptoms: ['trunk cankers', 'bleeding trunk', 'wilting foliage', 'black leaf lesions', 'shoot dieback']
   },
-  'japanese beetle': {
-    name: 'Japanese Beetle',
-    symptoms: [
-      'Skeletonized leaves (only veins remaining)',
-      'Lace-like damage to foliage',
-      'Damaged flowers, especially roses and hibiscus',
-      'Adult beetles on plants feeding in groups',
-      'Poor turf quality from larval feeding on roots'
-    ],
-    regulatoryStatus: 'EPPO A2 List - quarantine pest',
-    reportRequired: true
+  {
+    keyword: 'ash dieback',
+    name: 'Ash Dieback',
+    description: 'A serious disease of ash trees caused by a fungus',
+    category: 'fungal disease',
+    symptoms: ['diamond-shaped lesions', 'wilting leaves', 'crown dieback', 'bark lesions', 'wood discoloration']
   },
-  'tomato brown rugose': {
-    name: 'Tomato Brown Rugose Fruit Virus (ToBRFV)',
-    symptoms: [
-      'Yellow/brown spots on leaves',
-      'Mosaic patterns on leaves',
-      'Wrinkled/rugose leaf surface',
-      'Narrow leaves',
-      'Yellow/brown spots on fruits',
-      'Rough fruit surface with yellow/brown patches',
-      'Reduced fruit size and quality'
-    ],
-    regulatoryStatus: 'EPPO A2 List - quarantine pest',
-    reportRequired: true
+  {
+    keyword: 'dutch elm disease',
+    name: 'Dutch Elm Disease',
+    description: 'A fungal disease affecting elm trees, spread by bark beetles',
+    category: 'fungal disease',
+    symptoms: ['yellowing foliage', 'wilting leaves', 'vascular discoloration', 'crown dieback', 'bark beetles']
+  },
+  {
+    keyword: 'grape flavescence',
+    name: 'Flavescence Dorée',
+    description: 'A phytoplasma disease affecting grapevines',
+    category: 'phytoplasma disease',
+    symptoms: ['downward leaf rolling', 'leaf discoloration', 'lack of lignification', 'flower abortion', 'berry shrivel']
+  },
+  {
+    keyword: 'bacterial wilt',
+    name: 'Bacterial Wilt',
+    description: 'A bacterial disease affecting a wide range of plants',
+    category: 'bacterial disease',
+    symptoms: ['rapid wilting', 'vascular discoloration', 'bacterial streaming', 'epinasty', 'adventitious roots']
+  },
+  {
+    keyword: 'plum pox',
+    name: 'Plum Pox Virus',
+    description: 'A viral disease affecting stone fruit trees',
+    category: 'viral disease',
+    symptoms: ['chlorotic rings', 'vein yellowing', 'leaf deformation', 'fruit rings', 'fruit deformation']
   }
-};
+];

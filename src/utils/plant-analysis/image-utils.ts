@@ -1,9 +1,9 @@
 
 /**
- * Convert a data URL to a File object
- * @param dataUrl The data URL string
- * @param filename The filename to use
- * @returns File object
+ * Converts a data URL to a File object
+ * @param dataUrl The data URL string (e.g., from canvas.toDataURL())
+ * @param filename The desired filename
+ * @returns A File object that can be uploaded
  */
 export const dataURLtoFile = (dataUrl: string, filename: string): File => {
   const arr = dataUrl.split(',');
@@ -11,55 +11,102 @@ export const dataURLtoFile = (dataUrl: string, filename: string): File => {
   const bstr = atob(arr[1]);
   let n = bstr.length;
   const u8arr = new Uint8Array(n);
-
+  
   while (n--) {
     u8arr[n] = bstr.charCodeAt(n);
   }
-
+  
   return new File([u8arr], filename, { type: mime });
 };
 
 /**
- * Preprocessing function for optimizing images for plant detection
- * @param imageFile URL of the image to preprocess
- * @returns Processed image file
+ * Applies basic preprocessing to an image before analysis to improve detection
+ * @param imageFile The original image file
+ * @returns A processed image file with enhanced qualities for plant detection
  */
 export const preprocessImageForPlantDetection = async (imageFile: File): Promise<File> => {
-  // In a real implementation, this would apply image preprocessing
-  // For now, we just return the original file
-  console.log("Preprocessing image for plant detection:", imageFile.name);
+  // For now, we're just returning the original file
+  // In the future, this could enhance contrast, adjust brightness, or apply other image processing
+  
+  // Convert to canvas to potentially manipulate pixels (future enhancement)
+  // const img = await createImageBitmap(imageFile);
+  // const canvas = document.createElement('canvas');
+  // canvas.width = img.width;
+  // canvas.height = img.height;
+  // const ctx = canvas.getContext('2d');
+  // ctx?.drawImage(img, 0, 0);
+  
+  // Return original for now
   return imageFile;
 };
 
 /**
- * Validates if an image is suitable for plant analysis
+ * Validates that an image is suitable for plant analysis
  * @param imageFile The image file to validate
- * @returns Boolean indicating if the image is valid
+ * @returns A boolean indicating if the image meets minimum requirements
  */
 export const validateImageForAnalysis = async (imageFile: File): Promise<boolean> => {
-  // In a real implementation, this would check image quality, size, etc.
-  // For now, we just do a simple size check
-  console.log("Validating image for analysis:", imageFile.name);
-  return imageFile.size > 0 && imageFile.size < 10 * 1024 * 1024; // Max 10MB
+  // Check if the file is an image
+  if (!imageFile.type.startsWith('image/')) {
+    return false;
+  }
+  
+  // Check if the file size is reasonable - increased from 10MB to 15MB to allow more detailed photos
+  const maxSizeBytes = 15 * 1024 * 1024; // 15MB
+  if (imageFile.size > maxSizeBytes) {
+    return false;
+  }
+  
+  // Additional checks could be added here in the future, like minimum dimensions
+  // or image quality assessment
+  
+  return true;
 };
 
 /**
- * Resize an image to optimal dimensions for detection algorithms
- * @param imageFile The image file to resize
- * @returns Resized image as a File
+ * Resizes an image to a maximum dimension while preserving aspect ratio
+ * This can help with model accuracy for very large or very small images
+ * @param imageFile The original image file
+ * @param maxDimension Maximum width or height
+ * @returns A resized image file
  */
-export const resizeImageForOptimalDetection = async (imageFile: File): Promise<File> => {
-  // In a real implementation, this would resize the image
-  // For now, we just return the original file
-  console.log("Resizing image for optimal detection:", imageFile.name);
-  return imageFile;
+export const resizeImageForOptimalDetection = async (imageFile: File, maxDimension = 1024): Promise<File> => {
+  try {
+    // Create an image from the file
+    const img = await createImageBitmap(imageFile);
+    
+    // Calculate aspect ratio and new dimensions
+    const aspectRatio = img.width / img.height;
+    let newWidth = img.width;
+    let newHeight = img.height;
+    
+    // Only resize if image is larger than max dimension
+    if (newWidth > maxDimension || newHeight > maxDimension) {
+      if (aspectRatio > 1) {
+        // Landscape
+        newWidth = maxDimension;
+        newHeight = Math.round(maxDimension / aspectRatio);
+      } else {
+        // Portrait
+        newHeight = maxDimension;
+        newWidth = Math.round(maxDimension * aspectRatio);
+      }
+    }
+    
+    // Draw resized image to canvas
+    const canvas = document.createElement('canvas');
+    canvas.width = newWidth;
+    canvas.height = newHeight;
+    const ctx = canvas.getContext('2d');
+    ctx?.drawImage(img, 0, 0, newWidth, newHeight);
+    
+    // Convert canvas to file
+    const dataUrl = canvas.toDataURL(imageFile.type);
+    const filename = imageFile.name.split('.')[0] + '_resized.' + imageFile.name.split('.').pop();
+    return dataURLtoFile(dataUrl, filename);
+  } catch (error) {
+    console.error('Error resizing image:', error);
+    return imageFile; // Return original if resize fails
+  }
 };
 
-/**
- * Format a decimal number as a percentage string
- * @param value The decimal value (0-1)
- * @returns Formatted percentage string
- */
-export const formatPercentage = (value: number): string => {
-  return `${Math.round(value * 100)}%`;
-};
