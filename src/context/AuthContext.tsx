@@ -1,3 +1,4 @@
+
 import { createContext, useState, useContext, useEffect, ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -17,17 +18,23 @@ interface AuthContextProps {
     birthDate: string;
     birthPlace: string;
     subscriptionPlan: string;
+    phone?: string;
+    address?: string;
+    avatar_url?: string;
   };
+  // Add missing props that are being used in the app
+  isAuthenticated: boolean;
+  isProfileComplete: boolean;
+  isMasterAccount: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   signUp: (email: string, password: string) => Promise<void>;
-  updateProfile: (updates: {
-    firstName?: string;
-    lastName?: string;
-    birthDate?: string;
-    birthPlace?: string;
-  }) => Promise<void>;
+  updateProfile: (field: string, value: string) => Promise<void>;
   fetchUserProfile: (userId: User['id']) => Promise<void>;
+  // Alias functions for compatibility
+  login: (email: string, password: string) => Promise<void>;
+  logout: () => Promise<void>;
+  register: (email: string, password: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextProps>({
@@ -44,11 +51,17 @@ const AuthContext = createContext<AuthContextProps>({
     birthPlace: '',
     subscriptionPlan: 'free'
   },
+  isAuthenticated: false,
+  isProfileComplete: false,
+  isMasterAccount: false,
   signIn: async () => {},
   signOut: async () => {},
   signUp: async () => {},
   updateProfile: async () => {},
   fetchUserProfile: async () => {},
+  login: async () => {},
+  logout: async () => {},
+  register: async () => {}
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -69,7 +82,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     role: 'user',
     birthDate: '',
     birthPlace: '',
-    subscriptionPlan: 'free'
+    subscriptionPlan: 'free',
+    phone: '',
+    address: ''
   });
   
   const navigate = useNavigate();
@@ -78,7 +93,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     const loadUser = async () => {
       try {
         setLoading(true);
-        const { data: { user: initialUser, session: initialSession } } = await supabase.auth.getSession();
+        const { data } = await supabase.auth.getSession();
+        const initialUser = data.session?.user || null;
+        const initialSession = data.session || null;
 
         setUser(initialUser);
         setSession(initialSession);
@@ -112,7 +129,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
             role: 'user',
             birthDate: '',
             birthPlace: '',
-            subscriptionPlan: 'free'
+            subscriptionPlan: 'free',
+            phone: '',
+            address: ''
           });
         }
       }
@@ -166,7 +185,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         role: 'user',
         birthDate: '',
         birthPlace: '',
-        subscriptionPlan: 'free'
+        subscriptionPlan: 'free',
+        phone: '',
+        address: ''
       });
       toast.success('Disconnesso con successo!');
       navigate('/auth');
@@ -202,21 +223,23 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }
   };
   
-  const updateProfile = async (updates: {
-    firstName?: string;
-    lastName?: string;
-    birthDate?: string;
-    birthPlace?: string;
-  }) => {
+  const updateProfile = async (field: string, value: string) => {
     try {
       setLoading(true);
       if (!user) {
         throw new Error("User not logged in");
       }
   
+      // Convert snake_case field names to camelCase for the database
+      const dbFieldName = field === 'firstName' ? 'first_name' : 
+                          field === 'lastName' ? 'last_name' : 
+                          field === 'birthDate' ? 'birth_date' :
+                          field === 'birthPlace' ? 'birth_place' :
+                          field === 'avatar_url' ? 'avatar_url' : field;
+  
       const { data, error } = await supabase
         .from('profiles')
-        .update({ ...updates })
+        .update({ [dbFieldName]: value })
         .eq('id', user.id);
   
       if (error) {
@@ -257,7 +280,10 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           role: data.role || 'user',
           birthDate: data.birth_date || '',
           birthPlace: data.birth_place || '',
-          subscriptionPlan: data.subscription_plan || 'free'
+          subscriptionPlan: data.subscription_plan || 'free',
+          phone: data.phone || '',
+          address: data.address || '',
+          avatar_url: data.avatar_url || ''
         });
       }
     } catch (error) {
@@ -265,16 +291,32 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }
   };
   
+  // Computed properties
+  const isAuthenticated = !!user && !!session;
+  const isProfileComplete = !!(userProfile.firstName && userProfile.lastName && userProfile.birthDate && userProfile.birthPlace);
+  const isMasterAccount = isAuthenticated && userProfile.role === 'expert';
+  
+  // Alias functions for compatibility
+  const login = signIn;
+  const logout = signOut;
+  const register = signUp;
+  
   const value = {
     user,
     session,
     loading,
     userProfile,
+    isAuthenticated,
+    isProfileComplete,
+    isMasterAccount,
     signIn,
     signOut,
     signUp,
     updateProfile,
-    fetchUserProfile
+    fetchUserProfile,
+    login,
+    logout,
+    register
   };
 
   return (

@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect } from 'react';
 import { PLANT_DISEASES } from '@/data/plantDiseases';
 import { DiagnosedDisease, AnalysisDetails } from '@/components/diagnose/types';
@@ -5,7 +6,7 @@ import { plantSpeciesMap } from '@/data/plantDatabase';
 import { MOCK_PRODUCTS } from '@/components/chat/types';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { dataURLtoFile } from '@/utils/plant-analysis/image-utils';
+import { dataURLtoFile, formatPercentage } from '@/utils/plant-analysis/image-utils';
 
 export const usePlantDiagnosis = () => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -105,9 +106,10 @@ export const usePlantDiagnosis = () => {
           .sort(() => 0.5 - Math.random())
           .slice(0, Math.floor(Math.random() * 2) + 2)
           .map(p => p.name),
-        causes: [],
-        treatments: [],
-        resources: []
+        causes: result.causes || ["Causa non determinata"],
+        treatments: result.treatments || ["Trattamento generico consigliato"],
+        symptoms: result.symptoms || ["Sintomi non specificati"],
+        resources: result.resources || [{ title: "Informazioni generali", url: "/library/general" }]
       };
       
       setDiagnosedDisease(diseaseData);
@@ -213,15 +215,12 @@ export const usePlantDiagnosis = () => {
       const fallbackDisease: DiagnosedDisease = {
         ...emergencyDisease,
         confidence: 0.65,
-        products: recommendedProducts.map(p => p.name),
-        causes: emergencyDisease.causes || [],
-        treatments: emergencyDisease.treatments || [],
-        resources: emergencyDisease.resources || []
+        products: recommendedProducts.map(p => p.name)
       };
       
       setDiagnosedDisease(fallbackDisease);
       
-      setAnalysisDetails({
+      const emergencyDetails: AnalysisDetails = {
         plantName: plantName,
         plantSpecies: plantName,
         identifiedFeatures: [
@@ -260,8 +259,12 @@ export const usePlantDiagnosis = () => {
           confidence: 0.8
         },
         eppoRegulatedConcern: null
-      });
+      };
       
+      // Associate analysis details with the diagnosed disease
+      fallbackDisease.analysisDetails = emergencyDetails;
+      
+      setAnalysisDetails(emergencyDetails);
       setIsAnalyzing(false);
       setAnalysisProgress(100);
       toast.error("Si è verificato un errore nell'analisi. Utilizzando dati di backup.");

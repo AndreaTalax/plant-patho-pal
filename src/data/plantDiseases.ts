@@ -22,6 +22,11 @@ export const PLANT_DISEASES: DiagnosedDisease[] = [
     ],
     products: ['1', '2'],
     confidence: 0.92,
+    treatment: [
+      'Remove affected leaves',
+      'Apply fungicide',
+      'Improve air circulation'
+    ],
     resources: [{ title: 'fungal-diseases', url: '/library/fungal-diseases' }]
   },
   {
@@ -43,6 +48,11 @@ export const PLANT_DISEASES: DiagnosedDisease[] = [
     ],
     products: ['3', '5'],
     confidence: 0.89,
+    treatment: [
+      'Remove spots',
+      'Apply copper fungicide',
+      'Avoid overhead watering'
+    ],
     resources: [{ title: 'fungal-diseases', url: '/library/fungal-diseases' }]
   },
   {
@@ -65,6 +75,11 @@ export const PLANT_DISEASES: DiagnosedDisease[] = [
     ],
     products: ['4'],
     confidence: 0.95,
+    treatment: [
+      'Spray with water',
+      'Apply insecticidal soap',
+      'Introduce beneficial insects'
+    ],
     resources: [{ title: 'pest-control', url: '/library/pest-control' }]
   },
   {
@@ -88,6 +103,11 @@ export const PLANT_DISEASES: DiagnosedDisease[] = [
     ],
     products: ['5'],
     confidence: 0.87,
+    treatment: [
+      'Improve drainage',
+      'Reduce watering',
+      'Apply fungicide'
+    ],
     resources: [{ title: 'fungal-diseases', url: '/library/fungal-diseases' }]
   },
   {
@@ -111,6 +131,11 @@ export const PLANT_DISEASES: DiagnosedDisease[] = [
     ],
     products: ['4'],
     confidence: 0.91,
+    treatment: [
+      'Increase humidity',
+      'Spray with water',
+      'Apply insecticidal soap'
+    ],
     resources: [{ title: 'pest-control', url: '/library/pest-control' }]
   }
 ];

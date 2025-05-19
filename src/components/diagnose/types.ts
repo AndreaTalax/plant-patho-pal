@@ -16,8 +16,9 @@ export interface DiagnosedDisease {
   products: string[];
   causes: string[];
   treatments: string[];
+  symptoms: string[]; // Add missing property
   resources: { title: string; url: string }[];
-  analysisDetails?: AnalysisDetails; // Add analysisDetails to DiagnosedDisease
+  analysisDetails?: AnalysisDetails; // Add analysisDetails property
 }
 
 export interface AnalysisDetails {
