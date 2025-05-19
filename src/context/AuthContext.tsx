@@ -130,7 +130,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
             birthPlace: '',
             subscriptionPlan: 'free',
             phone: '',
-            address: ''
+            address: '',
+            avatar_url: '' // Add avatar_url here as well
           });
         }
       }
@@ -186,7 +187,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         birthPlace: '',
         subscriptionPlan: 'free',
         phone: '',
-        address: ''
+        address: '',
+        avatar_url: '' // Add avatar_url here as well
       });
       toast.success('Disconnesso con successo!');
       navigate('/auth');
