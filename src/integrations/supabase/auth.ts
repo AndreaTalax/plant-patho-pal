@@ -1,6 +1,7 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { User, Session } from '@supabase/supabase-js';
-import { crypto } from 'crypto';
+import { randomUUID } from 'crypto';
 
 // Function for user registration
 export const signUp = async (email: string, password: string) => {
@@ -12,7 +13,7 @@ export const signUp = async (email: string, password: string) => {
       console.log('Email in whitelist, simulating registration for:', email);
       
       // Generate proper UUIDs for simulated users
-      const mockUserId = crypto.randomUUID();
+      const mockUserId = randomUUID();
       
       // Simulate successful registration without actually calling Supabase
       return {
