@@ -1,5 +1,5 @@
 
-import { randomUUID } from 'crypto';
+import { v4 as uuidv4 } from 'uuid';
 import { User, Session } from '@supabase/supabase-js';
 
 // Whitelist of emails that can be automatically logged in
@@ -57,7 +57,7 @@ export const getMockUserId = (email: string): string => {
   if (storedUserId) {
     return storedUserId;
   } else {
-    const newId = randomUUID();
+    const newId = uuidv4();
     localStorage.setItem(`mockuser-${email}`, newId);
     return newId;
   }

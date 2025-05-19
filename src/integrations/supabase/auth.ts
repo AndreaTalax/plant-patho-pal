@@ -1,4 +1,4 @@
-
+import { v4 as uuidv4 } from 'uuid';
 import { supabase } from '@/integrations/supabase/client';
 import { User, Session } from '@supabase/supabase-js';
 import { randomUUID } from 'crypto';
@@ -13,7 +13,7 @@ export const signUp = async (email: string, password: string) => {
       console.log('Email in whitelist, simulating registration for:', email);
       
       // Generate proper UUIDs for simulated users
-      const mockUserId = randomUUID();
+      const mockUserId = uuidv4();
       
       // Simulate successful registration without actually calling Supabase
       return {
@@ -81,8 +81,21 @@ export const signUp = async (email: string, password: string) => {
           data: {
             user: {
               email: email,
-              id: `${email.split('@')[0]}-mock-id`,
+              id: uuidv4(),
               email_confirmed_at: new Date().toISOString(),
+              // Adding required fields for the Supabase User type
+              app_metadata: { provider: 'email' },
+              user_metadata: { role: 'user' },
+              aud: 'authenticated',
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+              phone: null,
+              confirmation_sent_at: new Date().toISOString(),
+              confirmed_at: new Date().toISOString(),
+              last_sign_in_at: new Date().toISOString(),
+              role: null,
+              identities: [],
+              factors: []
             },
             session: null
           }
@@ -157,7 +170,7 @@ export const signIn = async (email: string, password: string) => {
         
         // Generate proper UUIDs for simulated users
         // Instead of using hardcoded strings like 'test-user-id', use valid UUIDs
-        let mockUserId: string = randomUUID();
+        let mockUserId: string = uuidv4();
         let mockRole = 'user';
         
         // Store generated UUID in localStorage to maintain consistency between sessions

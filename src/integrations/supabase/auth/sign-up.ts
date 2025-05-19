@@ -1,8 +1,8 @@
 
+import { v4 as uuidv4 } from 'uuid';
 import { supabase } from '../client';
 import { SignUpResponse } from './types';
 import { whitelistedEmails, createMockUser } from './mock-users';
-import { randomUUID } from 'crypto';
 
 // Function for user registration
 export const signUp = async (email: string, password: string): Promise<SignUpResponse> => {
@@ -12,7 +12,7 @@ export const signUp = async (email: string, password: string): Promise<SignUpRes
       console.log('Email in whitelist, simulating registration for:', email);
       
       // Generate proper UUIDs for simulated users
-      const mockUserId = randomUUID();
+      const mockUserId = uuidv4();
       
       // Simulate successful registration without actually calling Supabase
       return {
