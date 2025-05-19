@@ -1,4 +1,5 @@
 
+
 export interface PlantInfoFormValues {
   isIndoor: boolean;
   wateringFrequency: number;
@@ -23,6 +24,7 @@ export interface AnalysisDetails {
     primaryService?: string;
     agreementScore?: number;
     isValidPlantImage?: boolean;
+    dataSource?: string;
     huggingFaceResult?: {
       label: string;
       score: number;
