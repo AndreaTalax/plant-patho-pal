@@ -8,7 +8,6 @@ import { PlantInfoFormValues } from './diagnose/PlantInfoForm';
 import { toast } from 'sonner';
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from '@/context/AuthContext';
-import { AuthRequiredDialog } from './auth/AuthRequiredDialog';
 
 // Importing our components
 import DiagnoseHeader from './diagnose/DiagnoseHeader';
@@ -20,11 +19,6 @@ const DiagnoseTab = () => {
   const { userProfile, isAuthenticated } = useAuth();
   const [showCamera, setShowCamera] = useState(false);
   const [showModelInfo, setShowModelInfo] = useState(false);
-  const [showAuthDialog, setShowAuthDialog] = useState(false);
-  const [authDialogConfig, setAuthDialogConfig] = useState({
-    title: "Devi accedere",
-    description: "Per utilizzare questa funzionalità devi accedere al tuo account."
-  });
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -71,13 +65,9 @@ const DiagnoseTab = () => {
         // If AI is selected, proceed with AI analysis
         handleImageUpload(file);
       } else {
-        // If AI is not selected, check authentication first
+        // If AI is not selected and user not authenticated, redirect to login
         if (!isAuthenticated) {
-          setAuthDialogConfig({
-            title: "Devi accedere per contattare il fitopatologo",
-            description: "Per inviare la tua richiesta al fitopatologo devi prima accedere."
-          });
-          setShowAuthDialog(true);
+          navigate('/auth');
           return;
         }
         
@@ -144,11 +134,7 @@ const DiagnoseTab = () => {
     try {
       // Check for user authentication
       if (!isAuthenticated) {
-        setAuthDialogConfig({
-          title: "Devi accedere per contattare il fitopatologo",
-          description: "Per inviare la tua richiesta al fitopatologo devi prima accedere."
-        });
-        setShowAuthDialog(true);
+        navigate('/auth');
         return;
       }
       
@@ -159,6 +145,7 @@ const DiagnoseTab = () => {
         toast.error("Devi accedere per contattare il fitopatologo", {
           duration: 3000
         });
+        navigate('/auth');
         return;
       }
 
@@ -301,13 +288,9 @@ const DiagnoseTab = () => {
       // If AI is selected, process the image with AI
       captureImage(imageDataUrl);
     } else {
-      // If AI is not selected, check authentication first
+      // If AI is not selected and user not authenticated, redirect to login
       if (!isAuthenticated) {
-        setAuthDialogConfig({
-          title: "Devi accedere per contattare il fitopatologo",
-          description: "Per inviare la tua richiesta al fitopatologo devi prima accedere."
-        });
-        setShowAuthDialog(true);
+        navigate('/auth');
         return;
       }
       
@@ -334,34 +317,30 @@ const DiagnoseTab = () => {
   const navigateToChat = () => {
     // Check authentication before navigating
     if (!isAuthenticated) {
-      setAuthDialogConfig({
-        title: "Devi accedere per accedere alla chat",
-        description: "Per visualizzare le conversazioni con il fitopatologo devi prima accedere."
-      });
-      setShowAuthDialog(true);
+      navigate('/auth');
       return;
     }
     
+    // Navigate to chat tab with user's plant information and image
     navigate('/');
+    
+    // Prepare data for chat
+    const plantData = {
+      image: uploadedImage,
+      plantInfo: {
+        isIndoor: plantInfo.isIndoor,
+        wateringFrequency: plantInfo.wateringFrequency,
+        lightExposure: plantInfo.lightExposure,
+        symptoms: plantInfo.symptoms
+      }
+    };
+    
+    // Store data temporarily for chat view
+    sessionStorage.setItem('plantDataForChat', JSON.stringify(plantData));
+    
     // Using a slight timeout to ensure navigation completes before tab selection
     setTimeout(() => {
       const event = new CustomEvent('switchTab', { detail: 'chat' });
-      window.dispatchEvent(event);
-    }, 100);
-  };
-
-  const navigateToShop = (productId?: string) => {
-    navigate('/');
-    setTimeout(() => {
-      const event = new CustomEvent('switchTab', { detail: 'shop' });
-      window.dispatchEvent(event);
-    }, 100);
-  };
-
-  const navigateToLibrary = (resourceId?: string) => {
-    navigate('/');
-    setTimeout(() => {
-      const event = new CustomEvent('switchTab', { detail: 'library' });
       window.dispatchEvent(event);
     }, 100);
   };
@@ -412,14 +391,6 @@ const DiagnoseTab = () => {
         accept="image/*,video/*"
         className="hidden"
         onChange={handleImageUploadEvent}
-      />
-      
-      {/* Authentication Dialog */}
-      <AuthRequiredDialog 
-        isOpen={showAuthDialog}
-        onClose={() => setShowAuthDialog(false)}
-        title={authDialogConfig.title}
-        description={authDialogConfig.description}
       />
     </div>
   );

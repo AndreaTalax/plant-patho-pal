@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -16,15 +16,18 @@ import {
   Flower2,
   User,
   Save,
-  Edit
+  Edit,
+  Camera,
+  Upload
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
-import { useToast } from "@/hooks/use-toast"; // Updated import path
+import { useToast } from "@/hooks/use-toast";
 import PrivacyPolicyModal from "./PrivacyPolicyModal";
 import SettingsModal from "./SettingsModal";
 import ChangeCredentialsModal from "./ChangeCredentialsModal";
+import { supabase } from "@/integrations/supabase/client";
 
 const ProfileTab = () => {
   const [privacyPolicyOpen, setPrivacyPolicyOpen] = useState(false);
@@ -34,6 +37,10 @@ const ProfileTab = () => {
   const [editingAddress, setEditingAddress] = useState(false);
   const [phoneValue, setPhoneValue] = useState("");
   const [addressValue, setAddressValue] = useState("");
+  const [isChangingAvatar, setIsChangingAvatar] = useState(false);
+  const [avatarUpdating, setAvatarUpdating] = useState(false);
+  
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const navigate = useNavigate();
   const { logout, userProfile, updateProfile } = useAuth();
@@ -77,15 +84,156 @@ const ProfileTab = () => {
     const lastName = userProfile.lastName || "";
     return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
   };
+  
+  const handleOpenFileDialog = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
+  
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    try {
+      setAvatarUpdating(true);
+      
+      // Create a unique file name
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${userProfile.id}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+      
+      // Convert to data URL for immediate preview
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+        const dataUrl = event.target?.result as string;
+        
+        // Update the avatar in the profile
+        await updateProfile("avatar_url", dataUrl);
+        
+        // You would normally upload to a storage bucket here
+        // For now, we're just using data URLs
+        
+        setAvatarUpdating(false);
+        setIsChangingAvatar(false);
+        
+        toast({
+          title: "Avatar updated",
+          description: "Your profile picture has been updated successfully",
+        });
+      };
+      
+      reader.readAsDataURL(file);
+    } catch (error) {
+      console.error("Error uploading avatar:", error);
+      setAvatarUpdating(false);
+      toast({
+        title: "Upload failed",
+        description: "There was an error uploading your profile picture",
+        variant: "destructive",
+      });
+    }
+  };
+  
+  const handleChangePassword = async (newPassword: string) => {
+    try {
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      
+      if (error) {
+        throw error;
+      }
+      
+      toast({
+        title: "Password updated",
+        description: "Your password has been changed successfully",
+      });
+      
+      return true;
+    } catch (error: any) {
+      console.error("Error updating password:", error);
+      toast({
+        title: "Password update failed",
+        description: error.message || "There was an error updating your password",
+        variant: "destructive",
+      });
+      return false;
+    }
+  };
+  
+  const handleChangeEmail = async (newEmail: string) => {
+    try {
+      const { error } = await supabase.auth.updateUser({ email: newEmail });
+      
+      if (error) {
+        throw error;
+      }
+      
+      toast({
+        title: "Email update initiated",
+        description: "Please check your new email address for a confirmation link",
+      });
+      
+      return true;
+    } catch (error: any) {
+      console.error("Error updating email:", error);
+      toast({
+        title: "Email update failed",
+        description: error.message || "There was an error updating your email",
+        variant: "destructive",
+      });
+      return false;
+    }
+  };
 
   return (
     <div className="space-y-6">
       {/* Profile Header */}
       <div className="flex flex-col items-center pt-8 pb-6">
-        <Avatar className="h-24 w-24 mb-4">
-          <AvatarImage src="/placeholder.svg" alt="User avatar" />
-          <AvatarFallback>{getInitials()}</AvatarFallback>
-        </Avatar>
+        <div className="relative">
+          <Avatar className="h-24 w-24 mb-4">
+            <AvatarImage src={userProfile.avatar_url || "/placeholder.svg"} alt="User avatar" />
+            <AvatarFallback>{getInitials()}</AvatarFallback>
+          </Avatar>
+          
+          {isChangingAvatar ? (
+            <div className="absolute -bottom-4 left-1/2 transform -translate-x-1/2 flex gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                className="bg-white"
+                disabled={avatarUpdating}
+                onClick={handleOpenFileDialog}
+              >
+                <Upload className="h-4 w-4 mr-1" />
+                Upload
+              </Button>
+              <Button 
+                size="sm" 
+                variant="ghost"
+                onClick={() => setIsChangingAvatar(false)}
+                disabled={avatarUpdating}
+              >
+                Cancel
+              </Button>
+              <input 
+                ref={fileInputRef}
+                type="file" 
+                accept="image/*" 
+                className="hidden"
+                onChange={handleAvatarUpload}
+                disabled={avatarUpdating}
+              />
+            </div>
+          ) : (
+            <Button
+              className="absolute bottom-0 right-0 h-8 w-8 rounded-full"
+              size="icon"
+              variant="secondary"
+              onClick={() => setIsChangingAvatar(true)}
+            >
+              <Camera className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
         <h2 className="text-2xl font-bold text-gray-900">
           {userProfile.firstName} {userProfile.lastName}
         </h2>
@@ -233,7 +381,12 @@ const ProfileTab = () => {
       {/* Modals */}
       <PrivacyPolicyModal open={privacyPolicyOpen} onOpenChange={setPrivacyPolicyOpen} />
       <SettingsModal open={settingsOpen} onOpenChange={setSettingsOpen} />
-      <ChangeCredentialsModal open={credentialsOpen} onOpenChange={setCredentialsOpen} />
+      <ChangeCredentialsModal 
+        open={credentialsOpen} 
+        onOpenChange={setCredentialsOpen} 
+        onChangePassword={handleChangePassword}
+        onChangeEmail={handleChangeEmail}
+      />
     </div>
   );
 };

@@ -4,7 +4,8 @@ import { ArrowRight, Save, AlertCircle, MessageCircle, Loader2, RefreshCw } from
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { useState } from "react";
-import { AuthRequiredDialog } from "@/components/auth/AuthRequiredDialog";
+import { supabase } from "@/integrations/supabase/client";
+import { EXPERT_ID } from "@/integrations/supabase/client";
 
 interface ActionButtonsProps {
   onStartNewAnalysis: () => void;
@@ -13,6 +14,13 @@ interface ActionButtonsProps {
   saveLoading?: boolean;
   hasValidAnalysis: boolean;
   useAI?: boolean;
+  plantImage?: string;
+  plantInfo?: {
+    isIndoor: boolean;
+    wateringFrequency: number;
+    lightExposure: string;
+    symptoms?: string;
+  };
 }
 
 const ActionButtons = ({ 
@@ -21,22 +29,101 @@ const ActionButtons = ({
   onChatWithExpert, 
   saveLoading = false,
   hasValidAnalysis,
-  useAI = false
+  useAI = false,
+  plantImage,
+  plantInfo
 }: ActionButtonsProps) => {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, userProfile } = useAuth();
   const navigate = useNavigate();
-  const [showAuthDialog, setShowAuthDialog] = useState(false);
+  const [redirecting, setRedirecting] = useState(false);
   
-  const handleChatWithExpert = () => {
+  const handleChatWithExpert = async () => {
     if (!isAuthenticated) {
-      setShowAuthDialog(true);
+      navigate('/auth');
       return;
     }
     
-    if (onChatWithExpert) {
-      onChatWithExpert();
-    } else {
-      // Fallback direct navigation if callback not provided
+    setRedirecting(true);
+    
+    try {
+      if (plantImage && plantInfo) {
+        // Find or create a conversation with the expert
+        const { data: existingConversation, error: convCheckError } = await supabase
+          .from('conversations')
+          .select('id')
+          .eq('user_id', userProfile.id)
+          .eq('expert_id', EXPERT_ID)
+          .single();
+        
+        let conversationId = existingConversation?.id;
+        
+        if (!conversationId) {
+          // Create new conversation
+          const { data: newConversation, error: convError } = await supabase
+            .from('conversations')
+            .insert({
+              user_id: userProfile.id,
+              expert_id: EXPERT_ID,
+              status: 'active'
+            })
+            .select('id')
+            .single();
+          
+          if (convError) {
+            console.error("Error creating conversation:", convError);
+            return;
+          }
+          
+          conversationId = newConversation.id;
+        }
+        
+        // Create a message with the plant information
+        const messageText = `Ho bisogno di aiuto con la mia pianta.
+        
+Sintomi: ${plantInfo.symptoms || 'Non specificati'}
+
+Dettagli pianta:
+- Ambiente: ${plantInfo.isIndoor ? 'Interno' : 'Esterno'}
+- Frequenza irrigazione: ${plantInfo.wateringFrequency} volte a settimana
+- Esposizione luce: ${plantInfo.lightExposure}`;
+        
+        if (conversationId) {
+          // Send the message with plant details and image
+          const { error: msgError } = await supabase
+            .from('messages')
+            .insert({
+              conversation_id: conversationId,
+              sender_id: userProfile.id,
+              recipient_id: EXPERT_ID,
+              text: messageText,
+              products: { 
+                plantImage: plantImage,
+                plantDetails: {
+                  isIndoor: plantInfo.isIndoor,
+                  wateringFrequency: plantInfo.wateringFrequency,
+                  lightExposure: plantInfo.lightExposure,
+                  symptoms: plantInfo.symptoms
+                },
+                userDetails: {
+                  firstName: userProfile.firstName,
+                  lastName: userProfile.lastName,
+                  birthDate: userProfile.birthDate,
+                  birthPlace: userProfile.birthPlace
+                }
+              }
+            });
+          
+          if (msgError) {
+            console.error("Error sending message:", msgError);
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Error preparing chat:", error);
+    } finally {
+      setRedirecting(false);
+      
+      // Navigate to home and trigger chat tab change
       navigate('/');
       setTimeout(() => {
         const event = new CustomEvent('switchTab', { detail: 'chat' });
@@ -67,15 +154,23 @@ const ActionButtons = ({
         </Button>
       )}
 
-      {!useAI && (
-        <Button
-          className="w-full bg-drplant-blue-dark hover:bg-drplant-blue-darker flex items-center justify-center gap-2"
-          onClick={handleChatWithExpert}
-        >
-          <MessageCircle className="h-4 w-4" />
-          <span>Vai alla chat con il fitopatologo</span>
-        </Button>
-      )}
+      <Button
+        className="w-full bg-drplant-blue-dark hover:bg-drplant-blue-darker flex items-center justify-center gap-2"
+        onClick={handleChatWithExpert}
+        disabled={redirecting}
+      >
+        {redirecting ? (
+          <>
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <span>Caricamento chat...</span>
+          </>
+        ) : (
+          <>
+            <MessageCircle className="h-4 w-4" />
+            <span>Vai alla chat con il fitopatologo</span>
+          </>
+        )}
+      </Button>
       
       <Button 
         onClick={onStartNewAnalysis} 
@@ -100,13 +195,6 @@ const ActionButtons = ({
           La tua richiesta è stata inviata al fitopatologo. Riceverai una risposta al più presto nella sezione Chat.
         </p>
       )}
-      
-      <AuthRequiredDialog 
-        isOpen={showAuthDialog}
-        onClose={() => setShowAuthDialog(false)}
-        title="Devi accedere per contattare il fitopatologo"
-        description="Per visualizzare le conversazioni con il fitopatologo devi prima accedere."
-      />
     </div>
   );
 };

@@ -81,12 +81,96 @@ export const useUserChat = (userId: string) => {
     
     initializeChat();
     
+    // Check if there's plant data in session storage
+    const storedPlantData = sessionStorage.getItem('plantDataForChat');
+    if (storedPlantData) {
+      try {
+        const plantData = JSON.parse(storedPlantData);
+        if (plantData.image && plantData.plantInfo) {
+          // Send plant data to expert automatically
+          setTimeout(() => {
+            handleSendPlantData(plantData.image, plantData.plantInfo);
+            // Clear storage after sending to prevent duplicate sends
+            sessionStorage.removeItem('plantDataForChat');
+          }, 500);
+        }
+      } catch (error) {
+        console.error("Error parsing stored plant data:", error);
+      }
+    }
+    
     return () => {
       if (messagesSubscription) {
         supabase.removeChannel(messagesSubscription);
       }
     };
   }, [activeChat, userId]);
+  
+  // Send plant data to expert
+  const handleSendPlantData = async (imageUrl: string, plantInfo: any) => {
+    try {
+      setIsSending(true);
+      
+      // Create conversation if it doesn't exist
+      if (!currentDbConversation) {
+        const conversation = await findOrCreateConversation(userId);
+        if (!conversation) {
+          toast("Could not create conversation");
+          setIsSending(false);
+          return;
+        }
+        setCurrentDbConversation(conversation);
+      }
+      
+      // Format message text
+      const messageText = `Ho bisogno di aiuto con la mia pianta.
+        
+Sintomi: ${plantInfo.symptoms || 'Non specificati'}
+
+Dettagli pianta:
+- Ambiente: ${plantInfo.isIndoor ? 'Interno' : 'Esterno'}
+- Frequenza irrigazione: ${plantInfo.wateringFrequency} volte a settimana
+- Esposizione luce: ${plantInfo.lightExposure}`;
+      
+      // Add message to UI immediately to improve UX
+      const tempMessage: Message = {
+        id: `temp-${Date.now()}`,
+        sender: 'user',
+        text: messageText,
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        plantImage: imageUrl,
+        plantDetails: plantInfo
+      };
+      setMessages(prev => [...prev, tempMessage]);
+      
+      // Send message with plant data
+      const { error: msgError } = await supabase
+        .from('messages')
+        .insert({
+          conversation_id: currentDbConversation!.id,
+          sender_id: userId,
+          recipient_id: EXPERT_ID,
+          text: messageText,
+          products: { 
+            plantImage: imageUrl,
+            plantDetails: plantInfo
+          }
+        });
+        
+      if (msgError) {
+        // Remove temp message if sending failed
+        setMessages(prev => prev.filter(msg => msg.id !== tempMessage.id));
+        toast("Error sending plant data");
+        console.error("Error sending plant data:", msgError);
+      }
+      
+      setIsSending(false);
+    } catch (error) {
+      console.error("Error in handleSendPlantData:", error);
+      toast("Error sending plant data");
+      setIsSending(false);
+    }
+  };
   
   // Send message
   const handleSendMessage = async (text: string) => {
@@ -142,5 +226,6 @@ export const useUserChat = (userId: string) => {
     messages,
     isSending,
     handleSendMessage,
+    handleSendPlantData
   };
 };
