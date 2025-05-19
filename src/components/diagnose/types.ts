@@ -58,6 +58,24 @@ export interface AnalysisDetails {
     dataSource?: string;
     leafDiagnosticCapabilities?: string[];
   };
+  risultatiCompleti?: {
+    plantIdResult?: {
+      plantName?: string;
+      scientificName?: string;
+      commonNames?: string[];
+      confidence?: number;
+      isHealthy?: boolean;
+      diseases?: any[];
+      taxonomy?: {
+        family?: string;
+        genus?: string;
+        kingdom?: string;
+      };
+      wikiDescription?: string;
+      similarImages?: any[];
+      edibleParts?: string[];
+    };
+  };
   identifiedFeatures?: string[];
   alternativeDiagnoses?: {
     disease: string;
