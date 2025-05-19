@@ -157,7 +157,7 @@ export const signIn = async (email: string, password: string) => {
         
         // Generate proper UUIDs for simulated users
         // Instead of using hardcoded strings like 'test-user-id', use valid UUIDs
-        let mockUserId = crypto.randomUUID();
+        let mockUserId: string = randomUUID();
         let mockRole = 'user';
         
         // Store generated UUID in localStorage to maintain consistency between sessions
