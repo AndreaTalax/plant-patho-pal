@@ -80,7 +80,7 @@ export const signUp = async (email: string, password: string): Promise<SignUpRes
           data: {
             user: {
               email: email,
-              id: randomUUID(),
+              id: uuidv4(),
               email_confirmed_at: new Date().toISOString(),
               // Adding required fields for the Supabase User type
               app_metadata: { provider: 'email' },
