@@ -1,9 +1,12 @@
+
 import { useState, useRef, useEffect } from 'react';
 import { PLANT_DISEASES } from '@/data/plantDiseases';
-import { formatHuggingFaceResult, dataURLtoFile } from '@/utils/plant-analysis';
+import { formatHuggingFaceResult, dataURLtoFile, analyzePlantImage } from '@/utils/plant-analysis';
 import { DiagnosedDisease, AnalysisDetails } from '@/components/diagnose/types';
 import { plantSpeciesMap } from '@/data/plantDatabase';
 import { MOCK_PRODUCTS } from '@/components/chat/types';
+import { fileToBase64WithoutPrefix } from '@/utils/plant-analysis/plant-id-service';
+import { toast } from 'sonner';
 
 export const usePlantDiagnosis = () => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -29,158 +32,128 @@ export const usePlantDiagnosis = () => {
     setAnalysisDetails(null);
     
     try {
-      // Simulazione rapida del progresso
+      // Simulazione rapida del progresso per feedback visivo all'utente
       const progressInterval = setInterval(() => {
         setAnalysisProgress(prev => {
-          const newProgress = prev + Math.random() * 40; // Ancora più veloce
+          const newProgress = prev + Math.random() * 20; // Veloce ma non troppo
           return newProgress > 95 ? 95 : newProgress;
         });
-      }, 50); // Ridotto da 100ms a 50ms per un feedback ancora più rapido
+      }, 100);
 
-      // Simulazione dell'analisi completata rapidamente
-      setTimeout(() => {
-        clearInterval(progressInterval);
-        setAnalysisProgress(100);
-        
-        // Scegli una malattia random dal database delle malattie
-        const randomDisease = PLANT_DISEASES[Math.floor(Math.random() * PLANT_DISEASES.length)];
-        
-        // Estrai un nome di pianta casuale dal nostro database
-        const plantEntries = Object.entries(plantSpeciesMap);
-        const randomPlantEntry = plantEntries[Math.floor(Math.random() * plantEntries.length)];
-        const plantName = randomPlantEntry[1];
-        
-        // Aggiungi prodotti consigliati (2-3 prodotti casuali)
-        const recommendedProducts = MOCK_PRODUCTS
-          .sort(() => 0.5 - Math.random()) // Mescola casualmente
-          .slice(0, Math.floor(Math.random() * 2) + 2); // Prendi 2-3 prodotti
-        
-        const disease = {
-          ...randomDisease,
-          confidence: 0.65 + Math.random() * 0.1, // 65-75% di confidenza
-          products: recommendedProducts.map(p => p.name), // Aggiunge i nomi dei prodotti consigliati
-        };
-        
-        setDiagnosedDisease(disease);
-        
-        setDiagnosisResult(`Rilevato ${randomDisease.name} su ${plantName} con alta confidenza.`);
-        
-        // Creazione dei dettagli di analisi con il nome della pianta
-        const analysisDetails: AnalysisDetails = {
-          multiServiceInsights: {
-            huggingFaceResult: {
-              label: randomDisease.name,
-              score: disease.confidence
-            },
-            agreementScore: Math.round(disease.confidence * 100),
-            primaryService: 'PlantNet AI',
-            plantSpecies: plantName,
-            plantName: plantName.split(' ')[0],
-            plantPart: 'foglia',
-            isHealthy: false,
-            isValidPlantImage: true,
-            dataSource: 'TRY Plant Trait Database',
-            // Add leaf analysis data for Sistema Digitale Foglia
-            leafAnalysis: {
-              leafColor: 'green',
-              patternDetected: 'leaf spots',
-              diseaseConfidence: disease.confidence,
-              healthStatus: 'diseased',
-              leafType: 'Compound',
-              details: {
-                symptomDescription: 'Spots with chlorotic halos',
-                symptomCategory: 'fungal disease'
-              }
-            },
-            advancedLeafAnalysis: true,
-            leafDiagnosticCapabilities: [
-              'Pattern recognition',
-              'Chlorosis detection',
-              'Necrosis identification',
-              'Disease progression analysis',
-              'Nutrient deficiency recognition'
-            ]
-          },
-          identifiedFeatures: [
-            "Corrispondenza pattern", 
-            "Rilevata decolorazione", 
-            "Identificazione positiva",
-            `Nome pianta: ${plantName}`
-          ],
-          alternativeDiagnoses: PLANT_DISEASES.filter(d => d.id !== randomDisease.id)
-            .slice(0, 3)
-            .map(d => ({ 
-              disease: d.id, 
-              probability: 0.1 + Math.random() * 0.2
-            })),
-          sistemaDigitaleFoglia: true,
-          analysisTechnology: 'Sistema Digitale Foglia',
-          // Add recommended products
-          recommendedProducts: recommendedProducts,
-          // Add recommended additional tests
-          recommendedAdditionalTests: [
-            'Analisi del pH del suolo',
-            'Analisi delle carenze nutritive',
-            'Esame microscopico',
-            'Test di coltura in laboratorio'
-          ]
-        };
-        
-        setAnalysisDetails(analysisDetails);
+      // Chiama il vero servizio di analisi invece di usare dati simulati
+      console.log("Calling Plant.id analysis API with image...");
+      const analysisResult = await analyzePlantImage(imageFile);
+      
+      clearInterval(progressInterval);
+      setAnalysisProgress(100);
+      
+      if (!analysisResult) {
+        toast.error("Errore durante l'analisi dell'immagine");
         setIsAnalyzing(false);
-      }, 800); // Ridotto a 0.8 secondi
+        return;
+      }
+      
+      console.log("Analysis result from Plant.id:", analysisResult);
+      
+      // Usa i dati reali da Plant.id API e altri servizi se disponibili
+      if (analysisResult.plantIdResult) {
+        console.log("Detected Plant.id results:", analysisResult.plantIdResult);
+      }
+      
+      // Estrai i dati sulla malattia dalla risposta API reale
+      const isHealthy = analysisResult.healthy === true;
+      const diseaseName = isHealthy ? "Pianta sana" : analysisResult.label || "Malattia sconosciuta";
+      const confidence = analysisResult.score || 0.7;
+      
+      let diseaseInfo: DiagnosedDisease | null = null;
+      
+      // Cerca corrispondenze nel nostro database di malattie se non è sana
+      if (!isHealthy) {
+        // Trova la malattia più simile dal database
+        const matchingDisease = PLANT_DISEASES.find(d => 
+          d.name.toLowerCase().includes(analysisResult.label?.toLowerCase()) || 
+          analysisResult.label?.toLowerCase().includes(d.name.toLowerCase())
+        );
+        
+        if (matchingDisease) {
+          diseaseInfo = {
+            ...matchingDisease,
+            confidence: confidence
+          };
+        } else {
+          // Crea un oggetto malattia basato sui dati API
+          diseaseInfo = {
+            id: `disease-${Date.now()}`,
+            name: diseaseName,
+            description: "Descrizione non disponibile",
+            causes: "Cause non specificate",
+            symptoms: ["Sintomi visibili sull'immagine"],
+            treatments: ["Consultare un esperto"],
+            confidence: confidence,
+            healthy: isHealthy
+          };
+        }
+      } else {
+        // Se è una pianta sana
+        diseaseInfo = {
+          id: "healthy-plant",
+          name: "Pianta sana",
+          description: "La pianta sembra sana basata sull'analisi dell'immagine.",
+          causes: "N/A",
+          symptoms: ["Nessun sintomo rilevato"],
+          treatments: ["Continua con le normali pratiche di cura"],
+          confidence: confidence,
+          healthy: true
+        };
+      }
+      
+      // Se ci sono prodotti consigliati nell'API, usali
+      if (analysisResult.recommendedProducts && analysisResult.recommendedProducts.length > 0) {
+        diseaseInfo.products = analysisResult.recommendedProducts.map(p => p.name || p.toString());
+      } else {
+        // Altrimenti usa prodotti simulati
+        const recommendedProducts = MOCK_PRODUCTS
+          .sort(() => 0.5 - Math.random())
+          .slice(0, Math.floor(Math.random() * 2) + 2);
+        diseaseInfo.products = recommendedProducts.map(p => p.name);
+      }
+      
+      setDiagnosedDisease(diseaseInfo);
+      setDiagnosisResult(`Rilevato ${diseaseName} con ${Math.round(confidence * 100)}% di confidenza.`);
+      
+      // Imposta i dettagli dell'analisi usando i dati reali
+      setAnalysisDetails(analysisResult);
+      
+      setIsAnalyzing(false);
+      
     } catch (error) {
       console.error("Error during image analysis:", error);
       
-      // Gestione dell'errore e fornitura di un fallback con alta confidenza
+      // Gestione dell'errore e fornitura di un fallback
+      toast.error(`Errore durante l'analisi: ${(error as Error).message || 'Errore sconosciuto'}`);
+      
+      // Fallback a una diagnosi di emergenza
       const emergencyDisease = PLANT_DISEASES[Math.floor(Math.random() * PLANT_DISEASES.length)];
       
-      // Estrai un nome di pianta casuale dal nostro database
-      const plantEntries = Object.entries(plantSpeciesMap);
-      const randomPlantEntry = plantEntries[Math.floor(Math.random() * plantEntries.length)];
-      const plantName = randomPlantEntry[1] || 'Pianta'; // Fallback to "Plant" in Italian
-      
-      // Aggiungi prodotti consigliati (1-2 prodotti casuali)
-      const recommendedProducts = MOCK_PRODUCTS
-        .sort(() => 0.5 - Math.random()) // Mescola casualmente
-        .slice(0, Math.floor(Math.random() * 2) + 1); // Prendi 1-2 prodotti
-      
-      setDiagnosisResult(`Risultato analisi: ${emergencyDisease.name}`);
+      setDiagnosisResult(`Errore di analisi, usando risultato di emergenza: ${emergencyDisease.name}`);
       setDiagnosedDisease({
         ...emergencyDisease,
-        confidence: 0.65, // 65% di confidenza
-        products: recommendedProducts.map(p => p.name) // Aggiunge i nomi dei prodotti consigliati
+        confidence: 0.5,
+        products: MOCK_PRODUCTS.slice(0, 2).map(p => p.name)
       });
       
       setAnalysisDetails({
         multiServiceInsights: {
-          plantName: plantName,
-          plantSpecies: plantName,
+          plantName: "Pianta",
           isHealthy: false,
           isValidPlantImage: true,
-          // Add emergency leaf analysis data
           leafAnalysis: {
             healthStatus: 'unknown',
-            diseaseConfidence: 0.65,
+            diseaseConfidence: 0.5,
             leafColor: 'variable'
-          },
-          advancedLeafAnalysis: false
+          }
         },
-        identifiedFeatures: [
-          "Riconoscimento pattern", 
-          "Analisi dati visivi", 
-          "Diagnosi", 
-          `Nome pianta: ${plantName}`
-        ],
-        alternativeDiagnoses: PLANT_DISEASES.filter(d => d.id !== emergencyDisease.id)
-          .slice(0, 2)
-          .map(d => ({ disease: d.id, probability: 0.3 })),
-        recommendedProducts: recommendedProducts,
-        recommendedAdditionalTests: [
-          'Ispezione visiva da parte di un esperto',
-          'Test di laboratorio',
-          'Analisi del suolo'
-        ]
+        identifiedFeatures: ["Analisi di fallback", "Diagnosi d'emergenza"],
       });
       
       setIsAnalyzing(false);
