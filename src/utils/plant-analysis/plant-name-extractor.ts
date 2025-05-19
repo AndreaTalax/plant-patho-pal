@@ -1,85 +1,118 @@
 
-import { capitalize } from './plant-part-utils';
-import { plantSpeciesMap } from '../../data/plantDatabase';
+import { plantSpeciesMap } from '@/data/plantDatabase';
 
 /**
- * Enhanced plant name extraction utility
- * Attempts to identify plant names from various sources and formats
- * @param label The classification label from the model
- * @param plantSpeciesMap Map of known plant species
- * @returns The extracted plant name or null if not found
+ * Extract plant name from label using fuzzy matching against plant database
+ * @param label The raw label from the model
+ * @param plantDatabase A map of plant IDs to scientific names
+ * @returns The identified plant name or null
  */
-export function extractPlantName(
-  label: string, 
-  speciesMap: Record<string, string> | null = null
-): string | null {
+export function extractPlantName(label: string, plantDatabase: Record<string, string>): string | null {
   if (!label) return null;
   
-  // Use the provided map or default to the global plantSpeciesMap
-  const effectiveMap = speciesMap || plantSpeciesMap;
-
-  // Convert label to lowercase for case-insensitive matching
-  const labelLower = label.toLowerCase();
-  let plantName = null;
+  const lowerLabel = label.toLowerCase();
   
-  // First check in the plantSpeciesMap
-  if (effectiveMap) {
-    for (const [key, value] of Object.entries(effectiveMap)) {
-      if (labelLower.includes(key.toLowerCase())) {
-        return typeof value === 'string' ? value : key;
-      }
+  // First check if label directly contains a species name from our database
+  const databaseEntries = Object.entries(plantDatabase);
+  
+  for (const [id, speciesName] of databaseEntries) {
+    const scientificName = speciesName.toLowerCase();
+    const commonName = id.toLowerCase().replace(/_/g, ' ');
+    
+    if (lowerLabel.includes(scientificName) || lowerLabel.includes(commonName)) {
+      return speciesName;
     }
   }
   
-  // If no match in mapping, look for common plant keywords
-  const plantLabels = [
-    'tomato', 'potato', 'apple', 'corn', 'grape', 'strawberry',
-    'pepper', 'lettuce', 'monstera', 'aloe', 'cactus', 'fern', 
-    'ficus', 'jade', 'snake plant', 'rose', 'orchid', 'basil',
-    'mint', 'rosemary', 'lavender', 'cannabis', 'hemp', 
-    'sunflower', 'tulip', 'lily', 'bamboo', 'palm',
-    // Italian plant names
-    'pomodoro', 'patata', 'mela', 'mais', 'uva', 'fragola',
-    'peperone', 'lattuga', 'felce', 'rosa', 'basilico',
-    'menta', 'rosmarino', 'lavanda', 'girasole', 'tulipano',
-    'giglio', 'bambù', 'palma', 'fico', 'orchidea'
+  // Check for common plant names that might be in the label
+  const commonPlantTypeIndicators = [
+    'tomato', 'pomodoro',
+    'apple', 'mela',
+    'basil', 'basilico',
+    'pepper', 'peperone',
+    'rose', 'rosa',
+    'citrus', 'agrume',
+    'monstera',
+    'pothos',
+    'ficus',
+    'olive', 'olivo',
+    'grape', 'uva'
   ];
   
-  const matchedPlant = plantLabels.find(plant => labelLower.includes(plant));
-  
-  if (matchedPlant) {
-    return capitalize(matchedPlant);
+  for (const indicator of commonPlantTypeIndicators) {
+    if (lowerLabel.includes(indicator)) {
+      // Try to find matching plant in database
+      const matchingPlant = databaseEntries.find(([id, name]) => 
+        id.toLowerCase().includes(indicator) || name.toLowerCase().includes(indicator)
+      );
+      
+      if (matchingPlant) {
+        return matchingPlant[1]; // Return scientific name
+      }
+      
+      // Return capitalized indicator as fallback
+      return indicator.charAt(0).toUpperCase() + indicator.slice(1);
+    }
   }
   
-  // If still no plant name found, try to extract from words in the label
-  const possiblePlantWords = label.split(/[\s,_-]+/).filter(word => 
-    word.length > 3 && !word.match(/disease|infected|spot|blight|rot|rust|mildew|virus/i)
-  );
-  
-  if (possiblePlantWords.length > 0) {
-    // Use the most likely word as plant name
-    return capitalize(possiblePlantWords[0]);
-  }
-  
-  return "Pianta"; // Return "Plant" in Italian as fallback instead of null
+  return null;
 }
 
 /**
- * Determines the most likely plant type based on the plant name
- * @param plantName The name of the plant
- * @returns The detected plant type or null if not determinable
+ * Detect the general plant type based on name
+ * @param plantName The plant name
+ * @returns The detected plant type or null
  */
 export function detectPlantType(plantName: string | null): string | null {
   if (!plantName) return null;
   
-  const nameLower = plantName.toLowerCase();
+  const lowerName = plantName.toLowerCase();
   
-  // Map common plant names to their types
-  if (['palm', 'palma'].some(term => nameLower.includes(term))) return 'palm';
-  if (['cactus', 'succulent', 'aloe', 'jade'].some(term => nameLower.includes(term))) return 'succulent';
-  if (['monstera', 'ficus', 'snake plant'].some(term => nameLower.includes(term))) return 'houseplant';
-  if (['tomato', 'potato', 'pepper', 'corn', 'pomodoro', 'patata', 'peperone', 'mais'].some(term => nameLower.includes(term))) return 'vegetable';
-  if (['rose', 'tulip', 'lily', 'orchid', 'rosa', 'tulipano', 'giglio', 'orchidea'].some(term => nameLower.includes(term))) return 'flowering';
+  // Plant type classification based on name patterns
+  if (lowerName.includes('palm') || lowerName.includes('cocos') || lowerName.includes('palma')) {
+    return 'palm';
+  }
+  
+  if (lowerName.includes('cactus') || lowerName.includes('succulen') || lowerName.includes('aloe') || 
+      lowerName.includes('echeveria') || lowerName.includes('grassa')) {
+    return 'succulent';
+  }
+  
+  if (lowerName.includes('monstera') || lowerName.includes('pothos') || 
+      lowerName.includes('philodendron') || lowerName.includes('ficus') || 
+      lowerName.includes('snake plant') || lowerName.includes('sansevieria')) {
+    return 'houseplant';
+  }
+  
+  if (lowerName.includes('tomato') || lowerName.includes('pomodoro') ||
+      lowerName.includes('pepper') || lowerName.includes('peperone') ||
+      lowerName.includes('cucumber') || lowerName.includes('cetriolo') ||
+      lowerName.includes('lettuce') || lowerName.includes('lattuga') ||
+      lowerName.includes('cabbage') || lowerName.includes('cavolo')) {
+    return 'vegetable';
+  }
+  
+  if (lowerName.includes('rose') || lowerName.includes('rosa') ||
+      lowerName.includes('tulip') || lowerName.includes('tulipano') ||
+      lowerName.includes('lily') || lowerName.includes('giglio') ||
+      lowerName.includes('pansy') || lowerName.includes('viola')) {
+    return 'flowering';
+  }
+  
+  if (lowerName.includes('oak') || lowerName.includes('quercia') ||
+      lowerName.includes('maple') || lowerName.includes('acero') ||
+      lowerName.includes('pine') || lowerName.includes('pino') ||
+      lowerName.includes('birch') || lowerName.includes('betulla')) {
+    return 'tree';
+  }
+  
+  if (lowerName.includes('basil') || lowerName.includes('basilico') ||
+      lowerName.includes('mint') || lowerName.includes('menta') ||
+      lowerName.includes('oregano') || lowerName.includes('rosemary') || 
+      lowerName.includes('rosmarino') || lowerName.includes('thyme') || 
+      lowerName.includes('timo')) {
+    return 'herb';
+  }
   
   return null;
 }

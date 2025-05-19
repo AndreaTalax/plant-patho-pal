@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -43,6 +42,10 @@ const DiagnosisResult = ({
   const hasAiServiceData = analysisData?.analysisDetails?.aiServices && 
                           analysisData.analysisDetails.aiServices.length > 0;
 
+  // Check if we have Sistema Digitale Foglia data
+  const hasSistemaDigitaleData = analysisData?.analysisDetails?.multiServiceInsights?.advancedLeafAnalysis ||
+                                analysisData?.analysisDetails?.multiServiceInsights?.sistemaDigitaleFogliaVersion;
+
   // Mock navigation functions for DiagnosisTabs
   const handleNavigateToLibrary = (resourceId?: string) => {
     console.log("Navigate to library:", resourceId);
@@ -69,6 +72,16 @@ const DiagnosisResult = ({
                 <Badge className="bg-drplant-green text-white flex items-center gap-1 py-1.5">
                   <Leaf className="h-3 w-3" />
                   <span className="text-xs">{plantSpecies}</span>
+                </Badge>
+              </div>
+            )}
+            
+            {/* Sistema Digitale Foglia badge */}
+            {hasSistemaDigitaleData && !isAnalyzing && (
+              <div className="absolute top-0 right-0 m-2">
+                <Badge className="bg-blue-600 text-white flex items-center gap-1 py-1.5">
+                  <Leaf className="h-3 w-3" />
+                  <span className="text-xs">Sistema Digitale Foglia</span>
                 </Badge>
               </div>
             )}
@@ -107,76 +120,96 @@ const DiagnosisResult = ({
             </div>
           )}
           
-          {/* AI Services analysis results */}
-          {hasAiServiceData && !isAnalyzing && (
+          {/* Sistema Digitale Foglia analysis panel */}
+          {hasSistemaDigitaleData && !isAnalyzing && analysisData?.analysisDetails?.multiServiceInsights?.leafAnalysis && (
             <div className="mb-4">
               <Button 
                 variant="outline" 
                 size="sm"
                 onClick={() => setShowAiServices(!showAiServices)}
-                className={`flex items-center gap-1.5 w-full ${showAiServices ? 'bg-green-50 text-green-700' : ''}`}
+                className={`flex items-center gap-1.5 w-full ${showAiServices ? 'bg-blue-50 text-blue-700' : ''}`}
               >
                 {showAiServices ? (
                   <>
-                    <EyeOff className="h-4 w-4" /> Hide AI Services Data
+                    <EyeOff className="h-4 w-4" /> Nascondi Analisi Foglia
                   </>
                 ) : (
                   <>
-                    <Eye className="h-4 w-4" /> Show AI Services Data
+                    <Eye className="h-4 w-4" /> Mostra Analisi Foglia
                   </>
                 )}
               </Button>
               
               {showAiServices && (
-                <div className="mt-2 border rounded-lg p-2 text-xs bg-gray-50">
-                  <h4 className="font-semibold mb-1">AI Service Results</h4>
-                  <div className="space-y-1.5">
-                    {analysisData?.analysisDetails?.aiServices?.map((service: any, index: number) => (
-                      <div key={index} className="flex items-center justify-between">
-                        <span>{service.name}</span>
-                        <div className="flex items-center gap-1">
-                          {service.result ? (
-                            <Check className="h-3 w-3 text-green-600" />
-                          ) : (
-                            <X className="h-3 w-3 text-red-600" />
-                          )}
-                          <span className={service.result ? "text-green-600" : "text-red-600"}>
-                            {Math.round(service.confidence * 100)}%
-                          </span>
-                        </div>
+                <div className="mt-2 border rounded-lg p-3 text-xs bg-blue-50">
+                  <h4 className="font-semibold mb-2">Analisi Foglia</h4>
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <span>Colore foglia:</span>
+                      <span className="font-medium">{analysisData.analysisDetails.multiServiceInsights.leafAnalysis.leafColor}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Pattern rilevato:</span>
+                      <span className="font-medium">{analysisData.analysisDetails.multiServiceInsights.leafAnalysis.patternDetected}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Stato sanitario:</span>
+                      <span className={`font-medium ${analysisData.analysisDetails.multiServiceInsights.leafAnalysis.healthStatus === 'healthy' ? 'text-green-600' : 'text-amber-600'}`}>
+                        {analysisData.analysisDetails.multiServiceInsights.leafAnalysis.healthStatus === 'healthy' ? 'Sana' : 'Patologica'}
+                      </span>
+                    </div>
+                    {analysisData.analysisDetails.multiServiceInsights.leafAnalysis.details?.symptomDescription && (
+                      <div className="flex justify-between">
+                        <span>Sintomi:</span>
+                        <span className="font-medium text-right">{analysisData.analysisDetails.multiServiceInsights.leafAnalysis.details.symptomDescription}</span>
                       </div>
-                    ))}
+                    )}
                   </div>
                   
-                  <div className="mt-2 pt-2 border-t">
-                    <div className="flex justify-between">
-                      <span>Nome pianta rilevato:</span>
-                      <span className="font-medium">{plantName}</span>
+                  {analysisData?.analysisDetails?.multiServiceInsights?.leafDiagnosticCapabilities && (
+                    <div className="mt-3 pt-2 border-t">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs text-blue-700">Analisi avanzata con Sistema Digitale Foglia</span>
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               )}
             </div>
           )}
           
+          {/* AI Services analysis results */}
+          {hasAiServiceData && !isAnalyzing && !showAiServices && (
+            <div className="mb-4">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => setShowAiServices(true)}
+                className="flex items-center gap-1.5 w-full"
+              >
+                <Eye className="h-4 w-4" /> Mostra Dettagli Analisi AI
+              </Button>
+            </div>
+          )}
+          
           <div className="bg-drplant-green/10 p-3 rounded-lg mb-4">
-            <h4 className="font-medium mb-1">Plant Information</h4>
+            <h4 className="font-medium mb-1">Informazioni Pianta</h4>
             <div className="text-sm space-y-1">
               <div className="flex items-center gap-2">
-                <span className="text-gray-600">Environment: </span>
+                <span className="text-gray-600">Ambiente: </span>
                 <span>{plantInfo.isIndoor ? "Indoor" : "Outdoor"}</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-gray-600">Watering: </span>
-                <span>{plantInfo.wateringFrequency} times/week</span>
+                <span className="text-gray-600">Irrigazione: </span>
+                <span>{plantInfo.wateringFrequency} volte/settimana</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-gray-600">Light: </span>
+                <span className="text-gray-600">Luce: </span>
                 <span>{plantInfo.lightExposure}</span>
               </div>
               {plantInfo.symptoms && (
                 <div className="flex items-center gap-2">
-                  <span className="text-gray-600">Symptoms: </span>
+                  <span className="text-gray-600">Sintomi: </span>
                   <span>{plantInfo.symptoms}</span>
                 </div>
               )}
@@ -202,18 +235,21 @@ const DiagnosisResult = ({
           {isAnalyzing ? (
             <div className="flex flex-col items-center justify-center py-4 h-full">
               <Loader2 className="h-8 w-8 text-drplant-blue animate-spin mb-4" />
-              <p className="text-drplant-blue font-medium mb-2">Analyzing your plant...</p>
+              <p className="text-drplant-blue font-medium mb-2">Analisi in corso...</p>
               <div className="w-full max-w-xs">
                 <progress value={75} max={100} className="w-full h-2" />
               </div>
               <p className="text-xs text-gray-500 mt-2">
-                Multiple AI services are analyzing your plant
+                Sistemi di analisi avanzata in elaborazione
               </p>
             </div>
           ) : analysisData ? (
             <div className="h-full">
               <div className="flex items-center gap-2 mb-4">
-                <Badge className="bg-amber-500">{Math.round(analysisData.confidence * 100)}% Confidence</Badge>
+                <Badge className="bg-amber-500">{Math.round(analysisData.confidence * 100)}% Confidenza</Badge>
+                {analysisData?.analysisDetails?.multiServiceInsights?.sistemaDigitaleFogliaVersion && (
+                  <Badge className="bg-blue-600">Sistema Digitale Foglia v{analysisData.analysisDetails.multiServiceInsights.sistemaDigitaleFogliaVersion}</Badge>
+                )}
               </div>
               
               <DiagnosisTabs
@@ -227,7 +263,7 @@ const DiagnosisResult = ({
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center py-4 h-full">
-              <p className="text-gray-500">Upload an image to start diagnosis</p>
+              <p className="text-gray-500">Carica un'immagine per iniziare la diagnosi</p>
             </div>
           )}
         </div>
