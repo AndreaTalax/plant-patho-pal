@@ -22,19 +22,17 @@ interface AuthContextProps {
     address?: string;
     avatar_url?: string;
   };
-  // Add missing props that are being used in the app
   isAuthenticated: boolean;
   isProfileComplete: boolean;
   isMasterAccount: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
-  signUp: (email: string, password: string) => Promise<void>;
+  signUp: (email: string, password: string) => Promise<any>; // Changed return type to any to handle confirmationRequired
   updateProfile: (field: string, value: string) => Promise<void>;
   fetchUserProfile: (userId: User['id']) => Promise<void>;
-  // Alias functions for compatibility
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
-  register: (email: string, password: string) => Promise<void>;
+  register: (email: string, password: string) => Promise<any>; // Changed return type to any
 }
 
 const AuthContext = createContext<AuthContextProps>({
@@ -84,7 +82,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     birthPlace: '',
     subscriptionPlan: 'free',
     phone: '',
-    address: ''
+    address: '',
+    avatar_url: '' // Added avatar_url to the initial state
   });
   
   const navigate = useNavigate();
@@ -202,7 +201,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const signUp = async (email: string, password: string) => {
     try {
       setLoading(true);
-      const { data: { user }, error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
       });
@@ -210,14 +209,18 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         throw error;
       }
       
-      if (user) {
-        await fetchUserProfile(user.id);
+      if (data.user) {
+        await fetchUserProfile(data.user.id);
       }
       
       toast.success('Registrazione effettuata con successo! Controlla la tua email per la verifica.');
+      
+      // Return data to allow the caller to check for confirmationRequired
+      return data;
     } catch (error: any) {
       console.error('Error signing up:', error.message);
       toast.error(`Errore durante la registrazione: ${error.message}`);
+      throw error;
     } finally {
       setLoading(false);
     }
@@ -274,7 +277,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       if (data) {
         setUserProfile({
           id: data.id,
-          email: data.email,
+          email: data.email || '',
           firstName: data.first_name || '',
           lastName: data.last_name || '',
           role: data.role || 'user',

@@ -21,14 +21,14 @@ export const dataURLtoFile = (dataUrl: string, filename: string): File => {
 
 /**
  * Preprocessing function for optimizing images for plant detection
- * @param imageUrl URL of the image to preprocess
- * @returns Processed image URL
+ * @param imageFile URL of the image to preprocess
+ * @returns Processed image file
  */
-export const preprocessImageForPlantDetection = async (imageUrl: string): Promise<string> => {
+export const preprocessImageForPlantDetection = async (imageFile: File): Promise<File> => {
   // In a real implementation, this would apply image preprocessing
-  // For now, we just return the original URL
-  console.log("Preprocessing image for plant detection:", imageUrl);
-  return imageUrl;
+  // For now, we just return the original file
+  console.log("Preprocessing image for plant detection:", imageFile.name);
+  return imageFile;
 };
 
 /**
