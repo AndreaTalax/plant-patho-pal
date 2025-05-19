@@ -52,13 +52,17 @@ const DiagnosisStages: React.FC<DiagnosisStagesProps> = ({
   const navigate = useNavigate();
 
   const handleChatWithExpert = () => {
-    if (!isAuthenticated) {
-      navigate('/auth');
-      return;
-    }
-    
-    if (onChatWithExpert) {
-      onChatWithExpert();
+    try {
+      if (!isAuthenticated) {
+        navigate('/auth');
+        return;
+      }
+      
+      if (onChatWithExpert) {
+        onChatWithExpert();
+      }
+    } catch (error) {
+      console.error("Errore nella navigazione alla chat:", error);
     }
   };
 

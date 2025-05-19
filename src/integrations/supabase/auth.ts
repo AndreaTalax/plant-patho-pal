@@ -1,6 +1,6 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { User, Session } from '@supabase/supabase-js';
+import { crypto } from 'crypto';
 
 // Function for user registration
 export const signUp = async (email: string, password: string) => {
@@ -11,6 +11,9 @@ export const signUp = async (email: string, password: string) => {
     if (whitelistedEmails.includes(email.toLowerCase())) {
       console.log('Email in whitelist, simulating registration for:', email);
       
+      // Generate proper UUIDs for simulated users
+      const mockUserId = crypto.randomUUID();
+      
       // Simulate successful registration without actually calling Supabase
       return {
         confirmationRequired: false,
@@ -18,8 +21,7 @@ export const signUp = async (email: string, password: string) => {
         data: {
           user: {
             email: email,
-            id: email === "talaiaandrea@gmail.com" ? "talaiaandrea-id" : 
-                 email === "test@gmail.com" ? "test-user-id" : "premium-user-id",
+            id: mockUserId,
             email_confirmed_at: new Date().toISOString(),
             // Adding required fields for the Supabase User type
             app_metadata: { provider: 'email' },
@@ -152,20 +154,24 @@ export const signIn = async (email: string, password: string) => {
       if (password === expectedPassword) {
         console.log('Simulated login for whitelisted email:', email);
         
-        // Create a mock object for the user that meets the User interface
+        // Generate proper UUIDs for simulated users
+        // Instead of using hardcoded strings like 'test-user-id', use valid UUIDs
+        let mockUserId = crypto.randomUUID();
         let mockRole = 'user';
-        let mockUserId = 'user-id';
+        
+        // Store generated UUID in localStorage to maintain consistency between sessions
+        const storedUserId = localStorage.getItem(`mockuser-${email}`);
+        if (storedUserId) {
+          mockUserId = storedUserId;
+        } else {
+          localStorage.setItem(`mockuser-${email}`, mockUserId);
+        }
         
         if (email === "agrotecnicomarconigro@gmail.com") {
           mockRole = 'master';
-          mockUserId = 'premium-user-id';
-        } else if (email === "talaiaandrea@gmail.com") {
-          mockUserId = 'talaiaandrea-id';
-        } else if (email === "test@gmail.com") {
-          mockUserId = 'test-user-id';
         }
         
-        // Complete User mock with all required fields
+        // Complete User mock with all required fields and valid UUID
         const mockUser: User = {
           id: mockUserId,
           email: email,

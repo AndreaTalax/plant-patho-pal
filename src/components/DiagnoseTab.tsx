@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { modelInfo } from '@/utils/aiDiagnosisUtils';
@@ -57,32 +56,39 @@ const DiagnoseTab = () => {
     
     const file = e.target.files?.[0];
     if (file) {
-      // Create a temporary URL for the uploaded image
-      const tempUrl = URL.createObjectURL(file);
-      setUploadedImage(tempUrl);
-      
-      if (plantInfo.useAI) {
-        // If AI is selected, proceed with AI analysis
-        handleImageUpload(file);
-      } else {
-        // If AI is not selected and user not authenticated, redirect to login
-        if (!isAuthenticated) {
-          navigate('/auth');
-          return;
-        }
+      try {
+        // Create a temporary URL for the uploaded image
+        const tempUrl = URL.createObjectURL(file);
+        setUploadedImage(tempUrl);
         
-        // Check if user profile is complete
-        if (!userProfile.firstName || !userProfile.lastName || !userProfile.birthDate || !userProfile.birthPlace) {
-          toast.error("Completa il tuo profilo prima di inviare una richiesta", {
-            description: "Nome, cognome, data e luogo di nascita sono obbligatori",
-            duration: 4000
-          });
-          navigate('/complete-profile');
-          return;
+        if (plantInfo.useAI) {
+          // If AI is selected, proceed with AI analysis
+          handleImageUpload(file);
+        } else {
+          // If AI is not selected and user not authenticated, redirect to login
+          if (!isAuthenticated) {
+            navigate('/auth');
+            return;
+          }
+          
+          // Check if user profile is complete
+          if (!userProfile.firstName || !userProfile.lastName || !userProfile.birthDate || !userProfile.birthPlace) {
+            toast.error("Completa il tuo profilo prima di inviare una richiesta", {
+              description: "Nome, cognome, data e luogo di nascita sono obbligatori",
+              duration: 4000
+            });
+            navigate('/complete-profile');
+            return;
+          }
+          
+          // If authenticated and profile complete, notify expert
+          await notifyExpert(file, tempUrl);
         }
-        
-        // If authenticated and profile complete, notify expert
-        await notifyExpert(file, tempUrl);
+      } catch (error) {
+        console.error("Errore durante il caricamento dell'immagine:", error);
+        toast.error("Si è verificato un errore nel caricamento dell'immagine", {
+          duration: 3000
+        });
       }
     }
   };
@@ -279,33 +285,40 @@ const DiagnoseTab = () => {
   };
 
   const handleCaptureImage = async (imageDataUrl: string) => {
-    setShowCamera(false);
-    
-    // Store the captured image
-    setUploadedImage(imageDataUrl);
-    
-    if (plantInfo.useAI) {
-      // If AI is selected, process the image with AI
-      captureImage(imageDataUrl);
-    } else {
-      // If AI is not selected and user not authenticated, redirect to login
-      if (!isAuthenticated) {
-        navigate('/auth');
-        return;
-      }
+    try {
+      setShowCamera(false);
       
-      // Check if user profile is complete before sending to expert
-      if (!userProfile.firstName || !userProfile.lastName || !userProfile.birthDate || !userProfile.birthPlace) {
-        toast.error("Completa il tuo profilo prima di inviare una richiesta", {
-          description: "Nome, cognome, data e luogo di nascita sono obbligatori",
-          duration: 4000
-        });
-        navigate('/complete-profile');
-        return;
-      }
+      // Store the captured image
+      setUploadedImage(imageDataUrl);
       
-      // If authenticated and profile complete, send directly to the expert
-      await notifyExpert(undefined, imageDataUrl);
+      if (plantInfo.useAI) {
+        // If AI is selected, process the image with AI
+        captureImage(imageDataUrl);
+      } else {
+        // If AI is not selected and user not authenticated, redirect to login
+        if (!isAuthenticated) {
+          navigate('/auth');
+          return;
+        }
+        
+        // Check if user profile is complete before sending to expert
+        if (!userProfile.firstName || !userProfile.lastName || !userProfile.birthDate || !userProfile.birthPlace) {
+          toast.error("Completa il tuo profilo prima di inviare una richiesta", {
+            description: "Nome, cognome, data e luogo di nascita sono obbligatori",
+            duration: 4000
+          });
+          navigate('/complete-profile');
+          return;
+        }
+        
+        // If authenticated and profile complete, send directly to the expert
+        await notifyExpert(undefined, imageDataUrl);
+      }
+    } catch (error) {
+      console.error("Errore durante l'acquisizione dell'immagine:", error);
+      toast.error("Si è verificato un errore nell'acquisizione dell'immagine", {
+        duration: 3000
+      });
     }
   };
 

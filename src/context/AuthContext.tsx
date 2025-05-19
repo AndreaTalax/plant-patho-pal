@@ -137,6 +137,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // Simplified profile fetching to avoid type recursion
   const fetchUserProfile = async (userId: string) => {
     try {
+      // Check if this is a mock user (for test@gmail.com and others)
+      if (userId && (userId.includes('mockuser-') || localStorage.getItem(`mockuser-${userId}`))) {
+        console.log('Mock user detected, not querying database');
+        return;
+      }
+      
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
@@ -144,7 +150,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         .single();
         
       if (error) {
-        throw error;
+        console.error('Error fetching user profile:', error);
+        return;
       }
       
       if (data) {
@@ -204,7 +211,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           role: email === "agrotecnicomarconigro@gmail.com" ? "master" : "user"
         }));
         
-        if (data.user.id) {
+        if (data.user.id && !data.user.id.includes('mockuser-')) {
           setTimeout(() => {
             fetchUserProfile(data.user!.id);
           }, 0);
@@ -234,6 +241,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       role: "user" as const,
       birthDate: "",
       birthPlace: ""
+    });
+    
+    // Clear any localStorage mock user data
+    Object.keys(localStorage).forEach(key => {
+      if (key.startsWith('mockuser-')) {
+        // Keep the mock UIDs to maintain consistent IDs between logins
+        // localStorage.removeItem(key);
+      }
     });
   };
   
@@ -326,20 +341,29 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUsername(newUsername);
       setUserProfile(prev => ({ ...prev, username: newUsername }));
       
-      supabase
-        .from('profiles')
-        .update({ username: newUsername })
-        .eq('id', user.id)
-        .then(({ error }) => {
-          if (error) {
-            console.error('Error updating username:', error);
-          }
-        });
+      // Skip database update for mock users
+      if (user.id && !user.id.includes('mockuser-')) {
+        supabase
+          .from('profiles')
+          .update({ username: newUsername })
+          .eq('id', user.id)
+          .then(({ error }) => {
+            if (error) {
+              console.error('Error updating username:', error);
+            }
+          });
+      }
     }
   };
   
   const updatePassword = async (newPassword: string) => {
     try {
+      // Skip for mock users
+      if (user && user.id && user.id.includes('mockuser-')) {
+        console.log("Password update simulated for mock user");
+        return;
+      }
+      
       const { error } = await supabase.auth.updateUser({
         password: newPassword
       });
@@ -367,7 +391,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }));
     
     // If user is authenticated, update the profile in the database
-    if (user) {
+    // Skip database update for mock users
+    if (user && !user.id.includes('mockuser-')) {
       try {
         const updates: Record<string, any> = {};
         
