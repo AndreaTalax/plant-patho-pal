@@ -4,7 +4,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { MessageCircle, Loader2, Eye, EyeOff, Thermometer, Leaf, Check, X } from 'lucide-react';
-import DiagnosisTabs from './DiagnosisTabs';
+import DiagnosisTabs from '@/components/diagnose/DiagnosisTabs';
 import { PlantInfoFormValues } from '../PlantInfoForm';
 import { DiagnosedDisease } from '../types';
 import ActionButtons from './ActionButtons';
@@ -31,16 +31,17 @@ const DiagnosisResult = ({
   const [activeResultTab, setActiveResultTab] = useState('overview');
 
   // Check if we have a thermal map
-  const hasThermalMap = analysisData?.thermalMap && !isAnalyzing;
+  const hasThermalMap = analysisData?.analysisDetails?.thermalMap && !isAnalyzing;
   
   // Get plant name from analytics or use a default
-  const plantName = analysisData?.plantName || "Pianta";
+  const plantName = analysisData?.analysisDetails?.plantName || "Pianta";
   
   // Check if multi-service identified a plant species
-  const plantSpecies = analysisData?.plantSpecies || plantName;
+  const plantSpecies = analysisData?.analysisDetails?.plantSpecies || plantName;
   
   // Check if we have AI service-specific results
-  const hasAiServiceData = analysisData?.aiServices && analysisData.aiServices.length > 0;
+  const hasAiServiceData = analysisData?.analysisDetails?.aiServices && 
+                          analysisData.analysisDetails.aiServices.length > 0;
 
   return (
     <Card className="bg-white p-6 shadow-md rounded-2xl w-full max-w-2xl">
@@ -67,7 +68,7 @@ const DiagnosisResult = ({
             {hasThermalMap && showThermalMap && (
               <div className="absolute inset-0 mix-blend-overlay">
                 <img 
-                  src={analysisData?.thermalMap} 
+                  src={analysisData?.analysisDetails?.thermalMap} 
                   alt="Thermal map" 
                   className="w-full h-full object-cover"
                 />
@@ -121,7 +122,7 @@ const DiagnosisResult = ({
                 <div className="mt-2 border rounded-lg p-2 text-xs bg-gray-50">
                   <h4 className="font-semibold mb-1">AI Service Results</h4>
                   <div className="space-y-1.5">
-                    {analysisData?.aiServices?.map((service: any, index: number) => (
+                    {analysisData?.analysisDetails?.aiServices?.map((service: any, index: number) => (
                       <div key={index} className="flex items-center justify-between">
                         <span>{service.name}</span>
                         <div className="flex items-center gap-1">
@@ -208,7 +209,7 @@ const DiagnosisResult = ({
               
               <DiagnosisTabs
                 disease={analysisData}
-                analysisDetails={analysisData}
+                analysisDetails={analysisData.analysisDetails}
                 activeTab={activeResultTab}
                 onTabChange={setActiveResultTab}
               />
