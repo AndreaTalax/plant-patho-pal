@@ -4,8 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { MessageCircle, Loader2, Eye, EyeOff, Thermometer, Leaf, Check, X } from 'lucide-react';
 import DiagnosisTabs from '../DiagnosisTabs';
-import { PlantInfoFormValues } from '../types';
-import { DiagnosedDisease } from '../types';
+import { DiagnosedDisease, PlantInfoFormValues } from '../types';
 import ActionButtons from './ActionButtons';
 
 interface DiagnosisResultProps {
@@ -254,7 +253,7 @@ const DiagnosisResult = ({
               
               <DiagnosisTabs
                 disease={analysisData}
-                analysisDetails={analysisData.analysisDetails}
+                analysisDetails={analysisData.analysisDetails || null}
                 activeTab={activeResultTab}
                 onTabChange={setActiveResultTab}
                 onNavigateToLibrary={handleNavigateToLibrary}

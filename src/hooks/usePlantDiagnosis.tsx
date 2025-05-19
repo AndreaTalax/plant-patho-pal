@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from 'react';
 import { PLANT_DISEASES } from '@/data/plantDiseases';
 import { DiagnosedDisease, AnalysisDetails } from '@/components/diagnose/types';
@@ -189,6 +188,10 @@ export const usePlantDiagnosis = () => {
         },
         eppoRegulatedConcern: result.eppoRegulatedConcern || null
       };
+      
+      // Associate analysis details with the diagnosed disease
+      diseaseData.analysisDetails = details;
+      setDiagnosedDisease(diseaseData);
       
       setAnalysisDetails(details);
       setIsAnalyzing(false);

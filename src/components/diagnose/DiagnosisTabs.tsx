@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -37,7 +38,7 @@ const DiagnosisTabs = ({
         <p className="text-gray-700 mb-4">{disease.description}</p>
         
         <h4 className="font-semibold text-gray-900 mb-2">Causes:</h4>
-        <p className="text-gray-700 mb-4">{disease.causes}</p>
+        <p className="text-gray-700 mb-4">{disease.causes.join(", ")}</p>
         
         {analysisDetails && (
           <div className="mt-4 bg-blue-50 p-3 rounded-lg">
@@ -60,7 +61,7 @@ const DiagnosisTabs = ({
           <Button 
             size="sm"
             className="bg-drplant-green hover:bg-drplant-green-dark"
-            onClick={() => onNavigateToLibrary(disease.resources[0])}
+            onClick={() => disease.resources && disease.resources.length > 0 ? onNavigateToLibrary(disease.resources[0].title) : onNavigateToLibrary()}
           >
             <Book className="mr-2 h-4 w-4" /> Learn More
           </Button>

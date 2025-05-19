@@ -1,4 +1,12 @@
 
+export interface PlantInfoFormValues {
+  isIndoor: boolean;
+  wateringFrequency: number;
+  lightExposure: string;
+  symptoms?: string;
+  useAI?: boolean;
+}
+
 export interface DiagnosedDisease {
   id: string;
   name: string;
@@ -6,12 +14,10 @@ export interface DiagnosedDisease {
   description: string;
   treatment: string[];
   products: string[];
-  causes?: string[];
-  treatments?: string[];
-  resources?: {
-    title: string;
-    url: string;
-  }[];
+  causes: string[];
+  treatments: string[];
+  resources: { title: string; url: string }[];
+  analysisDetails?: AnalysisDetails; // Add analysisDetails to DiagnosedDisease
 }
 
 export interface AnalysisDetails {
