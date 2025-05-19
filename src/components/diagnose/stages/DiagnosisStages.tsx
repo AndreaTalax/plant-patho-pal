@@ -155,7 +155,7 @@ const DiagnosisStages: React.FC<DiagnosisStagesProps> = ({
         imageSrc={uploadedImage || ''}
         plantInfo={{
           isIndoor: plantInfo.isIndoor,
-          wateringFrequency: plantInfo.wateringFrequency,
+          wateringFrequency: Number(plantInfo.wateringFrequency), // Convert to number explicitly
           lightExposure: plantInfo.lightExposure,
           symptoms: plantInfo.symptoms,
           useAI: plantInfo.useAI

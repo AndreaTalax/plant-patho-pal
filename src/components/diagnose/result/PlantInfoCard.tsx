@@ -11,12 +11,12 @@ export interface PlantInfoCardProps {
 const PlantInfoCard: React.FC<PlantInfoCardProps> = ({ plantInfo, analysisDetails }) => {
   // Use either multiServiceInsights or direct property with fallback
   const plantName = 
-    analysisDetails?.multiServiceInsights?.plantName || 
+    (analysisDetails?.multiServiceInsights?.plantName) || 
     analysisDetails?.plantName || 
     'Pianta sconosciuta';
     
   const plantSpecies = 
-    analysisDetails?.multiServiceInsights?.plantSpecies || 
+    (analysisDetails?.multiServiceInsights?.plantSpecies) || 
     analysisDetails?.plantSpecies || 
     plantName;
   

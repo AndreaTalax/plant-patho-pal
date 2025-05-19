@@ -22,6 +22,7 @@ export interface AnalysisDetails {
     isHealthy?: boolean;
     primaryService?: string;
     agreementScore?: number;
+    isValidPlantImage?: boolean;
     huggingFaceResult?: {
       label: string;
       score: number;
@@ -52,5 +53,5 @@ export interface DiagnosedDisease {
   products: string[];
   resources: string[];
   analysisDetails?: AnalysisDetails;
-  symptoms?: string[]; // Adding this property to match the data in plantDiseases.ts
+  symptoms?: string[]; // This property is needed for plantDiseases.ts
 }
