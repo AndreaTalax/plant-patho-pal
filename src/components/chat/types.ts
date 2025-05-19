@@ -46,7 +46,12 @@ export interface Conversation {
   messages: Message[];
 }
 
-export interface DatabaseConversation extends DbConversation {
+export interface DatabaseConversation extends Partial<DbConversation> {
+  id: string;
+  user_id: string;
+  expert_id: string;
+  status?: string;
+  last_message_text?: string;
   user?: {
     id: string;
     username: string;

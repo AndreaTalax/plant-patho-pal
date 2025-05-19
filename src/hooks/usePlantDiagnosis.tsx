@@ -1,12 +1,12 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { PLANT_DISEASES } from '@/data/plantDiseases';
-import { dataURLtoFile } from '@/utils/plant-analysis';
 import { DiagnosedDisease, AnalysisDetails } from '@/components/diagnose/types';
 import { plantSpeciesMap } from '@/data/plantDatabase';
 import { MOCK_PRODUCTS } from '@/components/chat/types';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { dataURLtoFile } from '@/utils/plant-analysis/image-utils';
 
 export const usePlantDiagnosis = () => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -91,7 +91,7 @@ export const usePlantDiagnosis = () => {
       const confidence = result.score || result.confidence || 0.75;
       
       // Create the diagnosis result
-      const disease = {
+      const diseaseData: DiagnosedDisease = {
         id: result.label.toLowerCase().replace(/\s+/g, '-'),
         name: result.label,
         confidence: confidence,
@@ -105,11 +105,14 @@ export const usePlantDiagnosis = () => {
         products: result.products || MOCK_PRODUCTS
           .sort(() => 0.5 - Math.random())
           .slice(0, Math.floor(Math.random() * 2) + 2)
-          .map(p => p.name)
+          .map(p => p.name),
+        causes: [],
+        treatments: [],
+        resources: []
       };
       
-      setDiagnosedDisease(disease);
-      setDiagnosisResult(`Rilevato ${disease.name} su ${plantName} con alta confidenza.`);
+      setDiagnosedDisease(diseaseData);
+      setDiagnosisResult(`Rilevato ${diseaseData.name} su ${plantName} con alta confidenza.`);
       
       // Create analysis details
       const details: AnalysisDetails = {
@@ -122,7 +125,7 @@ export const usePlantDiagnosis = () => {
           `Nome pianta: ${plantName}`
         ],
         alternativeDiagnoses: result.alternativeDiagnoses || 
-          PLANT_DISEASES.filter(d => d.id !== disease.id)
+          PLANT_DISEASES.filter(d => d.id !== diseaseData.id)
             .slice(0, 3)
             .map(d => ({ 
               disease: d.id, 
@@ -134,12 +137,12 @@ export const usePlantDiagnosis = () => {
           'Esame microscopico',
           'Test di cultura in laboratorio'
         ],
-        multiServiceInsights: result.multiServiceInsights || {
+        multiServiceInsights: {
           huggingFaceResult: {
-            label: disease.name,
-            score: disease.confidence
+            label: diseaseData.name,
+            score: diseaseData.confidence
           },
-          agreementScore: Math.round(disease.confidence * 100),
+          agreementScore: Math.round(diseaseData.confidence * 100),
           primaryService: result.dataSource || 'PlantNet AI',
           plantSpecies: plantName,
           plantName: plantName.split(' ')[0],
@@ -151,7 +154,7 @@ export const usePlantDiagnosis = () => {
           leafAnalysis: result.leafAnalysis || {
             leafColor: 'green',
             patternDetected: 'leaf spots',
-            diseaseConfidence: disease.confidence,
+            diseaseConfidence: diseaseData.confidence,
             healthStatus: result.healthy ? 'healthy' : 'diseased',
             leafType: 'Compound',
             details: {
@@ -166,7 +169,8 @@ export const usePlantDiagnosis = () => {
             'Necrosis identification',
             'Disease progression analysis',
             'Nutrient deficiency recognition'
-          ]
+          ],
+          sistemaDigitaleFogliaVersion: '2.1.0'
         },
         thermalMap: result.thermalMap || null,
         aiServices: result.aiServices || [
@@ -174,9 +178,14 @@ export const usePlantDiagnosis = () => {
           { name: 'PlantNet Database', result: true, confidence: 0.92 },
           { name: 'TRY Plant Trait', result: true, confidence: 0.86 }
         ],
-        plantVerification: result.plantVerification || {
+        plantVerification: {
           isPlant: true,
-          confidence: 0.95
+          confidence: 0.95,
+          aiServices: [
+            { serviceName: 'PlantNet AI', result: true, confidence: 0.92 },
+            { serviceName: 'Sistema Digitale Foglia', result: true, confidence: 0.89 },
+            { serviceName: 'Plant Vision API', result: true, confidence: 0.94 }
+          ]
         },
         eppoRegulatedConcern: result.eppoRegulatedConcern || null
       };
@@ -197,11 +206,17 @@ export const usePlantDiagnosis = () => {
         .slice(0, Math.floor(Math.random() * 2) + 1);
       
       setDiagnosisResult(`Risultato analisi: ${emergencyDisease.name}`);
-      setDiagnosedDisease({
+      
+      const fallbackDisease: DiagnosedDisease = {
         ...emergencyDisease,
         confidence: 0.65,
-        products: recommendedProducts.map(p => p.name)
-      });
+        products: recommendedProducts.map(p => p.name),
+        causes: emergencyDisease.causes || [],
+        treatments: emergencyDisease.treatments || [],
+        resources: emergencyDisease.resources || []
+      };
+      
+      setDiagnosedDisease(fallbackDisease);
       
       setAnalysisDetails({
         plantName: plantName,
@@ -230,8 +245,18 @@ export const usePlantDiagnosis = () => {
             diseaseConfidence: 0.65,
             leafColor: 'variable'
           },
-          advancedLeafAnalysis: false
-        }
+          advancedLeafAnalysis: false,
+          sistemaDigitaleFogliaVersion: '2.1.0'
+        },
+        thermalMap: null,
+        aiServices: [
+          { name: 'Sistema Digitale Foglia', result: true, confidence: 0.65 }
+        ],
+        plantVerification: {
+          isPlant: true,
+          confidence: 0.8
+        },
+        eppoRegulatedConcern: null
       });
       
       setIsAnalyzing(false);

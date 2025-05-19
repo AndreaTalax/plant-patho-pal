@@ -1,22 +1,26 @@
 
-
-export interface PlantInfoFormValues {
-  isIndoor: boolean;
-  wateringFrequency: number;
-  lightExposure: string;
-  symptoms?: string;
-  useAI?: boolean;
+export interface DiagnosedDisease {
+  id: string;
+  name: string;
+  confidence: number;
+  description: string;
+  treatment: string[];
+  products: string[];
+  causes?: string[];
+  treatments?: string[];
+  resources?: {
+    title: string;
+    url: string;
+  }[];
 }
 
 export interface AnalysisDetails {
-  plantName?: string;
-  plantSpecies?: string;
-  thermalMap?: string;
-  aiServices?: any[];
-  identifiedFeatures?: string[];
-  alternativeDiagnoses?: Array<{disease: string, probability: number}>;
-  recommendedAdditionalTests?: string[];
-  multiServiceInsights?: {
+  plantName: string;
+  plantSpecies: string;
+  identifiedFeatures: string[];
+  alternativeDiagnoses: Array<{ disease: string; probability: number }>;
+  recommendedAdditionalTests: string[];
+  multiServiceInsights: {
     plantName?: string;
     plantSpecies?: string;
     plantPart?: string;
@@ -42,18 +46,22 @@ export interface AnalysisDetails {
     };
     advancedLeafAnalysis?: boolean;
     leafDiagnosticCapabilities?: string[];
+    sistemaDigitaleFogliaVersion?: string;
   };
-}
-
-export interface DiagnosedDisease {
-  id: string;
-  name: string;
-  description: string;
-  causes: string;
-  confidence: number;
-  treatments: string[];
-  products: string[];
-  resources: string[];
-  analysisDetails?: AnalysisDetails;
-  symptoms?: string[]; // This property is needed for plantDiseases.ts
+  thermalMap?: string | null;
+  aiServices?: Array<{
+    name: string;
+    result: boolean;
+    confidence: number;
+  }>;
+  plantVerification?: {
+    isPlant: boolean;
+    confidence: number;
+    aiServices?: Array<{
+      serviceName: string;
+      result: boolean;
+      confidence: number;
+    }>;
+  };
+  eppoRegulatedConcern?: any | null;
 }

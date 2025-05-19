@@ -1,7 +1,6 @@
-import { createContext, useContext, useState, ReactNode, useEffect } from "react";
-import { supabase, EXPERT_ID } from '@/integrations/supabase/client';
-import { Session, User } from "@supabase/supabase-js";
-import { signIn, signOut, signUp } from '@/integrations/supabase/auth';
+import { createContext, useContext, useEffect, useState } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { EXPERT } from '@/components/chat/types';
 
 // Define type for user profile
 type UserProfile = {
