@@ -4,8 +4,8 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { MessageCircle, Loader2, Eye, EyeOff, Thermometer, Leaf, Check, X } from 'lucide-react';
-import DiagnosisTabs from '@/components/diagnose/DiagnosisTabs';
-import { PlantInfoFormValues } from '../PlantInfoForm';
+import DiagnosisTabs from '../DiagnosisTabs';
+import { PlantInfoFormValues } from '../types';
 import { DiagnosedDisease } from '../types';
 import ActionButtons from './ActionButtons';
 
@@ -42,6 +42,15 @@ const DiagnosisResult = ({
   // Check if we have AI service-specific results
   const hasAiServiceData = analysisData?.analysisDetails?.aiServices && 
                           analysisData.analysisDetails.aiServices.length > 0;
+
+  // Mock navigation functions for DiagnosisTabs
+  const handleNavigateToLibrary = (resourceId?: string) => {
+    console.log("Navigate to library:", resourceId);
+  };
+
+  const handleNavigateToShop = (productId?: string) => {
+    console.log("Navigate to shop:", productId);
+  };
 
   return (
     <Card className="bg-white p-6 shadow-md rounded-2xl w-full max-w-2xl">
@@ -195,7 +204,7 @@ const DiagnosisResult = ({
               <Loader2 className="h-8 w-8 text-drplant-blue animate-spin mb-4" />
               <p className="text-drplant-blue font-medium mb-2">Analyzing your plant...</p>
               <div className="w-full max-w-xs">
-                <progress value={75} max="100" className="w-full h-2" />
+                <progress value={75} max={100} className="w-full h-2" />
               </div>
               <p className="text-xs text-gray-500 mt-2">
                 Multiple AI services are analyzing your plant
@@ -212,6 +221,8 @@ const DiagnosisResult = ({
                 analysisDetails={analysisData.analysisDetails}
                 activeTab={activeResultTab}
                 onTabChange={setActiveResultTab}
+                onNavigateToLibrary={handleNavigateToLibrary}
+                onNavigateToShop={handleNavigateToShop}
               />
             </div>
           ) : (

@@ -9,9 +9,18 @@ export interface PlantInfoCardProps {
 }
 
 const PlantInfoCard: React.FC<PlantInfoCardProps> = ({ plantInfo, analysisDetails }) => {
-  // Utilizziamo sia plantName che plantSpecies per una migliore visualizzazione
-  const plantName = analysisDetails?.multiServiceInsights?.plantName || 'Pianta sconosciuta';
-  const plantSpecies = analysisDetails?.multiServiceInsights?.plantSpecies || plantName;
+  // Use either multiServiceInsights or direct property with fallback
+  const plantName = 
+    analysisDetails?.multiServiceInsights?.plantName || 
+    analysisDetails?.plantName || 
+    'Pianta sconosciuta';
+    
+  const plantSpecies = 
+    analysisDetails?.multiServiceInsights?.plantSpecies || 
+    analysisDetails?.plantSpecies || 
+    plantName;
+  
+  const plantPart = analysisDetails?.multiServiceInsights?.plantPart || 'Intera pianta';
   
   return (
     <Card className="mb-4">
@@ -32,7 +41,7 @@ const PlantInfoCard: React.FC<PlantInfoCardProps> = ({ plantInfo, analysisDetail
               <div>{plantSpecies || 'Sconosciuta'}</div>
               
               <div>Parte della pianta:</div>
-              <div>{analysisDetails?.multiServiceInsights?.plantPart || 'Intera pianta'}</div>
+              <div>{plantPart}</div>
             </div>
           )}
         </div>

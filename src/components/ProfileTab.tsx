@@ -100,15 +100,16 @@ const ProfileTab = () => {
       
       // Create a unique file name
       const fileExt = file.name.split('.').pop();
-      const fileName = `${userProfile.id}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+      const userId = (userProfile as any).id; // Use type assertion for id property
+      const fileName = `${userId}-${Math.random().toString(36).substring(2)}.${fileExt}`;
       
       // Convert to data URL for immediate preview
       const reader = new FileReader();
       reader.onload = async (event) => {
         const dataUrl = event.target?.result as string;
         
-        // Update the avatar in the profile
-        await updateProfile("avatar_url", dataUrl);
+        // Update the avatar in the profile - using type assertion for avatar_url
+        await updateProfile("avatar_url" as any, dataUrl);
         
         // You would normally upload to a storage bucket here
         // For now, we're just using data URLs
@@ -190,7 +191,7 @@ const ProfileTab = () => {
       <div className="flex flex-col items-center pt-8 pb-6">
         <div className="relative">
           <Avatar className="h-24 w-24 mb-4">
-            <AvatarImage src={userProfile.avatar_url || "/placeholder.svg"} alt="User avatar" />
+            <AvatarImage src={(userProfile as any).avatar_url || "/placeholder.svg"} alt="User avatar" />
             <AvatarFallback>{getInitials()}</AvatarFallback>
           </Avatar>
           

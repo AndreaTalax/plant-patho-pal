@@ -15,6 +15,31 @@ export interface AnalysisDetails {
   identifiedFeatures?: string[];
   alternativeDiagnoses?: Array<{disease: string, probability: number}>;
   recommendedAdditionalTests?: string[];
+  multiServiceInsights?: {
+    plantName?: string;
+    plantSpecies?: string;
+    plantPart?: string;
+    isHealthy?: boolean;
+    primaryService?: string;
+    agreementScore?: number;
+    huggingFaceResult?: {
+      label: string;
+      score: number;
+    };
+    leafAnalysis?: {
+      leafColor?: string;
+      patternDetected?: string;
+      diseaseConfidence?: number;
+      healthStatus?: string;
+      leafType?: string;
+      details?: {
+        symptomDescription?: string;
+        symptomCategory?: string;
+      };
+    };
+    advancedLeafAnalysis?: boolean;
+    leafDiagnosticCapabilities?: string[];
+  };
 }
 
 export interface DiagnosedDisease {
@@ -27,4 +52,5 @@ export interface DiagnosedDisease {
   products: string[];
   resources: string[];
   analysisDetails?: AnalysisDetails;
+  symptoms?: string[]; // Adding this property to match the data in plantDiseases.ts
 }
