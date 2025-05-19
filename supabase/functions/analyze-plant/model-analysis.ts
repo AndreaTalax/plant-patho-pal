@@ -1,4 +1,3 @@
-
 import { isPlantHealthy, identifyPlantPart, extractPlantName, isPlantLabel, checkForEppoConcerns } from './plant-verification.ts';
 
 // Function to analyze an image using Hugging Face models
@@ -78,7 +77,9 @@ export function formatModelResult(
   isLeaf: boolean,
   floraIncognitaResult: any,
   plantSnapResult: any,
-  isReliable: boolean
+  isReliable: boolean,
+  detectedPlantType: string | null = null,
+  plantIdResult: any = null
 ) {
   // If we have an array result, get the top prediction
   let topPrediction;
@@ -116,11 +117,22 @@ export function formatModelResult(
   const eppoCheck = checkForEppoConcerns(topPrediction.label);
   
   // Determine if plant is healthy
-  const healthy = isPlantHealthy(topPrediction.label);
+  // First check Plant.id health assessment if available
+  let healthy;
+  if (plantIdResult && plantIdResult.isHealthy !== undefined) {
+    healthy = plantIdResult.isHealthy;
+  } else {
+    healthy = isPlantHealthy(topPrediction.label);
+  }
   
   // If no plant name was determined, try to extract it from the label
   if (!plantName) {
-    plantName = extractPlantName(topPrediction.label);
+    // Try to get from Plant.id first
+    if (plantIdResult && plantIdResult.plantName) {
+      plantName = plantIdResult.plantName;
+    } else {
+      plantName = extractPlantName(topPrediction.label);
+    }
   }
   
   // If no plant part was determined, try to identify it from the label
@@ -131,18 +143,33 @@ export function formatModelResult(
   // Determine which service provided the best identification
   let primaryService, primaryConfidence;
   
-  if (floraIncognitaResult && floraIncognitaResult.score > topPrediction.score && 
+  // Check Plant.id first as it's the most comprehensive
+  if (plantIdResult && plantIdResult.confidence > 0.7 && 
+      (plantIdResult.confidence > topPrediction.score && 
+      (!floraIncognitaResult || plantIdResult.confidence > floraIncognitaResult.score) && 
+      (!plantSnapResult || plantIdResult.confidence > plantSnapResult.score))) {
+    primaryService = "Plant.id";
+    primaryConfidence = plantIdResult.confidence;
+  }
+  // Then check Flora Incognita
+  else if (floraIncognitaResult && floraIncognitaResult.score > topPrediction.score && 
       (!plantSnapResult || floraIncognitaResult.score > plantSnapResult.score)) {
     primaryService = "Flora Incognita";
     primaryConfidence = floraIncognitaResult.score;
-  } else if (plantSnapResult && plantSnapResult.score > topPrediction.score && 
+  } 
+  // Then check PlantSnap
+  else if (plantSnapResult && plantSnapResult.score > topPrediction.score && 
              (!floraIncognitaResult || plantSnapResult.score > floraIncognitaResult.score)) {
     primaryService = "PlantSnap";
     primaryConfidence = plantSnapResult.score;
-  } else if (eppoCheck.isEppoConcern) {
+  } 
+  // Check if it's an EPPO concern
+  else if (eppoCheck.isEppoConcern) {
     primaryService = "EPPO Global Database";
     primaryConfidence = topPrediction.score;
-  } else if (isLeaf) {
+  } 
+  // Otherwise use our ML models
+  else if (isLeaf) {
     primaryService = "New Plant Diseases Dataset + OLID I";
     primaryConfidence = topPrediction.score;
   } else {
@@ -152,7 +179,9 @@ export function formatModelResult(
   
   // Determine appropriate database source
   let dataSource;
-  if (primaryService === "Flora Incognita") {
+  if (primaryService === "Plant.id") {
+    dataSource = "Plant.id API";
+  } else if (primaryService === "Flora Incognita") {
     dataSource = "Flora Incognita Botanical Database";
   } else if (primaryService === "PlantSnap") {
     dataSource = "PlantSnap Global Plant Database";
@@ -173,7 +202,8 @@ export function formatModelResult(
     eppoCheck,
     primaryService,
     primaryConfidence,
-    dataSource
+    dataSource,
+    plantIdResult
   };
 }
 
@@ -184,7 +214,10 @@ export function formatAnalysisResult(
   isLeaf: boolean,
   floraIncognitaResult: any,
   plantSnapResult: any,
-  formattedData: any
+  formattedData: any,
+  detectedPlantType: string | null = null,
+  eppoCheck: any = null,
+  plantIdResult: any = null
 ) {
   const {
     topPrediction,
@@ -192,7 +225,6 @@ export function formatAnalysisResult(
     plantName,
     plantPart,
     healthy,
-    eppoCheck,
     primaryService,
     primaryConfidence,
     dataSource
@@ -204,9 +236,8 @@ export function formatAnalysisResult(
     finalPlantName = healthy ? 'Healthy Plant (Unidentified species)' : 'Plant (Unidentified species)';
   }
   
-  // Format the analysis result integrating TRY Plant Trait Database, New Plant Diseases Dataset,
-  // and EPPO Global Database with the new Flora Incognita and PlantSnap data
-  return {
+  // Format the analysis result integrating all available data sources
+  const result = {
     label: topPrediction.label,
     score: topPrediction.score || 0,
     allPredictions: allPredictions,
@@ -220,14 +251,33 @@ export function formatAnalysisResult(
     isLeafAnalysis: isLeaf,
     dataSource: dataSource,
     primaryService: primaryService,
-    eppoRegulatedConcern: eppoCheck.isEppoConcern ? {
+    eppoRegulatedConcern: eppoCheck?.isEppoConcern ? {
       name: eppoCheck.concernName,
       isQuarantine: true,
       warningLevel: 'high'
     } : null,
     floraIncognitaResult: floraIncognitaResult,
-    plantSnapResult: plantSnapResult
+    plantSnapResult: plantSnapResult,
+    detectedPlantType: detectedPlantType
   };
+
+  // Add Plant.id specific data if available
+  if (plantIdResult) {
+    result.plantIdResult = {
+      plantName: plantIdResult.plantName,
+      scientificName: plantIdResult.scientificName,
+      commonNames: plantIdResult.commonNames,
+      confidence: plantIdResult.confidence,
+      isHealthy: plantIdResult.isHealthy,
+      diseases: plantIdResult.diseases || [],
+      taxonomy: plantIdResult.taxonomy,
+      wikiDescription: plantIdResult.wikiDescription,
+      similarImages: plantIdResult.similarImages,
+      edibleParts: plantIdResult.edibleParts
+    };
+  }
+
+  return result;
 }
 
 // Simple function to capitalize the first letter of a string

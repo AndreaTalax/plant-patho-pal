@@ -53,3 +53,4 @@ verify_jwt = false
 
 [functions.update-conversation-last-message-trigger]
 verify_jwt = false
+

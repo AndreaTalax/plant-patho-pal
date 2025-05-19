@@ -26,6 +26,91 @@ const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 const floraIncognitaKey = Deno.env.get("FLORA_INCOGNITA_API_KEY");
 const plantSnapKey = Deno.env.get("PLANTSNAP_API_KEY");
 const eppoApiKey = Deno.env.get("EPPO_API_KEY");
+const plantIdApiKey = Deno.env.get("PLANT_ID_API_KEY");
+
+// Function to analyze with Plant.id API
+async function analyzeWithPlantId(imageBase64: string): Promise<any> {
+  try {
+    if (!plantIdApiKey) {
+      console.log("Plant.id API key not provided. Skipping Plant.id analysis.");
+      return { identification: null, health: null };
+    }
+    
+    // Call both identification and health assessment APIs in parallel
+    const [identifyPromise, healthPromise] = await Promise.allSettled([
+      // Identification API
+      fetch("https://api.plant.id/v2/identify", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Api-Key": plantIdApiKey
+        },
+        body: JSON.stringify({
+          images: [imageBase64],
+          modifiers: ["crops_fast", "similar_images"],
+          plant_language: "it",
+          plant_details: [
+            "common_names",
+            "url",
+            "wiki_description",
+            "taxonomy",
+            "synonyms",
+            "edible_parts"
+          ]
+        }),
+        signal: AbortSignal.timeout(15000), // 15 second timeout
+      }),
+      
+      // Health assessment API
+      fetch("https://api.plant.id/v2/health_assessment", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Api-Key": plantIdApiKey
+        },
+        body: JSON.stringify({
+          images: [imageBase64],
+          modifiers: ["crops_fast"],
+          language: "it",
+          disease_details: [
+            "common_names",
+            "description",
+            "treatment",
+            "classification"
+          ]
+        }),
+        signal: AbortSignal.timeout(15000), // 15 second timeout
+      })
+    ]);
+    
+    // Process identification results
+    let identificationResult = null;
+    if (identifyPromise.status === 'fulfilled') {
+      const response = identifyPromise.value;
+      if (response.ok) {
+        identificationResult = await response.json();
+      } else {
+        console.error("Plant.id identification API error:", await response.text());
+      }
+    }
+    
+    // Process health assessment results
+    let healthResult = null;
+    if (healthPromise.status === 'fulfilled') {
+      const response = healthPromise.value;
+      if (response.ok) {
+        healthResult = await response.json();
+      } else {
+        console.error("Plant.id health API error:", await response.text());
+      }
+    }
+    
+    return { identification: identificationResult, health: healthResult };
+  } catch (error) {
+    console.error("Error in Plant.id analysis:", error);
+    return { identification: null, health: null };
+  }
+}
 
 // Main handler function
 serve(async (req) => {
@@ -46,6 +131,7 @@ serve(async (req) => {
     // Get the request body
     const formData = await req.formData();
     const imageFile = formData.get('image');
+    const imageBase64 = formData.get('imageBase64') as string || null;
 
     if (!imageFile || !(imageFile instanceof File)) {
       return new Response(JSON.stringify({ error: 'No image file provided' }), {
@@ -83,18 +169,85 @@ serve(async (req) => {
     const detectedPlantType = plantVerification.detectedPlantType;
     console.log(`Detected plant type from verification: ${detectedPlantType || 'Unknown'}`);
     
-    // Analyze with Flora Incognita and PlantSnap in parallel
-    const [floraIncognitaResultPromise, plantSnapResultPromise, isLeafPromise, eppoCheckPromise] = await Promise.allSettled([
+    // Analyze with different services in parallel for better performance
+    const [
+      floraIncognitaResultPromise, 
+      plantSnapResultPromise, 
+      isLeafPromise, 
+      eppoCheckPromise,
+      plantIdResultPromise
+    ] = await Promise.allSettled([
       analyzeWithFloraIncognita(imageArrayBuffer, floraIncognitaKey),
       analyzeWithPlantSnap(imageArrayBuffer, plantSnapKey),
       isLeafImage(imageArrayBuffer, huggingFaceToken),
-      checkForEppoConcerns(imageArrayBuffer, huggingFaceToken)
+      checkForEppoConcerns(imageArrayBuffer, huggingFaceToken),
+      // Only run Plant.id analysis if we have the base64 image and API key
+      imageBase64 ? analyzeWithPlantId(imageBase64) : Promise.resolve(null)
     ]);
     
     const floraIncognitaResult = floraIncognitaResultPromise.status === 'fulfilled' ? floraIncognitaResultPromise.value : null;
     const plantSnapResult = plantSnapResultPromise.status === 'fulfilled' ? plantSnapResultPromise.value : null;
     const isLeaf = isLeafPromise.status === 'fulfilled' ? isLeafPromise.value : false;
     const eppoCheck = eppoCheckPromise.status === 'fulfilled' ? eppoCheckPromise.value : null;
+    const plantIdResult = plantIdResultPromise.status === 'fulfilled' ? plantIdResultPromise.value : null;
+    
+    // Process Plant.id results if available
+    let plantIdProcessedResult = null;
+    if (plantIdResult) {
+      const identification = plantIdResult.identification;
+      const health = plantIdResult.health;
+      
+      // Format Plant.id results into our standard format
+      if (identification || health) {
+        plantIdProcessedResult = {
+          source: "Plant.id API",
+          confidence: 0,
+          isReliable: false
+        };
+        
+        // Process identification data
+        if (identification && identification.suggestions && identification.suggestions.length > 0) {
+          const bestMatch = identification.suggestions[0];
+          plantIdProcessedResult.plantName = bestMatch.plant_name;
+          plantIdProcessedResult.scientificName = bestMatch.plant_details?.scientific_name || bestMatch.plant_name;
+          plantIdProcessedResult.commonNames = bestMatch.plant_details?.common_names || [];
+          plantIdProcessedResult.confidence = bestMatch.probability;
+          plantIdProcessedResult.isReliable = bestMatch.probability > 0.7;
+          plantIdProcessedResult.taxonomy = bestMatch.plant_details?.taxonomy || {};
+          plantIdProcessedResult.wikiDescription = bestMatch.plant_details?.wiki_description?.value || "";
+          plantIdProcessedResult.similarImages = bestMatch.similar_images || [];
+          plantIdProcessedResult.edibleParts = bestMatch.plant_details?.edible_parts || [];
+        }
+        
+        // Process health assessment data
+        if (health && health.health_assessment && health.health_assessment.diseases) {
+          const diseases = health.health_assessment.diseases;
+          const isHealthy = diseases.length === 0 || 
+            (diseases.length === 1 && diseases[0].name.toLowerCase().includes("healthy"));
+          
+          plantIdProcessedResult.isHealthy = isHealthy;
+          plantIdProcessedResult.diseases = diseases.map((disease: any) => ({
+            name: disease.name,
+            probability: disease.probability,
+            description: disease.disease_details?.description || "",
+            treatment: disease.disease_details?.treatment || {
+              biological: [],
+              chemical: [],
+              prevention: []
+            },
+            classification: disease.disease_details?.classification || {}
+          }));
+          
+          // Update reliability based on disease probability if a disease is detected
+          if (!isHealthy && diseases[0].probability > 0.7) {
+            plantIdProcessedResult.isReliable = true;
+          }
+        } else {
+          plantIdProcessedResult.isHealthy = true;
+          plantIdProcessedResult.diseases = [];
+        }
+      }
+    }
     
     // Choose plant-type specific model if available
     let plantTypeModels = {}; 
@@ -143,17 +296,30 @@ serve(async (req) => {
       plantTypeModels
     );
     
-    // If all models failed but we have either Flora Incognita or PlantSnap results,
+    // If all models failed but we have either Flora Incognita, PlantSnap or Plant.id results,
     // we can still provide some analysis
     let analysisResult;
-    if (!result && (floraIncognitaResult || plantSnapResult)) {
-      // Create a substitute result based on Flora Incognita or PlantSnap
-      analysisResult = {
-        label: (floraIncognitaResult?.species || plantSnapResult?.species || "Unknown Plant"),
-        score: (floraIncognitaResult?.score || plantSnapResult?.score || 0.7)
-      };
+    if (!result && (floraIncognitaResult || plantSnapResult || plantIdProcessedResult)) {
+      // Create a substitute result based on available APIs
+      // Prioritize Plant.id if available since it's more comprehensive
+      if (plantIdProcessedResult && plantIdProcessedResult.confidence > 0.7) {
+        analysisResult = {
+          label: plantIdProcessedResult.plantName || "Unknown Plant",
+          score: plantIdProcessedResult.confidence || 0.7
+        };
+      } else if (floraIncognitaResult?.score > (plantSnapResult?.score || 0)) {
+        analysisResult = {
+          label: floraIncognitaResult.species || "Unknown Plant",
+          score: floraIncognitaResult.score || 0.7
+        };
+      } else if (plantSnapResult) {
+        analysisResult = {
+          label: plantSnapResult.species || "Unknown Plant",
+          score: plantSnapResult.score || 0.7
+        };
+      }
     } else if (!result) {
-      // If all models failed and we don't have Flora Incognita or PlantSnap results either
+      // If all models failed and we don't have any other API results
       return new Response(
         JSON.stringify({
           error: 'All plant classification models failed',
@@ -169,11 +335,27 @@ serve(async (req) => {
       analysisResult = result;
     }
 
-    // Extract plant name if we have Flora Incognita or PlantSnap results
+    // Extract plant name from our available API results
     let plantName = null;
-    if (floraIncognitaResult && floraIncognitaResult.score > (analysisResult.score || 0)) {
+    let bestConfidence = analysisResult.score || 0;
+    
+    // Check Plant.id first as it's comprehensive
+    if (plantIdProcessedResult && plantIdProcessedResult.confidence > bestConfidence) {
+      bestConfidence = plantIdProcessedResult.confidence;
+      if (plantIdProcessedResult.commonNames && plantIdProcessedResult.commonNames.length > 0) {
+        plantName = `${plantIdProcessedResult.commonNames[0]} (${plantIdProcessedResult.plantName})`;
+      } else {
+        plantName = plantIdProcessedResult.plantName;
+      }
+    }
+    // Check Flora Incognita next
+    else if (floraIncognitaResult && floraIncognitaResult.score > bestConfidence) {
+      bestConfidence = floraIncognitaResult.score;
       plantName = `${floraIncognitaResult.species} (${floraIncognitaResult.family})`;
-    } else if (plantSnapResult && plantSnapResult.score > (analysisResult.score || 0)) {
+    } 
+    // Check PlantSnap last
+    else if (plantSnapResult && plantSnapResult.score > bestConfidence) {
+      bestConfidence = plantSnapResult.score;
       plantName = `${plantSnapResult.species} (${plantSnapResult.family})`;
       if (plantSnapResult.details?.common_names?.[0]) {
         plantName = `${plantSnapResult.details.common_names[0]} (${plantSnapResult.species})`;
@@ -189,7 +371,8 @@ serve(async (req) => {
       floraIncognitaResult, 
       plantSnapResult,
       analysisResult.isReliable !== undefined ? analysisResult.isReliable : true,
-      detectedPlantType // Add detected plant type
+      detectedPlantType, // Add detected plant type
+      plantIdProcessedResult // Add the Plant.id results
     );
     
     // Check if we have EPPO concerns
@@ -211,7 +394,8 @@ serve(async (req) => {
       plantSnapResult, 
       formattedData,
       detectedPlantType, // Add detected plant type
-      eppoCheck
+      eppoCheck,
+      plantIdProcessedResult // Add Plant.id results
     );
 
     // Initialize Supabase client with service role key to bypass RLS
@@ -257,7 +441,8 @@ serve(async (req) => {
           healthy: finalAnalysisResult.healthy,
           isLeaf: isLeaf,
           eppoRegulated: finalAnalysisResult.eppoRegulatedConcern !== null,
-          detectedPlantType: detectedPlantType
+          detectedPlantType: detectedPlantType,
+          plantIdResults: plantIdProcessedResult // Store the Plant.id results
         },
         user_id: userId
       });
@@ -274,7 +459,8 @@ serve(async (req) => {
       score: finalAnalysisResult.score,
       healthy: finalAnalysisResult.healthy,
       dataSource: finalAnalysisResult.dataSource,
-      plantType: detectedPlantType
+      plantType: detectedPlantType,
+      usingPlantId: !!plantIdProcessedResult
     })}`);
 
     // Prepare the result before sending
@@ -283,7 +469,8 @@ serve(async (req) => {
         ...finalAnalysisResult,
         message: insertError ? "Plant analysis completed but not saved" : "Plant analysis completed and saved",
         dataSource: finalAnalysisResult.dataSource,
-        eppoIntegrated: true
+        eppoIntegrated: true,
+        plantIdIntegrated: !!plantIdProcessedResult
       }),
       {
         status: 200,

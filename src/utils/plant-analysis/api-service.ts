@@ -2,12 +2,13 @@
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { preprocessImageForPlantDetection, validateImageForAnalysis, resizeImageForOptimalDetection } from "./image-utils";
+import { fileToBase64WithoutPrefix } from "./plant-id-service";
 
 /**
  * Sends an image to the Supabase Edge Function for plant disease analysis
  * Using a combined approach with PlantSnap and Flora Incognita APIs alongside
  * the PlantNet-inspired approach, TRY Plant Trait Database, New Plant Diseases Dataset,
- * OLID I, and EPPO Global Database
+ * OLID I, and EPPO Global Database, and now also Plant.id API
  * @param imageFile The plant image file to analyze
  * @returns The analysis result from the image processing models
  */
@@ -29,6 +30,10 @@ export const analyzePlantImage = async (imageFile: File) => {
     const formData = new FormData();
     formData.append('image', optimizedImage);
     formData.append('optimized', 'true'); // Flag to indicate optimized image
+    
+    // Convert image to base64 for Plant.id API
+    const imageBase64 = await fileToBase64WithoutPrefix(optimizedImage);
+    formData.append('imageBase64', imageBase64);
 
     toast.info("Analisi dell'immagine in corso...", {
       duration: 3000,

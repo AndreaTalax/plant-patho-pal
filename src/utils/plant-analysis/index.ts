@@ -9,6 +9,7 @@ export * from './leaf-analysis';
 export { detectPlantType } from './plant-name-extractor';
 export * from './plant-part-utils';
 export * from './result-formatter';
+export * from './plant-id-service';
 
 // Utility function to format percentage values
 export const formatPercentage = (value: number): string => {
