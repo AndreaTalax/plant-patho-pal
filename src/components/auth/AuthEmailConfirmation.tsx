@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Mail, AlertCircle, RefreshCw } from "lucide-react";
-import { resendConfirmationEmail } from '@/integrations/supabase/supabaseClient';
+import { resendConfirmationEmail } from '@/integrations/supabase/auth';
 import { toast } from 'sonner';
 
 interface AuthEmailConfirmationProps {
