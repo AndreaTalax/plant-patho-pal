@@ -4,12 +4,20 @@ import { isPlantHealthy, identifyPlantPart, extractPlantName, isPlantLabel, chec
 export async function analyzeImageWithModels(
   imageArrayBuffer: ArrayBuffer, 
   huggingFaceToken: string,
-  isLeaf: boolean
+  isLeaf: boolean,
+  plantTypeModels: any = {}
 ): Promise<any> {
   // Select appropriate models based on whether it's a leaf image or general plant
   let plantModels;
   
-  if (isLeaf) {
+  if (plantTypeModels && Object.keys(plantTypeModels).length > 0) {
+    // Use the specialized models if provided
+    plantModels = [
+      plantTypeModels.primary,
+      plantTypeModels.secondary,
+      "facebook/deit-base-patch16-224" // Backup model
+    ].filter(Boolean);
+  } else if (isLeaf) {
     // For leaf images, use models better suited for the New Plant Diseases Dataset and OLID I
     plantModels = [
       "microsoft/resnet-50",          // Good for leaf disease classification
@@ -113,16 +121,14 @@ export function formatModelResult(
     allPredictions = [];
   }
   
-  // Check if this might be an EPPO regulated pest/disease
-  const eppoCheck = checkForEppoConcerns(topPrediction.label);
-  
-  // Determine if plant is healthy
-  // First check Plant.id health assessment if available
+  // Check for health flag directly from the result, or determine from label
   let healthy;
   if (plantIdResult && plantIdResult.isHealthy !== undefined) {
     healthy = plantIdResult.isHealthy;
   } else {
-    healthy = isPlantHealthy(topPrediction.label);
+    // Make sure topPrediction.label is a string before using toLowerCase
+    const label = topPrediction.label ? String(topPrediction.label) : '';
+    healthy = isPlantHealthy(label);
   }
   
   // If no plant name was determined, try to extract it from the label
@@ -131,13 +137,17 @@ export function formatModelResult(
     if (plantIdResult && plantIdResult.plantName) {
       plantName = plantIdResult.plantName;
     } else {
-      plantName = extractPlantName(topPrediction.label);
+      // Make sure topPrediction.label is a string before extracting name
+      const label = topPrediction.label ? String(topPrediction.label) : '';
+      plantName = extractPlantName(label);
     }
   }
   
   // If no plant part was determined, try to identify it from the label
   if (!plantPart) {
-    plantPart = identifyPlantPart(topPrediction.label);
+    // Make sure topPrediction.label is a string before identifying plant part
+    const label = topPrediction.label ? String(topPrediction.label) : '';
+    plantPart = identifyPlantPart(label);
   }
   
   // Determine which service provided the best identification
@@ -145,28 +155,23 @@ export function formatModelResult(
   
   // Check Plant.id first as it's the most comprehensive
   if (plantIdResult && plantIdResult.confidence > 0.7 && 
-      (plantIdResult.confidence > topPrediction.score && 
-      (!floraIncognitaResult || plantIdResult.confidence > floraIncognitaResult.score) && 
-      (!plantSnapResult || plantIdResult.confidence > plantSnapResult.score))) {
+      (plantIdResult.confidence > (topPrediction.score || 0) && 
+      (!floraIncognitaResult || plantIdResult.confidence > (floraIncognitaResult.score || 0)) && 
+      (!plantSnapResult || plantIdResult.confidence > (plantSnapResult.score || 0)))) {
     primaryService = "Plant.id";
     primaryConfidence = plantIdResult.confidence;
   }
   // Then check Flora Incognita
-  else if (floraIncognitaResult && floraIncognitaResult.score > topPrediction.score && 
-      (!plantSnapResult || floraIncognitaResult.score > plantSnapResult.score)) {
+  else if (floraIncognitaResult && floraIncognitaResult.score > (topPrediction.score || 0) && 
+      (!plantSnapResult || floraIncognitaResult.score > (plantSnapResult.score || 0))) {
     primaryService = "Flora Incognita";
     primaryConfidence = floraIncognitaResult.score;
   } 
   // Then check PlantSnap
-  else if (plantSnapResult && plantSnapResult.score > topPrediction.score && 
-             (!floraIncognitaResult || plantSnapResult.score > floraIncognitaResult.score)) {
+  else if (plantSnapResult && plantSnapResult.score > (topPrediction.score || 0) && 
+             (!floraIncognitaResult || plantSnapResult.score > (floraIncognitaResult.score || 0))) {
     primaryService = "PlantSnap";
     primaryConfidence = plantSnapResult.score;
-  } 
-  // Check if it's an EPPO concern
-  else if (eppoCheck.isEppoConcern) {
-    primaryService = "EPPO Global Database";
-    primaryConfidence = topPrediction.score;
   } 
   // Otherwise use our ML models
   else if (isLeaf) {
@@ -185,8 +190,6 @@ export function formatModelResult(
     dataSource = "Flora Incognita Botanical Database";
   } else if (primaryService === "PlantSnap") {
     dataSource = "PlantSnap Global Plant Database";
-  } else if (eppoCheck.isEppoConcern) {
-    dataSource = "EPPO Global Database";
   } else if (isLeaf) {
     dataSource = "New Plant Diseases Dataset + OLID I";
   } else {
@@ -199,7 +202,6 @@ export function formatModelResult(
     plantName,
     plantPart,
     healthy,
-    eppoCheck,
     primaryService,
     primaryConfidence,
     dataSource,

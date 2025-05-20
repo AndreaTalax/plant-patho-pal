@@ -1,4 +1,8 @@
 
+// We need to find and fix where the label.toLowerCase() is called when label might not be a string
+// Let's modify the part in the checkForEppoConcerns function to ensure label is always a string
+
+// Find and update the function in the file where it's checking for EPPO concerns
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
 import { corsHeaders } from "../_shared/cors.ts";

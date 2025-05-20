@@ -15,3 +15,7 @@ export * from './plant-id-service';
 export const formatPercentage = (value: number): string => {
   return `${Math.round(value * 100)}%`;
 };
+
+// Expose the analyzePlantImage function directly from the api-service
+export { analyzePlantImage } from './api-service';
+export { dataURLtoFile } from './plantAnalysisUtils';
