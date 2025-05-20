@@ -1,214 +1,198 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { corsHeaders } from "../_shared/cors.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
 
-const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
 
-const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
+const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") || "";
+const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 
-interface NotifyExpertRequest {
-  consultationId: string;
-  userId: string;
-  imageUrl: string;
-  symptoms: string;
-  plantInfo: Record<string, any>;
-}
+// ID dell'esperto/fitopatologo
+const EXPERT_ID = "premium-user-id";
 
+/**
+ * Edge Function che notifica il fitopatologo di una nuova richiesta di consulenza
+ * Crea una conversazione nella chat e invia il primo messaggio con l'immagine della pianta
+ * e le informazioni fornite dall'utente
+ */
 serve(async (req) => {
-  // Handle CORS preflight
-  if (req.method === "OPTIONS") {
+  // Gestisci le richieste CORS preflight
+  if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { consultationId, userId, imageUrl, symptoms, plantInfo } = await req.json() as NotifyExpertRequest;
-
-    if (!consultationId || !userId) {
+    // Ottieni i dati dalla richiesta
+    const {
+      consultationId,
+      userId,
+      imageUrl,
+      symptoms,
+      plantInfo
+    } = await req.json();
+    
+    if (!userId || !consultationId) {
       return new Response(
-        JSON.stringify({ error: "Dati richiesti mancanti: consultationId, userId" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ 
+          error: 'Dati mancanti', 
+          details: 'userId e consultationId sono richiesti' 
+        }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
       );
     }
 
-    // Get user profile info
-    const { data: userProfile, error: profileError } = await supabaseAdmin
+    // Inizializza il client Supabase con la service role key per bypassare RLS
+    const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
+    
+    // Ottieni il profilo dell'utente
+    const { data: userProfile, error: userProfileError } = await supabase
       .from('profiles')
       .select('*')
       .eq('id', userId)
       .single();
     
-    if (profileError) {
-      console.error("Error getting user profile:", profileError);
+    if (userProfileError) {
+      console.error("Errore nel recupero del profilo utente:", userProfileError);
       return new Response(
-        JSON.stringify({ error: "Errore nel recupero del profilo utente" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ error: 'Errore nel recupero del profilo utente' }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
       );
     }
 
-    console.log("User profile retrieved:", userProfile);
-
-    // Get all experts (users with role = 'expert')
-    const { data: experts, error: expertsError } = await supabaseAdmin
-      .from('profiles')
-      .select('id, email, username, first_name, last_name')
-      .eq('role', 'master')
-      .limit(1);
-    
-    if (expertsError) {
-      console.error("Error getting experts:", expertsError);
-      return new Response(
-        JSON.stringify({ error: "Errore nel recupero degli esperti" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-    
-    if (!experts || experts.length === 0) {
-      return new Response(
-        JSON.stringify({ error: "Nessun esperto trovato" }),
-        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-    
-    const expert = experts[0]; // Get the first expert
-    
-    // Create a conversation between the user and the expert if it doesn't exist
-    const { data: existingConversation, error: convCheckError } = await supabaseAdmin
+    // Verifica se esiste già una conversazione tra l'utente e l'esperto
+    const { data: existingConversation } = await supabase
       .from('conversations')
       .select('id')
       .eq('user_id', userId)
-      .eq('expert_id', expert.id)
+      .eq('expert_id', EXPERT_ID)
+      .eq('status', 'active')
       .single();
     
-    let conversationId = existingConversation?.id;
+    let conversationId;
     
-    if (!conversationId) {
-      // Create new conversation
-      const { data: newConversation, error: convError } = await supabaseAdmin
+    // Se non esiste una conversazione, creane una nuova
+    if (!existingConversation) {
+      const { data: newConversation, error: conversationError } = await supabase
         .from('conversations')
         .insert({
           user_id: userId,
-          expert_id: expert.id,
+          expert_id: EXPERT_ID,
           status: 'active'
         })
-        .select('id')
+        .select()
         .single();
       
-      if (convError) {
-        console.error("Error creating conversation:", convError);
+      if (conversationError) {
+        console.error("Errore nella creazione della conversazione:", conversationError);
         return new Response(
-          JSON.stringify({ error: "Errore nella creazione della conversazione" }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          JSON.stringify({ error: 'Errore nella creazione della conversazione' }),
+          {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          }
         );
       }
       
       conversationId = newConversation.id;
+    } else {
+      conversationId = existingConversation.id;
     }
     
-    // Format user profile information
-    const userName = userProfile?.first_name || "Utente";
-    const userLastName = userProfile?.last_name || "";
-    const userBirthDate = userProfile?.birth_date || "Non specificata";
-    const userBirthPlace = userProfile?.birth_place || "Non specificato";
+    // Prepara il messaggio con le informazioni della pianta
+    const username = userProfile.first_name 
+      ? `${userProfile.first_name} ${userProfile.last_name || ''}`
+      : userProfile.email || 'Utente';
+      
+    let messageText = `Nuova richiesta di consulenza da ${username}:\n\n`;
+    messageText += symptoms ? `Sintomi: ${symptoms}\n\n` : '';
     
-    // Create a message with the diagnosis information and user details
-    if (conversationId) {
-      const messageText = `Nuova richiesta di diagnosi:
-      
-Sintomi: ${symptoms}
-
-Dettagli pianta:
-- Ambiente: ${plantInfo.isIndoor ? 'Interno' : 'Esterno'}
-- Frequenza irrigazione: ${plantInfo.wateringFrequency} volte a settimana
-- Esposizione luce: ${plantInfo.lightExposure}
-
-Informazioni utente:
-- Nome: ${userName}
-- Cognome: ${userLastName}
-- Data di nascita: ${userBirthDate}
-- Luogo di nascita: ${userBirthPlace}
-
-ID Consultazione: ${consultationId}`;
-      
-      // Create message with user info and plant image
-      const { error: msgError } = await supabaseAdmin
+    if (plantInfo) {
+      messageText += "Informazioni sulla pianta:\n";
+      messageText += `- Ambiente: ${plantInfo.isIndoor ? 'Interno' : 'Esterno'}\n`;
+      messageText += `- Frequenza di irrigazione: ${plantInfo.wateringFrequency || 'Non specificata'}\n`;
+      messageText += `- Esposizione alla luce: ${plantInfo.lightExposure || 'Non specificata'}\n`;
+    }
+    
+    messageText += `\nID Consultazione: ${consultationId}`;
+    
+    // Crea il messaggio nella chat
+    const { error: messageError } = await supabase
+      .from('messages')
+      .insert({
+        conversation_id: conversationId,
+        sender_id: userId,
+        recipient_id: EXPERT_ID,
+        text: messageText
+      });
+    
+    if (messageError) {
+      console.error("Errore nell'invio del messaggio:", messageError);
+      return new Response(
+        JSON.stringify({ error: 'Errore nell\'invio del messaggio' }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
+    }
+    
+    // Se c'è un'immagine, invia un secondo messaggio con l'immagine
+    if (imageUrl) {
+      const { error: imageMessageError } = await supabase
         .from('messages')
         .insert({
           conversation_id: conversationId,
           sender_id: userId,
-          recipient_id: expert.id,
-          text: messageText,
-          // Include the plant image and details directly in the message
-          products: { 
-            plantImage: imageUrl,
-            consultationId: consultationId,
-            plantDetails: {
-              isIndoor: plantInfo.isIndoor,
-              wateringFrequency: plantInfo.wateringFrequency,
-              lightExposure: plantInfo.lightExposure,
-              symptoms: symptoms
-            },
-            userDetails: {
-              firstName: userName,
-              lastName: userLastName,
-              birthDate: userBirthDate,
-              birthPlace: userBirthPlace
-            }
-          }
+          recipient_id: EXPERT_ID,
+          text: "Immagine della pianta:",
+          image_url: imageUrl
         });
       
-      if (msgError) {
-        console.error("Error creating message:", msgError);
-        // Continue anyway, we don't want to fail the whole request just because the message failed
+      if (imageMessageError) {
+        console.error("Errore nell'invio dell'immagine:", imageMessageError);
+        // Continua comunque, il messaggio principale è stato inviato
       }
-
-      // Send email to the expert
-      try {
-        console.log(`Sending email notification to expert ${expert.email}`);
-        
-        await supabaseAdmin.functions.invoke('send-specialist-notification', {
-          body: {
-            conversation_id: conversationId,
-            sender_id: userId,
-            recipient_id: expert.id,
-            message_text: messageText,
-            expert_email: expert.email,
-            user_name: userName + " " + userLastName,
-            image_url: imageUrl,
-            plant_details: plantInfo,
-            user_details: {
-              firstName: userName,
-              lastName: userLastName,
-              birthDate: userBirthDate,
-              birthPlace: userBirthPlace
-            }
-          }
-        });
-        
-        console.log("Email notification sent to expert");
-      } catch (emailError) {
-        console.error("Error sending email notification:", emailError);
-        // Continue anyway, don't fail if email sending fails
-      }
-      
-      console.log(`Notifica inviata all'esperto ${expert.username || expert.email} per la consultazione ${consultationId}`);
     }
-
+    
+    // Aggiorna lo stato della consultazione
+    await supabase
+      .from('expert_consultations')
+      .update({ status: 'sent_to_expert' })
+      .eq('id', consultationId);
+    
+    // Tutto è andato a buon fine
     return new Response(
-      JSON.stringify({ 
-        success: true, 
-        message: "Notifica inviata con successo all'esperto",
+      JSON.stringify({
+        success: true,
+        message: 'Richiesta inviata con successo al fitopatologo',
         conversationId
       }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      }
     );
-    
   } catch (error) {
-    console.error("Error in notify-expert function:", error);
+    console.error("Errore nella notifica all'esperto:", error);
     return new Response(
-      JSON.stringify({ error: error.message }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      JSON.stringify({
+        error: 'Si è verificato un errore interno',
+        details: (error as Error).message
+      }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      }
     );
   }
 });

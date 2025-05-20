@@ -1,10 +1,10 @@
 
-// Just updating the checkForEppoConcerns function to ensure it safely handles non-string values.
-// For example, in the case where it's called directly with an object that might not have a label property,
-// or where the label is not a string.
+// Aggiornamento della funzione checkForEppoConcerns per gestire in modo sicuro valori non stringa.
+// Ad esempio, nel caso in cui sia chiamata direttamente con un oggetto che potrebbe non avere una proprietà label,
+// o dove la label non è una stringa.
 
 export function checkForEppoConcerns(labelOrData: any): any {
-  // If it's an ArrayBuffer (from the other overloaded version), just return a default result
+  // Se è un ArrayBuffer (dall'altra versione sovraccaricata), restituisci semplicemente un risultato predefinito
   if (labelOrData instanceof ArrayBuffer) {
     return {
       isEppoConcern: false,
@@ -15,12 +15,12 @@ export function checkForEppoConcerns(labelOrData: any): any {
     };
   }
   
-  // Make sure we're working with a string
+  // Assicurati che stiamo lavorando con una stringa
   const label = typeof labelOrData === 'string' ? labelOrData : 
                 (labelOrData?.label && typeof labelOrData.label === 'string') ? 
                 labelOrData.label : '';
   
-  // Now we can safely use toLowerCase() since we ensured label is a string
+  // Ora possiamo usare toLowerCase() in modo sicuro poiché abbiamo garantito che label sia una stringa
   const lowerLabel = label.toLowerCase();
   
   const eppoRegulatedKeywords = [

@@ -5,33 +5,33 @@ import { preprocessImageForPlantDetection, validateImageForAnalysis, resizeImage
 import { fileToBase64WithoutPrefix } from "./plant-id-service";
 
 /**
- * Sends an image to the Supabase Edge Function for plant disease analysis
- * Using a combined approach with PlantSnap and Flora Incognita APIs alongside
- * the PlantNet-inspired approach, TRY Plant Trait Database, New Plant Diseases Dataset,
- * OLID I, and EPPO Global Database, and now also Plant.id API
- * @param imageFile The plant image file to analyze
- * @returns The analysis result from the image processing models
+ * Invia un'immagine alla Supabase Edge Function per l'analisi delle malattie delle piante
+ * Utilizza un approccio combinato con API PlantSnap, Flora Incognita, PlantNet-inspired,
+ * TRY Plant Trait Database, New Plant Diseases Dataset, OLID I, EPPO Global Database e Plant.id API
+ * 
+ * @param imageFile Il file immagine della pianta da analizzare
+ * @returns Il risultato dell'analisi dai modelli di elaborazione immagini
  */
 export const analyzePlantImage = async (imageFile: File) => {
   try {
-    // Validate and preprocess the image
+    // Convalida e pre-elabora l'immagine
     const isValid = await validateImageForAnalysis(imageFile);
     if (!isValid) {
       toast.error("L'immagine non è adatta per l'analisi. Usa una foto di pianta più chiara.");
       return null;
     }
 
-    // Apply preprocessing to improve plant detection
+    // Applica pre-elaborazione per migliorare il rilevamento della pianta
     const processedImage = await preprocessImageForPlantDetection(imageFile);
     
-    // Resize image to optimal dimensions for ML models
+    // Ridimensiona l'immagine alle dimensioni ottimali per i modelli ML
     const optimizedImage = await resizeImageForOptimalDetection(processedImage);
     
     const formData = new FormData();
     formData.append('image', optimizedImage);
-    formData.append('optimized', 'true'); // Flag to indicate optimized image
+    formData.append('optimized', 'true'); // Flag per indicare l'immagine ottimizzata
     
-    // Convert image to base64 for Plant.id API
+    // Converti l'immagine in base64 per l'API Plant.id
     const imageBase64 = await fileToBase64WithoutPrefix(optimizedImage);
     formData.append('imageBase64', imageBase64);
 
@@ -39,9 +39,9 @@ export const analyzePlantImage = async (imageFile: File) => {
       duration: 3000,
     });
 
-    // Call the Supabase Edge Function with retry mechanism
+    // Chiama la Supabase Edge Function con meccanismo di retry
     let attempts = 0;
-    const maxAttempts = 4; // Increased from 3 to 4 for better chance of success
+    const maxAttempts = 4; // Aumentato da 3 a 4 per una maggiore possibilità di successo
     let data, error;
     
     while (attempts < maxAttempts) {
@@ -49,7 +49,7 @@ export const analyzePlantImage = async (imageFile: File) => {
         attempts++;
         console.log(`Tentativo di analisi pianta ${attempts}/${maxAttempts}...`);
         
-        // Add a small delay between retries to give the backend more time
+        // Aggiungi un piccolo ritardo tra i tentativi per dare più tempo al backend
         if (attempts > 1) {
           await new Promise(resolve => setTimeout(resolve, 1000 * attempts));
         }
@@ -64,13 +64,13 @@ export const analyzePlantImage = async (imageFile: File) => {
         data = response.data;
         error = response.error;
         
-        // Log the response for debugging
+        // Log della risposta per il debug
         console.log('Plant analysis response:', data);
         
-        // If successful or got data with error, break
+        // Se è riuscito o ha ottenuto dati con errore, interrompi
         if (!error || data) break;
         
-        // Wait before retrying (exponential backoff)
+        // Attendi prima di riprovare (backoff esponenziale)
         if (attempts < maxAttempts) {
           toast.info(`Nuovo tentativo di analisi (tentativo ${attempts + 1}/${maxAttempts})...`);
         }
@@ -90,7 +90,7 @@ export const analyzePlantImage = async (imageFile: File) => {
 
     console.log('Risultato analisi pianta:', data);
     
-    // Handle different analysis outcomes
+    // Gestisci diversi esiti dell'analisi
     if (data.isValidPlantImage === false) {
       toast.error("L'immagine caricata non sembra contenere una pianta. Prova con un'altra immagine.", {
         duration: 5000,
@@ -100,7 +100,7 @@ export const analyzePlantImage = async (imageFile: File) => {
         duration: 5000,
       });
     } else if (data.eppoRegulatedConcern) {
-      // Special EPPO alert for regulated pests and diseases
+      // Avviso speciale EPPO per parassiti e malattie regolamentate
       toast.error(`ALLERTA: Possibile rilevamento di ${data.eppoRegulatedConcern.name}, un parassita/malattia regolamentato. Si prega di segnalarlo alle autorità fitosanitarie locali.`, {
         duration: 8000,
       });
@@ -110,7 +110,7 @@ export const analyzePlantImage = async (imageFile: File) => {
       });
     }
     
-    // Even if the data is not ideal, return it so the UI can display something
+    // Anche se i dati non sono ideali, restituiscili in modo che l'interfaccia possa mostrare qualcosa
     return data || {
       label: "Pianta non identificata",
       score: 0.4,
@@ -122,7 +122,7 @@ export const analyzePlantImage = async (imageFile: File) => {
     console.error('Eccezione durante l\'analisi della pianta:', err);
     toast.error(`Errore di analisi: ${(err as Error).message || 'Errore sconosciuto'}`);
     
-    // Return fallback data to prevent UI from breaking
+    // Restituisci dati di fallback per evitare che l'interfaccia si blocchi
     return {
       label: "Errore di analisi",
       score: 0.2,

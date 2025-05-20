@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { modelInfo } from '@/utils/aiDiagnosisUtils';
@@ -139,10 +138,10 @@ const DiagnoseTab = () => {
     }
   };
 
-  // Function to notify plant pathologist with all information
+  // Funzione per notificare l'esperto con tutte le informazioni
   const notifyExpert = async (imageFile?: File, imageDataUrl?: string) => {
     try {
-      // Check for user authentication
+      // Controlla l'autenticazione dell'utente
       if (!isAuthenticated) {
         setAuthDialogConfig({
           title: "Devi accedere per contattare il fitopatologo",
@@ -162,7 +161,7 @@ const DiagnoseTab = () => {
         return;
       }
 
-      // Get user profile information
+      // Ottieni le informazioni del profilo utente
       const { data: userProfile, error: profileError } = await supabase
         .from('profiles')
         .select('*')
@@ -177,7 +176,7 @@ const DiagnoseTab = () => {
         return;
       }
       
-      // Check if user has completed their profile
+      // Controlla se l'utente ha completato il proprio profilo
       if (!userProfile.first_name || !userProfile.last_name || !userProfile.birth_date || !userProfile.birth_place) {
         toast.error("Completa il tuo profilo prima di inviare una richiesta", {
           description: "Nome, cognome, data e luogo di nascita sono obbligatori",
@@ -189,7 +188,7 @@ const DiagnoseTab = () => {
 
       let imageUrl = imageDataUrl;
       
-      // If we have a file but not a data URL, convert the file to data URL
+      // Se abbiamo un file ma non un URL di dati, converte il file in URL di dati
       if (imageFile && !imageDataUrl) {
         const reader = new FileReader();
         imageUrl = await new Promise((resolve) => {
@@ -198,7 +197,7 @@ const DiagnoseTab = () => {
         });
       }
 
-      // First, create a consultation record
+      // Prima, crea un record di consultazione
       const { data: consultationData, error: consultationError } = await supabase
         .from('expert_consultations')
         .insert({
@@ -223,12 +222,12 @@ const DiagnoseTab = () => {
         return;
       }
       
-      // Send notification to expert (using edge function)
+      // Invia notifica all'esperto (usando edge function)
       const consultationId = consultationData?.[0]?.id;
       if (consultationId) {
         toast.info("Invio richiesta in corso...", { duration: 2000 });
         
-        // Invoke the edge function to notify the expert via chat and email
+        // Invoca la edge function per notificare l'esperto via chat ed email
         const { data: notifyData, error: notifyError } = await supabase.functions.invoke('notify-expert', {
           body: { 
             consultationId,
@@ -255,7 +254,7 @@ const DiagnoseTab = () => {
           duration: 4000
         });
         
-        // Automatically navigate to the chat tab
+        // Naviga automaticamente alla scheda chat
         setTimeout(() => {
           navigate('/');
           setTimeout(() => {
