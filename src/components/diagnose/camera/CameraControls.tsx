@@ -19,7 +19,7 @@ const CameraControls: React.FC<CameraControlsProps> = ({
   onFlipCamera
 }) => {
   return (
-    <div className="absolute bottom-0 left-0 right-0 p-4 flex justify-between items-center bg-black bg-opacity-40">
+    <div className="absolute bottom-0 left-0 right-0 p-4 pb-16 md:pb-4 flex justify-between items-center bg-black bg-opacity-40">
       <Button
         variant="ghost"
         size="icon"
