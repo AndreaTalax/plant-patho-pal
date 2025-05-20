@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from 'react';
 import { PLANT_DISEASES } from '@/data/plantDiseases';
 import { formatHuggingFaceResult, dataURLtoFile, analyzePlantImage } from '@/utils/plant-analysis';
@@ -53,45 +52,65 @@ export const usePlantDiagnosis = () => {
         return;
       }
       
-      console.log("Analysis result from Plant.id:", analysisResult);
+      console.log("Analysis result from backend:", analysisResult);
       
-      // Usa i dati reali da Plant.id API e altri servizi se disponibili
-      if (analysisResult.plantIdResult) {
-        console.log("Detected Plant.id results:", analysisResult.plantIdResult);
+      // Usa i dati normalizzati dal backend
+      // Verifica che i dati siano nel formato standardizzato
+      if (!analysisResult.label || analysisResult.plantPart === undefined) {
+        console.warn("I dati ricevuti non sono completamente standardizzati", analysisResult);
       }
       
-      // Estrai i dati sulla malattia dalla risposta API reale
+      // Estrai i dati sulla malattia dalla risposta API standardizzata
       const isHealthy = analysisResult.healthy === true;
-      const diseaseName = isHealthy ? "Pianta sana" : analysisResult.label || "Malattia sconosciuta";
-      const confidence = analysisResult.score || 0.7;
+      const diseaseName = !isHealthy && analysisResult.disease ? 
+                         analysisResult.disease.name : 
+                         (isHealthy ? "Pianta sana" : "Problema non specificato");
+      const confidence = analysisResult.confidence || analysisResult.score || 0.7;
       
       let diseaseInfo: DiagnosedDisease | null = null;
       
       // Cerca corrispondenze nel nostro database di malattie se non è sana
       if (!isHealthy) {
-        // Trova la malattia più simile dal database
-        const matchingDisease = PLANT_DISEASES.find(d => 
-          d.name.toLowerCase().includes(analysisResult.label?.toLowerCase()) || 
-          analysisResult.label?.toLowerCase().includes(d.name.toLowerCase())
-        );
-        
-        if (matchingDisease) {
-          diseaseInfo = {
-            ...matchingDisease,
-            confidence: confidence
-          };
-        } else {
-          // Crea un oggetto malattia basato sui dati API
+        if (analysisResult.disease) {
+          // Usa direttamente i dati della malattia dal backend
           diseaseInfo = {
             id: `disease-${Date.now()}`,
-            name: diseaseName,
-            description: "Descrizione non disponibile",
-            causes: "Cause non specificate",
+            name: analysisResult.disease.name,
+            description: analysisResult.disease.description || "Nessuna descrizione disponibile",
+            causes: "Cause non specificate nel risultato dell'analisi",
             symptoms: ["Sintomi visibili sull'immagine"],
-            treatments: ["Consultare un esperto"],
-            confidence: confidence,
-            healthy: isHealthy
+            treatments: analysisResult.disease.treatment?.biological || 
+                       analysisResult.disease.treatment?.chemical || 
+                       analysisResult.disease.treatment?.prevention || 
+                       ["Consultare un esperto"],
+            confidence: analysisResult.disease.confidence || confidence,
+            healthy: false
           };
+        } else {
+          // Fallback al nostro database locale di malattie
+          const matchingDisease = PLANT_DISEASES.find(d => 
+            d.name.toLowerCase().includes(diseaseName.toLowerCase()) || 
+            diseaseName.toLowerCase().includes(d.name.toLowerCase())
+          );
+          
+          if (matchingDisease) {
+            diseaseInfo = {
+              ...matchingDisease,
+              confidence: confidence
+            };
+          } else {
+            // Crea un oggetto malattia generico
+            diseaseInfo = {
+              id: `disease-${Date.now()}`,
+              name: diseaseName,
+              description: "Descrizione non disponibile",
+              causes: "Cause non specificate",
+              symptoms: ["Sintomi visibili sull'immagine"],
+              treatments: ["Consultare un esperto"],
+              confidence: confidence,
+              healthy: false
+            };
+          }
         }
       } else {
         // Se è una pianta sana
@@ -121,8 +140,46 @@ export const usePlantDiagnosis = () => {
       setDiagnosedDisease(diseaseInfo);
       setDiagnosisResult(`Rilevato ${diseaseName} con ${Math.round(confidence * 100)}% di confidenza.`);
       
-      // Imposta i dettagli dell'analisi usando i dati reali
-      setAnalysisDetails(analysisResult);
+      // Crea un oggetto AnalysisDetails compatibile con il nuovo formato standardizzato
+      const normalizedDetails: AnalysisDetails = {
+        multiServiceInsights: {
+          plantName: analysisResult.label || "Pianta",
+          plantSpecies: analysisResult.plantName || analysisResult.label,
+          plantPart: analysisResult.plantPart || "whole plant",
+          isHealthy: analysisResult.healthy,
+          isValidPlantImage: true,
+          primaryService: analysisResult.dataSource,
+          agreementScore: analysisResult.confidence || analysisResult.score,
+          huggingFaceResult: {
+            label: analysisResult.label,
+            score: analysisResult.score || analysisResult.confidence
+          },
+          leafAnalysis: analysisResult.plantPart === "leaf" ? {
+            leafColor: "various",
+            patternDetected: analysisResult.disease ? "abnormal" : "normal",
+            diseaseConfidence: analysisResult.disease ? analysisResult.disease.confidence : 0,
+            healthStatus: analysisResult.healthy ? "healthy" : "unhealthy",
+            details: {
+              symptomDescription: analysisResult.disease ? analysisResult.disease.description : "",
+              symptomCategory: analysisResult.disease ? "detected" : "none"
+            }
+          } : undefined,
+          dataSource: analysisResult.dataSource
+        },
+        risultatiCompleti: {
+          plantIdResult: analysisResult._rawData?.plantId
+        },
+        identifiedFeatures: [analysisResult.label, analysisResult.plantPart],
+        alternativeDiagnoses: analysisResult.allPredictions?.slice(1, 3).map(p => ({
+          disease: p.label,
+          probability: p.score
+        })),
+        sistemaDigitaleFoglia: analysisResult.plantPart === "leaf",
+        analysisTechnology: analysisResult.dataSource
+      };
+      
+      // Imposta i dettagli dell'analisi usando i dati normalizzati
+      setAnalysisDetails(normalizedDetails);
       
       setIsAnalyzing(false);
       

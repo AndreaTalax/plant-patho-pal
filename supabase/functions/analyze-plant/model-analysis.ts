@@ -1,4 +1,4 @@
-import { isPlantHealthy, identifyPlantPart, extractPlantName, isPlantLabel, checkForEppoConcerns } from './plant-verification.ts';
+import { isPlantHealthy, identifyPlantPart, extractPlantName, isPlantLabel, checkForEppoConcerns, normalizeAnalysisResults } from './plant-verification.ts';
 
 // Function to analyze an image using Hugging Face models
 export async function analyzeImageWithModels(
@@ -196,7 +196,7 @@ export function formatModelResult(
     dataSource = "TRY Plant Trait Database + PlantNet";
   }
   
-  return {
+  const formattedData = {
     topPrediction,
     allPredictions,
     plantName,
@@ -206,6 +206,28 @@ export function formatModelResult(
     primaryConfidence,
     dataSource,
     plantIdResult
+  };
+  
+  // Add a call to the normalize function at the end
+  // to ensure consistent data structure
+  const normalizedResult = normalizeAnalysisResults(
+    {
+      label: topPrediction.label,
+      score: topPrediction.score || 0,
+      healthy: healthy,
+      plantPart: plantPart
+    },
+    plantIdResult,
+    floraIncognitaResult,
+    plantSnapResult,
+    null, // eppoCheck will be added later
+    isLeaf
+  );
+  
+  // Return both formats for backwards compatibility
+  return {
+    ...formattedData,
+    normalized: normalizedResult
   };
 }
 
@@ -279,7 +301,42 @@ export function formatAnalysisResult(
     };
   }
 
-  return result;
+  // Create the normalized result
+  const normalizedResult = normalizeAnalysisResults(
+    {
+      label: topPrediction.label,
+      score: topPrediction.score || 0,
+      healthy: healthy,
+      plantPart: plantPart || 'whole plant'
+    },
+    plantIdResult,
+    floraIncognitaResult,
+    plantSnapResult,
+    eppoCheck,
+    isLeaf
+  );
+  
+  // Merge the normalized result with our standard result
+  return {
+    ...result,  // existing format (for backward compatibility)
+    
+    // Normalized fields (always present)
+    label: normalizedResult.label,
+    plantPart: normalizedResult.plantPart,
+    healthy: normalizedResult.healthy,
+    disease: normalizedResult.disease,
+    score: normalizedResult.score,
+    confidence: normalizedResult.confidence,
+    eppoRegulatedConcern: normalizedResult.eppoRegulatedConcern,
+    
+    // Add raw data for debugging
+    _rawData: {
+      plantId: plantIdResult,
+      floraIncognita: floraIncognitaResult,
+      plantSnap: plantSnapResult,
+      huggingFace: modelResult
+    }
+  };
 }
 
 // Simple function to capitalize the first letter of a string

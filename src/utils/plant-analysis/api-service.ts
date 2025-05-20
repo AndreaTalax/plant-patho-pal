@@ -10,7 +10,7 @@ import { fileToBase64WithoutPrefix } from "./plant-id-service";
  * TRY Plant Trait Database, New Plant Diseases Dataset, OLID I, EPPO Global Database e Plant.id API
  * 
  * @param imageFile Il file immagine della pianta da analizzare
- * @returns Il risultato dell'analisi dai modelli di elaborazione immagini
+ * @returns Il risultato dell'analisi normalizzato in un formato standard
  */
 export const analyzePlantImage = async (imageFile: File) => {
   try {
@@ -90,12 +90,19 @@ export const analyzePlantImage = async (imageFile: File) => {
 
     console.log('Risultato analisi pianta:', data);
     
+    // Verifica se i dati hanno la nuova struttura standardizzata
+    if (!data.label || !data.plantPart) {
+      toast.warning("Formato dei dati non completamente standardizzato. Usando dati grezzi.", {
+        duration: 3000,
+      });
+    }
+    
     // Gestisci diversi esiti dell'analisi
     if (data.isValidPlantImage === false) {
       toast.error("L'immagine caricata non sembra contenere una pianta. Prova con un'altra immagine.", {
         duration: 5000,
       });
-    } else if (!data.isReliable) {
+    } else if (data.score < 0.5 && !data.isReliable) {
       toast.warning("I risultati dell'analisi hanno bassa confidenza. Considera di caricare un'immagine più chiara per risultati migliori.", {
         duration: 5000,
       });
@@ -104,20 +111,18 @@ export const analyzePlantImage = async (imageFile: File) => {
       toast.error(`ALLERTA: Possibile rilevamento di ${data.eppoRegulatedConcern.name}, un parassita/malattia regolamentato. Si prega di segnalarlo alle autorità fitosanitarie locali.`, {
         duration: 8000,
       });
+    } else if (data.healthy === false && data.disease) {
+      toast.warning(`Rilevato problema: ${data.disease.name} (${Math.round(data.disease.confidence * 100)}% confidenza)`, {
+        duration: 5000,
+      });
     } else {
       toast.success("Analisi della pianta completata!", {
         duration: 3000,
       });
     }
     
-    // Anche se i dati non sono ideali, restituiscili in modo che l'interfaccia possa mostrare qualcosa
-    return data || {
-      label: "Pianta non identificata",
-      score: 0.4,
-      healthy: true,
-      plantPart: "whole plant",
-      dataSource: "Analisi di emergenza"
-    };
+    // Ritorna i dati normalizzati
+    return data;
   } catch (err) {
     console.error('Eccezione durante l\'analisi della pianta:', err);
     toast.error(`Errore di analisi: ${(err as Error).message || 'Errore sconosciuto'}`);
@@ -129,7 +134,10 @@ export const analyzePlantImage = async (imageFile: File) => {
       healthy: null,
       plantPart: "whole plant",
       dataSource: "Fallback di emergenza",
-      error: (err as Error).message
+      confidence: 0.2,
+      error: (err as Error).message,
+      disease: null,
+      eppoRegulatedConcern: null
     };
   }
 };

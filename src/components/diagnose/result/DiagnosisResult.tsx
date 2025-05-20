@@ -27,8 +27,11 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
   // Process raw analysis data when it becomes available
   useState(() => {
     if (analysisData && !analysisDetails) {
-      const formattedData = formatHuggingFaceResult(analysisData);
-      setAnalysisDetails(formattedData);
+      // Verifica se i dati sono già nel nuovo formato standardizzato
+      if (analysisData && typeof analysisData === 'object') {
+        const formattedData = formatHuggingFaceResult(analysisData);
+        setAnalysisDetails(formattedData);
+      }
     }
   });
 
@@ -53,8 +56,8 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
         .from('diagnosi_piante')
         .insert({
           immagine_nome: plantInfo?.name || 'Pianta non identificata',
-          malattia: analysisData.healthy ? 'Sana' : analysisData.name,
-          accuratezza: analysisData.confidence,
+          malattia: analysisData.healthy ? 'Sana' : (analysisData.disease?.name || analysisData.name),
+          accuratezza: analysisData.confidence || analysisData.score || 0.7,
           user_id: user.id,
           risultati_completi: {
             ...analysisData,
@@ -63,6 +66,14 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
               wateringFrequency: plantInfo.wateringFrequency,
               lightExposure: plantInfo.lightExposure,
               symptoms: plantInfo.symptoms
+            },
+            standardFormat: {
+              label: analysisData.label,
+              plantPart: analysisData.plantPart || "whole plant",
+              healthy: analysisData.healthy === undefined ? true : analysisData.healthy,
+              disease: analysisData.disease,
+              score: analysisData.score || analysisData.confidence,
+              eppoRegulatedConcern: analysisData.eppoRegulatedConcern
             }
           }
         });
@@ -93,16 +104,18 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
     );
   }
 
+  // Visualizza i risultati dell'analisi
   return (
     <div className="space-y-4">
       <ImageDisplay 
         imageSrc={imageSrc} 
-        isHealthy={analysisDetails?.multiServiceInsights?.isHealthy}
+        isHealthy={analysisData?.healthy || analysisDetails?.multiServiceInsights?.isHealthy}
       />
       
       <PlantInfoCard 
         plantInfo={plantInfo}
         analysisDetails={analysisDetails}
+        standardizedData={analysisData} // Pass the standardized data
       />
       
       {plantInfo.useAI && analysisData && (
@@ -110,12 +123,14 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
           <EppoDataPanel 
             analysisDetails={analysisDetails}
             userInput={plantInfo.symptoms}
+            eppoData={analysisData.eppoRegulatedConcern} // Pass the direct EPPO data
           />
           
           <AiServicesData 
             analysisDetails={analysisDetails}
             isAnalyzing={isAnalyzing}
             plantSymptoms={plantInfo.symptoms}
+            standardizedData={analysisData} // Pass the standardized data
           />
         </>
       )}

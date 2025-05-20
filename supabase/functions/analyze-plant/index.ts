@@ -1,4 +1,3 @@
-
 // We need to find and fix where the label.toLowerCase() is called when label might not be a string
 // Let's modify the part in the checkForEppoConcerns function to ensure label is always a string
 
@@ -467,14 +466,27 @@ serve(async (req) => {
       usingPlantId: !!plantIdProcessedResult
     })}`);
 
-    // Prepare the result before sending
+    // Prepare the result before sending, ensuring it includes the standardized structure
     return new Response(
       JSON.stringify({
-        ...finalAnalysisResult,
-        message: insertError ? "Plant analysis completed but not saved" : "Plant analysis completed and saved",
+        // Standard fields that must always be present
+        label: finalAnalysisResult.label,
+        plantPart: finalAnalysisResult.plantPart || "whole plant",
+        healthy: finalAnalysisResult.healthy === undefined ? true : finalAnalysisResult.healthy,
+        disease: finalAnalysisResult.disease || null,
+        score: finalAnalysisResult.score || finalAnalysisResult.confidence || 0,
+        confidence: finalAnalysisResult.confidence || finalAnalysisResult.score || 0,
+        eppoRegulatedConcern: finalAnalysisResult.eppoRegulatedConcern || null,
+        
+        // Additional fields for richer information
         dataSource: finalAnalysisResult.dataSource,
+        plantName: finalAnalysisResult.plantName,
+        plantIdIntegrated: !!plantIdProcessedResult,
         eppoIntegrated: true,
-        plantIdIntegrated: !!plantIdProcessedResult
+        isValidPlantImage: finalAnalysisResult.isValidPlantImage || plantVerification.isPlant,
+        
+        // Message about the result
+        message: insertError ? "Plant analysis completed but not saved" : "Plant analysis completed and saved"
       }),
       {
         status: 200,
