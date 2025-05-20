@@ -18,4 +18,4 @@ export const formatPercentage = (value: number): string => {
 
 // Expose the analyzePlantImage function directly from the api-service
 export { analyzePlantImage } from './api-service';
-export { dataURLtoFile } from './plantAnalysisUtils';
+export { dataURLtoFile } from '../plantAnalysisUtils';
