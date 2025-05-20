@@ -1,4 +1,3 @@
-
 export interface DiagnosedDisease {
   id: string;
   name: string;
@@ -10,6 +9,28 @@ export interface DiagnosedDisease {
   confidence: number;
   healthy?: boolean;
   resources?: string[];
+  
+  // Add the new standardized properties
+  label?: string;
+  plantPart?: string;
+  disease?: {
+    name: string;
+    confidence: number;
+    description?: string;
+    treatment?: {
+      biological?: string[];
+      chemical?: string[];
+      prevention?: string[];
+    };
+  };
+  score?: number;
+  eppoRegulatedConcern?: {
+    name: string;
+    code?: string;
+    type?: string;
+    regulatoryStatus?: string;
+    warningLevel?: string;
+  } | null;
 }
 
 export interface PlantInfo {
@@ -86,4 +107,24 @@ export interface AnalysisDetails {
   recommendedProducts?: any[];
   analysisTechnology?: string;
   recommendedAdditionalTests?: string[];
+}
+
+// Update the component props interfaces for the components we're passing data to
+export interface PlantInfoCardProps {
+  plantInfo: PlantInfo;
+  analysisDetails: AnalysisDetails | null;
+  standardizedData?: DiagnosedDisease | null;
+}
+
+export interface EppoDataPanelProps {
+  analysisDetails: any;
+  userInput?: string;
+  eppoData?: any;
+}
+
+export interface AiServicesDataProps {
+  analysisDetails: any;
+  isAnalyzing: boolean;
+  plantSymptoms?: string;
+  standardizedData?: DiagnosedDisease | null;
 }

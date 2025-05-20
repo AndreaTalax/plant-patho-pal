@@ -8,20 +8,25 @@ import { supabase } from '@/integrations/supabase/client';
 interface EppoDataPanelProps {
   analysisDetails: any;
   userInput?: string;
+  eppoData?: any;
 }
 
-const EppoDataPanel = ({ analysisDetails, userInput }: EppoDataPanelProps) => {
-  const [eppoData, setEppoData] = useState<any>(null);
+const EppoDataPanel = ({ analysisDetails, userInput, eppoData: initialEppoData }: EppoDataPanelProps) => {
+  const [eppoData, setEppoData] = useState<any>(initialEppoData || null);
   const [explanation, setExplanation] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Fetch EPPO data when analysis details or user input changes
   useEffect(() => {
-    if (analysisDetails && userInput) {
+    if (initialEppoData) {
+      // If eppoData was provided through props, use it
+      setEppoData(initialEppoData);
+      setIsLoading(false);
+    } else if (analysisDetails && userInput) {
       fetchEppoData();
     }
-  }, [analysisDetails, userInput]);
+  }, [analysisDetails, userInput, initialEppoData]);
 
   const fetchEppoData = async () => {
     try {

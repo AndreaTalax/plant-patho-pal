@@ -1,16 +1,17 @@
-
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { formatPercentage } from '@/utils/plant-analysis';
 import { AlertTriangle } from 'lucide-react';
+import { DiagnosedDisease } from '../types';
 
 interface AiServicesDataProps {
   analysisDetails: any;
   isAnalyzing: boolean;
   plantSymptoms?: string;
+  standardizedData?: DiagnosedDisease | null;
 }
 
-const AiServicesData = ({ analysisDetails, isAnalyzing, plantSymptoms }: AiServicesDataProps) => {
+const AiServicesData = ({ analysisDetails, isAnalyzing, plantSymptoms, standardizedData }: AiServicesDataProps) => {
   if (isAnalyzing || !analysisDetails) {
     return null;
   }
@@ -20,9 +21,15 @@ const AiServicesData = ({ analysisDetails, isAnalyzing, plantSymptoms }: AiServi
     if (!analysisDetails || !plantSymptoms) return '';
     
     // Get plant name and potential disease
-    const plantName = analysisDetails?.multiServiceInsights?.plantName || 'pianta';
-    const isHealthy = analysisDetails?.multiServiceInsights?.isHealthy;
-    const detectedDisease = analysisDetails?.multiServiceInsights?.huggingFaceResult?.label;
+    const plantName = standardizedData?.label || 
+                     analysisDetails?.multiServiceInsights?.plantName || 
+                     'pianta';
+    const isHealthy = standardizedData?.healthy !== undefined ? 
+                     standardizedData.healthy : 
+                     analysisDetails?.multiServiceInsights?.isHealthy;
+    const detectedDisease = standardizedData?.disease?.name || 
+                          standardizedData?.name ||
+                          analysisDetails?.multiServiceInsights?.huggingFaceResult?.label;
     
     // Extract environmental factors from symptoms
     const hasOverwatering = plantSymptoms.toLowerCase().includes('umid') || 

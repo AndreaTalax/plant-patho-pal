@@ -1,16 +1,23 @@
 
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { AnalysisDetails } from '../types';
+import { AnalysisDetails, DiagnosedDisease } from '../types';
 
 export interface PlantInfoCardProps {
   plantInfo: any;
   analysisDetails: AnalysisDetails | null;
+  standardizedData?: DiagnosedDisease | null;
 }
 
-const PlantInfoCard: React.FC<PlantInfoCardProps> = ({ plantInfo, analysisDetails }) => {
+const PlantInfoCard: React.FC<PlantInfoCardProps> = ({ 
+  plantInfo, 
+  analysisDetails,
+  standardizedData 
+}) => {
   // Utilizziamo sia plantName che plantSpecies per una migliore visualizzazione
-  const plantName = analysisDetails?.multiServiceInsights?.plantName || 'Pianta sconosciuta';
+  const plantName = analysisDetails?.multiServiceInsights?.plantName || 
+                    standardizedData?.label ||
+                    'Pianta sconosciuta';
   const plantSpecies = analysisDetails?.multiServiceInsights?.plantSpecies || plantName;
   
   // Check for Plant.id specific data
