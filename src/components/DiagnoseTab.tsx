@@ -239,7 +239,9 @@ const DiagnoseTab = () => {
               wateringFrequency: plantInfo.wateringFrequency,
               lightExposure: plantInfo.lightExposure,
               symptoms: plantInfo.symptoms
-            }
+            },
+            diagnosisResult: diagnosedDisease, // Passa il risultato dell'analisi AI se disponibile
+            useAI: plantInfo.useAI // Indica se l'AI è stata utilizzata
           }
         });
         

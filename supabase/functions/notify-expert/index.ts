@@ -32,7 +32,9 @@ serve(async (req) => {
       userId,
       imageUrl,
       symptoms,
-      plantInfo
+      plantInfo,
+      diagnosisResult, // Aggiungi il risultato della diagnosi AI se disponibile
+      useAI // Flag per indicare se è stata usata l'AI
     } = await req.json();
     
     if (!userId || !consultationId) {
@@ -108,18 +110,49 @@ serve(async (req) => {
       conversationId = existingConversation.id;
     }
     
-    // Prepara il messaggio con le informazioni della pianta
+    // Prepara il messaggio con le informazioni appropriate
     const username = userProfile.first_name 
       ? `${userProfile.first_name} ${userProfile.last_name || ''}`
       : userProfile.email || 'Utente';
       
     let messageText = `Nuova richiesta di consulenza da ${username}:\n\n`;
+    
+    if (useAI && diagnosisResult) {
+      // Messaggio con risultato AI
+      messageText += "Analisi AI:\n";
+      messageText += `- Pianta: ${diagnosisResult.label || diagnosisResult.name}\n`;
+      messageText += `- Parte riconosciuta: ${diagnosisResult.plantPart || "Intera pianta"}\n`;
+      messageText += `- Stato salute: ${diagnosisResult.healthy ? 'Sana' : 'Malata'}\n`;
+      messageText += `- Confidenza: ${Math.round((diagnosisResult.score || diagnosisResult.confidence || 0) * 100)}%\n\n`;
+      
+      // Se c'è una malattia identificata
+      if (!diagnosisResult.healthy && diagnosisResult.disease) {
+        messageText += `- Malattia rilevata: ${diagnosisResult.disease.name}\n`;
+        messageText += `- Confidenza malattia: ${Math.round(diagnosisResult.disease.confidence * 100)}%\n`;
+        if (diagnosisResult.disease.description) {
+          messageText += `- Descrizione: ${diagnosisResult.disease.description}\n`;
+        }
+      }
+      
+      if (diagnosisResult.eppoRegulatedConcern) {
+        messageText += `\n⚠️ ALLERTA: Possibile rilevamento di ${diagnosisResult.eppoRegulatedConcern.name}, un organismo regolamentato!\n`;
+        messageText += `Tipo: ${diagnosisResult.eppoRegulatedConcern.type || "Non specificato"}\n`;
+        messageText += `Stato normativo: ${diagnosisResult.eppoRegulatedConcern.regulatoryStatus || "Non specificato"}\n\n`;
+      }
+      
+      messageText += "\nL'utente richiede un'ulteriore valutazione da parte dell'esperto.\n\n";
+    } else {
+      // Messaggio diretto all'esperto (senza AI)
+      messageText += "L'utente ha scelto di NON utilizzare l'AI per questa diagnosi.\n\n";
+    }
+    
+    // Aggiungi sempre i sintomi e le informazioni sulla pianta
     messageText += symptoms ? `Sintomi: ${symptoms}\n\n` : '';
     
     if (plantInfo) {
       messageText += "Informazioni sulla pianta:\n";
       messageText += `- Ambiente: ${plantInfo.isIndoor ? 'Interno' : 'Esterno'}\n`;
-      messageText += `- Frequenza di irrigazione: ${plantInfo.wateringFrequency || 'Non specificata'}\n`;
+      messageText += `- Frequenza di irrigazione: ${plantInfo.wateringFrequency || 'Non specificata'} volte/settimana\n`;
       messageText += `- Esposizione alla luce: ${plantInfo.lightExposure || 'Non specificata'}\n`;
     }
     

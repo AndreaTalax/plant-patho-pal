@@ -1,3 +1,4 @@
+
 export interface DiagnosedDisease {
   id: string;
   name: string;
@@ -40,6 +41,7 @@ export interface PlantInfo {
   symptoms: string;
   useAI?: boolean;
   name?: string;
+  infoComplete?: boolean;
 }
 
 export interface DiagnosisResultProps {
