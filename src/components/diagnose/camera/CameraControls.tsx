@@ -9,6 +9,7 @@ interface CameraControlsProps {
   isMobile: boolean;
   canFlipCamera: boolean;
   onFlipCamera?: () => void;
+  isProcessing?: boolean; // Added the isProcessing prop as optional
 }
 
 const CameraControls: React.FC<CameraControlsProps> = ({
@@ -16,7 +17,8 @@ const CameraControls: React.FC<CameraControlsProps> = ({
   onCancel,
   isMobile,
   canFlipCamera = false,
-  onFlipCamera
+  onFlipCamera,
+  isProcessing = false // Default value to false
 }) => {
   return (
     <div className="absolute bottom-0 left-0 right-0 p-4 pb-16 md:pb-4 flex justify-between items-center bg-black bg-opacity-40">
@@ -34,8 +36,13 @@ const CameraControls: React.FC<CameraControlsProps> = ({
         size="lg"
         className="rounded-full w-16 h-16 border-4 border-white bg-transparent hover:bg-white hover:bg-opacity-20"
         onClick={onCapture}
+        disabled={isProcessing}
       >
-        <Camera className="h-8 w-8 text-white" />
+        {isProcessing ? (
+          <span className="h-8 w-8 block border-4 border-t-white border-r-white border-b-transparent border-l-transparent rounded-full animate-spin" />
+        ) : (
+          <Camera className="h-8 w-8 text-white" />
+        )}
         <span className="sr-only">Scatta foto</span>
       </Button>
 
@@ -45,6 +52,7 @@ const CameraControls: React.FC<CameraControlsProps> = ({
           size="icon"
           className="text-white hover:bg-black hover:bg-opacity-30"
           onClick={onFlipCamera}
+          disabled={isProcessing}
         >
           <FlipHorizontal2 className="h-6 w-6" />
         </Button>
