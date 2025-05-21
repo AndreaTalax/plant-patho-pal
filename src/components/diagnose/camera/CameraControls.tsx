@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Camera, FlipHorizontal2, X } from 'lucide-react';
+import { Camera, FlipHorizontal2, X, CircleSlash } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface CameraControlsProps {
@@ -34,7 +34,7 @@ const CameraControls: React.FC<CameraControlsProps> = ({
       <Button
         variant="outline"
         size="lg"
-        className="rounded-full w-16 h-16 border-4 border-white bg-transparent hover:bg-white hover:bg-opacity-20"
+        className={`rounded-full w-16 h-16 border-4 ${isProcessing ? 'border-gray-300' : 'border-white'} bg-transparent hover:bg-white hover:bg-opacity-20 transition-all duration-200`}
         onClick={onCapture}
         disabled={isProcessing}
       >

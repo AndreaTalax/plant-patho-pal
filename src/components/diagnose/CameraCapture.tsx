@@ -4,6 +4,8 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import CameraControls from './camera/CameraControls';
 import { Loader2, Camera, CameraOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { measurePlantFeatureQuality } from '@/utils/plant-analysis/image-utils';
+import { toast } from 'sonner';
 
 interface CameraCaptureProps {
   onCapture: (imageDataUrl: string) => void;
@@ -23,6 +25,7 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('environment');
   const [isCaptureProcessing, setIsCaptureProcessing] = useState(false);
+  const [flashMode, setFlashMode] = useState<boolean>(false);
   
   // Start camera when component mounts
   useEffect(() => {
@@ -44,13 +47,21 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
     
     try {
       if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        const stream = await navigator.mediaDevices.getUserMedia({ 
+        const constraints = { 
           video: { 
             facingMode: facingMode,
             width: { ideal: 1920 },
             height: { ideal: 1080 }
           }
-        });
+        };
+        
+        // Add flashlight constraint for supported devices
+        if (flashMode) {
+          // @ts-ignore - Advanced constraints not in TypeScript defs
+          constraints.video.advanced = [{ torch: true }];
+        }
+        
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
         
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
@@ -88,6 +99,22 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
           // Convert the canvas to a data URL and pass it to the parent
           try {
             const imageDataUrl = canvas.toDataURL('image/jpeg', 0.9);
+            
+            // Evaluate image quality for plant detection
+            const imageFile = new File(
+              [await (await fetch(imageDataUrl)).blob()], 
+              "camera-capture.jpg", 
+              { type: "image/jpeg" }
+            );
+            const qualityScore = await measurePlantFeatureQuality(imageFile);
+            
+            // Warn user if the image quality is poor
+            if (qualityScore < 0.3) {
+              toast.warning("La qualità dell'immagine è bassa. Prova con più luce o avvicinati alla pianta.", {
+                duration: 4000
+              });
+            }
+            
             onCapture(imageDataUrl);
           } catch (err) {
             console.error("Error capturing image:", err);
@@ -102,6 +129,41 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
   
   const handleFlipCamera = () => {
     setFacingMode(prev => prev === 'user' ? 'environment' : 'user');
+  };
+
+  // Try to toggle device torch/flashlight
+  const toggleFlash = async () => {
+    try {
+      if (videoRef.current && videoRef.current.srcObject) {
+        const stream = videoRef.current.srcObject as MediaStream;
+        const track = stream.getVideoTracks()[0];
+        
+        // Check if flashlight is supported
+        const capabilities = track.getCapabilities();
+        if (!capabilities.torch) {
+          toast.error("Il flash non è supportato su questo dispositivo", { 
+            duration: 2000 
+          });
+          return;
+        }
+        
+        // Toggle flash state
+        const newFlashMode = !flashMode;
+        setFlashMode(newFlashMode);
+        
+        // Apply to track
+        await track.applyConstraints({
+          advanced: [{ torch: newFlashMode }]
+        });
+        
+        toast.success(newFlashMode ? "Flash attivato" : "Flash disattivato", {
+          duration: 1500
+        });
+      }
+    } catch (error) {
+      console.error("Error toggling flash:", error);
+      toast.error("Impossibile attivare il flash", { duration: 2000 });
+    }
   };
 
   return (
@@ -141,6 +203,28 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
         }}
       />
       <canvas ref={canvasRef} className="hidden" />
+      
+      {/* Flash toggle button - only shown on mobile and when camera is active */}
+      {isMobile && !cameraLoading && !cameraError && (
+        <Button
+          variant="ghost"
+          size="icon"
+          className="absolute top-4 right-4 text-white bg-black bg-opacity-30 hover:bg-opacity-40 z-20"
+          onClick={toggleFlash}
+        >
+          {flashMode ? (
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
+              <path d="M6 18h8l-4.7-4.7A1 1 0 0 0 8 14V8h-2v6a1 1 0 0 0 .3.7L6 18z"/>
+              <path d="M14 18l4-7h-5V4l-6 11h5v3z"/>
+            </svg>
+          ) : (
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
+              <path d="M6 18h8l-4.7-4.7A1 1 0 0 0 8 14V8h-2v6a1 1 0 0 0 .3.7L6 18z"/>
+              <line x1="2" y1="2" x2="22" y2="22"/>
+            </svg>
+          )}
+        </Button>
+      )}
       
       <CameraControls 
         onCapture={handleCapture}
