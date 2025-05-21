@@ -1,56 +1,57 @@
 
+# This file contains project-specific configurations for Supabase services
 project_id = "otdmqmpxukifoxjlgzmq"
 
 [api]
-enabled = true
+# Proxy port for the API gateway. Default is 54321.
 port = 54321
+# Hostname used by the local API service. Default is "localhost"
+hostname = "localhost"
+# Schema to use for the API gateway. Default is "public, storage, graphql_public"
 schemas = ["public", "storage", "graphql_public"]
 
 [db]
+# Port to use for the local database. Default is 54322.
 port = 54322
-shadow_port = 54320
+# Database major version. Default to version 15.
 major_version = 15
 
-[realtime]
-enabled = true
-
 [studio]
-enabled = true
+# Port to use for Supabase Studio. Default is 54323.
 port = 54323
-api_url = "http://localhost"
 
+# Email testing server
 [inbucket]
-enabled = true
+# Port to use for the email testing server web interface. Default is 54324.
 port = 54324
+# SMTP port to use for the email testing server. Default is 54325.
+smtp_port = 54325
+# POP3 port to use for the email testing server. Default is 54326.
+pop3_port = 54326
 
-[storage]
-enabled = true
-
-[auth]
-enabled = true
-site_url = "http://localhost:3000"
-
-[analytics]
-enabled = false
-
-[experimental]
-multipurpose_postgres = true
-
-[functions.analyze-plant]
-verify_jwt = false
-
-[functions.eppo-api]
-verify_jwt = false
-
-[functions.configure-auth-settings]
-verify_jwt = false
-
-[functions.send-registration-confirmation]
+[functions.analyze-with-cloud-vision]
 verify_jwt = true
 
-[functions.send-specialist-notification]
-verify_jwt = false
+[auth]
+# The base URL of your website. Used as an allow-list for redirects and for constructing URLs used in emails.
+site_url = "https://localhost:5173"
+# A list of URLs that auth providers are permitted to redirect to post authentication.
+additional_redirect_urls = ["https://localhost:5173"]
+# How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604,800 (1 week).
+jwt_expiry = 3600
+# Allow/disallow new user signups to your project.
+enable_signup = true
 
-[functions.update-conversation-last-message-trigger]
-verify_jwt = false
+[auth.email]
+# Allow/disallow new user signups via email to your project.
+enable_signup = true
+# If enabled, a user will be required to confirm any email change on both the old, and new email addresses.
+# If disabled, only the new email is required to confirm.
+double_confirm_changes = true
+# If enabled, users need to confirm their email address before signing in.
+enable_confirmations = false
 
+# Use custom SES configuration for sending emails.
+# Note: when using custom SMTP credentials, set auth.external_email_enabled = false
+[auth.smtp]
+sender_name = "Dr. Plant"

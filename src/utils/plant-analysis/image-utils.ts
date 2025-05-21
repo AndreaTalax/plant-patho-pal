@@ -1,4 +1,3 @@
-
 /**
  * Converts a data URL to a File object
  * @param dataUrl The data URL string (e.g., from canvas.toDataURL())
@@ -110,3 +109,135 @@ export const resizeImageForOptimalDetection = async (imageFile: File, maxDimensi
   }
 };
 
+/**
+ * Compresses an image to reduce file size while maintaining acceptable quality
+ * @param imageFile The original image file
+ * @param quality The JPEG quality (0-1), where 1 is highest quality
+ * @returns A compressed image file
+ */
+export const compressImageForUpload = async (imageFile: File, quality = 0.7): Promise<File> => {
+  try {
+    const img = await createImageBitmap(imageFile);
+    
+    // Create canvas with original dimensions
+    const canvas = document.createElement('canvas');
+    canvas.width = img.width;
+    canvas.height = img.height;
+    
+    // Draw image to canvas
+    const ctx = canvas.getContext('2d');
+    ctx?.drawImage(img, 0, 0);
+    
+    // Convert to compressed JPEG
+    const dataUrl = canvas.toDataURL('image/jpeg', quality);
+    const filename = imageFile.name.split('.')[0] + '_compressed.jpg';
+    return dataURLtoFile(dataUrl, filename);
+  } catch (error) {
+    console.error('Error compressing image:', error);
+    return imageFile; // Return original if compression fails
+  }
+};
+
+/**
+ * Extracts the dominant colors from an image
+ * @param imageFile The image file to analyze
+ * @returns Array of dominant colors in hex format
+ */
+export const extractDominantColors = async (imageFile: File): Promise<string[]> => {
+  try {
+    const img = await createImageBitmap(imageFile);
+    
+    // Create a small canvas to sample colors from
+    const canvas = document.createElement('canvas');
+    const sampleSize = 50; // Small enough for performance, large enough for accuracy
+    canvas.width = sampleSize;
+    canvas.height = sampleSize;
+    
+    const ctx = canvas.getContext('2d');
+    ctx?.drawImage(img, 0, 0, sampleSize, sampleSize);
+    
+    // Get pixel data
+    const imageData = ctx?.getImageData(0, 0, sampleSize, sampleSize);
+    if (!imageData) return ['#00FF00']; // Default green if extraction fails
+    
+    // Simple color counting (could be improved with clustering algorithms)
+    const colorCounts: Record<string, number> = {};
+    const data = imageData.data;
+    
+    // Sample pixels (skip some for performance)
+    for (let i = 0; i < data.length; i += 16) {
+      const r = data[i];
+      const g = data[i + 1];
+      const b = data[i + 2];
+      
+      // Convert to hex and count occurrences
+      const hex = `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+      colorCounts[hex] = (colorCounts[hex] || 0) + 1;
+    }
+    
+    // Sort by frequency
+    const sortedColors = Object.entries(colorCounts)
+      .sort((a, b) => b[1] - a[1])
+      .map(entry => entry[0]);
+    
+    // Return top 3 colors
+    return sortedColors.slice(0, 3);
+  } catch (error) {
+    console.error('Error extracting colors:', error);
+    return ['#00FF00']; // Default green if extraction fails
+  }
+};
+
+/**
+ * Enhances plant features in an image to improve detection
+ * @param imageFile The original image file
+ * @returns An enhanced image with improved plant visibility
+ */
+export const enhancePlantFeatures = async (imageFile: File): Promise<File> => {
+  try {
+    const img = await createImageBitmap(imageFile);
+    
+    // Create canvas with original dimensions
+    const canvas = document.createElement('canvas');
+    canvas.width = img.width;
+    canvas.height = img.height;
+    
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return imageFile;
+    
+    // Draw original image
+    ctx.drawImage(img, 0, 0);
+    
+    // Get image data for manipulation
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const data = imageData.data;
+    
+    // Enhance green channel slightly to emphasize plant features
+    for (let i = 0; i < data.length; i += 4) {
+      // Enhance green channel
+      const r = data[i];
+      const g = data[i + 1];
+      const b = data[i + 2];
+      
+      // If pixel has more green than other colors (likely plant)
+      if (g > r && g > b) {
+        // Enhance green while keeping natural look
+        data[i + 1] = Math.min(255, g * 1.1);
+        // Slightly reduce red and blue to make green more prominent
+        data[i] = Math.max(0, r * 0.95);
+        data[i + 2] = Math.max(0, b * 0.95);
+      }
+    }
+    
+    // Put enhanced data back to canvas
+    ctx.putImageData(imageData, 0, 0);
+    
+    // Convert to file
+    const dataUrl = canvas.toDataURL(imageFile.type);
+    const filename = imageFile.name.split('.')[0] + '_enhanced.' + imageFile.name.split('.').pop();
+    return dataURLtoFile(dataUrl, filename);
+  } catch (error) {
+    console.error('Error enhancing image:', error);
+    return imageFile; // Return original if enhancement fails
+  }
+};
