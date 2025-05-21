@@ -44,6 +44,7 @@ export function AuthEmailConfirmation({
         });
       }
     } catch (error) {
+      console.error("Errore nell'invio dell'email:", error);
       toast.error('Errore invio email', {
         description: "Non è stato possibile inviare l'email di conferma. Riprova più tardi.",
       });

@@ -40,7 +40,9 @@ export function AuthForm() {
           });
         } else {
           setEmailSent(true);
-          // Fix per la TypeScript error: verifica se la proprietà esiste
+          console.log("Risultato registrazione:", result);
+          
+          // Verifica se la conferma email è richiesta
           const needsConfirmation = 'confirmationRequired' in result ? result.confirmationRequired : true;
           
           toast.success('Registrazione completata', {

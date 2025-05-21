@@ -29,58 +29,58 @@ const SignUp = () => {
         setEmailSent(true);
         
         if (result.confirmationRequired) {
-          toast.success("Registration completed", {
-            description: "We have sent you a confirmation email. If you don't see it in your inbox, please check your spam or promotions folder.",
+          toast.success("Registrazione completata", {
+            description: "Ti abbiamo inviato un'email di conferma. Se non la vedi nella posta in arrivo, controlla la cartella spam.",
             duration: 8000,
             dismissible: true,
           });
         } else {
           // User might be already registered or email confirmed
-          toast.success("Registration completed", {
-            description: result.message || "Your account has been created successfully.",
+          toast.success("Registrazione completata", {
+            description: result.message || "Il tuo account è stato creato con successo.",
             duration: 8000,
             dismissible: true,
           });
         }
       } else {
         setEmailSent(true);
-        toast.success("Registration completed", {
-          description: "We have sent you a confirmation email. If you don't see it in your inbox, please check your spam or promotions folder.",
+        toast.success("Registrazione completata", {
+          description: "Ti abbiamo inviato un'email di conferma. Se non la vedi nella posta in arrivo, controlla la cartella spam.",
           duration: 8000,
           dismissible: true,
         });
       }
     } catch (error: any) {
-      console.error("Registration error:", error);
-      let errorMessage = "A problem occurred during registration";
+      console.error("Errore registrazione:", error);
+      let errorMessage = "Si è verificato un problema durante la registrazione";
       let registrationSuccessful = false;
       
       // Check for rate limit error specifically
       if (error.status === 429 || error.code === "over_email_send_rate_limit" || error.message?.includes("rate limit exceeded")) {
         setIsRateLimited(true);
-        errorMessage = "You've reached the email sending limit. Your account has been created, but we couldn't send another confirmation email.";
+        errorMessage = "Hai raggiunto il limite di invio email. Il tuo account è stato creato, ma non è stato possibile inviare un'altra email di conferma.";
         registrationSuccessful = true;
       }
       // Provide more specific error messages for other cases
       else if (error.message?.includes("weak_password")) {
-        errorMessage = "Password is too weak. It must contain at least 6 characters.";
+        errorMessage = "La password è troppo debole. Deve contenere almeno 6 caratteri.";
       } else if (error.message?.includes("already registered")) {
-        errorMessage = "This email address is already registered. Please try logging in.";
+        errorMessage = "Questo indirizzo email è già registrato. Prova ad accedere.";
         registrationSuccessful = true; // Consider already registered user as success
       } else if (error.message?.includes("email sending failed")) {
-        errorMessage = "Registration completed, but we couldn't send the confirmation email. Please try logging in.";
+        errorMessage = "Registrazione completata, ma non è stato possibile inviare l'email di conferma. Prova ad accedere.";
         registrationSuccessful = true;
       }
       
       if (registrationSuccessful) {
         setEmailSent(true);
-        toast.success("Registration completed", {
+        toast.success("Registrazione completata", {
           description: errorMessage,
           duration: 8000,
           dismissible: true,
         });
       } else {
-        toast.error("Registration error", {
+        toast.error("Errore registrazione", {
           description: errorMessage,
           duration: 8000,
           dismissible: true,
