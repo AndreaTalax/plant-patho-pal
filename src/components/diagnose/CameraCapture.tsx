@@ -22,6 +22,7 @@ interface ExtendedMediaTrackCapabilities extends MediaTrackCapabilities {
 // Define an extended interface for torch constraints
 interface ExtendedMediaTrackConstraintSet extends MediaTrackConstraintSet {
   torch?: boolean;
+  advanced?: ExtendedMediaTrackConstraintSet[];
 }
 
 const CameraCapture: React.FC<CameraCaptureProps> = ({
