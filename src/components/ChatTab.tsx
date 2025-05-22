@@ -24,8 +24,22 @@ const ChatTab = () => {
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'messages' },
-        () => {
+        (payload) => {
           // Refresh the chat when messages change
+          console.log('Message change detected:', payload.eventType);
+          setRefreshKey(Date.now());
+        }
+      )
+      .subscribe();
+      
+    // Also subscribe to conversation changes
+    const conversationsChannel = supabase
+      .channel('conversations-changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'conversations' },
+        (payload) => {
+          console.log('Conversation change detected:', payload.eventType);
           setRefreshKey(Date.now());
         }
       )
@@ -34,6 +48,7 @@ const ChatTab = () => {
     return () => {
       window.removeEventListener('refreshChat', handleRefreshChat);
       supabase.removeChannel(channel);
+      supabase.removeChannel(conversationsChannel);
     };
   }, []);
   

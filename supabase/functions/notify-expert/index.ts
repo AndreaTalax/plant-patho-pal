@@ -159,14 +159,15 @@ serve(async (req) => {
     messageText += `\nID Consultazione: ${consultationId}`;
     
     // Crea il messaggio nella chat
-    const { error: messageError } = await supabase
+    const { data: messageData, error: messageError } = await supabase
       .from('messages')
       .insert({
         conversation_id: conversationId,
         sender_id: userId,
         recipient_id: EXPERT_ID,
         text: messageText
-      });
+      })
+      .select();
     
     if (messageError) {
       console.error("Errore nell'invio del messaggio:", messageError);
@@ -202,6 +203,32 @@ serve(async (req) => {
       .from('expert_consultations')
       .update({ status: 'sent_to_expert' })
       .eq('id', consultationId);
+    
+    // Invia una notifica al fitopatologo usando la edge function di notifica specialistica
+    try {
+      await supabase.functions.invoke('send-specialist-notification', {
+        body: {
+          conversation_id: conversationId,
+          sender_id: userId,
+          recipient_id: EXPERT_ID,
+          message_text: messageText,
+          expert_email: 'fitopatologo@drplant.it', // Replace with actual expert email
+          user_name: username,
+          image_url: imageUrl,
+          plant_details: plantInfo,
+          user_details: {
+            firstName: userProfile.first_name || '',
+            lastName: userProfile.last_name || '',
+            birthDate: userProfile.birth_date || '',
+            birthPlace: userProfile.birth_place || '',
+          }
+        }
+      });
+      console.log('Notifica specialista inviata con successo');
+    } catch (notifyError) {
+      console.error('Errore nell\'invio della notifica al fitopatologo:', notifyError);
+      // Continue even if notification fails
+    }
     
     // Tutto è andato a buon fine
     return new Response(

@@ -81,15 +81,43 @@ serve(async (req) => {
     const { error: updateError } = await supabaseAdmin
       .from('conversations')
       .update({
-        last_message_text: message_text,
+        last_message_text: message_text.substring(0, 100) + (message_text.length > 100 ? '...' : ''),
         last_message_timestamp: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
+        unread_count: supabaseAdmin.sql`unread_count + 1`,
+        last_sender_id: sender_id
       })
       .eq('id', conversation_id);
 
     if (updateError) {
       console.error("Errore nell'aggiornamento della conversazione:", updateError);
       // Continuiamo comunque anche se l'aggiornamento fallisce
+    }
+    
+    // Invia una notifica push in tempo reale al fitopatologo attraverso il canale Realtime
+    try {
+      // Direttamente tramite il client Supabase, invia un messaggio sul canale realtime
+      const payload = {
+        type: 'new_message',
+        conversation_id,
+        sender_id,
+        sender_name: senderName,
+        message_preview: message_text.substring(0, 50) + (message_text.length > 50 ? '...' : ''),
+        timestamp: new Date().toISOString()
+      };
+      
+      // Broadcast su un canale specifico per l'esperto
+      const channel = supabaseAdmin.channel(`expert-notifications:${recipient_id}`);
+      await channel.send({
+        type: 'broadcast',
+        event: 'new_plant_consultation',
+        payload
+      });
+      
+      console.log(`Notifica realtime inviata al canale expert-notifications:${recipient_id}`);
+    } catch (realtimeError) {
+      console.error("Errore nell'invio della notifica realtime:", realtimeError);
+      // Continuiamo comunque anche se l'invio della notifica realtime fallisce
     }
 
     // Invia email al fitopatologo se abbiamo l'indirizzo email
@@ -110,6 +138,7 @@ serve(async (req) => {
               img.plant-image { max-width: 100%; height: auto; border: 1px solid #ddd; border-radius: 4px; margin: 15px 0; }
               .info-box { background-color: #e8f5e9; border-left: 4px solid #4CAF50; padding: 10px; margin: 15px 0; }
               .user-info-box { background-color: #e3f2fd; border-left: 4px solid #2196F3; padding: 10px; margin: 15px 0; }
+              .action-button { background-color: #4CAF50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; display: inline-block; margin: 20px 0; }
             </style>
           </head>
           <body>
@@ -150,6 +179,8 @@ serve(async (req) => {
                 <img src="${image_url}" alt="Immagine della pianta" class="plant-image">
                 ` : '<p>Nessuna immagine fornita.</p>'}
 
+                <a href="https://app.drplant.it" class="action-button">Rispondi nella piattaforma</a>
+                
                 <p>Puoi rispondere direttamente dalla piattaforma Dr. Plant accedendo alla sezione chat.</p>
               </div>
               <div class="footer">

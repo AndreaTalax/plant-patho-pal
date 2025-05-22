@@ -10,6 +10,8 @@ import { FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessa
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
+import { useAuth } from '@/context/AuthContext';
+import { toast } from 'sonner';
 
 export interface PlantInfoFormValues {
   isIndoor: boolean;
@@ -17,6 +19,7 @@ export interface PlantInfoFormValues {
   lightExposure: string;
   symptoms: string;
   useAI: boolean;
+  sendToExpert: boolean;
 }
 
 const formSchema = z.object({
@@ -25,6 +28,7 @@ const formSchema = z.object({
   lightExposure: z.string().min(1, "L'esposizione alla luce è obbligatoria"),
   symptoms: z.string().min(10, "Inserisci una descrizione dettagliata dei sintomi (min. 10 caratteri)"),
   useAI: z.boolean().optional(),
+  sendToExpert: z.boolean().optional(),
 })
 
 interface PlantInfoFormProps {
@@ -32,6 +36,7 @@ interface PlantInfoFormProps {
 }
 
 const PlantInfoForm = ({ onComplete }: PlantInfoFormProps) => {
+  const { isAuthenticated } = useAuth();
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -40,17 +45,26 @@ const PlantInfoForm = ({ onComplete }: PlantInfoFormProps) => {
       lightExposure: '',
       symptoms: '',
       useAI: false,
+      sendToExpert: true,
     }
   });
 
   const handleSubmit = (values: z.infer<typeof formSchema>) => {
-    // Ensure useAI is not undefined before passing it to onComplete
+    // If user wants to send to expert but isn't authenticated, show warning
+    if (values.sendToExpert && !isAuthenticated) {
+      toast.warning("Devi effettuare l'accesso per inviare la richiesta al fitopatologo", {
+        duration: 4000,
+      });
+    }
+    
+    // Ensure sendToExpert is not undefined before passing it to onComplete
     onComplete({
       isIndoor: values.isIndoor,
       wateringFrequency: values.wateringFrequency,
       lightExposure: values.lightExposure,
       symptoms: values.symptoms,
       useAI: values.useAI || false,
+      sendToExpert: values.sendToExpert || true,
     });
   };
 
@@ -161,26 +175,49 @@ const PlantInfoForm = ({ onComplete }: PlantInfoFormProps) => {
               )}
             />
             
-            <FormField
-              control={form.control}
-              name="useAI"
-              render={({ field }) => (
-                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 bg-blue-50">
-                  <FormControl>
-                    <Checkbox
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
-                  </FormControl>
-                  <div className="space-y-1 leading-none">
-                    <FormLabel>Usa l'intelligenza artificiale per diagnosi preliminare</FormLabel>
-                    <FormDescription>
-                      <span className="text-blue-600 font-medium">Servizio Premium</span>: Ottieni immediatamente una diagnosi AI preliminare (60-75% di accuratezza)
-                    </FormDescription>
-                  </div>
-                </FormItem>
-              )}
-            />
+            <div className="space-y-5">
+              <FormField
+                control={form.control}
+                name="useAI"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 bg-blue-50">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                      <FormLabel>Usa l'intelligenza artificiale per diagnosi preliminare</FormLabel>
+                      <FormDescription>
+                        <span className="text-blue-600 font-medium">Servizio Premium</span>: Ottieni immediatamente una diagnosi AI preliminare (60-75% di accuratezza)
+                      </FormDescription>
+                    </div>
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="sendToExpert"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 bg-green-50">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                      <FormLabel>Invia richiesta al fitopatologo</FormLabel>
+                      <FormDescription>
+                        <span className="text-green-600 font-medium">Consulenza Esperta</span>: Un fitopatologo qualificato esaminerà il tuo caso (richiede login)
+                      </FormDescription>
+                    </div>
+                  </FormItem>
+                )}
+              />
+            </div>
 
             <div className="pt-2">
               <Button 

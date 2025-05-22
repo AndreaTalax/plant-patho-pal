@@ -139,3 +139,102 @@ export const analyzePlantImage = async (imageFile: File) => {
     return fallbackLocalAnalysis(imageFile);
   }
 };
+
+/**
+ * Invia un'immagine e le informazioni della pianta direttamente al fitopatologo
+ * Utilizza il servizio di notifica esperto di Supabase
+ */
+export const sendPlantInfoToExpert = async (imageFile: File, plantInfo: any, userId: string) => {
+  try {
+    toast.dismiss(); // Dismiss any existing toasts
+    
+    if (!imageFile) {
+      toast.error("È necessaria un'immagine della pianta per inviare la richiesta");
+      return false;
+    }
+    
+    if (!userId) {
+      toast.error("È necessario effettuare l'accesso per inviare la richiesta");
+      return false;
+    }
+    
+    // Convert image to base64
+    const reader = new FileReader();
+    const imageUrl = await new Promise<string>((resolve) => {
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.readAsDataURL(imageFile);
+    });
+    
+    toast.info("Invio della richiesta in corso...", {
+      duration: 3000,
+    });
+    
+    // Prima, crea un record di consultazione
+    const { data: consultationData, error: consultationError } = await supabase
+      .from('expert_consultations')
+      .insert({
+        user_id: userId,
+        symptoms: plantInfo.symptoms,
+        image_url: imageUrl,
+        plant_info: {
+          isIndoor: plantInfo.isIndoor,
+          wateringFrequency: plantInfo.wateringFrequency,
+          lightExposure: plantInfo.lightExposure
+        },
+        status: 'pending'
+      })
+      .select();
+      
+    if (consultationError) {
+      console.error("Errore nella creazione della consultazione:", consultationError);
+      toast.error("Errore nell'invio della richiesta", {
+        duration: 4000,
+      });
+      return false;
+    }
+    
+    // Invia notifica all'esperto (usando edge function)
+    const consultationId = consultationData?.[0]?.id;
+    if (consultationId) {
+      const { data: notifyData, error: notifyError } = await supabase.functions.invoke('notify-expert', {
+        body: { 
+          consultationId,
+          userId,
+          imageUrl,
+          symptoms: plantInfo.symptoms,
+          plantInfo: {
+            isIndoor: plantInfo.isIndoor,
+            wateringFrequency: plantInfo.wateringFrequency,
+            lightExposure: plantInfo.lightExposure,
+          },
+          diagnosisResult: plantInfo.diagnosisResult, // Pass AI diagnosis result if available
+          useAI: plantInfo.useAI || false // Indicate if AI was used
+        }
+      });
+      
+      if (notifyError) {
+        console.error("Errore nella notifica all'esperto:", notifyError);
+        toast.error("Errore nella notifica all'esperto", { 
+          duration: 3000 
+        });
+        return false;
+      }
+      
+      toast.success("Richiesta inviata con successo!", {
+        description: "Il fitopatologo risponderà al più presto nella chat",
+        duration: 4000,
+      });
+      
+      // Force refresh of chat to show new message
+      window.dispatchEvent(new Event('refreshChat'));
+      
+      return true;
+    }
+    
+    return false;
+  } catch (err) {
+    console.error('Errore nell\'invio della richiesta al fitopatologo:', err);
+    toast.error(`Errore: ${(err as Error).message || 'Errore sconosciuto'}`);
+    return false;
+  }
+};
