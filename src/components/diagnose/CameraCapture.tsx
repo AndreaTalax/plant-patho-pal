@@ -14,6 +14,16 @@ interface CameraCaptureProps {
   canvasRef: React.RefObject<HTMLCanvasElement>;
 }
 
+// Define an extended interface for torch capabilities
+interface ExtendedMediaTrackCapabilities extends MediaTrackCapabilities {
+  torch?: boolean;
+}
+
+// Define an extended interface for torch constraints
+interface ExtendedMediaTrackConstraintSet extends MediaTrackConstraintSet {
+  torch?: boolean;
+}
+
 const CameraCapture: React.FC<CameraCaptureProps> = ({
   onCapture,
   onCancel,
@@ -47,7 +57,7 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
     
     try {
       if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        const constraints = { 
+        const constraints: MediaStreamConstraints = { 
           video: { 
             facingMode: facingMode,
             width: { ideal: 1920 },
@@ -57,8 +67,8 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
         
         // Add flashlight constraint for supported devices
         if (flashMode) {
-          // @ts-ignore - Advanced constraints not in TypeScript defs
-          constraints.video.advanced = [{ torch: true }];
+          // Use type assertion to handle the torch constraint
+          (constraints.video as ExtendedMediaTrackConstraintSet).advanced = [{ torch: true }];
         }
         
         const stream = await navigator.mediaDevices.getUserMedia(constraints);
@@ -139,7 +149,7 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
         const track = stream.getVideoTracks()[0];
         
         // Check if flashlight is supported
-        const capabilities = track.getCapabilities();
+        const capabilities = track.getCapabilities() as ExtendedMediaTrackCapabilities;
         if (!capabilities.torch) {
           toast.error("Il flash non è supportato su questo dispositivo", { 
             duration: 2000 
@@ -153,7 +163,7 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
         
         // Apply to track
         await track.applyConstraints({
-          advanced: [{ torch: newFlashMode }]
+          advanced: [{ torch: newFlashMode } as ExtendedMediaTrackConstraintSet]
         });
         
         toast.success(newFlashMode ? "Flash attivato" : "Flash disattivato", {
