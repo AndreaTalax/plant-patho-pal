@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -16,15 +16,17 @@ import {
   Flower2,
   User,
   Save,
-  Edit
+  Edit,
+  Camera
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
-import { useToast } from "@/hooks/use-toast"; // Updated import path
+import { toast } from "sonner";
 import PrivacyPolicyModal from "./PrivacyPolicyModal";
 import SettingsModal from "./SettingsModal";
 import ChangeCredentialsModal from "./ChangeCredentialsModal";
+import { supabase } from "@/integrations/supabase/client";
 
 const ProfileTab = () => {
   const [privacyPolicyOpen, setPrivacyPolicyOpen] = useState(false);
@@ -34,15 +36,18 @@ const ProfileTab = () => {
   const [editingAddress, setEditingAddress] = useState(false);
   const [phoneValue, setPhoneValue] = useState("");
   const [addressValue, setAddressValue] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
   
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
   const { logout, userProfile, updateProfile } = useAuth();
-  const { toast } = useToast();
 
   // Initialize state with user profile data
   useState(() => {
     setPhoneValue(userProfile.phone || "");
     setAddressValue(userProfile.address || "");
+    setAvatarUrl(userProfile.avatarUrl || null);
   });
 
   const handleSignOut = () => {
@@ -57,8 +62,7 @@ const ProfileTab = () => {
   const handleSavePhone = () => {
     updateProfile("phone", phoneValue);
     setEditingPhone(false);
-    toast({
-      title: "Phone number updated",
+    toast("Phone number updated", {
       description: "Your phone number has been saved successfully",
     });
   };
@@ -66,8 +70,7 @@ const ProfileTab = () => {
   const handleSaveAddress = () => {
     updateProfile("address", addressValue);
     setEditingAddress(false);
-    toast({
-      title: "Address updated",
+    toast("Address updated", {
       description: "Your address has been saved successfully",
     });
   };
@@ -77,15 +80,87 @@ const ProfileTab = () => {
     const lastName = userProfile.lastName || "";
     return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
   };
+  
+  const handleAvatarClick = () => {
+    fileInputRef.current?.click();
+  };
+  
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    try {
+      if (!event.target.files || event.target.files.length === 0) {
+        return;
+      }
+      
+      const file = event.target.files[0];
+      const fileExt = file.name.split('.').pop();
+      const filePath = `${userProfile.id}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+      
+      setUploading(true);
+      
+      // Upload the file to Supabase Storage
+      const { error: uploadError } = await supabase
+        .storage
+        .from('avatars')
+        .upload(filePath, file);
+        
+      if (uploadError) {
+        throw uploadError;
+      }
+      
+      // Get the public URL
+      const { data } = supabase
+        .storage
+        .from('avatars')
+        .getPublicUrl(filePath);
+        
+      const avatarUrl = data.publicUrl;
+      
+      // Update the user's profile
+      await updateProfile("avatarUrl", avatarUrl);
+      setAvatarUrl(avatarUrl);
+      
+      toast("Profile picture updated", {
+        description: "Your profile picture has been updated successfully",
+      });
+    } catch (error) {
+      console.error("Error uploading avatar:", error);
+      toast("Error uploading image", {
+        description: "There was a problem uploading your profile picture",
+      });
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
 
   return (
     <div className="space-y-6">
       {/* Profile Header */}
       <div className="flex flex-col items-center pt-8 pb-6">
-        <Avatar className="h-24 w-24 mb-4">
-          <AvatarImage src="/placeholder.svg" alt="User avatar" />
-          <AvatarFallback>{getInitials()}</AvatarFallback>
-        </Avatar>
+        <div className="relative">
+          <Avatar className="h-24 w-24 mb-4 cursor-pointer" onClick={handleAvatarClick}>
+            <AvatarImage src={avatarUrl || "/placeholder.svg"} alt="User avatar" />
+            <AvatarFallback>{getInitials()}</AvatarFallback>
+          </Avatar>
+          <Button 
+            size="icon" 
+            className="absolute bottom-3 right-0 rounded-full h-8 w-8" 
+            variant="outline"
+            onClick={handleAvatarClick}
+            disabled={uploading}
+          >
+            <Camera className="h-4 w-4" />
+          </Button>
+          <input 
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileChange}
+            accept="image/*"
+            className="hidden"
+          />
+        </div>
         <h2 className="text-2xl font-bold text-gray-900">
           {userProfile.firstName} {userProfile.lastName}
         </h2>

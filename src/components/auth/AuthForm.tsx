@@ -30,38 +30,38 @@ export function AuthForm() {
       if (mode === 'signup') {
         const result = await signUp(email, password);
         
-        // Gestione del caso di rate limit
+        // Handle rate limit case
         if (result && 'rateLimitExceeded' in result && result.rateLimitExceeded) {
           setIsRateLimited(true);
-          setEmailSent(true); // Mostriamo comunque la schermata di conferma
-          toast.warning('Limite invio email raggiunto', {
+          setEmailSent(true); // Still show the confirmation screen
+          toast.warning('Email sending limit reached', {
             description: result.message,
-            duration: 8000, // Durata più lunga per questo avviso importante
+            duration: 8000, // Longer duration for this important notice
           });
         } else {
           setEmailSent(true);
-          console.log("Risultato registrazione:", result);
+          console.log("Registration result:", result);
           
-          // Verifica se la conferma email è richiesta
+          // Check if email confirmation is required
           const needsConfirmation = 'confirmationRequired' in result ? result.confirmationRequired : true;
           
-          toast.success('Registrazione completata', {
+          toast.success('Registration completed', {
             description: needsConfirmation 
-              ? "Ti abbiamo inviato un'email di conferma. Se non la vedi nella casella principale, controlla nella cartella spam."
-              : "Registrazione completata con successo.",
+              ? "We've sent you a confirmation email. If you don't see it in your inbox, please check your spam folder."
+              : "Registration completed successfully.",
           });
         }
       } else {
         try {
           await signIn(email, password);
-          toast.success('Login effettuato con successo', {
-            description: "Benvenuto nel tuo account!",
+          toast.success('Login successful', {
+            description: "Welcome to your account!",
           });
         } catch (error: any) {
           if (error.message === 'email_not_confirmed') {
             setEmailSent(true);
-            toast.warning('Email non confermata', {
-              description: "Devi confermare la tua email prima di poter accedere. Controlla la tua casella di posta o richiedi un nuovo link di conferma.",
+            toast.warning('Email not confirmed', {
+              description: "You need to confirm your email before you can log in. Check your inbox or request a new confirmation link.",
               duration: 8000,
             });
           } else {
@@ -70,17 +70,17 @@ export function AuthForm() {
         }
       }
     } catch (error: any) {
-      let message = "Si è verificato un errore";
+      let message = "An error occurred";
       
       if (error.message?.includes('already registered')) {
-        message = "Email già registrata. Prova ad effettuare il login.";
+        message = "Email already registered. Try logging in instead.";
       } else if (error.message?.includes('Invalid login')) {
-        message = "Credenziali non valide. Controlla email e password.";
+        message = "Invalid credentials. Check your email and password.";
       } else if (error.message?.includes('weak password')) {
-        message = "La password deve contenere almeno 6 caratteri.";
+        message = "Password must be at least 6 characters long.";
       }
       
-      toast.error(mode === 'signup' ? 'Errore di registrazione' : 'Errore di login', {
+      toast.error(mode === 'signup' ? 'Registration error' : 'Login error', {
         description: message,
       });
     } finally {
@@ -100,11 +100,11 @@ export function AuthForm() {
       ) : (
         <>
           <CardHeader>
-            <CardTitle>{mode === 'login' ? 'Accedi' : 'Registrati'}</CardTitle>
+            <CardTitle>{mode === 'login' ? 'Login' : 'Register'}</CardTitle>
             <CardDescription>
               {mode === 'login'
-                ? 'Inserisci le tue credenziali per accedere'
-                : 'Crea un nuovo account per iniziare'}
+                ? 'Enter your credentials to log in'
+                : 'Create a new account to get started'}
             </CardDescription>
           </CardHeader>
           <AuthFormFields

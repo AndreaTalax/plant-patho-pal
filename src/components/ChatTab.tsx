@@ -65,9 +65,9 @@ const ChatTab = () => {
   return (
     <div className="flex flex-col min-h-full pt-3 pb-24">
       {isMasterAccount ? (
-        <ExpertChatView key={`expert-${refreshKey}-${userProfile.email}`} userId={userProfile.email} />
+        <ExpertChatView key={`expert-${refreshKey}-${userProfile.id}`} userId={userProfile.id} />
       ) : (
-        <UserChatView key={`user-${refreshKey}-${userProfile.email}`} userId={userProfile.email} />
+        <UserChatView key={`user-${refreshKey}-${userProfile.id}`} userId={userProfile.id} />
       )}
     </div>
   );

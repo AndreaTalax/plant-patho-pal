@@ -15,8 +15,8 @@ interface AuthRequiredDialogProps {
 export function AuthRequiredDialog({
   isOpen,
   onClose,
-  title = "Devi accedere",
-  description = "Per utilizzare questa funzionalità devi accedere al tuo account.",
+  title = "Login Required",
+  description = "You need to log in to use this feature.",
   redirectPath = "/auth",
 }: AuthRequiredDialogProps) {
   const navigate = useNavigate();
@@ -40,10 +40,10 @@ export function AuthRequiredDialog({
         </DialogHeader>
         <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-0">
           <Button variant="outline" onClick={onClose}>
-            Annulla
+            Cancel
           </Button>
           <Button onClick={handleLogin} className="bg-drplant-blue hover:bg-drplant-blue-dark">
-            Accedi
+            Login
           </Button>
         </DialogFooter>
       </DialogContent>

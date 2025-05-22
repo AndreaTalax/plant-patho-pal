@@ -122,11 +122,6 @@ const Login = () => {
             <div className="text-center w-full text-sm text-gray-500">
               Don't have an account? <Link to="/signup" className="text-drplant-blue font-medium hover:underline">Sign Up</Link>
             </div>
-            <div className="text-center w-full text-xs text-gray-400">
-              <p>Demo accounts:</p>
-              <p>Regular user: test@gmail.com / test123</p>
-              <p>Plant pathologist: agrotecnicomarconigro@gmail.com / marconigro93</p>
-            </div>
           </CardFooter>
         </Card>
 

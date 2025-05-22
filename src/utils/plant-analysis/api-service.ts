@@ -5,44 +5,46 @@ import { preprocessImageForPlantDetection, validateImageForAnalysis, resizeImage
 import { fileToBase64WithoutPrefix, fallbackLocalAnalysis } from "./plant-id-service";
 
 /**
- * Invia un'immagine alla Supabase Edge Function per l'analisi delle malattie delle piante
- * Utilizza un approccio combinato con API PlantSnap, Flora Incognita, PlantNet-inspired,
- * TRY Plant Trait Database, New Plant Diseases Dataset, OLID I, EPPO Global Database e Plant.id API
+ * Send an image to the Supabase Edge Function for plant disease analysis
+ * Uses a combined approach with PlantSnap, Flora Incognita, PlantNet-inspired,
+ * TRY Plant Trait Database, New Plant Diseases Dataset, OLID I, EPPO Global Database and Plant.id API
  * 
- * @param imageFile Il file immagine della pianta da analizzare
- * @returns Il risultato dell'analisi normalizzato in un formato standard
+ * @param imageFile The plant image file to analyze
+ * @returns The analysis result normalized in a standard format
  */
 export const analyzePlantImage = async (imageFile: File) => {
   try {
     // Dismiss any existing toasts to prevent stuck notifications
     toast.dismiss();
     
-    // Convalida e pre-elabora l'immagine
+    // Validate and pre-process the image
     const isValid = await validateImageForAnalysis(imageFile);
     if (!isValid) {
-      toast.error("L'immagine non è adatta per l'analisi. Usa una foto di pianta più chiara.");
+      toast.error("The image is not suitable for analysis. Use a clearer plant photo.", {
+        duration: 3000
+      });
       return null;
     }
 
-    // Applica pre-elaborazione per migliorare il rilevamento della pianta
+    // Apply pre-processing to improve plant detection
     const processedImage = await preprocessImageForPlantDetection(imageFile);
     
-    // Ridimensiona l'immagine alle dimensioni ottimali per i modelli ML
+    // Resize the image to optimal dimensions for ML models
     const optimizedImage = await resizeImageForOptimalDetection(processedImage);
     
     const formData = new FormData();
     formData.append('image', optimizedImage);
-    formData.append('optimized', 'true'); // Flag per indicare l'immagine ottimizzata
+    formData.append('optimized', 'true'); // Flag to indicate the image is optimized
     
-    // Converti l'immagine in base64 per l'API Plant.id
+    // Convert the image to base64 for Plant.id API
     const imageBase64 = await fileToBase64WithoutPrefix(optimizedImage);
     formData.append('imageBase64', imageBase64);
 
-    toast.info("Analisi dell'immagine in corso...", {
+    toast.info("Analyzing image...", {
       duration: 3000,
     });
 
-    // Chiama la Supabase Edge Function con meccanismo di retry
+    // Call the Supabase Edge Function with retry mechanism
     let attempts = 0;
     const maxAttempts = 2; // Reduce attempts to respond faster on failures
     let data, error;
@@ -50,9 +52,9 @@ export const analyzePlantImage = async (imageFile: File) => {
     while (attempts < maxAttempts) {
       try {
         attempts++;
-        console.log(`Tentativo di analisi pianta ${attempts}/${maxAttempts}...`);
+        console.log(`Plant analysis attempt ${attempts}/${maxAttempts}...`);
         
-        // Aggiungi un piccolo ritardo tra i tentativi per dare più tempo al backend
+        // Add a small delay between attempts to give the backend more time
         if (attempts > 1) {
           await new Promise(resolve => setTimeout(resolve, 1000 * attempts));
         }
@@ -67,18 +69,18 @@ export const analyzePlantImage = async (imageFile: File) => {
         data = response.data;
         error = response.error;
         
-        // Log della risposta per il debug
+        // Log the response for debugging
         console.log('Plant analysis response:', data);
         
-        // Se è riuscito o ha ottenuto dati con errore, interrompi
+        // If successful or got data with error, break
         if (!error || data) break;
         
-        // Attendi prima di riprovare (backoff esponenziale)
+        // Wait before retrying (exponential backoff)
         if (attempts < maxAttempts) {
-          toast.info(`Nuovo tentativo di analisi (tentativo ${attempts + 1}/${maxAttempts})...`);
+          toast.info(`Retrying analysis (attempt ${attempts + 1}/${maxAttempts})...`);
         }
       } catch (retryError) {
-        console.error(`Errore al tentativo ${attempts}:`, retryError);
+        console.error(`Error at attempt ${attempts}:`, retryError);
         if (attempts === maxAttempts) {
           error = { message: (retryError as Error).message };
         }
@@ -87,8 +89,8 @@ export const analyzePlantImage = async (imageFile: File) => {
 
     // If edge function failed completely, use fallback local analysis
     if (error || !data) {
-      console.error('Errore nella chiamata alla funzione analyze-plant:', error);
-      toast.warning("Analisi remota non disponibile. Utilizzando riconoscimento locale.", {
+      console.error('Error calling analyze-plant function:', error);
+      toast.warning("Remote analysis unavailable. Using local recognition.", {
         duration: 4000,
       });
       
@@ -96,65 +98,73 @@ export const analyzePlantImage = async (imageFile: File) => {
       return fallbackLocalAnalysis(imageFile);
     }
 
-    console.log('Risultato analisi pianta:', data);
+    console.log('Plant analysis result:', data);
     
-    // Verifica se i dati hanno la nuova struttura standardizzata
+    // Verify if the data has the new standardized structure
     if (!data.label || !data.plantPart) {
-      toast.warning("Formato dei dati non completamente standardizzato. Usando dati grezzi.", {
+      toast.warning("Data format not fully standardized. Using raw data.", {
         duration: 3000,
       });
     }
     
-    // Gestisci diversi esiti dell'analisi
+    // Handle different analysis outcomes
     if (data.isValidPlantImage === false) {
-      toast.error("L'immagine caricata non sembra contenere una pianta. Prova con un'altra immagine.", {
+      toast.error("The uploaded image doesn't seem to contain a plant. Try another image.", {
         duration: 5000,
       });
     } else if (data.score < 0.5 && !data.isReliable) {
-      toast.warning("I risultati dell'analisi hanno bassa confidenza. Considera di caricare un'immagine più chiara per risultati migliori.", {
+      toast.warning("Analysis results have low confidence. Consider uploading a clearer image for better results.", {
         duration: 5000,
       });
     } else if (data.eppoRegulatedConcern) {
-      // Avviso speciale EPPO per parassiti e malattie regolamentate
-      toast.error(`ALLERTA: Possibile rilevamento di ${data.eppoRegulatedConcern.name}, un parassita/malattia regolamentato. Si prega di segnalarlo alle autorità fitosanitarie locali.`, {
+      // Special EPPO warning for regulated pests and diseases
+      toast.error(`ALERT: Possible detection of ${data.eppoRegulatedConcern.name}, a regulated pest/disease. Please report to local phytosanitary authorities.`, {
         duration: 8000,
       });
     } else if (data.healthy === false && data.disease) {
-      toast.warning(`Rilevato problema: ${data.disease.name} (${Math.round(data.disease.confidence * 100)}% confidenza)`, {
+      toast.warning(`Detected issue: ${data.disease.name} (${Math.round(data.disease.confidence * 100)}% confidence)`, {
         duration: 5000,
       });
     } else {
-      toast.success("Analisi della pianta completata!", {
+      toast.success("Plant analysis completed!", {
         duration: 3000,
       });
     }
     
-    // Ritorna i dati normalizzati
+    // Return the normalized data
     return data;
   } catch (err) {
-    console.error('Eccezione durante l\'analisi della pianta:', err);
-    toast.error(`Errore di analisi: ${(err as Error).message || 'Errore sconosciuto'}`);
+    console.error('Exception during plant analysis:', err);
+    toast.error(`Analysis error: ${(err as Error).message || 'Unknown error'}`);
     
-    // Restituisci dati di fallback per evitare che l'interfaccia si blocchi
+    // Return fallback data to avoid interface blocking
     return fallbackLocalAnalysis(imageFile);
   }
 };
 
 /**
- * Invia un'immagine e le informazioni della pianta direttamente al fitopatologo
- * Utilizza il servizio di notifica esperto di Supabase
+ * Send an image and plant information directly to the phytopathologist
+ * Uses the Supabase expert notification service
  */
-export const sendPlantInfoToExpert = async (imageFile: File, plantInfo: any, userId: string) => {
+export const sendPlantInfoToExpert = async (imageFile: File | null, plantInfo: any, userId: string) => {
   try {
     toast.dismiss(); // Dismiss any existing toasts
     
     if (!imageFile) {
-      toast.error("È necessaria un'immagine della pianta per inviare la richiesta");
+      toast.error("A plant image is required to send the request");
       return false;
     }
     
     if (!userId) {
-      toast.error("È necessario effettuare l'accesso per inviare la richiesta");
+      toast.error("You must be logged in to send the request");
+      return false;
+    }
+
+    // Get current session to ensure user is logged in
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    if (!session || sessionError) {
+      console.error("User not logged in or session error:", sessionError);
+      toast.error("Please log in to contact the phytopathologist");
       return false;
     }
     
@@ -165,11 +175,11 @@ export const sendPlantInfoToExpert = async (imageFile: File, plantInfo: any, use
       reader.readAsDataURL(imageFile);
     });
     
-    toast.info("Invio della richiesta in corso...", {
+    toast.info("Sending request...", {
       duration: 3000,
     });
     
-    // Prima, crea un record di consultazione
+    // First, create a consultation record
     const { data: consultationData, error: consultationError } = await supabase
       .from('expert_consultations')
       .insert({
@@ -186,14 +196,14 @@ export const sendPlantInfoToExpert = async (imageFile: File, plantInfo: any, use
       .select();
       
     if (consultationError) {
-      console.error("Errore nella creazione della consultazione:", consultationError);
-      toast.error("Errore nell'invio della richiesta", {
+      console.error("Error creating consultation:", consultationError);
+      toast.error("Error sending request", {
         duration: 4000,
       });
       return false;
     }
     
-    // Invia notifica all'esperto (usando edge function)
+    // Notify the expert (using edge function)
     const consultationId = consultationData?.[0]?.id;
     if (consultationId) {
       const { data: notifyData, error: notifyError } = await supabase.functions.invoke('notify-expert', {
@@ -213,15 +223,15 @@ export const sendPlantInfoToExpert = async (imageFile: File, plantInfo: any, use
       });
       
       if (notifyError) {
-        console.error("Errore nella notifica all'esperto:", notifyError);
-        toast.error("Errore nella notifica all'esperto", { 
+        console.error("Error notifying expert:", notifyError);
+        toast.error("Error notifying the expert", { 
           duration: 3000 
         });
         return false;
       }
       
-      toast.success("Richiesta inviata con successo!", {
-        description: "Il fitopatologo risponderà al più presto nella chat",
+      toast.success("Request sent successfully!", {
+        description: "The phytopathologist will respond in the chat soon",
         duration: 4000,
       });
       
@@ -233,8 +243,8 @@ export const sendPlantInfoToExpert = async (imageFile: File, plantInfo: any, use
     
     return false;
   } catch (err) {
-    console.error('Errore nell\'invio della richiesta al fitopatologo:', err);
-    toast.error(`Errore: ${(err as Error).message || 'Errore sconosciuto'}`);
+    console.error('Error sending request to phytopathologist:', err);
+    toast.error(`Error: ${(err as Error).message || 'Unknown error'}`);
     return false;
   }
 };

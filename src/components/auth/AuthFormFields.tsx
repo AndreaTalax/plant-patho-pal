@@ -38,7 +38,7 @@ export function AuthFormFields({
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="nome@esempio.com"
+              placeholder="name@example.com"
               className="pl-10"
               required
             />
@@ -53,7 +53,7 @@ export function AuthFormFields({
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder={mode === 'signup' ? 'Minimo 6 caratteri' : '••••••••'}
+              placeholder={mode === 'signup' ? 'Minimum 6 characters' : '••••••••'}
               className="pl-10"
               required
             />
@@ -63,14 +63,14 @@ export function AuthFormFields({
       <CardFooter className="flex flex-col space-y-4">
         <Button type="submit" className="w-full" disabled={isLoading}>
           {isLoading
-            ? mode === 'login' ? 'Accesso in corso...' : 'Registrazione in corso...'
-            : mode === 'login' ? 'Accedi' : 'Registrati'}
+            ? mode === 'login' ? 'Logging in...' : 'Registering...'
+            : mode === 'login' ? 'Login' : 'Register'}
         </Button>
         <div className="text-sm text-center">
           {mode === 'login' ? (
-            <span>Non hai un account? <button type="button" className="text-drplant-blue hover:underline" onClick={toggleMode}>Registrati</button></span>
+            <span>Don't have an account? <button type="button" className="text-drplant-blue hover:underline" onClick={toggleMode}>Register</button></span>
           ) : (
-            <span>Hai già un account? <button type="button" className="text-drplant-blue hover:underline" onClick={toggleMode}>Accedi</button></span>
+            <span>Already have an account? <button type="button" className="text-drplant-blue hover:underline" onClick={toggleMode}>Login</button></span>
           )}
         </div>
       </CardFooter>
