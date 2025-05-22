@@ -2,7 +2,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { preprocessImageForPlantDetection, validateImageForAnalysis, resizeImageForOptimalDetection } from "./image-utils";
-import { fileToBase64WithoutPrefix } from "./plant-id-service";
+import { fileToBase64WithoutPrefix, fallbackLocalAnalysis } from "./plant-id-service";
 
 /**
  * Invia un'immagine alla Supabase Edge Function per l'analisi delle malattie delle piante
@@ -14,6 +14,9 @@ import { fileToBase64WithoutPrefix } from "./plant-id-service";
  */
 export const analyzePlantImage = async (imageFile: File) => {
   try {
+    // Dismiss any existing toasts to prevent stuck notifications
+    toast.dismiss();
+    
     // Convalida e pre-elabora l'immagine
     const isValid = await validateImageForAnalysis(imageFile);
     if (!isValid) {
@@ -41,7 +44,7 @@ export const analyzePlantImage = async (imageFile: File) => {
 
     // Chiama la Supabase Edge Function con meccanismo di retry
     let attempts = 0;
-    const maxAttempts = 4; // Aumentato da 3 a 4 per una maggiore possibilità di successo
+    const maxAttempts = 2; // Reduce attempts to respond faster on failures
     let data, error;
     
     while (attempts < maxAttempts) {
@@ -82,10 +85,15 @@ export const analyzePlantImage = async (imageFile: File) => {
       }
     }
 
-    if (error) {
+    // If edge function failed completely, use fallback local analysis
+    if (error || !data) {
       console.error('Errore nella chiamata alla funzione analyze-plant:', error);
-      toast.error(`Errore di analisi: ${error.message || 'Errore sconosciuto'}`);
-      return null;
+      toast.warning("Analisi remota non disponibile. Utilizzando riconoscimento locale.", {
+        duration: 4000,
+      });
+      
+      // Use fallback local analysis
+      return fallbackLocalAnalysis(imageFile);
     }
 
     console.log('Risultato analisi pianta:', data);
@@ -128,16 +136,6 @@ export const analyzePlantImage = async (imageFile: File) => {
     toast.error(`Errore di analisi: ${(err as Error).message || 'Errore sconosciuto'}`);
     
     // Restituisci dati di fallback per evitare che l'interfaccia si blocchi
-    return {
-      label: "Errore di analisi",
-      score: 0.2,
-      healthy: null,
-      plantPart: "whole plant",
-      dataSource: "Fallback di emergenza",
-      confidence: 0.2,
-      error: (err as Error).message,
-      disease: null,
-      eppoRegulatedConcern: null
-    };
+    return fallbackLocalAnalysis(imageFile);
   }
 };
