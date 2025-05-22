@@ -51,10 +51,10 @@ export const identifyPlantTypeWithVision = (visionResults: any): string | null =
   
   // Estrai etichette relative alle piante
   const plantLabels = visionResults.labels
-    .filter(label => label.description.toLowerCase().includes('plant') || 
+    .filter((label: any) => label.description.toLowerCase().includes('plant') || 
              label.description.toLowerCase().includes('flower') || 
              label.description.toLowerCase().includes('tree'))
-    .sort((a, b) => b.score - a.score);
+    .sort((a: any, b: any) => b.score - a.score);
   
   if (plantLabels.length > 0) {
     return plantLabels[0].description;
@@ -74,11 +74,11 @@ export const detectPlantDiseaseWithVision = (visionResults: any): { isHealthy: b
   // Cerca termini correlati a malattie delle piante nelle etichette
   const diseaseTerms = ['disease', 'spot', 'blight', 'mildew', 'rot', 'rust', 'yellow', 'brown', 'wilt', 'mold'];
   const diseaseLabels = visionResults.labels
-    .filter(label => diseaseTerms.some(term => label.description.toLowerCase().includes(term)))
-    .sort((a, b) => b.score - a.score);
+    .filter((label: any) => diseaseTerms.some(term => label.description.toLowerCase().includes(term)))
+    .sort((a: any, b: any) => b.score - a.score);
   
   // Controllo dei colori: le piante malate spesso hanno colori anomali
-  const hasUnhealthyColors = visionResults.colors.some(color => {
+  const hasUnhealthyColors = visionResults.colors.some((color: any) => {
     const { red, green, blue } = color.color;
     // Gialli forti, marroni o colori innaturali potrebbero indicare malattie
     return (red > 200 && green > 200 && blue < 100) || // Giallo

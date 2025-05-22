@@ -1,12 +1,9 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 /**
  * Sends an image to the Supabase Edge Function for plant disease analysis
- * Using a combined approach with PlantSnap and Flora Incognita APIs alongside
- * the PlantNet-inspired approach, TRY Plant Trait Database, New Plant Diseases Dataset,
- * OLID I, and EPPO Global Database
+ * Using a combined approach with multiple AI services and databases
  * @param imageFile The plant image file to analyze
  * @returns The analysis result from the image processing models
  */

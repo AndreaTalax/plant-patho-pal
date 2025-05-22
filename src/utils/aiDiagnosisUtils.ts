@@ -1,4 +1,5 @@
-// Model information for plant disease diagnosis with PlantNet integration
+
+// Model information for plant disease diagnosis with Dr.Plant AI integration
 export interface ModelInfo {
   name: string;
   accuracy: string;
@@ -44,16 +45,16 @@ export const modelInfo: ModelInfo = {
     "Confidence scoring",
     "EPPO regulated pest detection"
   ],
-  description: "Advanced plant identification system that combines multiple databases: PlantNet-inspired identification techniques with disease classification algorithms. For leaf diseases, uses the New Plant Diseases Dataset and OLID I. For general plant identification, leverages the TRY Plant Trait Database. For regulated pests and diseases, integrates the EPPO Global Database.",
+  description: "Advanced plant identification system that combines multiple databases: Disease classification algorithms from New Plant Diseases Dataset and OLID I. For general plant identification, leverages the TRY Plant Trait Database. For regulated pests and diseases, integrates the EPPO Global Database.",
   lastUpdated: "2025-05-14",
   accuracy: "97.2%",
-  dataset: "TRY Plant Trait Database + PlantNet + New Plant Diseases Dataset + OLID I + EPPO Global Database",
+  dataset: "TRY Plant Trait Database + New Plant Diseases Dataset + OLID I + EPPO Global Database",
   inputSize: "224x224 pixels",
   classes: 58,
   framework: "PyTorch + TensorFlow",
   license: "CC BY-NC-SA 4.0",
-  authors: ["PlantNet Contributors", "Vision Research Team", "TRY Database Consortium", "OLID Research Group", "EPPO Database Team"],
-  repo: "https://github.com/plantnet/open-source",
+  authors: ["Vision Research Team", "TRY Database Consortium", "OLID Research Group", "EPPO Database Team"],
+  repo: "https://github.com/drplant/open-source",
   paperUrl: "https://doi.org/10.1016/j.gc.2017.08.005",
   inferenceTime: "180-350ms",
   architecture: {
@@ -67,7 +68,7 @@ export const modelInfo: ModelInfo = {
     recall: 0.968,
     f1Score: 0.970
   },
-  baseModel: "EfficientNet + ViT + PlantNet + ResNet",
+  baseModel: "EfficientNet + ViT + ResNet",
   datasetSize: "120,000 images + 12 million trait records + 87,000 leaf disease images + 20,000 EPPO regulated pests",
   dataAugmentation: [
     "Random rotation",

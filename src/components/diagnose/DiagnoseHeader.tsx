@@ -13,7 +13,7 @@ const DiagnoseHeader: React.FC<DiagnoseHeaderProps> = ({ showModelInfo, onToggle
         <h2 className="text-2xl font-bold text-drplant-green">Plant Identification</h2>
         <div className="flex items-center bg-blue-50 text-blue-600 rounded-full px-3 py-0.5 text-xs mt-1">
           <span className="font-semibold mr-1">Powered by</span> 
-          <span className="font-bold">PlantNet™ AI</span>
+          <span className="font-bold">Dr.Plant™ AI</span>
         </div>
         <p className="text-sm text-gray-500 text-center mt-2 max-w-xs">
           For best results, ensure your plant is well-lit and clearly visible in the frame.
@@ -25,7 +25,7 @@ const DiagnoseHeader: React.FC<DiagnoseHeaderProps> = ({ showModelInfo, onToggle
           onClick={onToggleModelInfo}
           className="text-sm text-drplant-blue hover:text-drplant-blue-dark flex items-center gap-1"
         >
-          <span>{showModelInfo ? 'Hide PlantNet Info' : 'Show PlantNet AI Info'}</span>
+          <span>{showModelInfo ? 'Hide AI Info' : 'Show AI Info'}</span>
         </button>
       </div>
     </>
