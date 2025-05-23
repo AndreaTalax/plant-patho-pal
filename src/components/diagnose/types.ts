@@ -99,7 +99,7 @@ export interface AnalysisDetails {
       edibleParts?: string[];
     };
     plexiAIResult?: any;
-    plantInfo?: PlantInfo; // Add this field to fix the error
+    plantInfo?: PlantInfo; // Plant info is a valid property here
   };
   identifiedFeatures?: string[];
   alternativeDiagnoses?: {
