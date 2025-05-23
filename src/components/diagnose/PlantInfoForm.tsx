@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -24,9 +23,9 @@ export interface PlantInfoFormValues {
 
 const formSchema = z.object({
   isIndoor: z.boolean(),
-  wateringFrequency: z.string().min(1, "La frequenza di irrigazione è obbligatoria"),
-  lightExposure: z.string().min(1, "L'esposizione alla luce è obbligatoria"),
-  symptoms: z.string().min(10, "Inserisci una descrizione dettagliata dei sintomi (min. 10 caratteri)"),
+  wateringFrequency: z.string().min(1, "Watering frequency is required"),
+  lightExposure: z.string().min(1, "Light exposure is required"),
+  symptoms: z.string().min(10, "Please provide a detailed description of the symptoms (min. 10 characters)"),
   useAI: z.boolean().optional(),
   sendToExpert: z.boolean().optional(),
 })
@@ -52,7 +51,7 @@ const PlantInfoForm = ({ onComplete }: PlantInfoFormProps) => {
   const handleSubmit = (values: z.infer<typeof formSchema>) => {
     // If user wants to send to expert but isn't authenticated, show warning
     if (values.sendToExpert && !isAuthenticated) {
-      toast.warning("Devi effettuare l'accesso per inviare la richiesta al fitopatologo", {
+      toast("You need to log in to send the request to the plant expert", {
         duration: 4000,
       });
     }
@@ -72,10 +71,10 @@ const PlantInfoForm = ({ onComplete }: PlantInfoFormProps) => {
     <Card className="bg-white p-6 shadow-md rounded-2xl">
       <div className="space-y-6">
         <div>
-          <h3 className="text-lg font-medium text-gray-900 mb-2">Informazioni sulla pianta</h3>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">Plant Information</h3>
           <p className="text-sm text-gray-500 mb-4">
-            Per ottenere una diagnosi più accurata, fornisci alcune informazioni sulla tua pianta.
-            Questi dettagli ci aiuteranno a comprendere meglio la sua situazione.
+            To get a more accurate diagnosis, please provide some information about your plant.
+            These details will help us better understand its situation.
           </p>
         </div>
 
@@ -93,7 +92,7 @@ const PlantInfoForm = ({ onComplete }: PlantInfoFormProps) => {
                     />
                   </FormControl>
                   <div className="space-y-1 leading-none">
-                    <FormLabel>La pianta è in casa (ambiente chiuso)</FormLabel>
+                    <FormLabel>Is the plant indoors (closed environment)</FormLabel>
                   </div>
                 </FormItem>
               )}
@@ -104,22 +103,22 @@ const PlantInfoForm = ({ onComplete }: PlantInfoFormProps) => {
               name="wateringFrequency"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Frequenza di irrigazione (volte a settimana) *</FormLabel>
+                  <FormLabel>Watering frequency (times per week) *</FormLabel>
                   <Select 
                     onValueChange={field.onChange}
                     defaultValue={field.value}
                   >
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Seleziona frequenza" />
+                        <SelectValue placeholder="Select frequency" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="1">1 volta</SelectItem>
-                      <SelectItem value="2">2 volte</SelectItem>
-                      <SelectItem value="3">3 volte</SelectItem>
-                      <SelectItem value="4">4 o più volte</SelectItem>
-                      <SelectItem value="0">Raramente / Mai</SelectItem>
+                      <SelectItem value="1">1 time</SelectItem>
+                      <SelectItem value="2">2 times</SelectItem>
+                      <SelectItem value="3">3 times</SelectItem>
+                      <SelectItem value="4">4 or more times</SelectItem>
+                      <SelectItem value="0">Rarely / Never</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -132,21 +131,21 @@ const PlantInfoForm = ({ onComplete }: PlantInfoFormProps) => {
               name="lightExposure"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Esposizione alla luce *</FormLabel>
+                  <FormLabel>Light exposure *</FormLabel>
                   <Select 
                     onValueChange={field.onChange}
                     defaultValue={field.value}
                   >
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Seleziona esposizione" />
+                        <SelectValue placeholder="Select exposure" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="full-sun">Luce piena / sole diretto</SelectItem>
-                      <SelectItem value="partial-sun">Parzialmente soleggiata</SelectItem>
-                      <SelectItem value="shade">Ombra / luce indiretta</SelectItem>
-                      <SelectItem value="low-light">Luce scarsa</SelectItem>
+                      <SelectItem value="full-sun">Full sun / direct sunlight</SelectItem>
+                      <SelectItem value="partial-sun">Partially shaded</SelectItem>
+                      <SelectItem value="shade">Shade / indirect light</SelectItem>
+                      <SelectItem value="low-light">Low light</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -159,16 +158,16 @@ const PlantInfoForm = ({ onComplete }: PlantInfoFormProps) => {
               name="symptoms"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Descrizione dei sintomi *</FormLabel>
+                  <FormLabel>Describe the symptoms *</FormLabel>
                   <FormControl>
                     <Textarea 
-                      placeholder="Descrivi qui i sintomi della pianta (ingiallimento foglie, macchie, appassimento, ecc.)"
+                      placeholder="Describe the symptoms of the plant (yellowing leaves, spots, wilting, etc.)"
                       className="min-h-[120px]"
                       {...field}
                     />
                   </FormControl>
                   <FormDescription>
-                    Fornisci una descrizione dettagliata di tutti i sintomi visibili
+                    Provide a detailed description of all visible symptoms
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -188,9 +187,9 @@ const PlantInfoForm = ({ onComplete }: PlantInfoFormProps) => {
                       />
                     </FormControl>
                     <div className="space-y-1 leading-none">
-                      <FormLabel>Usa l'intelligenza artificiale per diagnosi preliminare</FormLabel>
+                      <FormLabel>Use artificial intelligence for preliminary diagnosis</FormLabel>
                       <FormDescription>
-                        <span className="text-blue-600 font-medium">Servizio Premium</span>: Ottieni immediatamente una diagnosi AI preliminare (60-75% di accuratezza)
+                        <span className="text-blue-600 font-medium">Premium Service</span>: Get an immediate preliminary AI diagnosis (60-75% accuracy)
                       </FormDescription>
                     </div>
                   </FormItem>
@@ -209,9 +208,9 @@ const PlantInfoForm = ({ onComplete }: PlantInfoFormProps) => {
                       />
                     </FormControl>
                     <div className="space-y-1 leading-none">
-                      <FormLabel>Invia richiesta al fitopatologo</FormLabel>
+                      <FormLabel>Send request to plant expert</FormLabel>
                       <FormDescription>
-                        <span className="text-green-600 font-medium">Consulenza Esperta</span>: Un fitopatologo qualificato esaminerà il tuo caso (richiede login)
+                        <span className="text-green-600 font-medium">Expert Consultation</span>: A qualified plant pathologist will examine your case (login required)
                       </FormDescription>
                     </div>
                   </FormItem>
@@ -224,22 +223,22 @@ const PlantInfoForm = ({ onComplete }: PlantInfoFormProps) => {
                 type="submit" 
                 className="w-full mt-4 bg-drplant-green hover:bg-drplant-green/90"
               >
-                Continua
+                Continue
               </Button>
             </div>
           </form>
         </Form>
 
         <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-          <h4 className="text-sm font-medium text-amber-800">Accuratezza diagnosi AI:</h4>
+          <h4 className="text-sm font-medium text-amber-800">Accuracy of AI diagnoses:</h4>
           <ul className="mt-2 space-y-2 text-xs text-amber-700">
             <li className="flex items-center">
               <span className="font-medium mr-2">60-75%</span>
-              <span>Diagnosi preliminare basata su immagine (se la foto è chiara)</span>
+              <span>Initial AI diagnosis based on image (if the photo is clear)</span>
             </li>
             <li className="flex items-center">
               <span className="font-medium mr-2">&lt;50%</span>
-              <span>Diagnosi precisa se non supportata da esami di laboratorio</span>
+              <span>Accurate diagnosis if not supported by laboratory tests</span>
             </li>
           </ul>
         </div>

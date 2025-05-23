@@ -8,6 +8,7 @@ export interface PlantInfo {
   symptoms: string;
   useAI: boolean;
   infoComplete: boolean;
+  sendToExpert?: boolean;
 }
 
 interface PlantInfoContextType {
@@ -22,6 +23,7 @@ const initialPlantInfo: PlantInfo = {
   symptoms: '',
   useAI: false,
   infoComplete: false,
+  sendToExpert: true,
 };
 
 const PlantInfoContext = createContext<PlantInfoContextType | undefined>(undefined);

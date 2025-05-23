@@ -21,8 +21,8 @@ const DiagnoseTab = () => {
   const [showModelInfo, setShowModelInfo] = useState(false);
   const [showAuthDialog, setShowAuthDialog] = useState(false);
   const [authDialogConfig, setAuthDialogConfig] = useState({
-    title: "Devi accedere",
-    description: "Per utilizzare questa funzionalità devi accedere al tuo account."
+    title: "You must log in",
+    description: "To use this feature, you need to log in to your account."
   });
   
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -53,7 +53,7 @@ const DiagnoseTab = () => {
 
   const handleImageUploadEvent = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!plantInfo.infoComplete) {
-      toast.warning("Inserisci prima le informazioni sulla pianta", {
+      toast.warning("Please enter plant information first", {
         dismissible: true,
         duration: 3000
       });
@@ -73,8 +73,8 @@ const DiagnoseTab = () => {
         // If AI is not selected, check authentication first
         if (!isAuthenticated) {
           setAuthDialogConfig({
-            title: "Devi accedere per contattare il fitopatologo",
-            description: "Per inviare la tua richiesta al fitopatologo devi prima accedere."
+            title: "You must log in to contact the expert",
+            description: "To send your request to the expert, you need to log in first."
           });
           setShowAuthDialog(true);
           return;
@@ -82,8 +82,8 @@ const DiagnoseTab = () => {
         
         // Check if user profile is complete
         if (!userProfile.firstName || !userProfile.lastName || !userProfile.birthDate || !userProfile.birthPlace) {
-          toast.error("Completa il tuo profilo prima di inviare una richiesta", {
-            description: "Nome, cognome, data e luogo di nascita sono obbligatori",
+          toast.error("Complete your profile before sending a request", {
+            description: "Name, surname, date and place of birth are required",
             duration: 4000
           });
           navigate('/complete-profile');
@@ -98,7 +98,7 @@ const DiagnoseTab = () => {
 
   const takePicture = () => {
     if (!plantInfo.infoComplete) {
-      toast.warning("Inserisci prima le informazioni sulla pianta", {
+      toast.warning("Please enter plant information first", {
         dismissible: true,
         duration: 3000
       });
@@ -123,14 +123,14 @@ const DiagnoseTab = () => {
       })
       .catch(err => {
         console.error("Error accessing camera:", err);
-        toast.error("Impossibile accedere alla fotocamera. Verifica i permessi.", {
+        toast.error("Camera access failed. Check permissions.", {
           dismissible: true,
           duration: 4000
         });
         setShowCamera(false);
       });
     } else {
-      toast.error("Fotocamera non supportata nel tuo browser o dispositivo", {
+      toast.error("Camera not supported in your browser or device", {
         dismissible: true,
         duration: 4000
       });
@@ -144,8 +144,8 @@ const DiagnoseTab = () => {
       // Controlla l'autenticazione dell'utente
       if (!isAuthenticated) {
         setAuthDialogConfig({
-          title: "Devi accedere per contattare il fitopatologo",
-          description: "Per inviare la tua richiesta al fitopatologo devi prima accedere."
+          title: "You must log in to contact the expert",
+          description: "To send your request to the expert, you need to log in first."
         });
         setShowAuthDialog(true);
         return;
@@ -155,7 +155,7 @@ const DiagnoseTab = () => {
       
       if (!user) {
         console.error("User not logged in");
-        toast.error("Devi accedere per contattare il fitopatologo", {
+        toast.error("You must log in to contact the expert", {
           duration: 3000
         });
         return;
@@ -170,7 +170,7 @@ const DiagnoseTab = () => {
       
       if (profileError) {
         console.error("Error fetching user profile:", profileError);
-        toast.error("Errore nel recupero del profilo utente", {
+        toast.error("Error retrieving user profile", {
           duration: 3000
         });
         return;
@@ -178,8 +178,8 @@ const DiagnoseTab = () => {
       
       // Controlla se l'utente ha completato il proprio profilo
       if (!userProfile.first_name || !userProfile.last_name || !userProfile.birth_date || !userProfile.birth_place) {
-        toast.error("Completa il tuo profilo prima di inviare una richiesta", {
-          description: "Nome, cognome, data e luogo di nascita sono obbligatori",
+        toast.error("Complete your profile before sending a request", {
+          description: "Name, surname, date and place of birth are required",
           duration: 4000
         });
         navigate('/complete-profile');
@@ -215,8 +215,8 @@ const DiagnoseTab = () => {
         
       if (consultationError) {
         console.error("Error creating consultation:", consultationError);
-        toast.error("Errore nell'invio della richiesta", {
-          description: "Non è stato possibile creare la consultazione",
+        toast.error("Error sending request", {
+          description: "Failed to create consultation",
           duration: 4000
         });
         return;
@@ -225,7 +225,7 @@ const DiagnoseTab = () => {
       // Invia notifica all'esperto (usando edge function)
       const consultationId = consultationData?.[0]?.id;
       if (consultationId) {
-        toast.info("Invio richiesta in corso...", { duration: 2000 });
+        toast.info("Sending request...", { duration: 2000 });
         
         // Invoca la edge function per notificare l'esperto via chat ed email
         const { data: notifyData, error: notifyError } = await supabase.functions.invoke('notify-expert', {
@@ -247,12 +247,12 @@ const DiagnoseTab = () => {
         
         if (notifyError) {
           console.error("Error notifying expert:", notifyError);
-          toast.error("Errore nell'invio della notifica all'esperto", { duration: 3000 });
+          toast.error("Error sending notification to expert", { duration: 3000 });
           return;
         }
         
-        toast.success("Richiesta inviata con successo!", {
-          description: "Il fitopatologo risponderà al più presto",
+        toast.success("Request sent successfully!", {
+          description: "The expert will respond as soon as possible",
           duration: 4000
         });
         
@@ -267,7 +267,7 @@ const DiagnoseTab = () => {
       }
     } catch (error) {
       console.error("Error notifying expert:", error);
-      toast.error("Si è verificato un errore durante l'invio della richiesta", {
+      toast.error("An error occurred during request sending", {
         duration: 4000
       });
     }
@@ -280,6 +280,7 @@ const DiagnoseTab = () => {
       lightExposure: data.lightExposure,
       symptoms: data.symptoms,
       useAI: data.useAI,
+      sendToExpert: data.sendToExpert,
       infoComplete: true
     });
     
@@ -290,6 +291,19 @@ const DiagnoseTab = () => {
         behavior: 'smooth'
       });
     }, 300);
+    
+    // If the user wants to send to expert, trigger chat switch with delay
+    if (data.sendToExpert && isAuthenticated) {
+      setTimeout(() => {
+        // Dispatch event to trigger refreshChat
+        window.dispatchEvent(new Event('refreshChat'));
+        
+        // Show notification that info was sent to expert
+        toast("Plant information sent to expert", {
+          description: "Check the chat tab to communicate with the expert"
+        });
+      }, 1000);
+    }
   };
 
   const handleCaptureImage = async (imageDataUrl: string) => {
@@ -305,8 +319,8 @@ const DiagnoseTab = () => {
       // If AI is not selected, check authentication first
       if (!isAuthenticated) {
         setAuthDialogConfig({
-          title: "Devi accedere per contattare il fitopatologo",
-          description: "Per inviare la tua richiesta al fitopatologo devi prima accedere."
+          title: "You must log in to contact the expert",
+          description: "To send your request to the expert, you need to log in first."
         });
         setShowAuthDialog(true);
         return;
@@ -314,8 +328,8 @@ const DiagnoseTab = () => {
       
       // Check if user profile is complete before sending to expert
       if (!userProfile.firstName || !userProfile.lastName || !userProfile.birthDate || !userProfile.birthPlace) {
-        toast.error("Completa il tuo profilo prima di inviare una richiesta", {
-          description: "Nome, cognome, data e luogo di nascita sono obbligatori",
+        toast.error("Complete your profile before sending a request", {
+          description: "Name, surname, date and place of birth are required",
           duration: 4000
         });
         navigate('/complete-profile');
@@ -336,8 +350,8 @@ const DiagnoseTab = () => {
     // Check authentication before navigating
     if (!isAuthenticated) {
       setAuthDialogConfig({
-        title: "Devi accedere per accedere alla chat",
-        description: "Per visualizzare le conversazioni con il fitopatologo devi prima accedere."
+        title: "You must log in to access the chat",
+        description: "To view conversations with the expert, you need to log in first."
       });
       setShowAuthDialog(true);
       return;

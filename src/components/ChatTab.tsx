@@ -1,6 +1,7 @@
 
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
+import { usePlantInfo } from '@/context/PlantInfoContext';
 import ExpertChatView from './chat/ExpertChatView';
 import UserChatView from './chat/UserChatView';
 import { supabase } from '@/integrations/supabase/client';
@@ -8,7 +9,9 @@ import { toast } from 'sonner';
 
 const ChatTab = () => {
   const { userProfile, isMasterAccount } = useAuth();
+  const { plantInfo } = usePlantInfo();
   const [refreshKey, setRefreshKey] = useState(Date.now());
+  const [synced, setSynced] = useState(false);
   
   // Force refresh when switching tabs or on chat issues
   useEffect(() => {
@@ -51,6 +54,86 @@ const ChatTab = () => {
       supabase.removeChannel(conversationsChannel);
     };
   }, []);
+  
+  // Sync plant information to chat when it changes
+  useEffect(() => {
+    // Only sync if there's complete plant information and user is logged in
+    if (plantInfo.infoComplete && userProfile && userProfile.id && !synced) {
+      const syncPlantInfoToChat = async () => {
+        try {
+          // Find or create a conversation with the expert
+          const { data: existingConversation } = await supabase
+            .from('conversations')
+            .select('id')
+            .eq('user_id', userProfile.id)
+            .limit(1)
+            .single();
+            
+          let conversationId;
+          
+          if (existingConversation) {
+            conversationId = existingConversation.id;
+          } else {
+            const { data: newConversation, error: convError } = await supabase
+              .from('conversations')
+              .insert({
+                user_id: userProfile.id,
+                expert_id: 'premium-user-id' // Expert ID
+              })
+              .select()
+              .single();
+              
+            if (convError) {
+              console.error("Error creating conversation:", convError);
+              return;
+            }
+            
+            conversationId = newConversation.id;
+          }
+          
+          // Prepare message with plant information
+          let messageText = "Plant information:\n";
+          messageText += `- Environment: ${plantInfo.isIndoor ? 'Indoor' : 'Outdoor'}\n`;
+          messageText += `- Watering frequency: ${plantInfo.wateringFrequency || 'Not specified'} times/week\n`;
+          messageText += `- Light exposure: ${plantInfo.lightExposure || 'Not specified'}\n`;
+          messageText += `- Symptoms: ${plantInfo.symptoms || 'Not specified'}\n`;
+          
+          // Send message with plant information
+          const { error: msgError } = await supabase
+            .from('messages')
+            .insert({
+              conversation_id: conversationId,
+              sender_id: userProfile.id,
+              recipient_id: 'premium-user-id', // Expert ID
+              text: messageText
+            });
+            
+          if (msgError) {
+            console.error("Error sending plant information:", msgError);
+            return;
+          }
+          
+          setSynced(true);
+          toast("Plant information sent to expert");
+          
+          // Refresh chat to show the new message
+          setRefreshKey(Date.now());
+          
+        } catch (error) {
+          console.error("Error syncing plant info to chat:", error);
+        }
+      };
+      
+      syncPlantInfoToChat();
+    }
+  }, [plantInfo, userProfile, synced]);
+  
+  // Reset synced state when plant info changes
+  useEffect(() => {
+    if (plantInfo && !plantInfo.infoComplete) {
+      setSynced(false);
+    }
+  }, [plantInfo]);
   
   // Early return if no user is logged in
   if (!userProfile || !userProfile.id) {

@@ -1,3 +1,4 @@
+
 import { useState, useRef } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -85,6 +86,12 @@ const ProfileTab = () => {
       
       const file = event.target.files[0];
       const fileExt = file.name.split('.').pop();
+      
+      if (!userProfile.id) {
+        toast("User profile not properly loaded");
+        return;
+      }
+      
       const filePath = `${userProfile.id}-${Math.random().toString(36).substring(2)}.${fileExt}`;
       
       setUploading(true);
