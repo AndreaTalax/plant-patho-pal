@@ -1,3 +1,4 @@
+
 import { createContext, useContext, useState, ReactNode, useEffect } from "react";
 import { supabase, EXPERT_ID } from '@/integrations/supabase/client';
 import { Session, User } from "@supabase/supabase-js";
@@ -14,6 +15,8 @@ type UserProfile = {
   role: "user" | "master"; // Limited to these specific values
   birthDate?: string; // Add birthDate field
   birthPlace?: string; // Add birthPlace field
+  id: string; // Add id field
+  avatarUrl?: string; // Add avatarUrl field
 };
 
 type AuthContextType = {
@@ -63,6 +66,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   
   const [userProfile, setUserProfile] = useState<UserProfile>({
+    id: "", // Initialize id
     username: "",
     firstName: "",
     lastName: "",
@@ -71,7 +75,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     address: "",
     role: "user" as const,
     birthDate: "",
-    birthPlace: ""
+    birthPlace: "",
+    avatarUrl: "" // Initialize avatarUrl
   });
   
   const [isProfileComplete, setIsProfileComplete] = useState(false);
@@ -94,6 +99,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setUsername(usernameFromEmail);
           setUserProfile(prev => ({ 
             ...prev,
+            id: session.user.id, // Set id from session
             username: usernameFromEmail,
             email: email
           }));
@@ -120,6 +126,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setUsername(usernameFromEmail);
         setUserProfile(prev => ({ 
           ...prev,
+          id: session.user.id, // Set id from session
           username: usernameFromEmail,
           email: email
         }));
@@ -153,6 +160,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         
         setUsername(username);
         setUserProfile({
+          id: userId, // Set id
           username: username,
           firstName: (data as any).first_name || '',
           lastName: (data as any).last_name || '',
@@ -161,7 +169,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           address: (data as any).address || '',
           role: ((data as any).role as "user" | "master") || 'user',
           birthDate: (data as any).birth_date || '',
-          birthPlace: (data as any).birth_place || ''
+          birthPlace: (data as any).birth_place || '',
+          avatarUrl: (data as any).avatar_url || '' // Set avatarUrl
         });
         
         setIsProfileComplete(!!(data as any).first_name && !!(data as any).last_name);
@@ -199,6 +208,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         // Set initial profile data
         setUserProfile(prev => ({ 
           ...prev,
+          id: data.user!.id, // Set id
           username: usernameFromEmail,
           email: email,
           role: email === "agrotecnicomarconigro@gmail.com" ? "master" : "user"
@@ -225,6 +235,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setUser(null);
     setSession(null);
     setUserProfile({
+      id: "", // Reset id
       username: "",
       firstName: "",
       lastName: "",
@@ -233,7 +244,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       address: "",
       role: "user" as const,
       birthDate: "",
-      birthPlace: ""
+      birthPlace: "",
+      avatarUrl: "" // Reset avatarUrl
     });
   };
   
@@ -261,6 +273,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         // For pre-configured accounts, set up complete profiles
         if (email === "talaiaandrea@gmail.com") {
           setUserProfile({
+            id: result.data.user.id, // Set id
             username: "talaia",
             firstName: "Andrea",
             lastName: "Talaia",
@@ -269,11 +282,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             address: "",
             role: "user",
             birthDate: "",
-            birthPlace: ""
+            birthPlace: "",
+            avatarUrl: "" // Initialize avatarUrl
           });
           setIsProfileComplete(true);
         } else if (email === "agrotecnicomarconigro@gmail.com") {
           setUserProfile({
+            id: result.data.user.id, // Set id
             username: "marconigro",
             firstName: "Marco",
             lastName: "Nigro",
@@ -282,12 +297,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             address: "Via Roma 123, Milan, Italy",
             role: "master",
             birthDate: "",
-            birthPlace: ""
+            birthPlace: "",
+            avatarUrl: "" // Initialize avatarUrl
           });
           setIsProfileComplete(true);
           setIsMasterAccount(true);
         } else if (email === "test@gmail.com") {
           setUserProfile({
+            id: result.data.user.id, // Set id
             username: "testuser",
             firstName: "Test",
             lastName: "User",
@@ -296,11 +313,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             address: "",
             role: "user",
             birthDate: "",
-            birthPlace: ""
+            birthPlace: "",
+            avatarUrl: "" // Initialize avatarUrl
           });
           setIsProfileComplete(true);
         } else {
           setUserProfile({
+            id: result.data.user.id, // Set id
             username: usernameFromEmail,
             firstName: "",
             lastName: "",
@@ -309,7 +328,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             address: "",
             role: "user",
             birthDate: "",
-            birthPlace: ""
+            birthPlace: "",
+            avatarUrl: "" // Initialize avatarUrl
           });
         }
       }
@@ -381,6 +401,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         else if (field === 'role') updates['role'] = value;
         else if (field === 'birthDate') updates['birth_date'] = value;
         else if (field === 'birthPlace') updates['birth_place'] = value;
+        else if (field === 'avatarUrl') updates['avatar_url'] = value; // Add avatarUrl to profile updates
         
         const { error } = await supabase
           .from('profiles')

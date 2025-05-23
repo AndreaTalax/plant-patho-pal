@@ -53,7 +53,6 @@ const ProfileTab = () => {
   const handleSignOut = () => {
     logout();
     toast({
-      title: "Successfully logged out",
       description: "You have been disconnected from your account",
     });
     navigate("/login");
@@ -113,11 +112,11 @@ const ProfileTab = () => {
         .from('avatars')
         .getPublicUrl(filePath);
         
-      const avatarUrl = data.publicUrl;
+      const newAvatarUrl = data.publicUrl;
       
       // Update the user's profile
-      await updateProfile("avatarUrl", avatarUrl);
-      setAvatarUrl(avatarUrl);
+      await updateProfile("avatarUrl", newAvatarUrl);
+      setAvatarUrl(newAvatarUrl);
       
       toast("Profile picture updated", {
         description: "Your profile picture has been updated successfully",

@@ -53,7 +53,7 @@ const ChatTab = () => {
   }, []);
   
   // Early return if no user is logged in
-  if (!userProfile) {
+  if (!userProfile || !userProfile.id) {
     return (
       <div className="flex justify-center items-center h-full">
         <p className="text-gray-500">Please log in to access the chat</p>
