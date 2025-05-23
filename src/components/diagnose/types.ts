@@ -31,6 +31,22 @@ export interface DiagnosedDisease {
     regulatoryStatus?: string;
     warningLevel?: string;
   } | null;
+  
+  // Add missing properties for enhanced plant analysis
+  careInstructions?: {
+    watering?: string;
+    light?: string;
+    soil?: string;
+    fertilizer?: string;
+    pruning?: string;
+    temperature?: string;
+    humidity?: string;
+    repotting?: string;
+    propagation?: string;
+  };
+  habitat?: string;
+  sources?: string[];
+  source?: string;
 }
 
 export interface PlantInfo {
