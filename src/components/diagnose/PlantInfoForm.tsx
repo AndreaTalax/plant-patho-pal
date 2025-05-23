@@ -5,6 +5,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage, Form } from '@/components/ui/form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -20,6 +21,7 @@ export interface PlantInfoFormValues {
   symptoms: string;
   useAI: boolean;
   sendToExpert: boolean;
+  name?: string; // Add name field
 }
 
 const formSchema = z.object({
@@ -29,6 +31,7 @@ const formSchema = z.object({
   symptoms: z.string().min(10, "Si prega di fornire una descrizione dettagliata dei sintomi (min. 10 caratteri)"),
   useAI: z.boolean().optional(),
   sendToExpert: z.boolean().optional(),
+  name: z.string().optional(), // Add name schema
 })
 
 interface PlantInfoFormProps {
@@ -44,8 +47,9 @@ const PlantInfoForm = ({ onComplete }: PlantInfoFormProps) => {
       wateringFrequency: '',
       lightExposure: '',
       symptoms: '',
-      useAI: false,
+      useAI: true, // Set default to true to use Plexi AI
       sendToExpert: true,
+      name: '', // Add name default
     }
   });
 
@@ -63,8 +67,9 @@ const PlantInfoForm = ({ onComplete }: PlantInfoFormProps) => {
       wateringFrequency: values.wateringFrequency,
       lightExposure: values.lightExposure,
       symptoms: values.symptoms,
-      useAI: values.useAI || false,
+      useAI: values.useAI || true, // Default to true
       sendToExpert: values.sendToExpert || true,
+      name: values.name,
     });
   };
 
@@ -74,13 +79,32 @@ const PlantInfoForm = ({ onComplete }: PlantInfoFormProps) => {
         <div>
           <h3 className="text-lg font-medium text-gray-900 mb-2">Informazioni sulla pianta</h3>
           <p className="text-sm text-gray-500 mb-4">
-            Per ottenere una diagnosi più accurata, fornisci alcune informazioni sulla tua pianta.
+            Per ottenere una diagnosi più accurata con Plexi AI, fornisci alcune informazioni sulla tua pianta.
             Questi dettagli ci aiuteranno a comprendere meglio la sua situazione.
           </p>
         </div>
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-5">
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Nome della pianta (opzionale)</FormLabel>
+                  <FormControl>
+                    <Input 
+                      placeholder="Inserisci il nome della pianta se lo conosci" 
+                      {...field} 
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    Se conosci il nome della pianta, aiuterà l'analisi
+                  </FormDescription>
+                </FormItem>
+              )}
+            />
+            
             <FormField
               control={form.control}
               name="isIndoor"
@@ -190,7 +214,7 @@ const PlantInfoForm = ({ onComplete }: PlantInfoFormProps) => {
                     <div className="space-y-1 leading-none">
                       <FormLabel>Utilizza Plexi AI per diagnosi preliminare</FormLabel>
                       <FormDescription>
-                        <span className="text-blue-600 font-medium">Servizio Premium</span>: Ottieni una diagnosi preliminare immediata con AI (60-75% di accuratezza)
+                        <span className="text-blue-600 font-medium">Servizio Premium</span>: Ottieni una diagnosi preliminare immediata con Plexi AI (60-75% di accuratezza)
                       </FormDescription>
                     </div>
                   </FormItem>

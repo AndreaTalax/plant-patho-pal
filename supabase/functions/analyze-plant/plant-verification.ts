@@ -1,192 +1,223 @@
 
-// Versione migliorata della funzione checkForEppoConcerns per gestire in modo sicuro valori non stringa.
-// Utilizza una struttura di risposta standardizzata con tutti i campi necessari.
+// Import required libraries
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
 
-export function checkForEppoConcerns(labelOrData: any): any {
-  // Se è un ArrayBuffer (dall'altra versione sovraccaricata), restituisci semplicemente un risultato predefinito
-  if (labelOrData instanceof ArrayBuffer) {
-    return {
-      isEppoConcern: false,
-      concernName: null,
-      eppoCode: null,
-      concernType: null,
-      regulatoryStatus: null
-    };
-  }
-  
-  // Assicurati che stiamo lavorando con una stringa
-  const label = typeof labelOrData === 'string' ? labelOrData : 
-                (labelOrData?.label && typeof labelOrData.label === 'string') ? 
-                labelOrData.label : '';
-  
-  // Ora possiamo usare toLowerCase() in modo sicuro poiché abbiamo garantito che label sia una stringa
-  const lowerLabel = label.toLowerCase();
-  
-  const eppoRegulatedKeywords = [
-    { keywords: ["xylella", "fastidiosa"], name: "Xylella fastidiosa", code: "XYLEFA", type: "Bacteria", regulatoryStatus: "Quarantine" },
-    { keywords: ["fire", "blight", "erwinia", "amylovora"], name: "Erwinia amylovora (Fire Blight)", code: "ERWIAM", type: "Bacteria", regulatoryStatus: "Regulated" },
-    { keywords: ["potato", "cyst", "nematode", "globodera"], name: "Globodera (Potato Cyst Nematode)", code: "HETDSP", type: "Nematode", regulatoryStatus: "Quarantine" },
-    { keywords: ["asian", "longhorn", "beetle", "anoplophora"], name: "Anoplophora glabripennis (Asian Longhorn Beetle)", code: "ANOLGL", type: "Insect", regulatoryStatus: "Quarantine" },
-    { keywords: ["pine", "wood", "nematode", "bursaphelenchus"], name: "Bursaphelenchus xylophilus (Pine Wood Nematode)", code: "BURSXY", type: "Nematode", regulatoryStatus: "Quarantine" },
-    { keywords: ["citrus", "greening", "huanglongbing"], name: "Candidatus Liberibacter asiaticus (Citrus Greening)", code: "LIBEAS", type: "Bacteria", regulatoryStatus: "Quarantine" },
-    { keywords: ["brown", "marmorated", "stink", "bug", "halyomorpha"], name: "Halyomorpha halys (Brown Marmorated Stink Bug)", code: "HALYHA", type: "Insect", regulatoryStatus: "Regulated" },
-    { keywords: ["fusarium", "wilt", "tropical", "race", "4"], name: "Fusarium oxysporum f.sp. cubense Tropical Race 4", code: "FUSOCB", type: "Fungi", regulatoryStatus: "Quarantine" }
-  ];
-  
-  for (const entry of eppoRegulatedKeywords) {
-    if (entry.keywords.some(keyword => lowerLabel.includes(keyword))) {
-      return {
-        isEppoConcern: true,
-        concernName: entry.name,
-        eppoCode: entry.code,
-        concernType: entry.type,
-        regulatoryStatus: entry.regulatoryStatus
-      };
+// Function to verify if the image contains a plant
+export const verifyImageContainsPlant = async (imageArrayBuffer: ArrayBuffer, huggingFaceToken: string | undefined): Promise<{
+  isPlant: boolean;
+  confidence: number;
+  detectedPlantType?: string;
+  aiServices?: {serviceName: string; result: boolean; confidence: number}[];
+}> => {
+  try {
+    // Check if the token is provided
+    if (!huggingFaceToken) {
+      console.log("No Hugging Face token provided. Assuming image contains a plant.");
+      return { isPlant: true, confidence: 1.0 };
     }
-  }
-  
-  return {
-    isEppoConcern: false,
-    concernName: null,
-    eppoCode: null,
-    concernType: null,
-    regulatoryStatus: null
-  };
-}
 
-// Aggiungiamo una nuova funzione per normalizzare i risultati di analisi delle piante
-export function normalizeAnalysisResults(
-  modelResult: any,
-  plantIdResult: any,
-  floraIncognitaResult: any,
-  plantSnapResult: any,
-  eppoCheck: any,
-  isLeaf: boolean
-): any {
-  // Inizializza la risposta normalizzata con campi obbligatori
-  let normalizedResponse = {
-    label: "Pianta non identificata",
-    plantPart: "unknown",
-    healthy: true,
-    disease: null,
-    score: 0,
-    eppoRegulatedConcern: null,
-    dataSource: "Aggregazione dati",
-    confidence: 0
-  };
-  
-  // Determina il punteggio di confidenza più alto tra tutte le fonti
-  const modelScore = modelResult?.score || 0;
-  const plantIdScore = plantIdResult?.confidence || 0;
-  const floraScore = floraIncognitaResult?.score || 0;
-  const snapScore = plantSnapResult?.score || 0;
-  
-  // Seleziona la fonte con maggiore confidenza
-  let bestSource = null;
-  let bestScore = 0;
-  
-  if (plantIdScore > bestScore) {
-    bestScore = plantIdScore;
-    bestSource = "Plant.id";
-  }
-  
-  if (floraScore > bestScore) {
-    bestScore = floraScore;
-    bestSource = "Flora Incognita";
-  }
-  
-  if (snapScore > bestScore) {
-    bestScore = snapScore;
-    bestSource = "PlantSnap";
-  }
-  
-  if (modelScore > bestScore) {
-    bestScore = modelScore;
-    bestSource = "AI Models";
-  }
-  
-  // Se non abbiamo trovato nessuna fonte affidabile, il risultato rimane quello predefinito
-  if (bestScore < 0.3) {
-    // Fallback locale con euristica di base
-    normalizedResponse.label = "Pianta non identificabile con confidenza";
-    normalizedResponse.score = 0.3;
-    normalizedResponse.confidence = 0.3;
-    normalizedResponse.dataSource = "Analisi euristica di fallback";
-    return normalizedResponse;
-  }
-  
-  // Aggiorniamo la risposta con i dati della migliore fonte
-  switch (bestSource) {
-    case "Plant.id":
-      normalizedResponse.label = plantIdResult.plantName || "Pianta";
-      normalizedResponse.score = plantIdScore;
-      normalizedResponse.confidence = plantIdScore;
-      normalizedResponse.dataSource = "Plant.id API";
-      normalizedResponse.healthy = plantIdResult.isHealthy !== undefined ? plantIdResult.isHealthy : true;
-      normalizedResponse.plantPart = isLeaf ? "leaf" : (plantIdResult.plantPart || "whole plant");
+    // Create request with image data
+    const formData = new FormData();
+    const blob = new Blob([imageArrayBuffer], { type: 'image/jpeg' });
+    formData.append('image', blob, 'image.jpg');
+
+    // Send request to the Hugging Face model
+    const response = await fetch(
+      "https://api-inference.huggingface.co/models/onnx-community/vit-plant-verification",
+      {
+        headers: { Authorization: `Bearer ${huggingFaceToken}` },
+        method: "POST",
+        body: formData,
+        signal: AbortSignal.timeout(10000), // 10 second timeout
+      }
+    );
+
+    if (!response.ok) {
+      console.error(`Error verifying plant: ${response.statusText}`);
+      // Default to true if the model fails - allow processing to continue
+      return { isPlant: true, confidence: 0.6 };
+    }
+
+    const data = await response.json();
+    const results = data.map(res => ({ 
+      label: res.label, 
+      score: res.score 
+    })).filter(res => res.score > 0.1);
+
+    // Get the top result
+    const topResult = results[0];
+    
+    // Check if it's a plant with high confidence
+    const isPlant = topResult && (
+      topResult.label.includes('plant') || 
+      topResult.label.includes('flower') || 
+      topResult.label.includes('tree') || 
+      topResult.label.includes('leaf')
+    );
+    
+    // Determine plant type from results if possible
+    let detectedPlantType = undefined;
+    
+    if (isPlant) {
+      // Check for specific plant types in the labels
+      const plantTypes = [
+        { type: 'succulent', keywords: ['succulent', 'cactus', 'aloe'] },
+        { type: 'houseplant', keywords: ['houseplant', 'indoor plant', 'potted plant'] },
+        { type: 'herb', keywords: ['herb', 'basil', 'mint', 'parsley', 'cilantro', 'thyme'] },
+        { type: 'flowering', keywords: ['flower', 'bloom', 'rose', 'tulip', 'orchid'] },
+        { type: 'palm', keywords: ['palm'] },
+        { type: 'vegetable', keywords: ['vegetable', 'tomato', 'lettuce', 'pepper'] },
+        { type: 'tree', keywords: ['tree', 'shrub'] }
+      ];
       
-      // Se non è sana, aggiungiamo le informazioni sulla malattia
-      if (!normalizedResponse.healthy && plantIdResult.diseases && plantIdResult.diseases.length > 0) {
-        const bestDisease = plantIdResult.diseases[0];
-        normalizedResponse.disease = {
-          name: bestDisease.name,
-          confidence: bestDisease.probability || 0.7,
-          description: bestDisease.description || "",
-          treatment: bestDisease.treatment || {}
+      for (const result of results) {
+        const label = result.label.toLowerCase();
+        for (const plantType of plantTypes) {
+          if (plantType.keywords.some(keyword => label.includes(keyword))) {
+            detectedPlantType = plantType.type;
+            break;
+          }
+        }
+        if (detectedPlantType) break;
+      }
+    }
+
+    return { 
+      isPlant: isPlant || topResult.score > 0.6,
+      confidence: topResult ? topResult.score : 0.5,
+      detectedPlantType,
+      aiServices: [
+        {
+          serviceName: 'Plexi AI Plant Verification',
+          result: isPlant || topResult.score > 0.6,
+          confidence: topResult ? topResult.score : 0.5
+        }
+      ]
+    };
+  } catch (error) {
+    console.error("Error in plant verification:", error);
+    // Default to true if there's an error - allow processing to continue
+    return { isPlant: true, confidence: 0.5 };
+  }
+};
+
+// Function to check if the image is specifically of a leaf
+export const isLeafImage = async (imageArrayBuffer: ArrayBuffer, huggingFaceToken: string | undefined): Promise<boolean> => {
+  try {
+    if (!huggingFaceToken) {
+      return false; // Default to false if no token
+    }
+
+    const formData = new FormData();
+    const blob = new Blob([imageArrayBuffer], { type: 'image/jpeg' });
+    formData.append('image', blob, 'image.jpg');
+
+    // Send request to object detection model
+    const response = await fetch(
+      "https://api-inference.huggingface.co/models/onnx-community/yolos-plant-parts",
+      {
+        headers: { Authorization: `Bearer ${huggingFaceToken}` },
+        method: "POST",
+        body: formData,
+        signal: AbortSignal.timeout(10000), // 10 second timeout
+      }
+    );
+
+    if (!response.ok) {
+      console.error(`Error detecting plant parts: ${response.statusText}`);
+      return false;
+    }
+
+    const data = await response.json();
+    
+    // Check if any leaf objects were detected with reasonable confidence
+    const leafDetections = data.filter(obj => 
+      (obj.label.toLowerCase().includes('leaf') || obj.label.toLowerCase() === 'leaf') && 
+      obj.score > 0.3
+    );
+
+    return leafDetections.length > 0;
+  } catch (error) {
+    console.error("Error in leaf detection:", error);
+    return false;
+  }
+};
+
+// Function to check if the plant might be an EPPO regulated pest/disease concern
+export const checkForEppoConcerns = async (
+  imageArrayBuffer: ArrayBuffer, 
+  huggingFaceToken: string | undefined
+): Promise<{
+  hasEppoConcern: boolean;
+  concernName?: string;
+  concernType?: string;
+  eppoCode?: string;
+  regulatoryStatus?: string;
+  confidenceScore?: number;
+}> => {
+  try {
+    if (!huggingFaceToken) {
+      return { hasEppoConcern: false };
+    }
+
+    const formData = new FormData();
+    const blob = new Blob([imageArrayBuffer], { type: 'image/jpeg' });
+    formData.append('image', blob, 'image.jpg');
+
+    // Send request to EPPO pest/disease detection model
+    const response = await fetch(
+      "https://api-inference.huggingface.co/models/onnx-community/eppo-regulated-pests",
+      {
+        headers: { Authorization: `Bearer ${huggingFaceToken}` },
+        method: "POST",
+        body: formData,
+        signal: AbortSignal.timeout(10000), // 10 second timeout
+      }
+    );
+
+    if (!response.ok) {
+      console.error(`Error checking for EPPO concerns: ${response.statusText}`);
+      return { hasEppoConcern: false };
+    }
+
+    const data = await response.json();
+    
+    // Process results
+    if (data && Array.isArray(data)) {
+      // Find any high-confidence regulated pest/disease matches
+      const topConcern = data.find(item => 
+        item && item.score > 0.7 && 
+        item.label && typeof item.label === 'string' && // Check label is a string
+        (item.label.toLowerCase().includes('xylella') || 
+         item.label.toLowerCase().includes('regulated') ||
+         item.label.toLowerCase().includes('quarantine'))
+      );
+      
+      if (topConcern) {
+        // Determine EPPO code if possible
+        let eppoCode = '';
+        const label = topConcern.label.toLowerCase();
+        
+        if (label.includes('xylella fastidiosa')) eppoCode = 'XYLEFA';
+        else if (label.includes('fire blight')) eppoCode = 'ERWIAM';
+        else if (label.includes('citrus greening')) eppoCode = 'LIBEAS';
+        
+        return {
+          hasEppoConcern: true,
+          concernName: topConcern.label,
+          concernType: label.includes('bacteria') ? 'bacteria' : 
+                      label.includes('virus') ? 'virus' :
+                      label.includes('fungi') ? 'fungi' : 'pest',
+          eppoCode,
+          regulatoryStatus: 'Quarantine pest/disease',
+          confidenceScore: topConcern.score
         };
       }
-      break;
-      
-    case "Flora Incognita":
-      normalizedResponse.label = floraIncognitaResult.species || "Pianta";
-      normalizedResponse.score = floraScore;
-      normalizedResponse.confidence = floraScore;
-      normalizedResponse.dataSource = "Flora Incognita";
-      normalizedResponse.plantPart = isLeaf ? "leaf" : "whole plant";
-      break;
-      
-    case "PlantSnap":
-      normalizedResponse.label = plantSnapResult.species || "Pianta";
-      normalizedResponse.score = snapScore;
-      normalizedResponse.confidence = snapScore;
-      normalizedResponse.dataSource = "PlantSnap";
-      normalizedResponse.plantPart = isLeaf ? "leaf" : "whole plant";
-      break;
-      
-    case "AI Models":
-      normalizedResponse.label = modelResult.label || "Pianta";
-      normalizedResponse.score = modelScore;
-      normalizedResponse.confidence = modelScore;
-      normalizedResponse.dataSource = "AI Models";
-      normalizedResponse.plantPart = isLeaf ? "leaf" : (modelResult.plantPart || "whole plant");
-      normalizedResponse.healthy = modelResult.healthy !== undefined ? modelResult.healthy : true;
-      break;
-  }
-  
-  // Verifica preoccupazioni EPPO
-  if (eppoCheck && eppoCheck.isEppoConcern) {
-    normalizedResponse.eppoRegulatedConcern = {
-      name: eppoCheck.concernName,
-      code: eppoCheck.eppoCode,
-      type: eppoCheck.concernType,
-      regulatoryStatus: eppoCheck.regulatoryStatus
-    };
-    
-    // Se c'è una preoccupazione EPPO, lo consideriamo unhealthy e aggiungiamo info sulla malattia
-    normalizedResponse.healthy = false;
-    if (!normalizedResponse.disease) {
-      normalizedResponse.disease = {
-        name: eppoCheck.concernName,
-        confidence: 0.9,
-        description: `Organismo regolamentato EPPO: ${eppoCheck.concernName} (${eppoCheck.eppoCode})`,
-        treatment: {
-          biological: ["Consultare immediatamente le autorità fitosanitarie locali"],
-          chemical: ["Non applicare trattamenti senza consultare le autorità"],
-          prevention: ["Isolamento della pianta", "Segnalazione alle autorità"]
-        }
-      };
     }
+    
+    return { hasEppoConcern: false };
+  } catch (error) {
+    console.error("Error in EPPO concern check:", error);
+    return { hasEppoConcern: false };
   }
-  
-  return normalizedResponse;
-}
+};

@@ -53,7 +53,7 @@ const DiagnoseTab = () => {
 
   const handleImageUploadEvent = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!plantInfo.infoComplete) {
-      toast.warning("Please enter plant information first", {
+      toast.warning("Inserisci prima le informazioni sulla pianta", {
         dismissible: true,
         duration: 3000
       });
@@ -67,8 +67,8 @@ const DiagnoseTab = () => {
       setUploadedImage(tempUrl);
       
       if (plantInfo.useAI) {
-        // If AI is selected, proceed with AI analysis
-        handleImageUpload(file);
+        // If AI is selected, proceed with AI analysis - now passing plantInfo
+        handleImageUpload(file, plantInfo);
       } else {
         // If AI is not selected, check authentication first
         if (!isAuthenticated) {
@@ -98,7 +98,7 @@ const DiagnoseTab = () => {
 
   const takePicture = () => {
     if (!plantInfo.infoComplete) {
-      toast.warning("Please enter plant information first", {
+      toast.warning("Inserisci prima le informazioni sulla pianta", {
         dismissible: true,
         duration: 3000
       });
@@ -274,15 +274,19 @@ const DiagnoseTab = () => {
   };
 
   const handlePlantInfoSubmit = (data: PlantInfoFormValues) => {
-    setPlantInfo({
+    // Update plant info with name to display in results
+    const updatedPlantInfo = {
       isIndoor: data.isIndoor,
       wateringFrequency: data.wateringFrequency,
       lightExposure: data.lightExposure,
       symptoms: data.symptoms,
       useAI: data.useAI,
       sendToExpert: data.sendToExpert,
+      name: data.name || "Pianta sconosciuta", // Make sure to capture the name
       infoComplete: true
-    });
+    };
+    
+    setPlantInfo(updatedPlantInfo);
     
     // After completing plant info, automatically scroll to the next section
     setTimeout(() => {
@@ -313,8 +317,8 @@ const DiagnoseTab = () => {
     setUploadedImage(imageDataUrl);
     
     if (plantInfo.useAI) {
-      // If AI is selected, process the image with AI
-      captureImage(imageDataUrl);
+      // If AI is selected, process the image with AI - now passing plantInfo
+      captureImage(imageDataUrl, plantInfo);
     } else {
       // If AI is not selected, check authentication first
       if (!isAuthenticated) {

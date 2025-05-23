@@ -1,8 +1,7 @@
-
 import { useState, useRef, useEffect } from 'react';
 import { PLANT_DISEASES } from '@/data/plantDiseases';
-import { formatHuggingFaceResult, dataURLtoFile, analyzePlantImage } from '@/utils/plant-analysis';
-import { DiagnosedDisease, AnalysisDetails } from '@/components/diagnose/types';
+import { formatHuggingFaceResult, dataURLtoFile, analyzePlant } from '@/utils/plant-analysis';
+import { DiagnosedDisease, AnalysisDetails, PlantInfo } from '@/components/diagnose/types';
 import { plantSpeciesMap } from '@/data/plantDatabase';
 import { MOCK_PRODUCTS } from '@/components/chat/types';
 import { fileToBase64WithoutPrefix } from '@/utils/plant-analysis/plant-id-service';
@@ -24,7 +23,7 @@ export const usePlantDiagnosis = () => {
     return true;
   };
 
-  const analyzeUploadedImage = async (imageFile: File) => {
+  const analyzeUploadedImage = async (imageFile: File, plantInfo?: PlantInfo) => {
     setIsAnalyzing(true);
     setDiagnosisResult(null);
     setDiagnosedDisease(null);
@@ -40,9 +39,9 @@ export const usePlantDiagnosis = () => {
         });
       }, 100);
 
-      // Chiama il vero servizio di analisi invece di usare dati simulati
-      console.log("Calling Plexi AI analysis API with image...");
-      const analysisResult = await analyzePlantImage(imageFile);
+      // Chiama il servizio di analisi con Plexi AI passando le informazioni sulla pianta
+      console.log("Calling Plexi AI analysis with plant info:", plantInfo);
+      const analysisResult = await analyzePlant(imageFile, plantInfo);
       
       clearInterval(progressInterval);
       setAnalysisProgress(100);
@@ -168,8 +167,10 @@ export const usePlantDiagnosis = () => {
           dataSource: "Plexi AI Plant Database"
         },
         risultatiCompleti: {
-          // Fix: Store the raw data in the correct property according to the updated type
-          plexiAIResult: analysisResult._rawData?.plexiAI || analysisResult._rawData
+          // Store the raw data in the correct property according to the updated type
+          plexiAIResult: analysisResult._rawData?.plexiAI || analysisResult._rawData,
+          // Also add plant info context for better results
+          plantInfo: plantInfo
         },
         identifiedFeatures: [analysisResult.label, analysisResult.plantPart],
         alternativeDiagnoses: analysisResult.allPredictions?.slice(1, 3).map(p => ({
@@ -238,7 +239,7 @@ export const usePlantDiagnosis = () => {
     stopCameraStream();
   };
 
-  const captureImage = (imageDataUrl: string) => {
+  const captureImage = (imageDataUrl: string, plantInfo?: PlantInfo) => {
     setUploadedImage(imageDataUrl);
     stopCameraStream();
     setAnalysisProgress(0);
@@ -248,18 +249,18 @@ export const usePlantDiagnosis = () => {
     
     // Log the capture for debugging
     console.log("Image captured, size:", imageFile.size, "bytes");
-    console.log("Starting image analysis with Plexi AI...");
+    console.log("Starting image analysis with Plexi AI...", plantInfo);
     
-    analyzeUploadedImage(imageFile);
+    analyzeUploadedImage(imageFile, plantInfo);
   };
 
-  const handleImageUpload = (file: File) => {
+  const handleImageUpload = (file: File, plantInfo?: PlantInfo) => {
     const reader = new FileReader();
     reader.onload = (event) => {
       setUploadedImage(event.target?.result as string);
       console.log("Image uploaded, size:", file.size, "bytes");
-      console.log("Starting image analysis with Plexi AI...");
-      analyzeUploadedImage(file);
+      console.log("Starting image analysis with Plexi AI...", plantInfo);
+      analyzeUploadedImage(file, plantInfo);
     };
     reader.readAsDataURL(file);
   };
