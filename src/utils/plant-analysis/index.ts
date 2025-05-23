@@ -1,10 +1,10 @@
 
 import { toast } from "sonner";
-import { analyzePlantImage, formatHuggingFaceResult, dataURLtoFile } from './plantAnalysisUtils';
+import { analyzePlantImage, formatHuggingFaceResult, dataURLtoFile, formatPercentage } from './plantAnalysisUtils';
 import { analyzeWithCloudVision, fallbackLocalAnalysis } from './plant-id-service';
 
 // Export the utilities for use in other files
-export { analyzePlantImage, formatHuggingFaceResult, dataURLtoFile };
+export { analyzePlantImage, formatHuggingFaceResult, dataURLtoFile, formatPercentage };
 
 // Main analysis function that connects to Plexi AI via Supabase Edge Function
 export const analyzePlant = async (imageFile: File, plantInfo: any = null) => {
