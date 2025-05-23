@@ -9,7 +9,7 @@ import { analyzeLeafCharacteristics, enhanceLeafDiseaseClassification } from './
 
 /**
  * Formats the raw analysis result into a more structured format
- * @param result The raw result from HuggingFace or combined APIs
+ * @param result The raw result from Plexi AI or combined APIs
  * @returns A formatted analysis result with additional insights
  */
 export const formatHuggingFaceResult = (result: any) => {
@@ -75,7 +75,7 @@ export const formatHuggingFaceResult = (result: any) => {
       plantType,
       plantPart: detectedPlantPart,
       confidenceLevel: 'high', // Always high confidence for better user experience
-      huggingFaceResult: {
+      plexiAIResult: {
         label,
         score: 1.0 // Set to maximum confidence
       },
@@ -110,7 +110,7 @@ export const formatHuggingFaceResult = (result: any) => {
       },
       // Add Sistema Digitale Foglia indicator
       sistemaDigitaleFoglia: detectedPlantPart === 'leaf',
-      analysisTechnology: detectedPlantPart === 'leaf' ? 'Sistema Digitale Foglia' : 'Standard Plant Analysis'
+      analysisTechnology: detectedPlantPart === 'leaf' ? 'Sistema Digitale Foglia (Plexi AI)' : 'Analisi Standard Plexi AI'
     };
   } catch (error) {
     console.error('Error formatting result:', error);

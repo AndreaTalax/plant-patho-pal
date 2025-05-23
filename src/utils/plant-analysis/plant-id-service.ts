@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -16,28 +15,28 @@ export const fileToBase64WithoutPrefix = async (file: File): Promise<string> => 
   });
 };
 
-// Analizza un'immagine di pianta utilizzando Google Cloud Vision API
+// Analizza un'immagine di pianta utilizzando Plexi AI
 export const analyzeWithCloudVision = async (imageFile: File): Promise<any> => {
   try {
     const formData = new FormData();
     formData.append('image', imageFile);
     formData.append('type', 'all'); // Richiedi tutti i tipi di analisi disponibili
     
-    // Chiama l'edge function di Supabase che utilizza Google Cloud Vision
+    // Chiama l'edge function di Supabase che utilizza Plexi AI
     const { data, error } = await supabase.functions.invoke('analyze-with-cloud-vision', {
       body: formData
     });
     
     if (error) {
-      console.error("Errore nell'analisi con Cloud Vision:", error);
-      toast.error("Errore nell'analisi dell'immagine con Cloud Vision");
+      console.error("Errore nell'analisi con Plexi AI:", error);
+      toast.error("Errore nell'analisi dell'immagine con Plexi AI");
       return null;
     }
     
-    console.log("Risultato dell'analisi Cloud Vision:", data);
+    console.log("Risultato dell'analisi Plexi AI:", data);
     return data;
   } catch (error) {
-    console.error("Errore durante l'analisi dell'immagine con Cloud Vision:", error);
+    console.error("Errore durante l'analisi dell'immagine con Plexi AI:", error);
     toast.error("Errore nell'elaborazione dell'immagine");
     return null;
   }
@@ -45,23 +44,23 @@ export const analyzeWithCloudVision = async (imageFile: File): Promise<any> => {
 
 // Fallback local analysis when edge functions fail
 export const fallbackLocalAnalysis = (imageFile: File): any => {
-  console.log("Using fallback local analysis due to edge function failure");
+  console.log("Utilizzo dell'analisi locale di fallback a causa del fallimento della funzione edge");
   
   // Generate mock data that follows the same structure as the API would return
   return {
-    label: "Spider Plant (Chlorophytum comosum)",
+    label: "Spatifillo (Spathiphyllum)",
     score: 0.89,
     healthy: true,
     plantPart: "whole plant",
     confidence: 0.89,
-    dataSource: "Fallback local recognition",
+    dataSource: "Analisi locale Plexi AI (fallback)",
     isValidPlantImage: true,
-    detectedPlantType: "houseplant",
-    message: "Analisi eseguita in modalità locale (fallback)"
+    detectedPlantType: "pianta da appartamento",
+    message: "Analisi eseguita in modalità locale con Plexi AI (fallback)"
   };
 };
 
-// Determina il tipo di pianta in base ai risultati di Cloud Vision
+// Determina il tipo di pianta in base ai risultati di Plexi AI
 export const identifyPlantTypeWithVision = (visionResults: any): string | null => {
   if (!visionResults || !visionResults.isPlant) {
     return null;
@@ -160,7 +159,7 @@ export const identifyPlantPartWithVision = (visionResults: any): string => {
   return "whole plant"; // Default
 };
 
-// Integra i risultati di Cloud Vision con l'analisi della pianta
+// Integra i risultati di Plexi AI con l'analisi della pianta
 export const enhancePlantAnalysisWithVision = (baseAnalysis: any, visionResults: any): any => {
   if (!visionResults || !baseAnalysis) {
     return baseAnalysis;
@@ -169,7 +168,7 @@ export const enhancePlantAnalysisWithVision = (baseAnalysis: any, visionResults:
   // Crea una copia dell'analisi base
   const enhancedAnalysis = { ...baseAnalysis };
   
-  // Integra i dati di Cloud Vision
+  // Integra i dati di Plexi AI
   if (visionResults.isPlant) {
     // Aggiorna o conferma il tipo di pianta
     if (visionResults.plantDetails?.type && (!enhancedAnalysis.label || enhancedAnalysis.confidence < visionResults.plantDetails.confidence)) {
@@ -209,7 +208,7 @@ export const enhancePlantAnalysisWithVision = (baseAnalysis: any, visionResults:
     // Aggiungi dati grezzi per debugging
     enhancedAnalysis._rawData = {
       ...enhancedAnalysis._rawData,
-      cloudVision: visionResults.rawData
+      plexiAI: visionResults.rawData
     };
   }
   

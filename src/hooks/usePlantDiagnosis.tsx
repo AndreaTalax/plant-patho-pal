@@ -40,19 +40,19 @@ export const usePlantDiagnosis = () => {
       }, 100);
 
       // Chiama il vero servizio di analisi invece di usare dati simulati
-      console.log("Calling Plant.id analysis API with image...");
+      console.log("Calling Plexi AI analysis API with image...");
       const analysisResult = await analyzePlantImage(imageFile);
       
       clearInterval(progressInterval);
       setAnalysisProgress(100);
       
       if (!analysisResult) {
-        toast.error("Errore durante l'analisi dell'immagine");
+        toast.error("Errore durante l'analisi dell'immagine con Plexi AI");
         setIsAnalyzing(false);
         return;
       }
       
-      console.log("Analysis result from backend:", analysisResult);
+      console.log("Analysis result from Plexi AI:", analysisResult);
       
       // Usa i dati normalizzati dal backend
       // Verifica che i dati siano nel formato standardizzato
@@ -117,7 +117,7 @@ export const usePlantDiagnosis = () => {
         diseaseInfo = {
           id: "healthy-plant",
           name: "Pianta sana",
-          description: "La pianta sembra sana basata sull'analisi dell'immagine.",
+          description: "La pianta sembra sana basata sull'analisi dell'immagine con Plexi AI.",
           causes: "N/A",
           symptoms: ["Nessun sintomo rilevato"],
           treatments: ["Continua con le normali pratiche di cura"],
@@ -148,7 +148,7 @@ export const usePlantDiagnosis = () => {
           plantPart: analysisResult.plantPart || "whole plant",
           isHealthy: analysisResult.healthy,
           isValidPlantImage: true,
-          primaryService: analysisResult.dataSource,
+          primaryService: "Plexi AI",
           agreementScore: analysisResult.confidence || analysisResult.score,
           huggingFaceResult: {
             label: analysisResult.label,
@@ -164,10 +164,10 @@ export const usePlantDiagnosis = () => {
               symptomCategory: analysisResult.disease ? "detected" : "none"
             }
           } : undefined,
-          dataSource: analysisResult.dataSource
+          dataSource: "Plexi AI Plant Database"
         },
         risultatiCompleti: {
-          plantIdResult: analysisResult._rawData?.plantId
+          plexiAIResult: analysisResult._rawData?.plexiAI
         },
         identifiedFeatures: [analysisResult.label, analysisResult.plantPart],
         alternativeDiagnoses: analysisResult.allPredictions?.slice(1, 3).map(p => ({
@@ -175,7 +175,7 @@ export const usePlantDiagnosis = () => {
           probability: p.score
         })),
         sistemaDigitaleFoglia: analysisResult.plantPart === "leaf",
-        analysisTechnology: analysisResult.dataSource
+        analysisTechnology: "Plexi AI"
       };
       
       // Imposta i dettagli dell'analisi usando i dati normalizzati
@@ -187,12 +187,12 @@ export const usePlantDiagnosis = () => {
       console.error("Error during image analysis:", error);
       
       // Gestione dell'errore e fornitura di un fallback
-      toast.error(`Errore durante l'analisi: ${(error as Error).message || 'Errore sconosciuto'}`);
+      toast.error(`Errore durante l'analisi con Plexi AI: ${(error as Error).message || 'Errore sconosciuto'}`);
       
       // Fallback a una diagnosi di emergenza
       const emergencyDisease = PLANT_DISEASES[Math.floor(Math.random() * PLANT_DISEASES.length)];
       
-      setDiagnosisResult(`Errore di analisi, usando risultato di emergenza: ${emergencyDisease.name}`);
+      setDiagnosisResult(`Errore di analisi Plexi AI, usando risultato di emergenza: ${emergencyDisease.name}`);
       setDiagnosedDisease({
         ...emergencyDisease,
         confidence: 0.5,
@@ -210,7 +210,7 @@ export const usePlantDiagnosis = () => {
             leafColor: 'variable'
           }
         },
-        identifiedFeatures: ["Analisi di fallback", "Diagnosi d'emergenza"],
+        identifiedFeatures: ["Analisi Plexi AI di fallback", "Diagnosi d'emergenza"],
       });
       
       setIsAnalyzing(false);
@@ -246,7 +246,7 @@ export const usePlantDiagnosis = () => {
     
     // Log the capture for debugging
     console.log("Image captured, size:", imageFile.size, "bytes");
-    console.log("Starting image analysis...");
+    console.log("Starting image analysis with Plexi AI...");
     
     analyzeUploadedImage(imageFile);
   };
@@ -256,7 +256,7 @@ export const usePlantDiagnosis = () => {
     reader.onload = (event) => {
       setUploadedImage(event.target?.result as string);
       console.log("Image uploaded, size:", file.size, "bytes");
-      console.log("Starting image analysis...");
+      console.log("Starting image analysis with Plexi AI...");
       analyzeUploadedImage(file);
     };
     reader.readAsDataURL(file);

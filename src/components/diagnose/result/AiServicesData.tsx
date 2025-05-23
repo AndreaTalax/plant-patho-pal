@@ -1,3 +1,4 @@
+
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { formatPercentage } from '@/utils/plant-analysis';
@@ -56,7 +57,7 @@ const AiServicesData = ({ analysisDetails, isAnalyzing, plantSymptoms, standardi
       explanation += '- Controllare regolarmente la presenza di parassiti o segni di malattia';
       
     } else {
-      explanation = `Dall'analisi dei sintomi descritti e dell'immagine fornita, la tua ${plantName} potrebbe presentare `;
+      explanation = `Dall'analisi dei sintomi descritti e dell'immagine fornita effettuata con Plexi AI, la tua ${plantName} potrebbe presentare `;
       
       if (detectedDisease) {
         explanation += `segni compatibili con ${detectedDisease}. `;
@@ -91,7 +92,7 @@ const AiServicesData = ({ analysisDetails, isAnalyzing, plantSymptoms, standardi
   return (
     <Card className="p-4 bg-white">
       <div className="mb-3 border-b pb-2">
-        <h3 className="text-lg font-medium">Analisi diagnostica</h3>
+        <h3 className="text-lg font-medium">Analisi diagnostica con Plexi AI</h3>
       </div>
 
       <div className="space-y-4">

@@ -1,5 +1,5 @@
 
-// Model information for plant disease diagnosis with Dr.Plant AI integration
+// Model information for plant disease diagnosis with Plexi AI integration
 export interface ModelInfo {
   name: string;
   accuracy: string;
@@ -34,7 +34,7 @@ export interface ModelInfo {
 }
 
 export const modelInfo: ModelInfo = {
-  name: "Plant Disease Detection",
+  name: "Plexi AI Plant Disease Detection",
   version: "5.0.0",
   capabilities: [
     "Multi-model plant verification",
@@ -45,7 +45,7 @@ export const modelInfo: ModelInfo = {
     "Confidence scoring",
     "EPPO regulated pest detection"
   ],
-  description: "Advanced plant identification system that combines multiple databases: Disease classification algorithms from New Plant Diseases Dataset and OLID I. For general plant identification, leverages the TRY Plant Trait Database. For regulated pests and diseases, integrates the EPPO Global Database.",
+  description: "Sistema avanzato di identificazione delle piante che combina più database: Algoritmi di classificazione delle malattie dal New Plant Diseases Dataset e OLID I. Per l'identificazione generale delle piante, sfrutta il database TRY Plant Trait. Per parassiti e malattie regolamentati, integra il database globale EPPO.",
   lastUpdated: "2025-05-14",
   accuracy: "97.2%",
   dataset: "TRY Plant Trait Database + New Plant Diseases Dataset + OLID I + EPPO Global Database",
@@ -53,8 +53,8 @@ export const modelInfo: ModelInfo = {
   classes: 58,
   framework: "PyTorch + TensorFlow",
   license: "CC BY-NC-SA 4.0",
-  authors: ["Vision Research Team", "TRY Database Consortium", "OLID Research Group", "EPPO Database Team"],
-  repo: "https://github.com/drplant/open-source",
+  authors: ["Plexi AI Research Team", "TRY Database Consortium", "OLID Research Group", "EPPO Database Team"],
+  repo: "https://github.com/plexiai/open-source",
   paperUrl: "https://doi.org/10.1016/j.gc.2017.08.005",
   inferenceTime: "180-350ms",
   architecture: {

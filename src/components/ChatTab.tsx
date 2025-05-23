@@ -92,11 +92,11 @@ const ChatTab = () => {
           }
           
           // Prepare message with plant information
-          let messageText = "Plant information:\n";
-          messageText += `- Environment: ${plantInfo.isIndoor ? 'Indoor' : 'Outdoor'}\n`;
-          messageText += `- Watering frequency: ${plantInfo.wateringFrequency || 'Not specified'} times/week\n`;
-          messageText += `- Light exposure: ${plantInfo.lightExposure || 'Not specified'}\n`;
-          messageText += `- Symptoms: ${plantInfo.symptoms || 'Not specified'}\n`;
+          let messageText = "Informazioni sulla pianta:\n";
+          messageText += `- Ambiente: ${plantInfo.isIndoor ? 'Interno' : 'Esterno'}\n`;
+          messageText += `- Frequenza di irrigazione: ${plantInfo.wateringFrequency || 'Non specificata'} volte/settimana\n`;
+          messageText += `- Esposizione alla luce: ${plantInfo.lightExposure || 'Non specificata'}\n`;
+          messageText += `- Sintomi: ${plantInfo.symptoms || 'Non specificati'}\n`;
           
           // Send message with plant information
           const { error: msgError } = await supabase
@@ -114,7 +114,7 @@ const ChatTab = () => {
           }
           
           setSynced(true);
-          toast("Plant information sent to expert");
+          toast("Informazioni sulla pianta inviate all'esperto");
           
           // Refresh chat to show the new message
           setRefreshKey(Date.now());
@@ -139,7 +139,7 @@ const ChatTab = () => {
   if (!userProfile || !userProfile.id) {
     return (
       <div className="flex justify-center items-center h-full">
-        <p className="text-gray-500">Please log in to access the chat</p>
+        <p className="text-gray-500">Accedi per utilizzare la chat</p>
       </div>
     );
   }
