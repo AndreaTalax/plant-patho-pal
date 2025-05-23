@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect } from 'react';
 import { PLANT_DISEASES } from '@/data/plantDiseases';
 import { formatHuggingFaceResult, dataURLtoFile, analyzePlantImage } from '@/utils/plant-analysis';
@@ -167,7 +168,8 @@ export const usePlantDiagnosis = () => {
           dataSource: "Plexi AI Plant Database"
         },
         risultatiCompleti: {
-          plexiAIResult: analysisResult._rawData?.plexiAI
+          // Fix: Store the raw data in the correct property according to the updated type
+          plexiAIResult: analysisResult._rawData?.plexiAI || analysisResult._rawData
         },
         identifiedFeatures: [analysisResult.label, analysisResult.plantPart],
         alternativeDiagnoses: analysisResult.allPredictions?.slice(1, 3).map(p => ({

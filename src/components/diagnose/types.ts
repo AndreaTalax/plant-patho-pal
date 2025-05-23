@@ -98,6 +98,7 @@ export interface AnalysisDetails {
       similarImages?: any[];
       edibleParts?: string[];
     };
+    plexiAIResult?: any; // Add this property to fix the error
   };
   identifiedFeatures?: string[];
   alternativeDiagnoses?: {
