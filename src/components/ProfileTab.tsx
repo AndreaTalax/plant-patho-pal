@@ -1,4 +1,3 @@
-
 import { useState, useRef } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -52,26 +51,20 @@ const ProfileTab = () => {
 
   const handleSignOut = () => {
     logout();
-    toast({
-      description: "You have been disconnected from your account",
-    });
+    toast("You have been disconnected from your account");
     navigate("/login");
   };
 
   const handleSavePhone = () => {
     updateProfile("phone", phoneValue);
     setEditingPhone(false);
-    toast("Phone number updated", {
-      description: "Your phone number has been saved successfully",
-    });
+    toast("Phone number updated");
   };
 
   const handleSaveAddress = () => {
     updateProfile("address", addressValue);
     setEditingAddress(false);
-    toast("Address updated", {
-      description: "Your address has been saved successfully",
-    });
+    toast("Address updated");
   };
 
   const getInitials = () => {
@@ -118,14 +111,10 @@ const ProfileTab = () => {
       await updateProfile("avatarUrl", newAvatarUrl);
       setAvatarUrl(newAvatarUrl);
       
-      toast("Profile picture updated", {
-        description: "Your profile picture has been updated successfully",
-      });
+      toast("Profile picture updated");
     } catch (error) {
       console.error("Error uploading avatar:", error);
-      toast("Error uploading image", {
-        description: "There was a problem uploading your profile picture",
-      });
+      toast("Error uploading image");
     } finally {
       setUploading(false);
       if (fileInputRef.current) {

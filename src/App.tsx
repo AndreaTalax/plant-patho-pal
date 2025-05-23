@@ -88,7 +88,7 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <ThemeProvider defaultMode="light">
+      <ThemeProvider>
         <AuthProvider>
           <PlantInfoProvider>
             <BrowserRouter>
