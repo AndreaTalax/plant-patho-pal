@@ -1,4 +1,3 @@
-
 export interface DiagnosedDisease {
   id: string;
   name: string;
@@ -99,6 +98,8 @@ export interface AnalysisDetails {
       edibleParts?: string[];
     };
     plexiAIResult?: any;
+    rougenAIResult?: any;
+    plantDiseasesAIResult?: any;
     plantInfo?: PlantInfo; // Plant info is a valid property here
   };
   identifiedFeatures?: string[];
@@ -111,6 +112,25 @@ export interface AnalysisDetails {
   recommendedProducts?: any[];
   analysisTechnology?: string;
   recommendedAdditionalTests?: string[];
+  // New fields for enhanced analysis
+  careInstructions?: {
+    watering?: string;
+    light?: string;
+    soil?: string;
+    fertilizer?: string;
+    pruning?: string;
+    temperature?: string;
+    humidity?: string;
+    repotting?: string;
+    propagation?: string;
+  };
+  habitat?: string;
+  aiServicesUsed?: string[];
+  privacyInfo?: {
+    dataRetention?: string;
+    dataUsage?: string;
+    privacyPolicy?: string;
+  };
 }
 
 // Update the component props interfaces for the components we're passing data to
