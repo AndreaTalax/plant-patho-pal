@@ -28,15 +28,20 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
   const [flashMode, setFlashMode] = useState<boolean>(false);
   
   // Camera hook
-  const { startCamera, stopCamera, toggleFlash } = useCamera({
+  const { startCamera, stopCamera, toggleFlash, currentStream } = useCamera({
     videoRef,
     facingMode,
     flashMode,
     onCameraError: (error) => {
+      console.error("Camera error:", error);
       setCameraError(error);
       setCameraLoading(false);
     },
-    onCameraLoad: () => setCameraLoading(false)
+    onCameraLoad: () => {
+      console.log("Camera loaded successfully");
+      setCameraLoading(false);
+      setCameraError(null);
+    }
   });
   
   // Image capture hook
@@ -48,31 +53,50 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
   
   // Start camera when component mounts or facing mode changes
   useEffect(() => {
-    startCamera();
+    console.log("Starting camera with facing mode:", facingMode);
+    setCameraLoading(true);
+    setCameraError(null);
     
-    // Cleanup on unmount
+    // Small delay to ensure state is updated
+    const timer = setTimeout(() => {
+      startCamera();
+    }, 100);
+    
+    // Cleanup on unmount or facing mode change
     return () => {
+      clearTimeout(timer);
       stopCamera();
     };
   }, [facingMode]);
   
   const handleFlipCamera = () => {
+    console.log("Flipping camera from", facingMode, "to", facingMode === 'user' ? 'environment' : 'user');
     setFacingMode(prev => prev === 'user' ? 'environment' : 'user');
   };
 
   // Handle flash toggle
   const handleToggleFlash = async () => {
-    const newFlashMode = await toggleFlash();
-    setFlashMode(newFlashMode);
+    try {
+      const newFlashMode = await toggleFlash();
+      setFlashMode(newFlashMode);
+    } catch (error) {
+      console.error("Error toggling flash:", error);
+    }
+  };
+
+  const handleCancel = () => {
+    console.log("Camera cancelled by user");
+    stopCamera();
+    onCancel();
   };
 
   return (
     <div className="fixed inset-0 z-50 bg-black flex items-center justify-center">
       {/* Camera loading indicator */}
-      <CameraLoading visible={cameraLoading} />
+      <CameraLoading visible={cameraLoading && !cameraError} />
       
       {/* Camera error display */}
-      <CameraError error={cameraError} onClose={onCancel} />
+      <CameraError error={cameraError} onClose={handleCancel} />
       
       {/* Camera video display */}
       <video 
@@ -81,15 +105,12 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
         playsInline 
         muted
         className="w-full h-full object-cover"
-        onError={() => {
-          setCameraError("Errore durante il caricamento della fotocamera");
-          setCameraLoading(false);
-        }}
+        style={{ display: cameraLoading || cameraError ? 'none' : 'block' }}
       />
       <canvas ref={canvasRef} className="hidden" />
       
       {/* Flash toggle button - only shown on mobile and when camera is active */}
-      {isMobile && !cameraLoading && !cameraError && (
+      {isMobile && !cameraLoading && !cameraError && currentStream && (
         <FlashToggle 
           flashMode={flashMode}
           onToggleFlash={handleToggleFlash}
@@ -97,15 +118,17 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
         />
       )}
       
-      {/* Camera controls */}
-      <CameraControls 
-        onCapture={captureImage}
-        onCancel={onCancel}
-        isMobile={isMobile}
-        canFlipCamera={isMobile}
-        onFlipCamera={handleFlipCamera}
-        isProcessing={isCaptureProcessing}
-      />
+      {/* Camera controls - only shown when camera is ready */}
+      {!cameraLoading && !cameraError && (
+        <CameraControls 
+          onCapture={captureImage}
+          onCancel={handleCancel}
+          isMobile={isMobile}
+          canFlipCamera={isMobile}
+          onFlipCamera={handleFlipCamera}
+          isProcessing={isCaptureProcessing}
+        />
+      )}
     </div>
   );
 };

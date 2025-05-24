@@ -105,37 +105,8 @@ const DiagnoseTab = () => {
       return;
     }
     
+    console.log("Activating camera...");
     setShowCamera(true);
-    
-    // Start camera stream
-    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-      navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: 'environment' } // Use back camera if available
-      })
-      .then(stream => {
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          if (stream) {
-            stopCameraStream(); // Clean up any existing stream
-          }
-          console.log("Camera activated successfully");
-        }
-      })
-      .catch(err => {
-        console.error("Error accessing camera:", err);
-        toast.error("Camera access failed. Check permissions.", {
-          dismissible: true,
-          duration: 4000
-        });
-        setShowCamera(false);
-      });
-    } else {
-      toast.error("Camera not supported in your browser or device", {
-        dismissible: true,
-        duration: 4000
-      });
-      setShowCamera(false);
-    }
   };
 
   // Funzione per notificare l'esperto con tutte le informazioni
@@ -346,8 +317,9 @@ const DiagnoseTab = () => {
   };
 
   const handleCancelCamera = () => {
-    stopCameraStream();
+    console.log("Camera cancelled, cleaning up...");
     setShowCamera(false);
+    // The camera cleanup is now handled by the CameraCapture component
   };
 
   const navigateToChat = () => {
