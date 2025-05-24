@@ -245,43 +245,57 @@ const DiagnoseTab = () => {
   }
 
   function handlePlantInfoSubmit(data: PlantInfoFormValues) {
-    // Update plant info with name to display in results
     const updatedPlantInfo = {
       isIndoor: data.isIndoor,
       wateringFrequency: data.wateringFrequency,
       lightExposure: data.lightExposure,
       symptoms: data.symptoms,
-      useAI: data.useAI,
-      sendToExpert: data.sendToExpert,
-      name: data.name || "Pianta sconosciuta", // Make sure to capture the name
+      useAI: false, // Reset useAI, will be set when user selects option
+      sendToExpert: false, // Reset sendToExpert, will be set when user selects option
+      name: data.name || "Pianta sconosciuta",
       infoComplete: true
     };
     
     setPlantInfo(updatedPlantInfo);
     
-    // After completing plant info, automatically scroll to the next section
     setTimeout(() => {
       window.scrollTo({
         top: window.scrollY + 200,
         behavior: 'smooth'
       });
     }, 300);
-    
-    // If the user wants to send to expert, trigger chat switch with delay
-    if (data.sendToExpert && isAuthenticated) {
-      setTimeout(() => {
-        // Dispatch event to trigger refreshChat
-        window.dispatchEvent(new Event('refreshChat'));
-        
-        // Show notification that info was sent to expert
-        toast("Plant information sent to expert", {
-          description: "Check the chat tab to communicate with the expert"
-        });
-      }, 1000);
-    }
   }
 
-  async function handleCaptureImage(imageDataUrl: string) {
+  function handleSelectAI() {
+    setPlantInfo({ ...plantInfo, useAI: true, sendToExpert: false });
+    setTimeout(() => {
+      window.scrollTo({
+        top: window.scrollY + 200,
+        behavior: 'smooth'
+      });
+    }, 300);
+  }
+
+  function handleSelectExpert() {
+    if (!isAuthenticated) {
+      setAuthDialogConfig({
+        title: "You must log in to contact the expert",
+        description: "To send your request to the expert, you need to log in first."
+      });
+      setShowAuthDialog(true);
+      return;
+    }
+    
+    setPlantInfo({ ...plantInfo, useAI: false, sendToExpert: true });
+    setTimeout(() => {
+      window.scrollTo({
+        top: window.scrollY + 200,
+        behavior: 'smooth'
+      });
+    }, 300);
+  }
+
+  function handleCaptureImage(imageDataUrl: string) {
     setShowCamera(false);
     
     // Store the captured image
@@ -358,9 +372,15 @@ const DiagnoseTab = () => {
   }
 
   // Determine which stage we're in
-  let currentStage: 'info' | 'capture' | 'result' = 'info';
+  let currentStage: 'info' | 'options' | 'capture' | 'result' = 'info';
   if (plantInfo.infoComplete) {
-    currentStage = uploadedImage ? 'result' : 'capture';
+    if (!plantInfo.useAI && !plantInfo.sendToExpert) {
+      currentStage = 'options';
+    } else if (uploadedImage) {
+      currentStage = 'result';
+    } else {
+      currentStage = 'capture';
+    }
   }
 
   return (
@@ -387,6 +407,8 @@ const DiagnoseTab = () => {
           canvasRef={canvasRef}
           onPlantInfoComplete={handlePlantInfoSubmit}
           onPlantInfoEdit={() => setPlantInfo({ ...plantInfo, infoComplete: false })}
+          onSelectAI={handleSelectAI}
+          onSelectExpert={handleSelectExpert}
           onTakePhoto={takePicture}
           onUploadPhoto={() => document.getElementById('file-upload')?.click()}
           onCapture={handleCaptureImage}

@@ -3,13 +3,14 @@ import React from 'react';
 import { usePlantInfo } from '@/context/PlantInfoContext';
 import PlantInfoForm from '../PlantInfoForm';
 import PlantInfoSummary from '../PlantInfoSummary';
+import DiagnosisOptions from '../DiagnosisOptions';
 import ScanLayout from '../scan/ScanLayout';
 import DiagnosisResult from '../result/DiagnosisResult';
 import CameraCapture from '../CameraCapture';
 import { DiagnosedDisease } from '../types';
 
 interface DiagnosisStagesProps {
-  stage: 'info' | 'capture' | 'result';
+  stage: 'info' | 'options' | 'capture' | 'result';
   showCamera: boolean;
   uploadedImage: string | null;
   isAnalyzing: boolean;
@@ -19,6 +20,8 @@ interface DiagnosisStagesProps {
   canvasRef: React.RefObject<HTMLCanvasElement>;
   onPlantInfoComplete: (data: any) => void;
   onPlantInfoEdit: () => void;
+  onSelectAI: () => void;
+  onSelectExpert: () => void;
   onTakePhoto: () => void;
   onUploadPhoto: () => void;
   onCapture: (imageDataUrl: string) => void;
@@ -38,6 +41,8 @@ const DiagnosisStages: React.FC<DiagnosisStagesProps> = ({
   canvasRef,
   onPlantInfoComplete,
   onPlantInfoEdit,
+  onSelectAI,
+  onSelectExpert,
   onTakePhoto,
   onUploadPhoto,
   onCapture,
@@ -60,6 +65,27 @@ const DiagnosisStages: React.FC<DiagnosisStagesProps> = ({
 
   if (stage === 'info') {
     return <PlantInfoForm onComplete={onPlantInfoComplete} />;
+  }
+
+  if (stage === 'options') {
+    return (
+      <>
+        <PlantInfoSummary 
+          plantInfo={{
+            isIndoor: plantInfo.isIndoor,
+            wateringFrequency: plantInfo.wateringFrequency,
+            lightExposure: plantInfo.lightExposure,
+            symptoms: plantInfo.symptoms
+          }}
+          onEdit={onPlantInfoEdit}
+        />
+
+        <DiagnosisOptions
+          onSelectAI={onSelectAI}
+          onSelectExpert={onSelectExpert}
+        />
+      </>
+    );
   }
 
   if (stage === 'capture') {
