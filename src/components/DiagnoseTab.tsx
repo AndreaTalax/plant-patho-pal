@@ -295,7 +295,7 @@ const DiagnoseTab = () => {
     }, 300);
   }
 
-  function handleCaptureImage(imageDataUrl: string) {
+  async function handleCaptureImage(imageDataUrl: string) {
     setShowCamera(false);
     
     // Store the captured image
