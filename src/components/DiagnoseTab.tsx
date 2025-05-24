@@ -8,6 +8,8 @@ import { toast } from 'sonner';
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from '@/context/AuthContext';
 import { AuthRequiredDialog } from './auth/AuthRequiredDialog';
+import { Button } from '@/components/ui/button';
+import { ArrowLeft } from 'lucide-react';
 
 // Importing our components
 import DiagnoseHeader from './diagnose/DiagnoseHeader';
@@ -383,8 +385,39 @@ const DiagnoseTab = () => {
     }
   }
 
+  // Handle back navigation
+  const handleBack = () => {
+    if (currentStage === 'result') {
+      // From result, go back to capture/scan
+      setUploadedImage(null);
+      resetDiagnosis();
+    } else if (currentStage === 'capture') {
+      // From capture, go back to options
+      setPlantInfo({ ...plantInfo, useAI: false, sendToExpert: false });
+    } else if (currentStage === 'options') {
+      // From options, go back to info
+      setPlantInfo({ ...plantInfo, infoComplete: false });
+    }
+  };
+
+  const shouldShowBackButton = currentStage !== 'info' && !showCamera;
+
   return (
     <div className="flex flex-col items-center justify-start px-4 pt-6 pb-24 min-h-full">
+      {/* Back Button */}
+      {shouldShowBackButton && (
+        <div className="w-full max-w-4xl mb-4">
+          <Button
+            variant="ghost"
+            onClick={handleBack}
+            className="flex items-center gap-2 text-gray-600 hover:text-gray-900"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Indietro
+          </Button>
+        </div>
+      )}
+
       <DiagnoseHeader 
         showModelInfo={showModelInfo} 
         onToggleModelInfo={() => setShowModelInfo(!showModelInfo)} 
