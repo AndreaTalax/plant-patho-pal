@@ -110,7 +110,7 @@ const DiagnoseTab = () => {
   };
 
   // Funzione per notificare l'esperto con tutte le informazioni
-  const notifyExpert = async (imageFile?: File, imageDataUrl?: string) => {
+  async function notifyExpert(imageFile?: File, imageDataUrl?: string) {
     try {
       // Controlla l'autenticazione dell'utente
       if (!isAuthenticated) {
@@ -242,9 +242,9 @@ const DiagnoseTab = () => {
         duration: 4000
       });
     }
-  };
+  }
 
-  const handlePlantInfoSubmit = (data: PlantInfoFormValues) => {
+  function handlePlantInfoSubmit(data: PlantInfoFormValues) {
     // Update plant info with name to display in results
     const updatedPlantInfo = {
       isIndoor: data.isIndoor,
@@ -279,9 +279,9 @@ const DiagnoseTab = () => {
         });
       }, 1000);
     }
-  };
+  }
 
-  const handleCaptureImage = async (imageDataUrl: string) => {
+  async function handleCaptureImage(imageDataUrl: string) {
     setShowCamera(false);
     
     // Store the captured image
@@ -314,15 +314,15 @@ const DiagnoseTab = () => {
       // If authenticated and profile complete, send directly to the expert
       await notifyExpert(undefined, imageDataUrl);
     }
-  };
+  }
 
-  const handleCancelCamera = () => {
+  function handleCancelCamera() {
     console.log("Camera cancelled, cleaning up...");
     setShowCamera(false);
     // The camera cleanup is now handled by the CameraCapture component
-  };
+  }
 
-  const navigateToChat = () => {
+  function navigateToChat() {
     // Check authentication before navigating
     if (!isAuthenticated) {
       setAuthDialogConfig({
@@ -339,23 +339,23 @@ const DiagnoseTab = () => {
       const event = new CustomEvent('switchTab', { detail: 'chat' });
       window.dispatchEvent(event);
     }, 100);
-  };
+  }
 
-  const navigateToShop = (productId?: string) => {
+  function navigateToShop(productId?: string) {
     navigate('/');
     setTimeout(() => {
       const event = new CustomEvent('switchTab', { detail: 'shop' });
       window.dispatchEvent(event);
     }, 100);
-  };
+  }
 
-  const navigateToLibrary = (resourceId?: string) => {
+  function navigateToLibrary(resourceId?: string) {
     navigate('/');
     setTimeout(() => {
       const event = new CustomEvent('switchTab', { detail: 'library' });
       window.dispatchEvent(event);
     }, 100);
-  };
+  }
 
   // Determine which stage we're in
   let currentStage: 'info' | 'capture' | 'result' = 'info';
@@ -375,7 +375,7 @@ const DiagnoseTab = () => {
         <ModelInfoPanel modelInfo={modelInfo} onClose={() => setShowModelInfo(false)} />
       )}
       
-      <div className="space-y-6 w-full max-w-md">
+      <div className="w-full">
         <DiagnosisStages
           stage={currentStage}
           showCamera={showCamera}

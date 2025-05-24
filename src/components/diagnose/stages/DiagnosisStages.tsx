@@ -1,8 +1,9 @@
+
 import React from 'react';
 import { usePlantInfo } from '@/context/PlantInfoContext';
 import PlantInfoForm from '../PlantInfoForm';
 import PlantInfoSummary from '../PlantInfoSummary';
-import ImageCaptureMethods from '../ImageCaptureMethods';
+import ScanLayout from '../scan/ScanLayout';
 import DiagnosisResult from '../result/DiagnosisResult';
 import CameraCapture from '../CameraCapture';
 import { DiagnosedDisease } from '../types';
@@ -74,7 +75,7 @@ const DiagnosisStages: React.FC<DiagnosisStagesProps> = ({
           onEdit={onPlantInfoEdit}
         />
 
-        <ImageCaptureMethods
+        <ScanLayout
           onTakePhoto={onTakePhoto}
           onUploadPhoto={onUploadPhoto}
         />
