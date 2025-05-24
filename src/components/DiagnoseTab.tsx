@@ -385,19 +385,29 @@ const DiagnoseTab = () => {
     }
   }
 
-  // Handle back navigation
+  // Handle back navigation with proper state reset
   const handleBack = () => {
     if (currentStage === 'result') {
-      // From result, go back to capture/scan
+      // From result, go back to capture/scan - reset all diagnosis data
       setUploadedImage(null);
       resetDiagnosis();
+      // Keep the AI/Expert selection but remove the image
     } else if (currentStage === 'capture') {
-      // From capture, go back to options
+      // From capture, go back to options - reset AI/Expert selection and any uploaded images
+      setUploadedImage(null);
+      resetDiagnosis();
       setPlantInfo({ ...plantInfo, useAI: false, sendToExpert: false });
+      stopCameraStream(); // Make sure camera is stopped
     } else if (currentStage === 'options') {
-      // From options, go back to info
-      setPlantInfo({ ...plantInfo, infoComplete: false });
+      // From options, go back to info - reset everything except the form data
+      setUploadedImage(null);
+      resetDiagnosis();
+      setPlantInfo({ ...plantInfo, infoComplete: false, useAI: false, sendToExpert: false });
+      stopCameraStream(); // Make sure camera is stopped
     }
+    
+    // Dismiss any active toasts when going back
+    toast.dismiss();
   };
 
   const shouldShowBackButton = currentStage !== 'info' && !showCamera;
