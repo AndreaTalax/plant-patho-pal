@@ -13,6 +13,9 @@ interface UserProfile {
   birthPlace: string;
   email: string;
   role: 'user' | 'master';
+  phone?: string;
+  address?: string;
+  avatarUrl?: string;
 }
 
 interface AuthContextType {
@@ -21,10 +24,15 @@ interface AuthContextType {
   userProfile: UserProfile;
   isLoading: boolean;
   isAuthenticated: boolean;
+  isMasterAccount: boolean;
+  isProfileComplete: boolean;
   register: (email: string, password: string) => Promise<any>;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshProfile: () => Promise<void>;
+  updateProfile: (field: keyof UserProfile, value: string) => void;
+  updateUsername: (username: string) => void;
+  updatePassword: (password: string) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -39,7 +47,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     birthDate: '',
     birthPlace: '',
     email: '',
-    role: 'user'
+    role: 'user',
+    phone: '',
+    address: '',
+    avatarUrl: ''
   });
   const [isLoading, setIsLoading] = useState(true);
   
@@ -69,11 +80,58 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           birthDate: profile.birth_date || '',
           birthPlace: profile.birth_place || '',
           email: profile.email || user.email || '',
-          role: profile.role === 'master' ? 'master' : 'user'
+          role: profile.role === 'master' ? 'master' : 'user',
+          phone: profile.phone || '',
+          address: profile.address || '',
+          avatarUrl: profile.avatar_url || ''
         });
       }
     } catch (error) {
       console.error('Error in refreshProfile:', error);
+    }
+  };
+
+  const updateProfile = (field: keyof UserProfile, value: string) => {
+    setUserProfile(prev => ({ ...prev, [field]: value }));
+    
+    // Update in database if user is authenticated
+    if (user) {
+      const dbField = field === 'firstName' ? 'first_name' :
+                     field === 'lastName' ? 'last_name' :
+                     field === 'birthDate' ? 'birth_date' :
+                     field === 'birthPlace' ? 'birth_place' :
+                     field === 'avatarUrl' ? 'avatar_url' :
+                     field;
+      
+      supabase
+        .from('profiles')
+        .update({ [dbField]: value })
+        .eq('id', user.id)
+        .then(({ error }) => {
+          if (error) {
+            console.error('Error updating profile:', error);
+          }
+        });
+    }
+  };
+
+  const updateUsername = (username: string) => {
+    // For now, we'll just update the first name as username
+    updateProfile('firstName', username);
+  };
+
+  const updatePassword = async (password: string) => {
+    if (!user) return;
+    
+    try {
+      const { error } = await supabase.auth.updateUser({ password });
+      if (error) {
+        console.error('Error updating password:', error);
+        throw error;
+      }
+    } catch (error) {
+      console.error('Error in updatePassword:', error);
+      throw error;
     }
   };
 
@@ -102,7 +160,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             birthDate: '',
             birthPlace: '',
             email: '',
-            role: 'user'
+            role: 'user',
+            phone: '',
+            address: '',
+            avatarUrl: ''
           });
         }
         
@@ -143,12 +204,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const login = async (email: string, password: string) => {
+  const login = async (email: string, password: string): Promise<void> => {
     console.log('AuthContext: Starting login for:', email);
     try {
-      const result = await signIn(email, password);
+      await signIn(email, password);
       console.log('AuthContext: Login successful for:', email);
-      return result;
     } catch (error) {
       console.error('AuthContext: Login error:', error);
       throw error;
@@ -167,6 +227,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const isAuthenticated = !!user;
+  const isMasterAccount = userProfile.role === 'master';
+  const isProfileComplete = userProfile.firstName && userProfile.lastName && userProfile.birthDate && userProfile.birthPlace;
 
   return (
     <AuthContext.Provider value={{
@@ -175,10 +237,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       userProfile,
       isLoading,
       isAuthenticated,
+      isMasterAccount,
+      isProfileComplete: !!isProfileComplete,
       register,
       login,
       logout,
-      refreshProfile
+      refreshProfile,
+      updateProfile,
+      updateUsername,
+      updatePassword
     }}>
       {children}
     </AuthContext.Provider>
