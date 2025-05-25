@@ -42,7 +42,7 @@ export const signUp = async (email: string, password: string) => {
     
     console.log('Attempting registration for:', email);
     
-    // For other emails, proceed normally with supabase.auth.signUp and let Supabase handle email confirmation
+    // For other emails, proceed normally with supabase.auth.signUp
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -89,10 +89,28 @@ export const signUp = async (email: string, password: string) => {
       console.error('Registration error:', error.message);
       throw error;
     } else {
-      // Log successful registration - Supabase will handle email sending automatically
-      console.log('Registration successful for:', email);
-      console.log('User data:', data.user);
-      console.log('Email confirmation status:', data.user?.email_confirmed_at ? 'already confirmed' : 'confirmation required');
+      // Manual sending of confirmation email - adding a call to the Supabase function
+      try {
+        // If registration was successful, invoke the email sending function directly
+        console.log('Sending confirmation email via edge function');
+        
+        const { error: functionError } = await supabase.functions.invoke('send-registration-confirmation', {
+          body: { 
+            user: data.user,
+            email: email,
+            confirmationToken: 'manual-token',
+            confirmationUrl: `${window.location.origin}/confirm-email?token=${encodeURIComponent('manual-token')}&email=${encodeURIComponent(email)}` 
+          }
+        });
+        
+        if (functionError) {
+          console.error('Error sending confirmation email:', functionError);
+        } else {
+          console.log('Confirmation email sent successfully');
+        }
+      } catch (emailError) {
+        console.error('Error calling the email sending function:', emailError);
+      }
       
       // Check if the user needs to confirm their email
       const userConfirmationStatus = data.user?.confirmed_at 
@@ -101,7 +119,7 @@ export const signUp = async (email: string, password: string) => {
           ? 'already_confirmed' 
           : 'confirmation_required';
             
-      console.log('Registration completed for:', email, 'Status:', userConfirmationStatus);
+      console.log('Email sent to:', email, 'Status:', userConfirmationStatus);
       
       return {
         ...data,
@@ -120,8 +138,6 @@ export const signUp = async (email: string, password: string) => {
 // User login function
 export const signIn = async (email: string, password: string) => {
   try {
-    console.log('Attempting login for:', email, 'with password:', password);
-    
     // For specific emails, allow direct access without calling supabase.auth.signInWithPassword
     const whitelistedEmails = ["talaiaandrea@gmail.com", "test@gmail.com", "agrotecnicomarconigro@gmail.com"];
     const mockPasswords = {
@@ -133,12 +149,8 @@ export const signIn = async (email: string, password: string) => {
     if (whitelistedEmails.includes(email.toLowerCase())) {
       const expectedPassword = mockPasswords[email.toLowerCase() as keyof typeof mockPasswords];
       
-      console.log('Whitelisted email detected:', email);
-      console.log('Expected password:', expectedPassword);
-      console.log('Provided password:', password);
-      
       if (password === expectedPassword) {
-        console.log('Password matches! Creating mock session for:', email);
+        console.log('Simulated login for whitelisted email:', email);
         
         // Create a mock object for the user that meets the User interface
         let mockRole = 'user';
@@ -182,26 +194,11 @@ export const signIn = async (email: string, password: string) => {
           user: mockUser
         };
         
-        // Manually trigger the auth state change to simulate Supabase behavior
-        console.log('Triggering auth state change manually for whitelisted user');
-        
-        // Set the session in the auth context manually by triggering the auth state change
-        setTimeout(() => {
-          // This simulates what Supabase would normally do
-          window.dispatchEvent(new CustomEvent('supabase-auth-token', { 
-            detail: { session: mockSession, user: mockUser } 
-          }));
-        }, 100);
-        
         return {
-          data: {
-            user: mockUser,
-            session: mockSession
-          },
-          error: null
+          user: mockUser,
+          session: mockSession
         };
       } else {
-        console.log('Password does not match for whitelisted email');
         throw new Error("Invalid login credentials");
       }
     }
@@ -246,17 +243,13 @@ export const resendConfirmationEmail = async (email: string) => {
       };
     }
     
-    // For other emails, use standard Supabase resend (no fallback to edge function)
-    console.log('Attempting to resend confirmation email for:', email);
-    
+    // For other emails, first try sending through standard Supabase API
     const { data, error } = await supabase.auth.resend({
       type: 'signup',
       email,
     });
 
     if (error) {
-      console.error('Resend confirmation email error:', error);
-      
       if (error.status === 429) {
         return { 
           rateLimitExceeded: true, 
@@ -264,10 +257,35 @@ export const resendConfirmationEmail = async (email: string) => {
         };
       }
       
-      throw error;
+      console.warn('Standard resend error:', error.message);
+      
+      // If the standard API fails, try with our edge function
+      try {
+        console.log('Attempting to send via edge function');
+        const { error: functionError } = await supabase.functions.invoke('send-registration-confirmation', {
+          body: { 
+            email: email,
+            confirmationToken: 'resend-token',
+            confirmationUrl: `${window.location.origin}/confirm-email?token=${encodeURIComponent('resend-token')}&email=${encodeURIComponent(email)}` 
+          }
+        });
+        
+        if (functionError) {
+          console.error('Error sending email via edge function:', functionError);
+          throw functionError;
+        }
+        
+        console.log('Confirmation email sent successfully via edge function');
+        return { 
+          success: true, 
+          message: "We've sent a new confirmation email. Check your inbox."
+        };
+      } catch (edgeFunctionError) {
+        console.error('Irreversible error in email sending:', edgeFunctionError);
+        throw error; // Throw the original Supabase error
+      }
     }
     
-    console.log('Confirmation email resent successfully for:', email);
     return { 
       success: true, 
       message: "We've sent a new confirmation email. Check your inbox."
