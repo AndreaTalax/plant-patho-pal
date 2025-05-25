@@ -138,6 +138,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     console.log('AuthContext: Setting up auth state listener...');
     
+    // Handle manual auth events for whitelisted users
+    const handleManualAuth = (event: any) => {
+      console.log('Manual auth event received:', event.detail);
+      const { session: eventSession, user: eventUser } = event.detail;
+      
+      setSession(eventSession);
+      setUser(eventUser);
+      
+      if (eventUser) {
+        setTimeout(() => {
+          refreshProfile();
+        }, 0);
+      }
+      
+      setIsLoading(false);
+    };
+    
+    window.addEventListener('supabase-auth-token', handleManualAuth);
+    
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
@@ -189,6 +208,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => {
       console.log('AuthContext: Cleaning up auth state listener...');
       subscription.unsubscribe();
+      window.removeEventListener('supabase-auth-token', handleManualAuth);
     };
   }, []);
 
@@ -207,7 +227,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (email: string, password: string): Promise<void> => {
     console.log('AuthContext: Starting login for:', email);
     try {
-      await signIn(email, password);
+      const result = await signIn(email, password);
+      console.log('AuthContext: Login result:', result);
+      
+      // For whitelisted users, the auth state change is handled manually
+      // For regular users, Supabase handles it automatically
+      
       console.log('AuthContext: Login successful for:', email);
     } catch (error) {
       console.error('AuthContext: Login error:', error);

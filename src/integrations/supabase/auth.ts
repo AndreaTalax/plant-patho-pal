@@ -120,6 +120,8 @@ export const signUp = async (email: string, password: string) => {
 // User login function
 export const signIn = async (email: string, password: string) => {
   try {
+    console.log('Attempting login for:', email, 'with password:', password);
+    
     // For specific emails, allow direct access without calling supabase.auth.signInWithPassword
     const whitelistedEmails = ["talaiaandrea@gmail.com", "test@gmail.com", "agrotecnicomarconigro@gmail.com"];
     const mockPasswords = {
@@ -131,8 +133,12 @@ export const signIn = async (email: string, password: string) => {
     if (whitelistedEmails.includes(email.toLowerCase())) {
       const expectedPassword = mockPasswords[email.toLowerCase() as keyof typeof mockPasswords];
       
+      console.log('Whitelisted email detected:', email);
+      console.log('Expected password:', expectedPassword);
+      console.log('Provided password:', password);
+      
       if (password === expectedPassword) {
-        console.log('Simulated login for whitelisted email:', email);
+        console.log('Password matches! Creating mock session for:', email);
         
         // Create a mock object for the user that meets the User interface
         let mockRole = 'user';
@@ -176,11 +182,26 @@ export const signIn = async (email: string, password: string) => {
           user: mockUser
         };
         
+        // Manually trigger the auth state change to simulate Supabase behavior
+        console.log('Triggering auth state change manually for whitelisted user');
+        
+        // Set the session in the auth context manually by triggering the auth state change
+        setTimeout(() => {
+          // This simulates what Supabase would normally do
+          window.dispatchEvent(new CustomEvent('supabase-auth-token', { 
+            detail: { session: mockSession, user: mockUser } 
+          }));
+        }, 100);
+        
         return {
-          user: mockUser,
-          session: mockSession
+          data: {
+            user: mockUser,
+            session: mockSession
+          },
+          error: null
         };
       } else {
+        console.log('Password does not match for whitelisted email');
         throw new Error("Invalid login credentials");
       }
     }
