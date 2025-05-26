@@ -1,0 +1,86 @@
+const takePicture = async () => {
+  try {
+    // Verifica che plantInfo sia definito e completo
+    if (!plantInfo || !plantInfo.infoComplete) {
+      toast.warning("Inserisci prima le informazioni sulla pianta", {
+        dismissible: true,
+        duration: 3000
+      });
+      return;
+    }
+
+    // Verifica che un'opzione di diagnosi sia selezionata
+    if (!plantInfo.useAI && !plantInfo.sendToExpert) {
+      toast.warning("Seleziona prima un'opzione di diagnosi");
+      return;
+    }
+
+    console.log("Attivazione fotocamera...");
+    
+    // Verifica supporto per getUserMedia
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      toast.error("La fotocamera non è supportata su questo dispositivo");
+      return;
+    }
+
+    setShowCamera(true);
+    
+  } catch (error) {
+    console.error("Errore nell'attivazione della fotocamera:", error);
+    toast.error("Impossibile attivare la fotocamera");
+    setShowCamera(false);
+  }
+};
+
+const handleCaptureImage = async (imageDataUrl: string) => {
+  try {
+    setShowCamera(false);
+    
+    // Verifica che l'immagine sia valida
+    if (!imageDataUrl || !imageDataUrl.startsWith('data:image/')) {
+      toast.error("Immagine non valida");
+      return;
+    }
+    
+    // Pulisci l'immagine precedente se esiste
+    if (uploadedImage && uploadedImage.startsWith('blob:')) {
+      URL.revokeObjectURL(uploadedImage);
+    }
+    
+    // Memorizza l'immagine catturata
+    setUploadedImage(imageDataUrl);
+    
+    if (plantInfo.useAI) {
+      // Se l'AI è selezionata, elabora l'immagine con l'AI
+      await captureImage(imageDataUrl, plantInfo);
+    } else if (plantInfo.sendToExpert) {
+      // Se non è selezionata l'AI, verifica l'autenticazione prima
+      if (!isAuthenticated) {
+        setAuthDialogConfig({
+          title: "Devi effettuare il login per contattare l'esperto",
+          description: "Per inviare la tua richiesta all'esperto, devi prima effettuare il login."
+        });
+        setShowAuthDialog(true);
+        return;
+      }
+      
+      // Verifica che il profilo utente sia completo prima di inviare all'esperto
+      if (!userProfile?.firstName || !userProfile?.lastName || 
+          !userProfile?.birthDate || !userProfile?.birthPlace) {
+        toast.error("Completa il tuo profilo prima di inviare una richiesta", {
+          description: "Nome, cognome, data e luogo di nascita sono obbligatori",
+          duration: 4000
+        });
+        navigate('/complete-profile');
+        return;
+      }
+      
+      // Se autenticato e profilo completo, invia direttamente all'esperto
+      await notifyExpert(undefined, imageDataUrl);
+    }
+    
+  } catch (error) {
+    console.error("Errore durante la cattura dell'immagine:", error);
+    toast.error("Errore durante la cattura dell'immagine");
+  }
+};
