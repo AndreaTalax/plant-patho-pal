@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useState, ReactNode, useEffect } from "react";
 import { supabase, EXPERT_ID } from '@/integrations/supabase/client';
 import { Session, User } from "@supabase/supabase-js";
@@ -34,6 +33,14 @@ type AuthContextType = {
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+// Generate proper UUIDs for mock users
+const generateMockUserId = (email: string) => {
+  if (email === "talaiaandrea@gmail.com") return "550e8400-e29b-41d4-a716-446655440001";
+  if (email === "test@gmail.com") return "550e8400-e29b-41d4-a716-446655440002";
+  if (email === "agrotecnicomarconigro@gmail.com") return "550e8400-e29b-41d4-a716-446655440003";
+  return "550e8400-e29b-41d4-a716-446655440000";
+};
 
 // Mock user data for development when Supabase is not configured
 const MOCK_USERS = [
@@ -205,18 +212,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const usernameFromEmail = email.split('@')[0];
         setUsername(usernameFromEmail);
         
+        // Use proper UUID for mock users
+        const userId = data.user.id;
+        
         // Set initial profile data
         setUserProfile(prev => ({ 
           ...prev,
-          id: data.user!.id, // Set id
+          id: userId, // Set proper UUID
           username: usernameFromEmail,
           email: email,
           role: email === "agrotecnicomarconigro@gmail.com" ? "master" : "user"
         }));
         
-        if (data.user.id) {
+        if (userId) {
           setTimeout(() => {
-            fetchUserProfile(data.user!.id);
+            fetchUserProfile(userId);
           }, 0);
         }
       }
@@ -270,10 +280,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const usernameFromEmail = email.split('@')[0];
         setUsername(usernameFromEmail);
         
+        // Use proper UUID for mock users
+        const userId = result.data.user.id;
+        
         // For pre-configured accounts, set up complete profiles
         if (email === "talaiaandrea@gmail.com") {
           setUserProfile({
-            id: result.data.user.id, // Set id
+            id: userId, // Use proper UUID
             username: "talaia",
             firstName: "Andrea",
             lastName: "Talaia",
@@ -288,7 +301,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setIsProfileComplete(true);
         } else if (email === "agrotecnicomarconigro@gmail.com") {
           setUserProfile({
-            id: result.data.user.id, // Set id
+            id: userId, // Use proper UUID
             username: "marconigro",
             firstName: "Marco",
             lastName: "Nigro",
@@ -304,7 +317,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setIsMasterAccount(true);
         } else if (email === "test@gmail.com") {
           setUserProfile({
-            id: result.data.user.id, // Set id
+            id: userId, // Use proper UUID
             username: "testuser",
             firstName: "Test",
             lastName: "User",
@@ -319,7 +332,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setIsProfileComplete(true);
         } else {
           setUserProfile({
-            id: result.data.user.id, // Set id
+            id: userId, // Use proper UUID
             username: usernameFromEmail,
             firstName: "",
             lastName: "",

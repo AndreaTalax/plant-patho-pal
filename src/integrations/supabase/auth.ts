@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { User, Session } from '@supabase/supabase-js';
 
@@ -11,6 +10,14 @@ export const signUp = async (email: string, password: string) => {
     if (whitelistedEmails.includes(email.toLowerCase())) {
       console.log('Email in whitelist, simulating registration for:', email);
       
+      // Generate proper UUIDs for mock users
+      const generateMockUserId = (email: string) => {
+        if (email === "talaiaandrea@gmail.com") return "550e8400-e29b-41d4-a716-446655440001";
+        if (email === "test@gmail.com") return "550e8400-e29b-41d4-a716-446655440002";
+        if (email === "agrotecnicomarconigro@gmail.com") return "550e8400-e29b-41d4-a716-446655440003";
+        return "550e8400-e29b-41d4-a716-446655440000";
+      };
+      
       // Simulate successful registration without actually calling Supabase
       return {
         confirmationRequired: false,
@@ -18,8 +25,7 @@ export const signUp = async (email: string, password: string) => {
         data: {
           user: {
             email: email,
-            id: email === "talaiaandrea@gmail.com" ? "talaiaandrea-id" : 
-                 email === "test@gmail.com" ? "test-user-id" : "premium-user-id",
+            id: generateMockUserId(email),
             email_confirmed_at: new Date().toISOString(),
             // Adding required fields for the Supabase User type
             app_metadata: { provider: 'email' },
@@ -152,17 +158,20 @@ export const signIn = async (email: string, password: string) => {
       if (password === expectedPassword) {
         console.log('Simulated login for whitelisted email:', email);
         
+        // Generate proper UUIDs for mock users
+        const generateMockUserId = (email: string) => {
+          if (email === "talaiaandrea@gmail.com") return "550e8400-e29b-41d4-a716-446655440001";
+          if (email === "test@gmail.com") return "550e8400-e29b-41d4-a716-446655440002";
+          if (email === "agrotecnicomarconigro@gmail.com") return "550e8400-e29b-41d4-a716-446655440003";
+          return "550e8400-e29b-41d4-a716-446655440000";
+        };
+        
         // Create a mock object for the user that meets the User interface
         let mockRole = 'user';
-        let mockUserId = 'user-id';
+        let mockUserId = generateMockUserId(email);
         
         if (email === "agrotecnicomarconigro@gmail.com") {
           mockRole = 'master';
-          mockUserId = 'premium-user-id';
-        } else if (email === "talaiaandrea@gmail.com") {
-          mockUserId = 'talaiaandrea-id';
-        } else if (email === "test@gmail.com") {
-          mockUserId = 'test-user-id';
         }
         
         // Complete User mock with all required fields
