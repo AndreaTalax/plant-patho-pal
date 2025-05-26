@@ -1,0 +1,79 @@
+const handleImageUploadEvent = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  try {
+    // Verifica che plantInfo sia definito e completo
+    if (!plantInfo || !plantInfo.infoComplete) {
+      toast.warning("Inserisci prima le informazioni sulla pianta", {
+        dismissible: true,
+        duration: 3000
+      });
+      return;
+    }
+    
+    const file = e.target.files?.[0];
+    if (!file) {
+      toast.error("Nessun file selezionato");
+      return;
+    }
+
+    // Verifica che il file sia un'immagine
+    if (!file.type.startsWith('image/')) {
+      toast.error("Seleziona un file immagine valido");
+      return;
+    }
+
+    // Verifica dimensioni del file (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("Il file è troppo grande. Dimensione massima: 10MB");
+      return;
+    }
+    
+    // Pulisci l'immagine precedente se esiste
+    if (uploadedImage && uploadedImage.startsWith('blob:')) {
+      URL.revokeObjectURL(uploadedImage);
+    }
+    
+    // Crea un nuovo URL temporaneo per l'immagine caricata
+    const tempUrl = URL.createObjectURL(file);
+    setUploadedImage(tempUrl);
+    
+    if (plantInfo.useAI) {
+      // Se l'AI è selezionata, procedi con l'analisi AI
+      await handleImageUpload(file, plantInfo);
+    } else if (plantInfo.sendToExpert) {
+      // Se è selezionato l'esperto, verifica l'autenticazione
+      if (!isAuthenticated) {
+        setAuthDialogConfig({
+          title: "Devi effettuare il login per contattare l'esperto",
+          description: "Per inviare la tua richiesta all'esperto, devi prima effettuare il login."
+        });
+        setShowAuthDialog(true);
+        return;
+      }
+      
+      // Verifica che il profilo utente sia completo
+      if (!userProfile?.firstName || !userProfile?.lastName || 
+          !userProfile?.birthDate || !userProfile?.birthPlace) {
+        toast.error("Completa il tuo profilo prima di inviare una richiesta", {
+          description: "Nome, cognome, data e luogo di nascita sono obbligatori",
+          duration: 4000
+        });
+        navigate('/complete-profile');
+        return;
+      }
+      
+      // Se autenticato e profilo completo, notifica l'esperto
+      await notifyExpert(file, tempUrl);
+    } else {
+      // Nessuna opzione selezionata - questo non dovrebbe accadere
+      toast.error("Seleziona prima un'opzione di diagnosi");
+      console.warn("No diagnosis option selected");
+    }
+    
+  } catch (error) {
+    console.error("Errore durante il caricamento dell'immagine:", error);
+    toast.error("Errore durante il caricamento dell'immagine");
+  } finally {
+    // Reset dell'input file per permettere di selezionare lo stesso file di nuovo
+    e.target.value = '';
+  }
+};
