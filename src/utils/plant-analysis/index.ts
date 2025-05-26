@@ -1,4 +1,3 @@
-
 import { toast } from "sonner";
 import { dataURLtoFile, formatPercentage, preprocessImage, getCachedResponse, cacheResponse, generateImageHash } from './plantAnalysisUtils';
 import { formatHuggingFaceResult } from './result-formatter';
@@ -8,6 +7,9 @@ import { supabase } from "@/integrations/supabase/client";
 // Export the utilities for use in other files
 export { formatHuggingFaceResult, dataURLtoFile, formatPercentage };
 
+import { analyzeWithEnhancedAI } from './enhanced-analysis';
+import type { AnalysisProgress } from '../../services/aiProviders';
+
 // Multi-AI services plant analysis system
 // Main analysis function that connects to multiple plant identification APIs
 export const analyzePlant = async (imageFile: File, plantInfo: any = null) => {
@@ -15,6 +17,34 @@ export const analyzePlant = async (imageFile: File, plantInfo: any = null) => {
     // Dismiss any existing toasts to prevent stuck notifications
     toast.dismiss();
     
+    // Step 1: Prova prima con il nuovo sistema di analisi potenziato
+    toast.info("Avvio analisi con sistema AI potenziato...", { duration: 3000 });
+    
+    try {
+      console.log("Trying enhanced AI analysis system...");
+      
+      const progressCallback = (progress: AnalysisProgress) => {
+        console.log(`${progress.stage}: ${progress.percentage}% - ${progress.message}`);
+        
+        // Aggiorna il toast con il progresso
+        if (progress.percentage < 100) {
+          toast.info(`${progress.message} (${progress.percentage}%)`, { duration: 2000 });
+        }
+      };
+      
+      const enhancedResult = await analyzeWithEnhancedAI(imageFile, plantInfo, progressCallback);
+      
+      if (enhancedResult && enhancedResult.score > 0.3) {
+        console.log("Enhanced AI analysis successful", enhancedResult);
+        toast.success("Analisi completata con sistema AI potenziato", { duration: 2000 });
+        return enhancedResult;
+      }
+    } catch (enhancedError) {
+      console.error("Enhanced AI analysis failed:", enhancedError);
+      toast.warning("Sistema AI potenziato non disponibile, uso servizi standard...", { duration: 3000 });
+    }
+
+    // Step 2: Fallback al sistema esistente
     // Step 1: Preprocess the image to improve quality
     toast.info("Ottimizzazione dell'immagine...", { duration: 2000 });
     const processedImage = await preprocessImage(imageFile);
@@ -335,3 +365,4 @@ const fileToBase64 = async (file: File): Promise<string> => {
     reader.onerror = error => reject(error);
   });
 };
+
