@@ -34,23 +34,38 @@ const ImageCaptureMethods = ({ onTakePhoto, onUploadPhoto }: ImageCaptureMethods
         </Button>
 
         <div className="bg-amber-50 rounded-md p-4 mt-6">
-          <h4 className="text-sm font-medium text-amber-700 mb-2 flex items-center gap-1">
-            <Image className="h-4 w-4" /> 
-            Come fotografare correttamente la pianta
+          <h4 className="text-sm font-medium text-amber-700 mb-3 flex items-center gap-1">
+            📸 Come fotografare la pianta
           </h4>
           
-          <ul className="space-y-2 text-xs text-amber-600">
+          <ul className="space-y-3 text-xs text-amber-600">
             <li className="flex items-start gap-2">
-              <span className="bg-amber-200 text-amber-800 rounded-full h-4 w-4 flex items-center justify-center mt-0.5">✓</span>
-              <span>Fotografa l'intera pianta, compreso il vaso e il terreno</span>
+              <span className="bg-amber-200 text-amber-800 rounded-full h-4 w-4 flex items-center justify-center mt-0.5 text-xs">🪴</span>
+              <div>
+                <span className="font-medium">Pianta in vaso:</span>
+                <span className="block">Fotografa l'intera pianta incluso il vaso, assicurandoti che si veda la terra del vaso</span>
+              </div>
             </li>
             <li className="flex items-start gap-2">
-              <span className="bg-amber-200 text-amber-800 rounded-full h-4 w-4 flex items-center justify-center mt-0.5">✓</span>
-              <span>Se è in piena terra, includi il terreno circostante</span>
+              <span className="bg-amber-200 text-amber-800 rounded-full h-4 w-4 flex items-center justify-center mt-0.5 text-xs">🌱</span>
+              <div>
+                <span className="font-medium">Pianta in piena terra:</span>
+                <span className="block">Fotografa la pianta e la terra circostante</span>
+              </div>
             </li>
             <li className="flex items-start gap-2">
-              <span className="bg-amber-200 text-amber-800 rounded-full h-4 w-4 flex items-center justify-center mt-0.5">✓</span>
-              <span>Assicurati che l'immagine sia ben illuminata e nitida</span>
+              <span className="bg-amber-200 text-amber-800 rounded-full h-4 w-4 flex items-center justify-center mt-0.5 text-xs">💡</span>
+              <div>
+                <span className="font-medium">Qualità:</span>
+                <span className="block">Usa buona illuminazione e mantieni la fotocamera stabile</span>
+              </div>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="bg-amber-200 text-amber-800 rounded-full h-4 w-4 flex items-center justify-center mt-0.5 text-xs">🔍</span>
+              <div>
+                <span className="font-medium">Sintomi:</span>
+                <span className="block">Includi nell'inquadratura le parti malate o danneggiate</span>
+              </div>
             </li>
           </ul>
         </div>
