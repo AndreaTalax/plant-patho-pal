@@ -1,4 +1,3 @@
-
 const takePicture = async () => {
   try {
     // Verifica che plantInfo sia definito e completo
@@ -65,18 +64,8 @@ const handleCaptureImage = async (imageDataUrl: string) => {
         return;
       }
       
-      // Verifica che il profilo utente sia completo prima di inviare all'esperto
-      if (!userProfile?.firstName || !userProfile?.lastName || 
-          !userProfile?.birthDate || !userProfile?.birthPlace) {
-        toast.error("Completa il tuo profilo prima di inviare una richiesta", {
-          description: "Nome, cognome, data e luogo di nascita sono obbligatori",
-          duration: 4000
-        });
-        navigate('/complete-profile');
-        return;
-      }
-      
-      // Se autenticato e profilo completo, invia direttamente all'esperto e messaggio automatico
+      // Il profilo è già completo grazie al controllo nel routing
+      // Se autenticato, invia direttamente all'esperto e messaggio automatico
       await notifyExpert(undefined, imageDataUrl);
       await sendAutomaticChatMessage(undefined, imageDataUrl);
     }

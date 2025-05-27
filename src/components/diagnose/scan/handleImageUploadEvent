@@ -1,4 +1,3 @@
-
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -54,18 +53,8 @@ const handleImageUploadEvent = async (e: React.ChangeEvent<HTMLInputElement>) =>
         return;
       }
       
-      // Verifica che il profilo utente sia completo
-      if (!userProfile?.firstName || !userProfile?.lastName || 
-          !userProfile?.birthDate || !userProfile?.birthPlace) {
-        toast.error("Completa il tuo profilo prima di inviare una richiesta", {
-          description: "Nome, cognome, data e luogo di nascita sono obbligatori",
-          duration: 4000
-        });
-        navigate('/complete-profile');
-        return;
-      }
-      
-      // Se autenticato e profilo completo, notifica l'esperto e invia messaggio automatico
+      // Il profilo è già completo grazie al controllo nel routing
+      // Se autenticato, notifica l'esperto e invia messaggio automatico
       await notifyExpert(file, tempUrl);
       await sendAutomaticChatMessage(file, tempUrl);
     } else {

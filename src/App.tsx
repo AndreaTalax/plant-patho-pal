@@ -21,13 +21,17 @@ const queryClient = new QueryClient();
 
 // Protected route component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { isAuthenticated, isMasterAccount } = useAuth();
+  const { isAuthenticated, isProfileComplete, isMasterAccount } = useAuth();
   
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
   
-  // Skip profile completion requirement for all users
+  // Verifica se il profilo è completo (esclusi gli account master)
+  if (!isProfileComplete && !isMasterAccount) {
+    return <Navigate to="/complete-profile" replace />;
+  }
+  
   return <>{children}</>;
 };
 
