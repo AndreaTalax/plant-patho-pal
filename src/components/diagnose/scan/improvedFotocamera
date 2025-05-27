@@ -1,3 +1,4 @@
+
 const takePicture = async () => {
   try {
     // Verifica che plantInfo sia definito e completo
@@ -75,12 +76,67 @@ const handleCaptureImage = async (imageDataUrl: string) => {
         return;
       }
       
-      // Se autenticato e profilo completo, invia direttamente all'esperto
+      // Se autenticato e profilo completo, invia direttamente all'esperto e messaggio automatico
       await notifyExpert(undefined, imageDataUrl);
+      await sendAutomaticChatMessage(undefined, imageDataUrl);
     }
     
   } catch (error) {
     console.error("Errore durante la cattura dell'immagine:", error);
     toast.error("Errore durante la cattura dell'immagine");
+  }
+};
+
+// Funzione per inviare messaggio automatico in chat
+const sendAutomaticChatMessage = async (file?: File, imageUrl?: string) => {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    // Trova o crea conversazione con l'esperto
+    const { data: existingConversation } = await supabase
+      .from('conversations')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('expert_id', 'premium-user-id')
+      .single();
+
+    let conversationId;
+    if (!existingConversation) {
+      const { data: newConversation } = await supabase
+        .from('conversations')
+        .insert({
+          user_id: user.id,
+          expert_id: 'premium-user-id',
+          status: 'active'
+        })
+        .select()
+        .single();
+      conversationId = newConversation?.id;
+    } else {
+      conversationId = existingConversation.id;
+    }
+
+    if (!conversationId) return;
+
+    // Prepara il messaggio
+    let messageText = `Nuovo caso caricato:\nDescrizione: ${plantInfo.symptoms || 'Nessuna descrizione fornita'}\n`;
+    messageText += `Ambiente: ${plantInfo.isIndoor ? 'Interno' : 'Esterno'}\n`;
+    messageText += `Irrigazione: ${plantInfo.wateringFrequency || 'Non specificata'} volte/settimana\n`;
+    messageText += `Esposizione luce: ${plantInfo.lightExposure || 'Non specificata'}\n`;
+    messageText += `Immagine: ${imageUrl ? '[file allegato]' : '[nessuna immagine]'}`;
+
+    // Invia il messaggio
+    await supabase
+      .from('messages')
+      .insert({
+        conversation_id: conversationId,
+        sender_id: user.id,
+        recipient_id: 'premium-user-id',
+        text: messageText
+      });
+
+  } catch (error) {
+    console.error("Errore nell'invio del messaggio automatico:", error);
   }
 };
