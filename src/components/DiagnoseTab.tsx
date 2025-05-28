@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { modelInfo } from '@/utils/aiDiagnosisUtils';
@@ -10,6 +11,7 @@ import { useAuth } from '@/context/AuthContext';
 import { AuthRequiredDialog } from './auth/AuthRequiredDialog';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
+import { notifyExpert } from '@/components/expert/NotifyExpertService';
 
 // Importing our components
 import DiagnoseHeader from './diagnose/DiagnoseHeader';
@@ -64,38 +66,33 @@ const DiagnoseTab = () => {
     
     const file = e.target.files?.[0];
     if (file) {
+      // Verifica che il file sia un'immagine
+      if (!file.type.startsWith('image/')) {
+        toast.error("Seleziona un file immagine valido");
+        return;
+      }
+
+      // Verifica dimensioni del file (max 10MB)
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error("Il file è troppo grande. Dimensione massima: 10MB");
+        return;
+      }
+      
+      // Pulisci l'immagine precedente se esiste
+      if (uploadedImage && uploadedImage.startsWith('blob:')) {
+        URL.revokeObjectURL(uploadedImage);
+      }
+      
       // Create a temporary URL for the uploaded image
       const tempUrl = URL.createObjectURL(file);
       setUploadedImage(tempUrl);
       
-      if (plantInfo.useAI) {
-        // If AI is selected, proceed with AI analysis - now passing plantInfo
-        handleImageUpload(file, plantInfo);
-      } else {
-        // If AI is not selected, check authentication first
-        if (!isAuthenticated) {
-          setAuthDialogConfig({
-            title: "You must log in to contact the expert",
-            description: "To send your request to the expert, you need to log in first."
-          });
-          setShowAuthDialog(true);
-          return;
-        }
-        
-        // Check if user profile is complete
-        if (!userProfile.firstName || !userProfile.lastName || !userProfile.birthDate || !userProfile.birthPlace) {
-          toast.error("Complete your profile before sending a request", {
-            description: "Name, surname, date and place of birth are required",
-            duration: 4000
-          });
-          navigate('/complete-profile');
-          return;
-        }
-        
-        // If authenticated and profile complete, notify expert
-        await notifyExpert(file, tempUrl);
-      }
+      // Store the file for later use when user chooses diagnosis method
+      setPlantInfo({ ...plantInfo, uploadedFile: file, uploadedImageUrl: tempUrl });
     }
+    
+    // Reset dell'input file per permettere di selezionare lo stesso file di nuovo
+    e.target.value = '';
   };
 
   const takePicture = () => {
@@ -111,141 +108,6 @@ const DiagnoseTab = () => {
     setShowCamera(true);
   };
 
-  // Funzione per notificare l'esperto con tutte le informazioni
-  async function notifyExpert(imageFile?: File, imageDataUrl?: string) {
-    try {
-      // Controlla l'autenticazione dell'utente
-      if (!isAuthenticated) {
-        setAuthDialogConfig({
-          title: "You must log in to contact the expert",
-          description: "To send your request to the expert, you need to log in first."
-        });
-        setShowAuthDialog(true);
-        return;
-      }
-      
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        console.error("User not logged in");
-        toast.error("You must log in to contact the expert", {
-          duration: 3000
-        });
-        return;
-      }
-
-      // Ottieni le informazioni del profilo utente
-      const { data: userProfile, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single();
-      
-      if (profileError) {
-        console.error("Error fetching user profile:", profileError);
-        toast.error("Error retrieving user profile", {
-          duration: 3000
-        });
-        return;
-      }
-      
-      // Controlla se l'utente ha completato il proprio profilo
-      if (!userProfile.first_name || !userProfile.last_name || !userProfile.birth_date || !userProfile.birth_place) {
-        toast.error("Complete your profile before sending a request", {
-          description: "Name, surname, date and place of birth are required",
-          duration: 4000
-        });
-        navigate('/complete-profile');
-        return;
-      }
-
-      let imageUrl = imageDataUrl;
-      
-      // Se abbiamo un file ma non un URL di dati, converte il file in URL di dati
-      if (imageFile && !imageDataUrl) {
-        const reader = new FileReader();
-        imageUrl = await new Promise((resolve) => {
-          reader.onload = (e) => resolve(e.target?.result as string);
-          reader.readAsDataURL(imageFile);
-        });
-      }
-
-      // Prima, crea un record di consultazione
-      const { data: consultationData, error: consultationError } = await supabase
-        .from('expert_consultations')
-        .insert({
-          user_id: user.id,
-          symptoms: plantInfo.symptoms,
-          image_url: imageUrl,
-          plant_info: {
-            isIndoor: plantInfo.isIndoor,
-            wateringFrequency: plantInfo.wateringFrequency,
-            lightExposure: plantInfo.lightExposure
-          },
-          status: 'pending'
-        })
-        .select();
-        
-      if (consultationError) {
-        console.error("Error creating consultation:", consultationError);
-        toast.error("Error sending request", {
-          description: "Failed to create consultation",
-          duration: 4000
-        });
-        return;
-      }
-      
-      // Invia notifica all'esperto (usando edge function)
-      const consultationId = consultationData?.[0]?.id;
-      if (consultationId) {
-        toast.info("Sending request...", { duration: 2000 });
-        
-        // Invoca la edge function per notificare l'esperto via chat ed email
-        const { data: notifyData, error: notifyError } = await supabase.functions.invoke('notify-expert', {
-          body: { 
-            consultationId,
-            userId: user.id,
-            imageUrl,
-            symptoms: plantInfo.symptoms,
-            plantInfo: {
-              isIndoor: plantInfo.isIndoor,
-              wateringFrequency: plantInfo.wateringFrequency,
-              lightExposure: plantInfo.lightExposure,
-              symptoms: plantInfo.symptoms
-            },
-            diagnosisResult: diagnosedDisease, // Passa il risultato dell'analisi AI se disponibile
-            useAI: plantInfo.useAI // Indica se l'AI è stata utilizzata
-          }
-        });
-        
-        if (notifyError) {
-          console.error("Error notifying expert:", notifyError);
-          toast.error("Error sending notification to expert", { duration: 3000 });
-          return;
-        }
-        
-        toast.success("Request sent successfully!", {
-          description: "The expert will respond as soon as possible",
-          duration: 4000
-        });
-        
-        // Naviga automaticamente alla scheda chat
-        setTimeout(() => {
-          navigate('/');
-          setTimeout(() => {
-            const event = new CustomEvent('switchTab', { detail: 'chat' });
-            window.dispatchEvent(event);
-          }, 100);
-        }, 2000);
-      }
-    } catch (error) {
-      console.error("Error notifying expert:", error);
-      toast.error("An error occurred during request sending", {
-        duration: 4000
-      });
-    }
-  }
-
   function handlePlantInfoSubmit(data: PlantInfoFormValues) {
     const updatedPlantInfo = {
       isIndoor: data.isIndoor,
@@ -255,7 +117,9 @@ const DiagnoseTab = () => {
       useAI: false, // Reset useAI, will be set when user selects option
       sendToExpert: false, // Reset sendToExpert, will be set when user selects option
       name: data.name || "Pianta sconosciuta",
-      infoComplete: true
+      infoComplete: true,
+      uploadedFile: null,
+      uploadedImageUrl: null
     };
     
     setPlantInfo(updatedPlantInfo);
@@ -269,67 +133,91 @@ const DiagnoseTab = () => {
   }
 
   function handleSelectAI() {
-    setPlantInfo({ ...plantInfo, useAI: true, sendToExpert: false });
-    setTimeout(() => {
-      window.scrollTo({
-        top: window.scrollY + 200,
-        behavior: 'smooth'
+    // Check if user has uploaded an image
+    if (!uploadedImage) {
+      toast.warning("Carica prima un'immagine della pianta", {
+        dismissible: true,
+        duration: 3000
       });
-    }, 300);
+      return;
+    }
+    
+    setPlantInfo({ ...plantInfo, useAI: true, sendToExpert: false });
+    
+    // If user uploaded a file, process with AI
+    if (plantInfo.uploadedFile) {
+      handleImageUpload(plantInfo.uploadedFile, plantInfo);
+    } else if (uploadedImage && uploadedImage.startsWith('data:image/')) {
+      // If it's a captured image (base64), process with AI
+      captureImage(uploadedImage, plantInfo);
+    }
   }
 
   function handleSelectExpert() {
+    // Check if user has uploaded an image
+    if (!uploadedImage) {
+      toast.warning("Carica prima un'immagine della pianta", {
+        dismissible: true,
+        duration: 3000
+      });
+      return;
+    }
+    
     if (!isAuthenticated) {
       setAuthDialogConfig({
-        title: "You must log in to contact the expert",
-        description: "To send your request to the expert, you need to log in first."
+        title: "Devi effettuare il login per contattare l'esperto",
+        description: "Per inviare la tua richiesta all'esperto, devi prima accedere."
       });
       setShowAuthDialog(true);
       return;
     }
     
-    setPlantInfo({ ...plantInfo, useAI: false, sendToExpert: true });
-    setTimeout(() => {
-      window.scrollTo({
-        top: window.scrollY + 200,
-        behavior: 'smooth'
+    // Check if user profile is complete
+    if (!userProfile?.firstName || !userProfile?.lastName || !userProfile?.birthDate || !userProfile?.birthPlace) {
+      toast.error("Completa il tuo profilo prima di inviare una richiesta", {
+        description: "Nome, cognome, data e luogo di nascita sono richiesti",
+        duration: 4000
       });
-    }, 300);
+      navigate('/complete-profile');
+      return;
+    }
+    
+    setPlantInfo({ ...plantInfo, useAI: false, sendToExpert: true });
+    
+    // Send to expert immediately
+    sendToExpert();
+  }
+
+  async function sendToExpert() {
+    try {
+      if (plantInfo.uploadedFile) {
+        await notifyExpert(plantInfo.uploadedFile, undefined, plantInfo);
+      } else if (uploadedImage) {
+        await notifyExpert(undefined, uploadedImage, plantInfo);
+      }
+    } catch (error) {
+      console.error("Error notifying expert:", error);
+      toast.error("Errore nell'invio della richiesta all'esperto");
+    }
   }
 
   async function handleCaptureImage(imageDataUrl: string) {
     setShowCamera(false);
     
+    // Verifica che l'immagine sia valida
+    if (!imageDataUrl || !imageDataUrl.startsWith('data:image/')) {
+      toast.error("Immagine non valida");
+      return;
+    }
+    
+    // Pulisci l'immagine precedente se esiste
+    if (uploadedImage && uploadedImage.startsWith('blob:')) {
+      URL.revokeObjectURL(uploadedImage);
+    }
+    
     // Store the captured image
     setUploadedImage(imageDataUrl);
-    
-    if (plantInfo.useAI) {
-      // If AI is selected, process the image with AI - now passing plantInfo
-      captureImage(imageDataUrl, plantInfo);
-    } else {
-      // If AI is not selected, check authentication first
-      if (!isAuthenticated) {
-        setAuthDialogConfig({
-          title: "You must log in to contact the expert",
-          description: "To send your request to the expert, you need to log in first."
-        });
-        setShowAuthDialog(true);
-        return;
-      }
-      
-      // Check if user profile is complete before sending to expert
-      if (!userProfile.firstName || !userProfile.lastName || !userProfile.birthDate || !userProfile.birthPlace) {
-        toast.error("Complete your profile before sending a request", {
-          description: "Name, surname, date and place of birth are required",
-          duration: 4000
-        });
-        navigate('/complete-profile');
-        return;
-      }
-      
-      // If authenticated and profile complete, send directly to the expert
-      await notifyExpert(undefined, imageDataUrl);
-    }
+    setPlantInfo({ ...plantInfo, uploadedFile: null, uploadedImageUrl: imageDataUrl });
   }
 
   function handleCancelCamera() {
@@ -339,16 +227,6 @@ const DiagnoseTab = () => {
   }
 
   function navigateToChat() {
-    // Check authentication before navigating
-    if (!isAuthenticated) {
-      setAuthDialogConfig({
-        title: "You must log in to access the chat",
-        description: "To view conversations with the expert, you need to log in first."
-      });
-      setShowAuthDialog(true);
-      return;
-    }
-    
     navigate('/');
     // Using a slight timeout to ensure navigation completes before tab selection
     setTimeout(() => {
@@ -373,37 +251,36 @@ const DiagnoseTab = () => {
     }, 100);
   }
 
-  // Determine which stage we're in
-  let currentStage: 'info' | 'options' | 'capture' | 'result' = 'info';
+  // Determine which stage we're in based on new flow
+  let currentStage: 'info' | 'capture' | 'options' | 'result' = 'info';
   if (plantInfo.infoComplete) {
-    if (!plantInfo.useAI && !plantInfo.sendToExpert) {
-      currentStage = 'options';
-    } else if (uploadedImage) {
-      currentStage = 'result';
-    } else {
+    if (!uploadedImage) {
       currentStage = 'capture';
+    } else if (!plantInfo.useAI && !plantInfo.sendToExpert) {
+      currentStage = 'options';
+    } else {
+      currentStage = 'result';
     }
   }
 
   // Handle back navigation with proper state reset
   const handleBack = () => {
     if (currentStage === 'result') {
-      // From result, go back to capture/scan - reset all diagnosis data
-      setUploadedImage(null);
-      resetDiagnosis();
-      // Keep the AI/Expert selection but remove the image
-    } else if (currentStage === 'capture') {
-      // From capture, go back to options - reset AI/Expert selection and any uploaded images
-      setUploadedImage(null);
-      resetDiagnosis();
+      // From result, go back to options - reset diagnosis choice
       setPlantInfo({ ...plantInfo, useAI: false, sendToExpert: false });
-      stopCameraStream(); // Make sure camera is stopped
+      resetDiagnosis();
     } else if (currentStage === 'options') {
-      // From options, go back to info - reset everything except the form data
+      // From options, go back to capture - remove image
       setUploadedImage(null);
       resetDiagnosis();
-      setPlantInfo({ ...plantInfo, infoComplete: false, useAI: false, sendToExpert: false });
-      stopCameraStream(); // Make sure camera is stopped
+      setPlantInfo({ ...plantInfo, uploadedFile: null, uploadedImageUrl: null });
+      stopCameraStream();
+    } else if (currentStage === 'capture') {
+      // From capture, go back to info - reset everything
+      setUploadedImage(null);
+      resetDiagnosis();
+      setPlantInfo({ ...plantInfo, infoComplete: false, useAI: false, sendToExpert: false, uploadedFile: null, uploadedImageUrl: null });
+      stopCameraStream();
     }
     
     // Dismiss any active toasts when going back
@@ -465,7 +342,7 @@ const DiagnoseTab = () => {
       <input
         id="file-upload"
         type="file"
-        accept="image/*,video/*"
+        accept="image/*"
         className="hidden"
         onChange={handleImageUploadEvent}
       />

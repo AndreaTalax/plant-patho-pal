@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { usePlantInfo } from '@/context/PlantInfoContext';
 import PlantInfoForm from '../PlantInfoForm';
@@ -10,7 +9,7 @@ import CameraCapture from '../CameraCapture';
 import { DiagnosedDisease } from '../types';
 
 interface DiagnosisStagesProps {
-  stage: 'info' | 'options' | 'capture' | 'result';
+  stage: 'info' | 'capture' | 'options' | 'result';
   showCamera: boolean;
   uploadedImage: string | null;
   isAnalyzing: boolean;
@@ -67,27 +66,6 @@ const DiagnosisStages: React.FC<DiagnosisStagesProps> = ({
     return <PlantInfoForm onComplete={onPlantInfoComplete} />;
   }
 
-  if (stage === 'options') {
-    return (
-      <>
-        <PlantInfoSummary 
-          plantInfo={{
-            isIndoor: plantInfo.isIndoor,
-            wateringFrequency: plantInfo.wateringFrequency,
-            lightExposure: plantInfo.lightExposure,
-            symptoms: plantInfo.symptoms
-          }}
-          onEdit={onPlantInfoEdit}
-        />
-
-        <DiagnosisOptions
-          onSelectAI={onSelectAI}
-          onSelectExpert={onSelectExpert}
-        />
-      </>
-    );
-  }
-
   if (stage === 'capture') {
     return (
       <>
@@ -109,21 +87,66 @@ const DiagnosisStages: React.FC<DiagnosisStagesProps> = ({
     );
   }
 
-  if (stage === 'result') {
-    // If the user did not select the AI option, don't show the AI diagnosis UI
-    if (!plantInfo.useAI && uploadedImage) {
-      return (
-        <div className="space-y-4">
-          <div className="border rounded-lg p-4 bg-white shadow">
-            <h3 className="font-medium text-lg mb-3">Richiesta inviata al fitopatologo</h3>
-            
-            <div className="aspect-square w-full max-w-xs mx-auto overflow-hidden rounded-xl mb-4">
+  if (stage === 'options') {
+    return (
+      <>
+        <PlantInfoSummary 
+          plantInfo={{
+            isIndoor: plantInfo.isIndoor,
+            wateringFrequency: plantInfo.wateringFrequency,
+            lightExposure: plantInfo.lightExposure,
+            symptoms: plantInfo.symptoms
+          }}
+          onEdit={onPlantInfoEdit}
+        />
+
+        {uploadedImage && (
+          <div className="w-full max-w-md mx-auto mb-6">
+            <div className="aspect-square overflow-hidden rounded-xl border">
               <img 
                 src={uploadedImage} 
-                alt="Immagine inviata" 
+                alt="Immagine caricata" 
                 className="w-full h-full object-cover"
               />
             </div>
+          </div>
+        )}
+
+        <DiagnosisOptions
+          onSelectAI={onSelectAI}
+          onSelectExpert={onSelectExpert}
+        />
+      </>
+    );
+  }
+
+  if (stage === 'result') {
+    // If the user selected expert option and sent the request
+    if (plantInfo.sendToExpert && !plantInfo.useAI) {
+      return (
+        <div className="space-y-4">
+          <PlantInfoSummary 
+            plantInfo={{
+              isIndoor: plantInfo.isIndoor,
+              wateringFrequency: plantInfo.wateringFrequency,
+              lightExposure: plantInfo.lightExposure,
+              symptoms: plantInfo.symptoms
+            }}
+            onEdit={onPlantInfoEdit}
+          />
+          
+          <div className="border rounded-lg p-4 bg-white shadow">
+            <h3 className="font-medium text-lg mb-3">Richiesta inviata al fitopatologo</h3>
+            
+            {uploadedImage && (
+              <div className="aspect-square w-full max-w-xs mx-auto overflow-hidden rounded-xl mb-4">
+                <img 
+                  src={uploadedImage} 
+                  alt="Immagine inviata" 
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            )}
             
             <div className="bg-green-50 border border-green-200 rounded-lg p-4 my-4">
               <p className="text-green-800 font-medium">
@@ -162,20 +185,32 @@ const DiagnosisStages: React.FC<DiagnosisStagesProps> = ({
     
     // Otherwise show the regular AI diagnosis result
     return (
-      <DiagnosisResult
-        imageSrc={uploadedImage || ''}
-        plantInfo={{
-          isIndoor: plantInfo.isIndoor,
-          wateringFrequency: plantInfo.wateringFrequency,
-          lightExposure: plantInfo.lightExposure,
-          symptoms: plantInfo.symptoms,
-          useAI: plantInfo.useAI
-        }}
-        analysisData={diagnosedDisease}
-        isAnalyzing={isAnalyzing}
-        onStartNewAnalysis={onStartNewAnalysis}
-        onChatWithExpert={onChatWithExpert}
-      />
+      <>
+        <PlantInfoSummary 
+          plantInfo={{
+            isIndoor: plantInfo.isIndoor,
+            wateringFrequency: plantInfo.wateringFrequency,
+            lightExposure: plantInfo.lightExposure,
+            symptoms: plantInfo.symptoms
+          }}
+          onEdit={onPlantInfoEdit}
+        />
+        
+        <DiagnosisResult
+          imageSrc={uploadedImage || ''}
+          plantInfo={{
+            isIndoor: plantInfo.isIndoor,
+            wateringFrequency: plantInfo.wateringFrequency,
+            lightExposure: plantInfo.lightExposure,
+            symptoms: plantInfo.symptoms,
+            useAI: plantInfo.useAI
+          }}
+          analysisData={diagnosedDisease}
+          isAnalyzing={isAnalyzing}
+          onStartNewAnalysis={onStartNewAnalysis}
+          onChatWithExpert={onChatWithExpert}
+        />
+      </>
     );
   }
 
