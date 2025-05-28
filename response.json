@@ -1,0 +1,19 @@
+const response = await fetch(url);
+
+const contentType = response.headers.get('content-type') || '';
+
+if (!response.ok) {
+  // Prova a leggere testo (magari è HTML)
+  const errorText = await response.text();
+  throw new Error(`Errore HTTP ${response.status}: ${errorText.slice(0,150)}`);
+}
+
+if (!contentType.includes('application/json')) {
+  // Se è HTML, mostra un errore più chiaro!
+  const text = await response.text();
+  throw new Error(
+    `Risposta non valida dal server: non JSON.\nInizio risposta: ${text.slice(0, 120)}`
+  );
+}
+
+const data = await response.json();
