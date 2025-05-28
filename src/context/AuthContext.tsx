@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User, Session } from '@supabase/supabase-js';
@@ -15,7 +14,7 @@ interface AuthContextType {
   signUp: (email: string, password: string, userData: any) => Promise<{ success: boolean; message: string }>;
   signIn: (email: string, password: string) => Promise<{ success: boolean; message: string }>;
   signOut: () => Promise<void>;
-  updateProfile: (updates: any) => Promise<{ success: boolean; message: string }>;
+  updateProfile: (updatesOrField: any | string, value?: any) => Promise<{ success: boolean; message: string }>;
   isMasterAccount: boolean;
   // Additional methods expected by components
   login: (email: string, password: string) => Promise<void>;
@@ -273,7 +272,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setLoading(false);
   };
 
-  const updateProfile = async (updates: any) => {
+  const updateProfile = async (updatesOrField: any | string, value?: any) => {
     if (!user) {
       return {
         success: false,
@@ -282,6 +281,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
 
     try {
+      let updates: any;
+      
+      // Handle both calling patterns
+      if (typeof updatesOrField === 'string' && value !== undefined) {
+        // Two-argument pattern: updateProfile("fieldName", value)
+        updates = { [updatesOrField]: value };
+      } else {
+        // Single-argument pattern: updateProfile({ field: value })
+        updates = updatesOrField;
+      }
+
       const { error } = await supabase
         .from('profiles')
         .upsert({
