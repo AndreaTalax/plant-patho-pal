@@ -202,30 +202,7 @@ export const signIn = async (email: string, password: string) => {
         throw new Error("Invalid login credentials");
       }
     }
-    // Assicurati che 'supabase' sia già importato o dichiarato sopra
-
-export const resendConfirmationEmail = async (email: string) => {
-  try {
-    const { error } = await supabase.auth.resend({
-      type: 'signup',
-      email: email,
-      options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback`
-      }
-    });
     
-    if (error) {
-      return { 
-        rateLimitExceeded: error.message.includes('rate limit'),
-        message: error.message 
-      };
-    }
-    
-    return { success: true };
-  } catch (error) {
-    throw error;
-  }
-};
     // Per le altre email, procediamo normalmente con Supabase
     const { data, error } = await supabase.auth.signInWithPassword({
       email,

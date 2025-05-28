@@ -23,7 +23,7 @@ interface Consultation {
     first_name: string;
     last_name: string;
     email: string;
-  };
+  } | null;
 }
 
 interface ConversationSummary {
@@ -36,7 +36,7 @@ interface ConversationSummary {
     first_name: string;
     last_name: string;
     email: string;
-  };
+  } | null;
 }
 
 const ExpertDashboard = () => {
@@ -72,43 +72,61 @@ const ExpertDashboard = () => {
 
   const loadExpertData = async () => {
     try {
-      // Load consultations
+      // Load consultations first
       const { data: consultationsData, error: consultationsError } = await supabase
         .from('expert_consultations')
-        .select(`
-          *,
-          user_profile:user_id (
-            first_name,
-            last_name,
-            email
-          )
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
 
       if (consultationsError) {
         console.error('Error loading consultations:', consultationsError);
       } else {
-        setConsultations(consultationsData || []);
+        // Now get user profiles for each consultation
+        const consultationsWithProfiles = await Promise.all(
+          (consultationsData || []).map(async (consultation) => {
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('first_name, last_name, email')
+              .eq('id', consultation.user_id)
+              .single();
+            
+            return {
+              ...consultation,
+              user_profile: profile
+            };
+          })
+        );
+        
+        setConsultations(consultationsWithProfiles);
       }
 
       // Load conversations
       const { data: conversationsData, error: conversationsError } = await supabase
         .from('conversations')
-        .select(`
-          *,
-          user_profile:user_id (
-            first_name,
-            last_name,
-            email
-          )
-        `)
+        .select('*')
         .eq('expert_id', 'premium-user-id')
         .order('updated_at', { ascending: false });
 
       if (conversationsError) {
         console.error('Error loading conversations:', conversationsError);
       } else {
-        setConversations(conversationsData || []);
+        // Get user profiles for each conversation
+        const conversationsWithProfiles = await Promise.all(
+          (conversationsData || []).map(async (conversation) => {
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('first_name, last_name, email')
+              .eq('id', conversation.user_id)
+              .single();
+            
+            return {
+              ...conversation,
+              user_profile: profile
+            };
+          })
+        );
+        
+        setConversations(conversationsWithProfiles);
       }
     } catch (error) {
       console.error('Error loading expert data:', error);

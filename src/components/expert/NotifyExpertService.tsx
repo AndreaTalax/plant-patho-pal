@@ -22,10 +22,10 @@ export const notifyExpert = async (file?: File, imageUrl?: string, plantInfo?: P
       finalImageUrl = await uploadBase64Image(imageUrl, user.id);
     }
 
-    // Create expert consultation record
+    // Create expert consultation record with proper Json casting
     const consultationData = {
       user_id: user.id,
-      plant_info: plantInfo || null,
+      plant_info: plantInfo ? JSON.parse(JSON.stringify(plantInfo)) : null,
       symptoms: plantInfo?.symptoms || null,
       image_url: finalImageUrl,
       status: 'pending'
