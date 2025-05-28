@@ -1,17 +1,9 @@
-import { toast } from 'sonner';
-import { Conversation, Product } from './types';
-import ConversationList from './ConversationList';
-import ProductRecommendationDialog from './ProductRecommendationDialog';
-import ConversationHeader from './expert/ConversationHeader';
-import ConversationBody from './expert/ConversationBody';
-import EmptyConversationState from './expert/EmptyConversationState';
-import { useExpertConversation } from './expert/useExpertConversation';
-
-interface ExpertChatViewProps {
-  userId: string;
-}
+import { useState } from "react";
+import { chatService } from "./chatService";
+// ...altri import
 
 const ExpertChatView = ({ userId }: ExpertChatViewProps) => {
+  // ...tuo stato e hook
   const {
     conversations,
     currentConversation,
@@ -22,59 +14,27 @@ const ExpertChatView = ({ userId }: ExpertChatViewProps) => {
     handleDeleteConversation,
     handleToggleBlockUser,
     handleSendProductRecommendations,
-    handleSendMessage
+    handleSendMessage,
+    // eventualmente aggiungi qui handleNewConversation se lo hai già
   } = useExpertConversation(userId);
 
+  // Handler per il pulsante "Inizia chat con fitopatologo"
+  const handleStartExpertChat = async () => {
+    // Crea una nuova conversazione con l'username desiderato
+    const newConv = await chatService.createConversation("Fitopatologo");
+    handleChatSelection(newConv.id); // seleziona la nuova conversazione
+  };
+
   return (
-    <div className="flex flex-col h-full">
-      <h2 className="text-xl font-bold mb-4 px-2 text-drplant-green">Plant Pathologist Panel</h2>
-      
-      <div className="flex-1 flex flex-col md:flex-row border rounded-lg overflow-hidden">
-        {/* Conversations sidebar */}
-        <div className="w-full md:w-1/3 border-r">
-          <ConversationList
-            conversations={conversations}
-            currentConversationId={currentConversation?.id}
-            onSelectConversation={handleChatSelection}
-            onDeleteConversation={handleDeleteConversation}
-            onToggleBlockUser={handleToggleBlockUser}
-          />
-        </div>
-        
-        {/* Chat area */}
-        <div className="w-full md:w-2/3 flex flex-col">
-          {currentConversation ? (
-            <>
-              <ConversationHeader
-                username={currentConversation.username}
-                isBlocked={currentConversation.blocked}
-                onRecommendProduct={() => setIsProductDialogOpen(true)}
-                onToggleBlockUser={() => handleToggleBlockUser(currentConversation.id)}
-                onDeleteConversation={() => handleDeleteConversation(currentConversation.id)}
-              />
-              
-              <ConversationBody
-                messages={currentConversation.messages}
-                isBlocked={currentConversation.blocked}
-                onSendMessage={handleSendMessage}
-                isSending={isSending}
-              />
-            </>
-          ) : (
-            <EmptyConversationState />
-          )}
-        </div>
-      </div>
-      
-      {/* Product recommendation dialog */}
-      <ProductRecommendationDialog
-        isOpen={isProductDialogOpen}
-        onOpenChange={setIsProductDialogOpen}
-        onSendRecommendations={handleSendProductRecommendations}
-        username={currentConversation?.username}
-      />
+    // ...
+    <div className="w-full md:w-2/3 flex flex-col">
+      {currentConversation ? (
+        // ...chat attiva...
+      ) : (
+        // Passa la prop corretta!
+        <EmptyConversationState onStartChat={handleStartExpertChat} />
+      )}
     </div>
+    // ...
   );
 };
-
-export default ExpertChatView;
