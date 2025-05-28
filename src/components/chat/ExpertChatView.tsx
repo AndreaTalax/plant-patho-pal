@@ -1,4 +1,3 @@
-
 import { toast } from 'sonner';
 import { Conversation, Product } from './types';
 import ConversationList from './ConversationList';
