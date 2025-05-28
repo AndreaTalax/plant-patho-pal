@@ -1,0 +1,15 @@
+export function buildDiagnosisMessage(user, plant, diagnosis) {
+  return `
+👤 **Utente**
+Nome: ${user.nome} ${user.cognome}
+Email: ${user.email}
+
+🌱 **Pianta**
+Tipo: ${plant.tipo}
+Sintomi: ${plant.sintomi}
+Foto: ${plant.foto ? '[Allegato]' : 'Nessuna'}
+
+🩺 **Diagnosi richiesta**
+${diagnosis}
+  `.trim();
+}
