@@ -1,58 +1,69 @@
 
-import { Camera, MessageCircle, ShoppingBag, Leaf, User } from 'lucide-react';
-import { useAuth } from '@/context/AuthContext';
-
-type TabName = 'diagnose' | 'chat' | 'shop' | 'library' | 'profile';
+import { useState } from "react";
+import { Badge } from "@/components/ui/badge";
+import { 
+  Home, 
+  MessageSquare, 
+  BookOpen, 
+  ShoppingCart, 
+  User,
+  Stethoscope
+} from "lucide-react";
 
 interface BottomNavigationProps {
-  activeTab: TabName;
-  setActiveTab: (tab: TabName) => void;
+  activeTab: string;
+  setActiveTab: (tab: string) => void;
+  showExpertTab?: boolean;
 }
 
-const BottomNavigation = ({ activeTab, setActiveTab }: BottomNavigationProps) => {
-  const { isMasterAccount } = useAuth();
-  
-  // Define all tabs
-  const allTabs = [
-    { name: 'diagnose' as TabName, icon: Camera, label: 'Diagnose' },
-    { name: 'chat' as TabName, icon: MessageCircle, label: 'Chat' },
-    { name: 'shop' as TabName, icon: ShoppingBag, label: 'Shop' },
-    { name: 'library' as TabName, icon: Leaf, label: 'Library' },
-    { name: 'profile' as TabName, icon: User, label: 'Profile' }
+const BottomNavigation = ({ activeTab, setActiveTab, showExpertTab = false }: BottomNavigationProps) => {
+  const [unreadCount] = useState(0);
+
+  const navItems = [
+    { id: "diagnose", label: "Diagnosi", icon: Home },
+    { id: "chat", label: "Chat", icon: MessageSquare, hasNotification: unreadCount > 0 },
+    { id: "library", label: "Libreria", icon: BookOpen },
+    { id: "shop", label: "Shop", icon: ShoppingCart },
+    { id: "profile", label: "Profilo", icon: User },
   ];
-  
-  // Filter tabs based on user role
-  const tabs = allTabs.filter(tab => {
-    // Hide "Diagnose" tab for master accounts
-    if (isMasterAccount && tab.name === 'diagnose') {
-      return false;
-    }
-    return true;
-  });
+
+  // Add expert tab if user is master account
+  if (showExpertTab) {
+    navItems.splice(4, 0, { id: "expert", label: "Dashboard", icon: Stethoscope });
+  }
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-md border-t border-gray-100 shadow-lg z-50 pb-safe">
-      <div className="container mx-auto">
-        <div className="flex justify-between">
-          {tabs.map((tab) => (
+    <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-2 z-50">
+      <div className="flex justify-around items-center max-w-md mx-auto">
+        {navItems.map((item) => {
+          const Icon = item.icon;
+          const isActive = activeTab === item.id;
+          
+          return (
             <button
-              key={tab.name}
-              className={`flex flex-col items-center justify-center py-3 px-4 transition-colors ${
-                activeTab === tab.name
-                  ? 'text-drplant-blue'
-                  : 'text-gray-500 hover:text-drplant-blue/70'
+              key={item.id}
+              onClick={() => setActiveTab(item.id)}
+              className={`flex flex-col items-center gap-1 p-2 rounded-lg transition-colors relative ${
+                isActive 
+                  ? "text-drplant-green bg-drplant-green/10" 
+                  : "text-gray-600 hover:text-drplant-green"
               }`}
-              onClick={() => setActiveTab(tab.name)}
             >
-              <tab.icon className={`w-6 h-6 ${
-                activeTab === tab.name ? 'text-drplant-blue' : 'text-gray-500'
-              }`} />
-              <span className="text-xs mt-1 font-medium">{tab.label}</span>
+              <Icon className="h-5 w-5" />
+              <span className="text-xs font-medium">{item.label}</span>
+              {item.hasNotification && (
+                <Badge 
+                  variant="destructive" 
+                  className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center text-xs p-0"
+                >
+                  {unreadCount}
+                </Badge>
+              )}
             </button>
-          ))}
-        </div>
+          );
+        })}
       </div>
-    </div>
+    </nav>
   );
 };
 

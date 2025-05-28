@@ -1,75 +1,51 @@
 
-import { useState, useEffect } from 'react';
-import Header from '@/components/Header';
-import DiagnoseTab from '@/components/DiagnoseTab';
-import ChatTab from '@/components/ChatTab';
-import ShopTab from '@/components/ShopTab';
-import LibraryTab from '@/components/LibraryTab';
-import ProfileTab from '@/components/ProfileTab';
-import BottomNavigation from '@/components/BottomNavigation';
-import { useAuth } from '@/context/AuthContext';
-
-type TabName = 'diagnose' | 'chat' | 'shop' | 'library' | 'profile';
+import { useState } from "react";
+import { useAuth } from "@/context/AuthContext";
+import Header from "@/components/Header";
+import DiagnoseTab from "@/components/DiagnoseTab";
+import ChatTab from "@/components/ChatTab";
+import LibraryTab from "@/components/LibraryTab";
+import ShopTab from "@/components/ShopTab";
+import ProfileTab from "@/components/ProfileTab";
+import ExpertTab from "@/components/ExpertTab";
+import BottomNavigation from "@/components/BottomNavigation";
 
 const Index = () => {
+  const [activeTab, setActiveTab] = useState<string>("diagnose");
   const { isMasterAccount } = useAuth();
-  const [activeTab, setActiveTab] = useState<TabName>(isMasterAccount ? 'chat' : 'diagnose');
-  
-  // Reset active tab if user role changes (e.g., after login)
-  useEffect(() => {
-    if (isMasterAccount && activeTab === 'diagnose') {
-      setActiveTab('chat');
+
+  const renderTabContent = () => {
+    switch (activeTab) {
+      case "diagnose":
+        return <DiagnoseTab />;
+      case "chat":
+        return <ChatTab />;
+      case "library":
+        return <LibraryTab />;
+      case "shop":
+        return <ShopTab />;
+      case "profile":
+        return <ProfileTab />;
+      case "expert":
+        return isMasterAccount ? <ExpertTab /> : <DiagnoseTab />;
+      default:
+        return <DiagnoseTab />;
     }
-  }, [isMasterAccount, activeTab]);
-
-  // Add event listener for tab switching
-  useEffect(() => {
-    const handleTabSwitch = (event: CustomEvent) => {
-      const tabName = event.detail as TabName;
-      if (tabName) {
-        setActiveTab(tabName);
-      }
-    };
-
-    window.addEventListener('switchTab', handleTabSwitch as EventListener);
-    
-    return () => {
-      window.removeEventListener('switchTab', handleTabSwitch as EventListener);
-    };
-  }, []);
+  };
 
   return (
-    <div className="bg-gradient-to-b from-sky-50 to-white min-h-screen pb-safe">
+    <div className="min-h-screen bg-gray-50">
       <Header />
-
-      <div className="relative pt-16 md:pt-24 pb-4 px-4 overflow-hidden">
-        <div className="container mx-auto">
-          <div className="max-w-3xl mx-auto text-center">
-            <h1 className="text-3xl md:text-4xl font-bold text-drplant-blue mb-4">
-              {isMasterAccount ? 'Plant Health Specialist Dashboard' : 'Smart Plant Disease Diagnosis'}
-            </h1>
-            <p className="text-md md:text-lg text-gray-600">
-              {isMasterAccount 
-                ? 'Connect with users and provide expert plant health advice and product recommendations.'
-                : 'Get instant plant health analysis and expert consultation with our advanced AI-powered diagnosis system.'}
-            </p>
-          </div>
+      <main className="pb-20 pt-16">
+        <div className="container mx-auto px-4 py-4">
+          {renderTabContent()}
         </div>
-        <div className="absolute top-1/2 -left-24 w-48 h-48 bg-drplant-blue/10 rounded-full blur-3xl"/>
-        <div className="absolute top-1/4 -right-24 w-64 h-64 bg-drplant-green/10 rounded-full blur-3xl"/>
-      </div>
-
-      <div className="container mx-auto px-4 pb-24 mt-4">
-        <div className="relative bg-white rounded-2xl shadow-lg p-4 min-h-[60vh]">
-          {activeTab === 'diagnose' && !isMasterAccount && <DiagnoseTab />}
-          {activeTab === 'chat' && <ChatTab />}
-          {activeTab === 'shop' && <ShopTab />}
-          {activeTab === 'library' && <LibraryTab />}
-          {activeTab === 'profile' && <ProfileTab />}
-        </div>
-      </div>
-
-      <BottomNavigation activeTab={activeTab} setActiveTab={setActiveTab} />
+      </main>
+      <BottomNavigation 
+        activeTab={activeTab} 
+        setActiveTab={setActiveTab}
+        showExpertTab={isMasterAccount}
+      />
     </div>
   );
 };
