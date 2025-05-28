@@ -37,34 +37,45 @@ const CompleteProfile = () => {
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
-      firstName: userProfile?.firstName || "",
-      lastName: userProfile?.lastName || "",
-      birthDate: "",
-      birthPlace: "",
+      firstName: userProfile?.first_name || "",
+      lastName: userProfile?.last_name || "",
+      birthDate: userProfile?.birth_date || "",
+      birthPlace: userProfile?.birth_place || "",
     },
   });
 
-  const onSubmit = (values: ProfileFormValues) => {
+  const onSubmit = async (values: ProfileFormValues) => {
     setIsLoading(true);
 
     try {
-      // Update the profile fields directly
-      updateProfile("firstName", values.firstName);
-      updateProfile("lastName", values.lastName);
+      console.log('Submitting profile data:', values);
       
-      // For birth date and place, we need to match the property names in the UserProfile type
-      // In this case, we need to use "birthDate" and "birthPlace" instead of "birth_date" and "birth_place"
-      updateProfile("birthDate", values.birthDate);  
-      updateProfile("birthPlace", values.birthPlace);
-      
-      toast({
-        title: "Profilo completato",
-        description: "Benvenuto su Plant Patho Pal!",
+      // Update the profile with all fields at once using the correct database field names
+      const result = await updateProfile({
+        first_name: values.firstName,
+        last_name: values.lastName,
+        birth_date: values.birthDate,
+        birth_place: values.birthPlace
       });
-      
-      // Redirect to home page
-      navigate("/");
+
+      if (result.success) {
+        toast({
+          title: "Profilo completato",
+          description: "Benvenuto su Plant Patho Pal!",
+        });
+        
+        console.log('Profile updated successfully, navigating to home');
+        // Redirect to home page
+        navigate("/");
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Errore",
+          description: result.message || "Si è verificato un problema durante il salvataggio del profilo.",
+        });
+      }
     } catch (error) {
+      console.error('Error updating profile:', error);
       toast({
         variant: "destructive",
         title: "Errore",
