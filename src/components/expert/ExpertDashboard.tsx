@@ -84,11 +84,15 @@ const ExpertDashboard = () => {
         // Now get user profiles for each consultation
         const consultationsWithProfiles = await Promise.all(
           (consultationsData || []).map(async (consultation) => {
-            const { data: profile } = await supabase
+            const { data: profile, error: profileError } = await supabase
               .from('profiles')
               .select('first_name, last_name, email')
               .eq('id', consultation.user_id)
-              .single();
+              .maybeSingle();
+            
+            if (profileError) {
+              console.error('Error fetching profile for user:', consultation.user_id, profileError);
+            }
             
             return {
               ...consultation,
@@ -113,11 +117,15 @@ const ExpertDashboard = () => {
         // Get user profiles for each conversation
         const conversationsWithProfiles = await Promise.all(
           (conversationsData || []).map(async (conversation) => {
-            const { data: profile } = await supabase
+            const { data: profile, error: profileError } = await supabase
               .from('profiles')
               .select('first_name, last_name, email')
               .eq('id', conversation.user_id)
-              .single();
+              .maybeSingle();
+            
+            if (profileError) {
+              console.error('Error fetching profile for user:', conversation.user_id, profileError);
+            }
             
             return {
               ...conversation,
@@ -174,6 +182,14 @@ const ExpertDashboard = () => {
     return `${firstName?.charAt(0) || ''}${lastName?.charAt(0) || ''}`.toUpperCase();
   };
 
+  const getUserDisplayName = (userProfile?: { first_name: string; last_name: string; email: string; } | null) => {
+    if (!userProfile) return 'Utente sconosciuto';
+    if (userProfile.first_name || userProfile.last_name) {
+      return `${userProfile.first_name || ''} ${userProfile.last_name || ''}`.trim();
+    }
+    return userProfile.email || 'Utente sconosciuto';
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -228,9 +244,9 @@ const ExpertDashboard = () => {
                       </Avatar>
                       <div>
                         <div className="font-medium">
-                          {consultation.user_profile?.first_name} {consultation.user_profile?.last_name}
+                          {getUserDisplayName(consultation.user_profile)}
                         </div>
-                        <div className="text-sm text-gray-500">{consultation.user_profile?.email}</div>
+                        <div className="text-sm text-gray-500">{consultation.user_profile?.email || 'Email non disponibile'}</div>
                       </div>
                     </CardTitle>
                     {getStatusBadge(consultation.status)}
@@ -317,7 +333,7 @@ const ExpertDashboard = () => {
                       </Avatar>
                       <div>
                         <div className="font-medium">
-                          {conversation.user_profile?.first_name} {conversation.user_profile?.last_name}
+                          {getUserDisplayName(conversation.user_profile)}
                         </div>
                         <div className="text-sm text-gray-500 truncate max-w-xs">
                           {conversation.last_message_text || 'Nessun messaggio'}
