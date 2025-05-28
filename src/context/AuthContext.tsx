@@ -8,12 +8,21 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   profile: any;
+  userProfile: any; // Alias for profile to match component expectations
   loading: boolean;
+  isAuthenticated: boolean;
+  isProfileComplete: boolean;
   signUp: (email: string, password: string, userData: any) => Promise<{ success: boolean; message: string }>;
   signIn: (email: string, password: string) => Promise<{ success: boolean; message: string }>;
   signOut: () => Promise<void>;
   updateProfile: (updates: any) => Promise<{ success: boolean; message: string }>;
   isMasterAccount: boolean;
+  // Additional methods expected by components
+  login: (email: string, password: string) => Promise<void>;
+  logout: () => Promise<void>;
+  register: (email: string, password: string, userData?: any) => Promise<any>;
+  updateUsername: (username: string) => void;
+  updatePassword: (password: string) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -26,6 +35,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [isMasterAccount, setIsMasterAccount] = useState(false);
+
+  // Computed properties
+  const isAuthenticated = !!user;
+  const isProfileComplete = !!(profile?.first_name && profile?.last_name && profile?.birth_date && profile?.birth_place);
 
   useEffect(() => {
     // Get initial session
@@ -299,16 +312,55 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
+  // Alias methods for component compatibility
+  const login = async (email: string, password: string) => {
+    const result = await signIn(email, password);
+    if (!result.success) {
+      throw new Error(result.message);
+    }
+  };
+
+  const logout = async () => {
+    await signOut();
+  };
+
+  const register = async (email: string, password: string, userData?: any) => {
+    const result = await signUp(email, password, userData || {});
+    if (result.success) {
+      return { confirmationRequired: true, message: result.message };
+    } else {
+      throw new Error(result.message);
+    }
+  };
+
+  // Simple update functions for username and password
+  const updateUsername = (username: string) => {
+    updateProfile({ username });
+  };
+
+  const updatePassword = (password: string) => {
+    // Note: Password updates would typically go through Supabase auth
+    console.log('Password update requested - implement through Supabase auth');
+  };
+
   const value = {
     user,
     session,
     profile,
+    userProfile: profile, // Alias for component compatibility
     loading,
+    isAuthenticated,
+    isProfileComplete,
     signUp,
     signIn,
     signOut,
     updateProfile,
-    isMasterAccount
+    isMasterAccount,
+    login,
+    logout,
+    register,
+    updateUsername,
+    updatePassword
   };
 
   return (
