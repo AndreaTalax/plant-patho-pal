@@ -1,13 +1,36 @@
+import React from "react";
+import { Button, Typography, Box } from "@mui/material";
 
-import { MessageSquare } from 'lucide-react';
-
-const EmptyConversationState = () => {
-  return (
-    <div className="flex-1 flex flex-col items-center justify-center text-gray-500">
-      <MessageSquare className="h-10 w-10 mb-3 text-gray-300" />
-      <p className="text-sm">Select a conversation to start</p>
-    </div>
-  );
+type EmptyConversationStateProps = {
+  onStartChat: () => void;
 };
+
+const EmptyConversationState: React.FC<EmptyConversationStateProps> = ({
+  onStartChat,
+}) => (
+  <Box
+    display="flex"
+    flexDirection="column"
+    alignItems="center"
+    justifyContent="center"
+    height="100%"
+    p={2}
+  >
+    <Typography variant="h6" gutterBottom>
+      Non hai ancora iniziato una chat con il fitopatologo
+    </Typography>
+    <Typography variant="body1" color="textSecondary" gutterBottom>
+      Premi il pulsante qui sotto per iniziare una nuova conversazione e ricevere assistenza da un esperto.
+    </Typography>
+    <Button
+      variant="contained"
+      color="primary"
+      onClick={onStartChat}
+      sx={{ mt: 2 }}
+    >
+      Inizia chat con fitopatologo
+    </Button>
+  </Box>
+);
 
 export default EmptyConversationState;
