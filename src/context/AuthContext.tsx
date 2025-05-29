@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User, Session } from '@supabase/supabase-js';
@@ -102,15 +101,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       if (data) {
         console.log('User profile fetched:', data);
-        // Map snake_case from DB to camelCase for frontend use
+        // Normalize the profile data to support both naming conventions
         const normalizedProfile: UserProfile = {
           id: data.id,
           email: data.email,
-          firstName: data.first_name,
-          lastName: data.last_name,
+          firstName: data.first_name || data.firstName,
+          lastName: data.last_name || data.lastName,
           username: data.username,
-          birthDate: data.birth_date,
-          birthPlace: data.birth_place,
+          birthDate: data.birth_date || data.birthDate,
+          birthPlace: data.birth_place || data.birthPlace,
           first_name: data.first_name,
           last_name: data.last_name,
           birth_date: data.birth_date,
@@ -146,27 +145,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (whitelistedEmails.includes(email)) {
         console.log('Simulated login for whitelisted email:', email);
         
-        // Verifica password per test@gmail.com
-        if (email === 'test@gmail.com' && password !== 'test123') {
-          throw new Error('Invalid login credentials');
-        }
-        
-        // Genera UUID validi per gli utenti mock
-        const generateMockUserId = (email: string): string => {
-          if (email === 'premium@gmail.com') {
-            return '550e8400-e29b-41d4-a716-446655440000'; // UUID fisso per premium
-          } else if (email === 'test@gmail.com') {
-            return '550e8400-e29b-41d4-a716-446655440001'; // UUID fisso per test
-          } else {
-            return '550e8400-e29b-41d4-a716-446655440002'; // UUID fisso per altri
-          }
-        };
-        
-        const mockUserId = generateMockUserId(email);
-        
         // Crea un mock user object
         const mockUser: User = {
-          id: mockUserId,
+          id: email === 'premium@gmail.com' ? 'premium-user-id' : 'test-user-id',
           email: email,
           created_at: new Date().toISOString(),
           app_metadata: {},
@@ -201,8 +182,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setUser(mockUser);
         setSession(mockSession);
         
-        // Crea automaticamente un profilo completo per l'utente test
+        // Crea automaticamente un profilo per l'utente se non esiste
         await createOrUpdateProfile(mockUser.id, {
+          id: mockUser.id,
           email: email,
           username: email.split('@')[0],
           ...(email === 'premium@gmail.com' && {
@@ -210,12 +192,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             last_name: 'Nigro',
             birth_date: '1980-01-01',
             birth_place: 'Milano'
-          }),
-          ...(email === 'test@gmail.com' && {
-            first_name: 'Test',
-            last_name: 'User',
-            birth_date: '1990-01-01',
-            birth_place: 'Roma'
           })
         });
         
@@ -276,41 +252,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  const createOrUpdateProfile = async (userId: string, profileData: any) => {
+  const createOrUpdateProfile = async (userId: string, profileData: Partial<UserProfile>) => {
     try {
-      console.log('Creating/updating profile for user:', userId, 'with data:', profileData);
-      
-      // Map the data to match the exact database schema
-      const dbProfileData = {
-        id: userId,
-        email: profileData.email || null,
-        username: profileData.username || null,
-        first_name: profileData.first_name || null,
-        last_name: profileData.last_name || null,
-        phone: profileData.phone || null,
-        address: profileData.address || null,
-        role: profileData.role || 'user',
-        birth_date: profileData.birth_date || null,
-        birth_place: profileData.birth_place || null,
-        subscription_plan: profileData.subscription_plan || 'free',
-        avatar_url: profileData.avatar_url || null,
-        updated_at: new Date().toISOString()
-      };
-
-      console.log('Sending to database:', dbProfileData);
-
       const { error } = await supabase
         .from('profiles')
-        .upsert(dbProfileData, {
-          onConflict: 'id'
+        .upsert({
+          id: userId,
+          ...profileData
         });
 
-      if (error) {
-        console.error('Database error:', error);
-        throw error;
-      }
+      if (error) throw error;
 
-      console.log('Profile created/updated successfully');
       // Refresh the profile data
       await fetchUserProfile(userId);
     } catch (error) {
@@ -323,7 +275,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (!user) throw new Error('User not authenticated');
 
     try {
-      let profileUpdates: any;
+      let profileUpdates: Partial<UserProfile>;
 
       // Handle both old signature (field, value) and new signature (updates object)
       if (typeof updates === 'string') {
@@ -332,37 +284,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         profileUpdates = updates;
       }
 
-      // Map camelCase to snake_case for database
-      const dbUpdates: any = {};
-      Object.keys(profileUpdates).forEach(key => {
-        switch (key) {
-          case 'firstName':
-            dbUpdates.first_name = profileUpdates[key];
-            break;
-          case 'lastName':
-            dbUpdates.last_name = profileUpdates[key];
-            break;
-          case 'birthDate':
-            dbUpdates.birth_date = profileUpdates[key];
-            break;
-          case 'birthPlace':
-            dbUpdates.birth_place = profileUpdates[key];
-            break;
-          case 'avatarUrl':
-            dbUpdates.avatar_url = profileUpdates[key];
-            break;
-          default:
-            dbUpdates[key] = profileUpdates[key];
-        }
-      });
-
-      dbUpdates.updated_at = new Date().toISOString();
-
-      console.log('Updating profile with:', dbUpdates);
-
       const { error } = await supabase
         .from('profiles')
-        .update(dbUpdates)
+        .update(profileUpdates)
         .eq('id', user.id);
 
       if (error) throw error;
