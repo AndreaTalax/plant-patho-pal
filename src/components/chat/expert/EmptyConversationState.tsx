@@ -1,5 +1,6 @@
+
 import React from "react";
-import { Button, Typography, Box } from "@mui/material";
+import { Button } from "@/components/ui/button";
 
 type EmptyConversationStateProps = {
   onStartChat: () => void;
@@ -8,29 +9,20 @@ type EmptyConversationStateProps = {
 const EmptyConversationState: React.FC<EmptyConversationStateProps> = ({
   onStartChat,
 }) => (
-  <Box
-    display="flex"
-    flexDirection="column"
-    alignItems="center"
-    justifyContent="center"
-    height="100%"
-    p={2}
-  >
-    <Typography variant="h6" gutterBottom>
+  <div className="flex flex-col items-center justify-center h-full p-4">
+    <h3 className="text-lg font-semibold mb-2">
       Non hai ancora iniziato una chat con il fitopatologo
-    </Typography>
-    <Typography variant="body1" color="textSecondary" gutterBottom>
+    </h3>
+    <p className="text-gray-500 text-center mb-4">
       Premi il pulsante qui sotto per iniziare una nuova conversazione e ricevere assistenza da un esperto.
-    </Typography>
+    </p>
     <Button
-      variant="contained"
-      color="primary"
       onClick={onStartChat}
-      sx={{ mt: 2 }}
+      className="bg-drplant-green hover:bg-drplant-green-dark"
     >
       Inizia chat con fitopatologo
     </Button>
-  </Box>
+  </div>
 );
 
 export default EmptyConversationState;
