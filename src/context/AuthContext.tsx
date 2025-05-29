@@ -188,12 +188,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           email: email,
           username: email.split('@')[0],
           ...(email === 'premium@gmail.com' && {
-            firstName: 'Marco',
-            lastName: 'Nigro',
             first_name: 'Marco',
             last_name: 'Nigro',
-            birthDate: '1980-01-01',
-            birthPlace: 'Milano',
             birth_date: '1980-01-01',
             birth_place: 'Milano'
           })
