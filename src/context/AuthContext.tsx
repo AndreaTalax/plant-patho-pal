@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User, Session } from '@supabase/supabase-js';
@@ -190,7 +191,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         
         // Crea automaticamente un profilo completo per l'utente test
         await createOrUpdateProfile(mockUser.id, {
-          id: mockUser.id,
           email: email,
           username: email.split('@')[0],
           ...(email === 'premium@gmail.com' && {
@@ -264,17 +264,41 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  const createOrUpdateProfile = async (userId: string, profileData: Partial<UserProfile>) => {
+  const createOrUpdateProfile = async (userId: string, profileData: any) => {
     try {
+      console.log('Creating/updating profile for user:', userId, 'with data:', profileData);
+      
+      // Map the data to match the exact database schema
+      const dbProfileData = {
+        id: userId,
+        email: profileData.email || null,
+        username: profileData.username || null,
+        first_name: profileData.first_name || null,
+        last_name: profileData.last_name || null,
+        phone: profileData.phone || null,
+        address: profileData.address || null,
+        role: profileData.role || 'user',
+        birth_date: profileData.birth_date || null,
+        birth_place: profileData.birth_place || null,
+        subscription_plan: profileData.subscription_plan || 'free',
+        avatar_url: profileData.avatar_url || null,
+        updated_at: new Date().toISOString()
+      };
+
+      console.log('Sending to database:', dbProfileData);
+
       const { error } = await supabase
         .from('profiles')
-        .upsert({
-          id: userId,
-          ...profileData
+        .upsert(dbProfileData, {
+          onConflict: 'id'
         });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Database error:', error);
+        throw error;
+      }
 
+      console.log('Profile created/updated successfully');
       // Refresh the profile data
       await fetchUserProfile(userId);
     } catch (error) {
@@ -287,7 +311,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (!user) throw new Error('User not authenticated');
 
     try {
-      let profileUpdates: Partial<UserProfile>;
+      let profileUpdates: any;
 
       // Handle both old signature (field, value) and new signature (updates object)
       if (typeof updates === 'string') {
@@ -296,9 +320,37 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         profileUpdates = updates;
       }
 
+      // Map camelCase to snake_case for database
+      const dbUpdates: any = {};
+      Object.keys(profileUpdates).forEach(key => {
+        switch (key) {
+          case 'firstName':
+            dbUpdates.first_name = profileUpdates[key];
+            break;
+          case 'lastName':
+            dbUpdates.last_name = profileUpdates[key];
+            break;
+          case 'birthDate':
+            dbUpdates.birth_date = profileUpdates[key];
+            break;
+          case 'birthPlace':
+            dbUpdates.birth_place = profileUpdates[key];
+            break;
+          case 'avatarUrl':
+            dbUpdates.avatar_url = profileUpdates[key];
+            break;
+          default:
+            dbUpdates[key] = profileUpdates[key];
+        }
+      });
+
+      dbUpdates.updated_at = new Date().toISOString();
+
+      console.log('Updating profile with:', dbUpdates);
+
       const { error } = await supabase
         .from('profiles')
-        .update(profileUpdates)
+        .update(dbUpdates)
         .eq('id', user.id);
 
       if (error) throw error;
