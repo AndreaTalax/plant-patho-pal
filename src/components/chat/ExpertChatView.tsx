@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { chatService } from "./chatService";
 // ...altri import
@@ -31,7 +32,6 @@ const ExpertChatView = ({ userId }: ExpertChatViewProps) => {
       {currentConversation ? (
         // ...chat attiva...
       ) : (
-        // Passa la prop corretta!
         <EmptyConversationState onStartChat={handleStartExpertChat} />
       )}
     </div>
