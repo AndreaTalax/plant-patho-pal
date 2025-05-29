@@ -1,18 +1,45 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { supabase } from '../supabaseClient';
 
-export default function RegisterForm() {
-  const [email, setEmail] = useState('');
+export default function LoginForm() {
+  const [email, setEmail] = useState('test@gmail.com');
   const [password, setPassword] = useState('');
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleRegister = async (e: React.FormEvent) => {
+  // Login automatico per test@gmail.com (password da impostare qui)
+  useEffect(() => {
+    const autoLogin = async () => {
+      if (email === 'test@gmail.com') {
+        setLoading(true);
+        setMessage('');
+        // Imposta qui la password di test@gmail.com
+        const testPassword = 'test123'; // Sostituisci con la password corretta
+        
+        const { error } = await supabase.auth.signInWithPassword({
+          email: 'test@gmail.com',
+          password: testPassword,
+        });
+
+        setLoading(false);
+        if (error) {
+          setMessage(`❌ Errore login automatico: ${error.message}`);
+        } else {
+          setMessage('✅ Login automatico riuscito!');
+        }
+      }
+    };
+
+    autoLogin();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setMessage('');
 
-    const { error } = await supabase.auth.signUp({
+    const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
@@ -22,15 +49,13 @@ export default function RegisterForm() {
     if (error) {
       setMessage(`❌ Errore: ${error.message}`);
     } else {
-      setMessage('✅ Registrazione completata! Controlla la tua email per confermare.');
-      setEmail('');
-      setPassword('');
+      setMessage('✅ Login effettuato con successo!');
     }
   };
 
   return (
-    <form onSubmit={handleRegister} className="space-y-4 p-4 max-w-md mx-auto">
-      <h2 className="text-lg font-semibold">Registrazione</h2>
+    <form onSubmit={handleLogin} className="space-y-4 p-4 max-w-md mx-auto">
+      <h2 className="text-lg font-semibold">Login</h2>
       <input
         type="email"
         placeholder="Email"
@@ -52,7 +77,7 @@ export default function RegisterForm() {
         disabled={loading}
         className={`w-full px-4 py-2 rounded text-white ${loading ? 'bg-gray-400' : 'bg-green-600 hover:bg-green-700'}`}
       >
-        {loading ? 'Registrazione in corso...' : 'Registrati'}
+        {loading ? 'Accesso in corso...' : 'Accedi'}
       </button>
       {message && <p className="text-sm text-center">{message}</p>}
     </form>
