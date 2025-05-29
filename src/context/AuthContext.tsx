@@ -151,10 +151,22 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           throw new Error('Invalid login credentials');
         }
         
+        // Genera UUID validi per gli utenti mock
+        const generateMockUserId = (email: string): string => {
+          if (email === 'premium@gmail.com') {
+            return '550e8400-e29b-41d4-a716-446655440000'; // UUID fisso per premium
+          } else if (email === 'test@gmail.com') {
+            return '550e8400-e29b-41d4-a716-446655440001'; // UUID fisso per test
+          } else {
+            return '550e8400-e29b-41d4-a716-446655440002'; // UUID fisso per altri
+          }
+        };
+        
+        const mockUserId = generateMockUserId(email);
+        
         // Crea un mock user object
         const mockUser: User = {
-          id: email === 'premium@gmail.com' ? 'premium-user-id' : 
-              email === 'test@gmail.com' ? 'test-user-id' : 'test-user-id',
+          id: mockUserId,
           email: email,
           created_at: new Date().toISOString(),
           app_metadata: {},
