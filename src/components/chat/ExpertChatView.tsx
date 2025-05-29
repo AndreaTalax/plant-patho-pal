@@ -1,6 +1,5 @@
 
 import { useState } from "react";
-import { chatService } from "./chatService";
 import { useExpertConversation } from "./expert/useExpertConversation";
 import EmptyConversationState from "./expert/EmptyConversationState";
 import ConversationList from "./ConversationList";
@@ -26,8 +25,9 @@ const ExpertChatView = ({ userId }: ExpertChatViewProps) => {
   } = useExpertConversation(userId);
 
   const handleStartExpertChat = async () => {
-    const newConv = await chatService.createConversation("Fitopatologo");
-    handleChatSelection(newConv.id);
+    // For now, we'll use the existing conversation logic from the hook
+    // This will be improved when we add the actual chat creation functionality
+    console.log("Starting expert chat...");
   };
 
   return (

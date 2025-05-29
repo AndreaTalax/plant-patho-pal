@@ -21,35 +21,15 @@ const SignUp = () => {
       // Clear any previous toasts to prevent accumulation
       toast.dismiss();
       
-      const result = await register(values.email, values.password);
+      await register(values.email, values.password);
       setRegisteredEmail(values.email);
+      setEmailSent(true);
       
-      // If result contains confirmationRequired flag (coming from our modified function)
-      if (result && typeof result === 'object' && 'confirmationRequired' in result) {
-        setEmailSent(true);
-        
-        if (result.confirmationRequired) {
-          toast.success("Registrazione completata", {
-            description: "Ti abbiamo inviato un'email di conferma. Se non la vedi nella posta in arrivo, controlla la cartella spam.",
-            duration: 8000,
-            dismissible: true,
-          });
-        } else {
-          // User might be already registered or email confirmed
-          toast.success("Registrazione completata", {
-            description: result.message || "Il tuo account è stato creato con successo.",
-            duration: 8000,
-            dismissible: true,
-          });
-        }
-      } else {
-        setEmailSent(true);
-        toast.success("Registrazione completata", {
-          description: "Ti abbiamo inviato un'email di conferma. Se non la vedi nella posta in arrivo, controlla la cartella spam.",
-          duration: 8000,
-          dismissible: true,
-        });
-      }
+      toast.success("Registrazione completata", {
+        description: "Ti abbiamo inviato un'email di conferma. Se non la vedi nella posta in arrivo, controlla la cartella spam.",
+        duration: 8000,
+        dismissible: true,
+      });
     } catch (error: any) {
       console.error("Errore registrazione:", error);
       let errorMessage = "Si è verificato un problema durante la registrazione";
