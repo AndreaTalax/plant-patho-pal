@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User, Session } from '@supabase/supabase-js';
@@ -101,15 +102,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       if (data) {
         console.log('User profile fetched:', data);
-        // Normalize the profile data to support both naming conventions
+        // Map snake_case from DB to camelCase for frontend use
         const normalizedProfile: UserProfile = {
           id: data.id,
           email: data.email,
-          firstName: data.first_name || data.firstName,
-          lastName: data.last_name || data.lastName,
+          firstName: data.first_name,
+          lastName: data.last_name,
           username: data.username,
-          birthDate: data.birth_date || data.birthDate,
-          birthPlace: data.birth_place || data.birthPlace,
+          birthDate: data.birth_date,
+          birthPlace: data.birth_place,
           first_name: data.first_name,
           last_name: data.last_name,
           birth_date: data.birth_date,
