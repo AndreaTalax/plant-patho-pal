@@ -23,9 +23,11 @@ const ActionButtons = ({
   hasValidAnalysis,
   useAI = false
 }: ActionButtonsProps) => {
-  const { isAuthenticated } = useAuth();
+  const { user, userProfile } = useAuth(); // Usa 'user' invece di 'isAuthenticated'
   const navigate = useNavigate();
   const [showAuthDialog, setShowAuthDialog] = useState(false);
+  
+  const isAuthenticated = !!user; // Calcola isAuthenticated dal user object
   
   const handleChatWithExpert = () => {
     if (!isAuthenticated) {

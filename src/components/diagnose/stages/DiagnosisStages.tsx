@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { usePlantInfo } from '@/context/PlantInfoContext';
 import PlantInfoForm from '../PlantInfoForm';
@@ -7,6 +8,7 @@ import ScanLayout from '../scan/ScanLayout';
 import DiagnosisResult from '../result/DiagnosisResult';
 import CameraCapture from '../CameraCapture';
 import { DiagnosedDisease } from '../types';
+import { useNavigate } from 'react-router-dom';
 
 interface DiagnosisStagesProps {
   stage: 'info' | 'capture' | 'options' | 'result';
@@ -50,6 +52,21 @@ const DiagnosisStages: React.FC<DiagnosisStagesProps> = ({
   onChatWithExpert
 }) => {
   const { plantInfo } = usePlantInfo();
+  const navigate = useNavigate();
+
+  // Funzione per navigare alla chat
+  const handleNavigateToChat = () => {
+    if (onChatWithExpert) {
+      onChatWithExpert();
+    } else {
+      // Naviga direttamente alla homepage e switcha alla tab chat
+      navigate('/');
+      setTimeout(() => {
+        const event = new CustomEvent('switchTab', { detail: 'chat' });
+        window.dispatchEvent(event);
+      }, 100);
+    }
+  };
 
   if (showCamera) {
     return (
@@ -159,7 +176,7 @@ const DiagnosisStages: React.FC<DiagnosisStagesProps> = ({
             
             <div className="space-y-3 mt-4">
               <button 
-                onClick={onChatWithExpert} 
+                onClick={handleNavigateToChat}
                 className="w-full bg-drplant-blue hover:bg-drplant-blue-dark text-white font-medium py-2 px-4 rounded-lg flex items-center justify-center gap-2"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -208,7 +225,7 @@ const DiagnosisStages: React.FC<DiagnosisStagesProps> = ({
           analysisData={diagnosedDisease}
           isAnalyzing={isAnalyzing}
           onStartNewAnalysis={onStartNewAnalysis}
-          onChatWithExpert={onChatWithExpert}
+          onChatWithExpert={handleNavigateToChat}
         />
       </>
     );
