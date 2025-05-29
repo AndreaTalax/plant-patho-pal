@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User, Session } from '@supabase/supabase-js';
@@ -146,9 +145,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (whitelistedEmails.includes(email)) {
         console.log('Simulated login for whitelisted email:', email);
         
+        // Verifica password per test@gmail.com
+        if (email === 'test@gmail.com' && password !== 'test123') {
+          throw new Error('Invalid login credentials');
+        }
+        
         // Crea un mock user object
         const mockUser: User = {
-          id: email === 'premium@gmail.com' ? 'premium-user-id' : 'test-user-id',
+          id: email === 'premium@gmail.com' ? 'premium-user-id' : 
+              email === 'test@gmail.com' ? 'test-user-id' : 'test-user-id',
           email: email,
           created_at: new Date().toISOString(),
           app_metadata: {},
@@ -183,7 +188,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setUser(mockUser);
         setSession(mockSession);
         
-        // Crea automaticamente un profilo per l'utente se non esiste
+        // Crea automaticamente un profilo completo per l'utente test
         await createOrUpdateProfile(mockUser.id, {
           id: mockUser.id,
           email: email,
@@ -193,6 +198,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             last_name: 'Nigro',
             birth_date: '1980-01-01',
             birth_place: 'Milano'
+          }),
+          ...(email === 'test@gmail.com' && {
+            first_name: 'Test',
+            last_name: 'User',
+            birth_date: '1990-01-01',
+            birth_place: 'Roma'
           })
         });
         
