@@ -1,16 +1,9 @@
-
 import { useState } from "react";
-import { useExpertConversation } from "./expert/useExpertConversation";
-import EmptyConversationState from "./expert/EmptyConversationState";
-import ConversationList from "./ConversationList";
-import ConversationBody from "./expert/ConversationBody";
-import ProductRecommendationDialog from "./ProductRecommendationDialog";
-
-interface ExpertChatViewProps {
-  userId: string;
-}
+import { chatService } from "./chatService";
+// ...altri import
 
 const ExpertChatView = ({ userId }: ExpertChatViewProps) => {
+  // ...tuo stato e hook
   const {
     conversations,
     currentConversation,
@@ -22,46 +15,26 @@ const ExpertChatView = ({ userId }: ExpertChatViewProps) => {
     handleToggleBlockUser,
     handleSendProductRecommendations,
     handleSendMessage,
+    // eventualmente aggiungi qui handleNewConversation se lo hai già
   } = useExpertConversation(userId);
 
+  // Handler per il pulsante "Inizia chat con fitopatologo"
   const handleStartExpertChat = async () => {
-    // For now, we'll use the existing conversation logic from the hook
-    // This will be improved when we add the actual chat creation functionality
-    console.log("Starting expert chat...");
+    // Crea una nuova conversazione con l'username desiderato
+    const newConv = await chatService.createConversation("Fitopatologo");
+    handleChatSelection(newConv.id); // seleziona la nuova conversazione
   };
 
   return (
-    <div className="flex h-full">
-      <div className="w-full md:w-1/3 border-r bg-gray-50">
-        <ConversationList
-          conversations={conversations}
-          currentConversationId={currentConversation?.id}
-          onSelectConversation={handleChatSelection}
-          onDeleteConversation={handleDeleteConversation}
-          onToggleBlockUser={handleToggleBlockUser}
-        />
-      </div>
-      
-      <div className="w-full md:w-2/3 flex flex-col">
-        {currentConversation ? (
-          <ConversationBody
-            conversation={currentConversation}
-            isSending={isSending}
-            onSendMessage={handleSendMessage}
-            onOpenProductDialog={() => setIsProductDialogOpen(true)}
-          />
-        ) : (
-          <EmptyConversationState onStartChat={handleStartExpertChat} />
-        )}
-      </div>
-      
-      <ProductRecommendationDialog
-        isOpen={isProductDialogOpen}
-        onClose={() => setIsProductDialogOpen(false)}
-        onSendRecommendations={handleSendProductRecommendations}
-      />
+    // ...
+    <div className="w-full md:w-2/3 flex flex-col">
+      {currentConversation ? (
+        // ...chat attiva...
+      ) : (
+        // Passa la prop corretta!
+        <EmptyConversationState onStartChat={handleStartExpertChat} />
+      )}
     </div>
+    // ...
   );
 };
-
-export default ExpertChatView;

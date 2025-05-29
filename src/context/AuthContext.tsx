@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User, Session } from '@supabase/supabase-js';
@@ -15,10 +16,6 @@ interface UserProfile {
   last_name?: string;
   birth_date?: string;
   birth_place?: string;
-  phone?: string;
-  address?: string;
-  avatarUrl?: string;
-  avatar_url?: string;
 }
 
 interface AuthContextType {
@@ -114,10 +111,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           last_name: data.last_name,
           birth_date: data.birth_date,
           birth_place: data.birth_place,
-          phone: data.phone,
-          address: data.address,
-          avatarUrl: data.avatar_url,
-          avatar_url: data.avatar_url,
         };
         setUserProfile(normalizedProfile);
       } else {
@@ -188,8 +181,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           email: email,
           username: email.split('@')[0],
           ...(email === 'premium@gmail.com' && {
+            firstName: 'Marco',
+            lastName: 'Nigro',
             first_name: 'Marco',
             last_name: 'Nigro',
+            birthDate: '1980-01-01',
+            birthPlace: 'Milano',
             birth_date: '1980-01-01',
             birth_place: 'Milano'
           })

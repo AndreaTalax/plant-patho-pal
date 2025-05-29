@@ -14,14 +14,14 @@ import { MOCK_PRODUCTS } from './types';
 
 interface ProductRecommendationDialogProps {
   isOpen: boolean;
-  onClose: () => void;
+  onOpenChange: (open: boolean) => void;
   onSendRecommendations: (products: Product[]) => void;
   username?: string;
 }
 
 const ProductRecommendationDialog = ({
   isOpen,
-  onClose,
+  onOpenChange,
   onSendRecommendations,
   username
 }: ProductRecommendationDialogProps) => {
@@ -41,11 +41,11 @@ const ProductRecommendationDialog = ({
 
   const handleSendRecommendations = () => {
     onSendRecommendations(selectedProducts);
-    onClose();
+    onOpenChange(false);
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Recommend Products</DialogTitle>
@@ -94,7 +94,7 @@ const ProductRecommendationDialog = ({
         <div className="flex justify-end gap-3 mt-4">
           <Button 
             variant="outline" 
-            onClick={onClose}
+            onClick={() => onOpenChange(false)}
           >
             Cancel
           </Button>
