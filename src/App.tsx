@@ -16,6 +16,7 @@ import AboutUs from "./pages/AboutUs";
 import Services from "./pages/Services";
 import Contact from "./pages/Contact";
 import CompleteProfile from "./pages/CompleteProfile";
+import RegisterForm from './components/RegisterForm';
 
 const queryClient = new QueryClient();
 
@@ -105,4 +106,12 @@ const App = () => (
   </QueryClientProvider>
 );
 
+function App() {
+  return (
+    <div className="App">
+      <h1 className="text-xl font-bold">Crea un account</h1>
+      <RegisterForm />
+    </div>
+  );
+}
 export default App;
