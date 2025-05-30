@@ -10,6 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
 import { it } from 'date-fns/locale';
+import { MARCO_NIGRO_ID } from '@/components/phytopathologist';
 
 interface Consultation {
   id: string;
@@ -108,7 +109,7 @@ const ExpertDashboard = () => {
       const { data: conversationsData, error: conversationsError } = await supabase
         .from('conversations')
         .select('*')
-        .eq('expert_id', 'premium-user-id')
+        .eq('expert_id', 'MARCO_NIGRO_ID')
         .order('updated_at', { ascending: false });
 
       if (conversationsError) {
