@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { User, Session } from '@supabase/supabase-js';
 
 // Funzione di registrazione utente
+export const EXPERT_USER_ID = '07c7fe19-33c3-4782-b9a0-4e87c8aa7044';
 export const signUp = async (email: string, password: string) => {
   try {
     // Per email specifiche, consentiamo l'accesso diretto senza chiamare supabase.auth.signUp
