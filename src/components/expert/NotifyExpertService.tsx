@@ -1,4 +1,4 @@
-
+import { MARCO_NIGRO_ID } from '@/components/phytopathologist';
 import { supabase } from '@/integrations/supabase/client';
 import { uploadPlantImage, uploadBase64Image } from '@/utils/imageStorage';
 import { PlantInfo } from '@/components/diagnose/types';
@@ -48,7 +48,7 @@ export const notifyExpert = async (file?: File, imageUrl?: string, plantInfo?: P
       .from('conversations')
       .select('id')
       .eq('user_id', user.id)
-      .eq('expert_id', 'premium-user-id')
+      .eq('expert_id', 'MARCO_NIGRO_ID')
       .single();
 
     let conversationId;
@@ -57,7 +57,7 @@ export const notifyExpert = async (file?: File, imageUrl?: string, plantInfo?: P
         .from('conversations')
         .insert({
           user_id: user.id,
-          expert_id: 'premium-user-id',
+          expert_id: 'MARCO_NIGRO_ID',
           status: 'active'
         })
         .select()
@@ -95,7 +95,7 @@ export const notifyExpert = async (file?: File, imageUrl?: string, plantInfo?: P
       .insert({
         conversation_id: conversationId,
         sender_id: user.id,
-        recipient_id: 'premium-user-id',
+        recipient_id: 'MARCO_NIGRO_ID',
         text: messageText,
         image_url: finalImageUrl
       });
