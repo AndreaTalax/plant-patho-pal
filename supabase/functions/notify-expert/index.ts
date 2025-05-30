@@ -12,7 +12,8 @@ const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") || "";
 const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 
 // ID dell'esperto/fitopatologo
-const EXPERT_ID = "premium-user-id";
+const MARCO_NIGRO_ID = '07c7fe19-33c3-4782-b9a0-4e87c8aa7044';
+const expertId = MARCO_NIGRO_ID;
 
 /**
  * Edge Function che notifica il fitopatologo di una nuova richiesta di consulenza
