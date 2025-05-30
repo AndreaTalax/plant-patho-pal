@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -18,13 +17,9 @@ const Login = () => {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Clear any previous toast notifications
     toast.dismiss();
-    
     setIsLoading(true);
 
-    // Simple validation
     if (!email || !password) {
       toast.error("Error", {
         description: "Please enter both email and password",
@@ -35,18 +30,23 @@ const Login = () => {
     }
 
     try {
-      // Handle all user logins
       await login(email, password);
-      
-      // Show success message before navigation
-      toast.success("Login successful", {
-        description: "Welcome to your account!",
-        dismissible: true
-      });
-      
-      // Navigate after showing toast
-      navigate("/");
-      
+
+      if (email === "test@gmail.com") {
+        toast.success("Admin login", {
+          description: "Accesso completo come amministratore",
+          dismissible: true,
+        });
+        // Esempio redirect admin
+        // navigate("/admin");
+      } else {
+        toast.success("Login successful", {
+          description: "Welcome to your account!",
+          dismissible: true
+        });
+        navigate("/");
+      }
+
     } catch (error: any) {
       console.error("Login error:", error);
       toast.error("Login failed", {
@@ -62,7 +62,7 @@ const Login = () => {
     <div className="h-screen w-full bg-gradient-to-b from-drplant-blue-light via-white to-drplant-green/10 flex flex-col items-center justify-center px-4">
       <div className="absolute top-0 left-0 w-full h-64 bg-drplant-blue-light/30 -z-10 rounded-b-[50%]" />
       <div className="absolute bottom-0 right-0 w-full h-64 bg-drplant-green/20 -z-10 rounded-t-[30%]" />
-      
+
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center p-4 bg-white/80 backdrop-blur-sm rounded-full shadow-lg mb-4">
