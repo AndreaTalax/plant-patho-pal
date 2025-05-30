@@ -151,12 +151,24 @@ const login = async (email: string, password: string) => {
     
     // Se il login normale fallisce, verifica se è un'email whitelisted
     const whitelistedEmails = [
-      'test@gmail.com',
-      'premium@gmail.com',
-      'marco.nigro@drplant.it',
-      'fitopatologo@drplant.it'
-    ];
-    
+  'test@gmail.com',
+  'premium@gmail.com',
+  'marco.nigro@drplant.it',
+  'fitopatologo@drplant.it',
+  'agrotecnicomarconigro@gmail.com' 
+];
+    // Aggiungi la gestione specifica per Marco
+if (email === 'agrotecnicomarconigro@gmail.com') {
+  // Crea il profilo per Marco se non esiste
+  await createOrUpdateProfile(loginData.user.id, {
+    email: email,
+    username: 'marco.nigro',
+    first_name: 'Marco',
+    last_name: 'Nigro',
+    role: 'expert',
+    subscription_plan: 'premium'
+  });
+}
     if (whitelistedEmails.includes(email)) {
       console.log('Checking whitelisted email:', email);
       
