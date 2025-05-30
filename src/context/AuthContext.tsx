@@ -275,62 +275,70 @@ const login = async (email: string, password: string) => {
   };
 
   const updateProfile = async (updates: Partial<UserProfile> | string, value?: any) => {
-    if (!user) throw new Error('User not authenticated');
+  if (!user) throw new Error('User not authenticated');
+  
+  try {
+    console.log('Current user ID:', user.id);
+    console.log('User session:', session);
+    
+    let profileUpdates: any;
+    if (typeof updates === 'string') {
+      profileUpdates = { [updates]: value };
+    } else {
+      profileUpdates = updates;
+    }
 
-    try {
-      let profileUpdates: any;
-
-      // Handle both old signature (field, value) and new signature (updates object)
-      if (typeof updates === 'string') {
-        profileUpdates = { [updates]: value };
-      } else {
-        profileUpdates = updates;
+    // Map camelCase to snake_case for database
+    const dbUpdates: any = {};
+    Object.keys(profileUpdates).forEach(key => {
+      switch (key) {
+        case 'firstName':
+          dbUpdates.first_name = profileUpdates[key];
+          break;
+        case 'lastName':
+          dbUpdates.last_name = profileUpdates[key];
+          break;
+        case 'birthDate':
+          dbUpdates.birth_date = profileUpdates[key];
+          break;
+        case 'birthPlace':
+          dbUpdates.birth_place = profileUpdates[key];
+          break;
+        case 'avatarUrl':
+          dbUpdates.avatar_url = profileUpdates[key];
+          break;
+        default:
+          dbUpdates[key] = profileUpdates[key];
       }
+    });
 
-      // Map camelCase to snake_case for database
-      const dbUpdates: any = {};
-      Object.keys(profileUpdates).forEach(key => {
-        switch (key) {
-          case 'firstName':
-            dbUpdates.first_name = profileUpdates[key];
-            break;
-          case 'lastName':
-            dbUpdates.last_name = profileUpdates[key];
-            break;
-          case 'birthDate':
-            dbUpdates.birth_date = profileUpdates[key];
-            break;
-          case 'birthPlace':
-            dbUpdates.birth_place = profileUpdates[key];
-            break;
-          case 'avatarUrl':
-            dbUpdates.avatar_url = profileUpdates[key];
-            break;
-          default:
-            dbUpdates[key] = profileUpdates[key];
-        }
-      });
+    dbUpdates.updated_at = new Date().toISOString();
+    
+    console.log('Updating profile with:', dbUpdates);
+    console.log('User ID for update:', user.id);
 
-      dbUpdates.updated_at = new Date().toISOString();
+    const { data, error } = await supabase
+      .from('profiles')
+      .update(dbUpdates)
+      .eq('id', user.id)
+      .select(); // Aggiungi select per vedere cosa viene restituito
 
-      console.log('Updating profile with:', dbUpdates);
-
-      const { error } = await supabase
-        .from('profiles')
-        .update(dbUpdates)
-        .eq('id', user.id);
-
-      if (error) throw error;
-
-      // Refresh the profile data
-      await fetchUserProfile(user.id);
-      toast.success('Profilo aggiornato con successo!');
-    } catch (error: any) {
-      console.error('Error updating profile:', error?.message || error);
-      toast.error('Errore durante l\'aggiornamento del profilo');
+    if (error) {
+      console.error('Supabase error details:', error);
       throw error;
     }
-  };
+
+    console.log('Update successful, data:', data);
+    
+    // Refresh the profile data
+    await fetchUserProfile(user.id);
+    toast.success('Profilo aggiornato con successo!');
+  } catch (error: any) {
+    console.error('Error updating profile:', error?.message || error);
+    toast.error('Errore durante l\'aggiornamento del profilo');
+    throw error;
+  }
+};
 
   const updateUsername = async (username: string) => {
     await updateProfile({ username });
