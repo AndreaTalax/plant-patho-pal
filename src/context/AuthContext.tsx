@@ -135,7 +135,21 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       console.log('Attempting login with:', email);
       
-      // Lista di email whitelisted per il login simulato
+      // Prova prima il login normale con Supabase
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (data.user && data.session) {
+        console.log('Successful Supabase login:', email);
+        setUser(data.user);
+        setSession(data.session);
+        toast.success('Login effettuato con successo!');
+        return;
+      }
+      
+      // Se il login normale fallisce, verifica se è un'email whitelisted
       const whitelistedEmails = [
         'test@gmail.com',
         'premium@gmail.com',
@@ -144,98 +158,62 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       ];
       
       if (whitelistedEmails.includes(email)) {
-        console.log('Simulated login for whitelisted email:', email);
+        console.log('Fallback to simulated login for whitelisted email:', email);
         
         // Verifica password per test@gmail.com
         if (email === 'test@gmail.com' && password !== 'test123') {
           throw new Error('Invalid login credentials');
         }
         
-        // Genera UUID validi per gli utenti mock
-        const generateMockUserId = (email: string): string => {
-          if (email === 'premium@gmail.com') {
-            return '550e8400-e29b-41d4-a716-446655440000'; // UUID fisso per premium
-          } else if (email === 'test@gmail.com') {
-            return '550e8400-e29b-41d4-a716-446655440001'; // UUID fisso per test
-          } else {
-            return '550e8400-e29b-41d4-a716-446655440002'; // UUID fisso per altri
+        // Crea un utente simulato con registrazione in Supabase
+        try {
+          const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+            email,
+            password: 'temp123', // Password temporanea
+            options: {
+              data: {
+                first_name: email === 'test@gmail.com' ? 'Test' : 'User',
+                last_name: email === 'test@gmail.com' ? 'User' : 'Name'
+              }
+            }
+          });
+
+          if (signUpData.user && !signUpError) {
+            // Ora prova il login con la password temporanea
+            const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({
+              email,
+              password: 'temp123',
+            });
+
+            if (loginData.user && loginData.session && !loginError) {
+              setUser(loginData.user);
+              setSession(loginData.session);
+              
+              // Crea il profilo utente
+              await createOrUpdateProfile(loginData.user.id, {
+                email: email,
+                username: email.split('@')[0],
+                first_name: email === 'test@gmail.com' ? 'Test' : 'User',
+                last_name: email === 'test@gmail.com' ? 'User' : 'Name',
+                birth_date: '1990-01-01',
+                birth_place: 'Roma'
+              });
+              
+              toast.success('Login effettuato con successo!');
+              return;
+            }
           }
-        };
+        } catch (fallbackError) {
+          console.log('Fallback registration failed, this is expected if user already exists');
+        }
         
-        const mockUserId = generateMockUserId(email);
-        
-        // Crea un mock user object
-        const mockUser: User = {
-          id: mockUserId,
-          email: email,
-          created_at: new Date().toISOString(),
-          app_metadata: {},
-          user_metadata: {},
-          aud: 'authenticated',
-          confirmation_sent_at: new Date().toISOString(),
-          recovery_sent_at: new Date().toISOString(),
-          email_change_sent_at: new Date().toISOString(),
-          new_email: null,
-          new_phone: null,
-          invited_at: null,
-          action_link: null,
-          email_confirmed_at: new Date().toISOString(),
-          phone_confirmed_at: null,
-          confirmed_at: new Date().toISOString(),
-          last_sign_in_at: new Date().toISOString(),
-          role: 'authenticated',
-          updated_at: new Date().toISOString(),
-          identities: []
-        };
-
-        // Crea un mock session object
-        const mockSession: Session = {
-          access_token: 'mock-access-token',
-          token_type: 'bearer',
-          expires_in: 3600,
-          expires_at: Math.floor(Date.now() / 1000) + 3600,
-          refresh_token: 'mock-refresh-token',
-          user: mockUser
-        };
-
-        setUser(mockUser);
-        setSession(mockSession);
-        
-        // Crea automaticamente un profilo completo per l'utente test
-        await createOrUpdateProfile(mockUser.id, {
-          email: email,
-          username: email.split('@')[0],
-          ...(email === 'premium@gmail.com' && {
-            first_name: 'Marco',
-            last_name: 'Nigro',
-            birth_date: '1980-01-01',
-            birth_place: 'Milano'
-          }),
-          ...(email === 'test@gmail.com' && {
-            first_name: 'Test',
-            last_name: 'User',
-            birth_date: '1990-01-01',
-            birth_place: 'Roma'
-          })
-        });
-        
-        toast.success('Login effettuato con successo!');
-        return;
+        // Se tutto fallisce, usa il login normale
+        throw new Error('Invalid login credentials');
       }
       
-      // Per email non whitelisted, prova il login normale
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
+      // Se arriviamo qui, il login è fallito
       if (error) throw error;
 
-      if (data.user) {
-        setUser(data.user);
-        setSession(data.session);
-        toast.success('Login effettuato con successo!');
-      }
     } catch (error: any) {
       console.error('Login error:', error?.message || error);
       toast.error(error?.message || 'Errore durante il login');
