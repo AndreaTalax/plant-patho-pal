@@ -18,12 +18,14 @@ export const signUp = async (email: string, password: string) => {
         message: "Registrazione completata con successo. Puoi accedere immediatamente.",
         data: {
           user: {
-            email: email,
-            id: email === "talaiaandrea@gmail.com" ? "talaiaandrea-id" : 
-                 email === "test@gmail.com" ? "test-user-id" : "premium-user-id",
-            email_confirmed_at: new Date().toISOString(),
-            // Aggiungiamo i campi richiesti per il tipo User di Supabase
-            app_metadata: { provider: 'email' },
+  email: email,
+  id: email === "talaiaandrea@gmail.com" ? "talaiaandrea-id" : 
+      email === "test@gmail.com" ? "6ee6b888-8064-40a1-8b26-0658343f4360" : 
+      email === "agrotecnicomarconigro@gmail.com" ? "07c7fe19-33c3-4782-b9a0-4e87c8aa7044" :
+      "07c7fe19-33c3-4782-b9a0-4e87c8aa7044", // Default a Marco Nigro per altri utenti premium
+  email_confirmed_at: new Date().toISOString(),
+  // Aggiungiamo i campi richiesti per il tipo User di Supabase
+  app_metadata: { provider: 'email' },
             user_metadata: { role: email === "agrotecnicomarconigro@gmail.com" ? 'master' : 'user' },
             aud: 'authenticated',
             created_at: new Date().toISOString(),
