@@ -17,7 +17,7 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
 });
 
 // The expert ID is used in multiple places - centralizing it here
-export const EXPERT_ID = "premium-user-id" as const;
+export const EXPERT_ID = "07c7fe19-33c3-4782-b9a0-4e87c8aa7044";
 
 // Helper types for Supabase conversations and messages
 export type DbConversation = Database['public']['Tables']['conversations']['Row'];
