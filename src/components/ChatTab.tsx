@@ -6,6 +6,7 @@ import ExpertChatView from './chat/ExpertChatView';
 import UserChatView from './chat/UserChatView';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { MARCO_NIGRO_ID } from '@/components/phytopathologist';
 
 const ChatTab = () => {
   const { userProfile, isMasterAccount } = useAuth();
@@ -78,7 +79,7 @@ const ChatTab = () => {
               .from('conversations')
               .insert({
                 user_id: userProfile.id,
-                expert_id: 'premium-user-id' // Expert ID
+                expert_id: 'MARCO_NIGRO_ID' // Expert ID
               })
               .select()
               .single();
@@ -104,7 +105,7 @@ const ChatTab = () => {
             .insert({
               conversation_id: conversationId,
               sender_id: userProfile.id,
-              recipient_id: 'premium-user-id', // Expert ID
+              recipient_id: 'MARCO_NIGRO_ID', // Expert ID
               text: messageText
             });
             
