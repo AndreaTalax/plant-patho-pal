@@ -158,7 +158,7 @@ export const signIn = async (email: string, password: string) => {
         
         if (email === "agrotecnicomarconigro@gmail.com") {
           mockRole = 'master';
-          mockUserId = 'premium-user-id';
+          mockUserId = 'MARCO_NIGRO_ID';
         } else if (email === "talaiaandrea@gmail.com") {
           mockUserId = 'talaiaandrea-id';
         } else if (email === "test@gmail.com") {
