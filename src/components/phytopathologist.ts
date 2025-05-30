@@ -1,6 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
 
-// UUID fisso di Marco Nigro
 export const MARCO_NIGRO_ID = '07c7fe19-33c3-4782-b9a0-4e87c8aa7044';
 
 export const getMarcoNigroId = async (): Promise<string> => {
