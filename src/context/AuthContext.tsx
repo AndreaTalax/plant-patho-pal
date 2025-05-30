@@ -131,128 +131,105 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  const login = async (email: string, password: string) => {
-    try {
-      console.log('Attempting login with:', email);
-      
-      // Prova prima il login normale con Supabase
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+const login = async (email: string, password: string) => {
+  try {
+    console.log('Attempting login with:', email);
+    
+    // Prova prima il login normale con Supabase
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
 
-      if (data.user && data.session) {
-        console.log('Successful Supabase login:', email);
-        setUser(data.user);
-        setSession(data.session);
-        toast.success('Login effettuato con successo!');
-        return;
-      }
+    if (data.user && data.session && !error) {
+      console.log('Successful Supabase login:', email);
+      setUser(data.user);
+      setSession(data.session);
+      toast.success('Login effettuato con successo!');
+      return { success: true }; // Restituisci successo esplicito
+    }
+    
+    // Se il login normale fallisce, verifica se è un'email whitelisted
+    const whitelistedEmails = [
+      'test@gmail.com',
+      'premium@gmail.com',
+      'marco.nigro@drplant.it',
+      'fitopatologo@drplant.it'
+    ];
+    
+    if (whitelistedEmails.includes(email)) {
+      console.log('Checking whitelisted email:', email);
       
-      // Se il login normale fallisce, verifica se è un'email whitelisted
-      const whitelistedEmails = [
-        'test@gmail.com',
-        'premium@gmail.com',
-        'marco.nigro@drplant.it',
-        'fitopatologo@drplant.it'
-      ];
-      
-      if (whitelistedEmails.includes(email)) {
-        console.log('Fallback to simulated login for whitelisted email:', email);
-        
-        // Verifica password per test@gmail.com
-        if (email === 'test@gmail.com' && password !== 'test123') {
-          throw new Error('Invalid login credentials');
-        }
-        
-        // Crea un utente simulato con registrazione in Supabase
-        try {
-          const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-            email,
-            password: 'temp123', // Password temporanea
-            options: {
-              data: {
-                first_name: email === 'test@gmail.com' ? 'Test' : 'User',
-                last_name: email === 'test@gmail.com' ? 'User' : 'Name'
-              }
-            }
-          });
-
-          if (signUpData.user && !signUpError) {
-            // Ora prova il login con la password temporanea
-            const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({
-              email,
-              password: 'temp123',
-            });
-
-            if (loginData.user && loginData.session && !loginError) {
-              setUser(loginData.user);
-              setSession(loginData.session);
-              
-              // Crea il profilo utente
-              await createOrUpdateProfile(loginData.user.id, {
-                email: email,
-                username: email.split('@')[0],
-                first_name: email === 'test@gmail.com' ? 'Test' : 'User',
-                last_name: email === 'test@gmail.com' ? 'User' : 'Name',
-                birth_date: '1990-01-01',
-                birth_place: 'Roma'
-              });
-              
-              toast.success('Login effettuato con successo!');
-              return;
-            }
-          }
-        } catch (fallbackError) {
-          console.log('Fallback registration failed, this is expected if user already exists');
-        }
-        
-        // Se tutto fallisce, usa il login normale
+      // Verifica password per test@gmail.com
+      if (email === 'test@gmail.com' && password !== 'test123') {
         throw new Error('Invalid login credentials');
       }
       
-      // Se arriviamo qui, il login è fallito
-      if (error) throw error;
+      // Per le email whitelisted, crea un login simulato
+      try {
+        // Prova prima a registrare l'utente se non esiste
+        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+          email,
+          password: 'temp123',
+          options: {
+            data: {
+              first_name: email === 'test@gmail.com' ? 'Test' : 'User',
+              last_name: email === 'test@gmail.com' ? 'User' : 'Name'
+            }
+          }
+        });
 
-    } catch (error: any) {
-      console.error('Login error:', error?.message || error);
-      toast.error(error?.message || 'Errore durante il login');
-      throw error;
-    }
-  };
+        // Ora prova il login con la password temporanea
+        const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({
+          email,
+          password: 'temp123',
+        });
 
-  const logout = async () => {
-    try {
-      await supabase.auth.signOut();
-      setUser(null);
-      setSession(null);
-      setUserProfile(null);
-      toast.success('Logout effettuato con successo!');
-    } catch (error: any) {
-      console.error('Logout error:', error?.message || error);
-      toast.error('Errore durante il logout');
-      throw error;
-    }
-  };
-
-  const register = async (email: string, password: string) => {
-    try {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-      });
-
-      if (error) throw error;
-
-      if (data.user) {
-        toast.success('Registrazione completata! Controlla la tua email per confermare l\'account.');
+        if (loginData.user && loginData.session && !loginError) {
+          setUser(loginData.user);
+          setSession(loginData.session);
+          
+          // Crea il profilo utente
+          await createOrUpdateProfile(loginData.user.id, {
+            email: email,
+            username: email.split('@')[0],
+            first_name: email === 'test@gmail.com' ? 'Test' : 'User',
+            last_name: email === 'test@gmail.com' ? 'User' : 'Name',
+            birth_date: '1990-01-01',
+            birth_place: 'Roma'
+          });
+          
+          toast.success('Login effettuato con successo!');
+          return { success: true }; // Restituisci successo esplicito
+        }
+      } catch (fallbackError) {
+        console.log('Fallback registration failed, trying direct login');
+        // Se la registrazione fallisce, prova il login diretto
+        const { data: directLogin, error: directError } = await supabase.auth.signInWithPassword({
+          email,
+          password: 'temp123',
+        });
+        
+        if (directLogin.user && directLogin.session && !directError) {
+          setUser(directLogin.user);
+          setSession(directLogin.session);
+          toast.success('Login effettuato con successo!');
+          return { success: true };
+        }
       }
-    } catch (error: any) {
-      console.error('Registration error:', error?.message || error);
-      toast.error(error?.message || 'Errore durante la registrazione');
-      throw error;
     }
-  };
+    
+    // Se arriviamo qui, il login è fallito
+    throw new Error(error?.message || 'Invalid login credentials');
+    
+  } catch (error: any) {
+    console.error('Login error:', error?.message || error);
+    const errorMessage = error?.message || 'Errore durante il login';
+    toast.error(errorMessage);
+    throw new Error(errorMessage); // Importante: fai throw dell'errore
+  }
+};
+
 
   const createOrUpdateProfile = async (userId: string, profileData: any) => {
     try {
