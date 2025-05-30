@@ -96,7 +96,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         .maybeSingle();
 
       if (error) {
-        console.error('Error fetching user profile:', error);
+        console.error('Error fetching user profile:', error.message || error);
         return;
       }
 
@@ -125,8 +125,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         console.log('No profile found for user:', userId);
         setUserProfile(null);
       }
-    } catch (error) {
-      console.error('Error fetching user profile:', error);
+    } catch (error: any) {
+      console.error('Error fetching user profile:', error?.message || error);
       setUserProfile(null);
     }
   };
@@ -237,8 +237,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         toast.success('Login effettuato con successo!');
       }
     } catch (error: any) {
-      console.error('Login error:', error);
-      toast.error(error.message || 'Errore durante il login');
+      console.error('Login error:', error?.message || error);
+      toast.error(error?.message || 'Errore durante il login');
       throw error;
     }
   };
@@ -251,7 +251,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setUserProfile(null);
       toast.success('Logout effettuato con successo!');
     } catch (error: any) {
-      console.error('Logout error:', error);
+      console.error('Logout error:', error?.message || error);
       toast.error('Errore durante il logout');
       throw error;
     }
@@ -270,8 +270,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         toast.success('Registrazione completata! Controlla la tua email per confermare l\'account.');
       }
     } catch (error: any) {
-      console.error('Registration error:', error);
-      toast.error(error.message || 'Errore durante la registrazione');
+      console.error('Registration error:', error?.message || error);
+      toast.error(error?.message || 'Errore durante la registrazione');
       throw error;
     }
   };
@@ -306,15 +306,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         });
 
       if (error) {
-        console.error('Database error:', error);
+        console.error('Database error:', error?.message || error);
         throw error;
       }
 
       console.log('Profile created/updated successfully');
       // Refresh the profile data
       await fetchUserProfile(userId);
-    } catch (error) {
-      console.error('Error creating/updating profile:', error);
+    } catch (error: any) {
+      console.error('Error creating/updating profile:', error?.message || error);
       throw error;
     }
   };
@@ -371,7 +371,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       await fetchUserProfile(user.id);
       toast.success('Profilo aggiornato con successo!');
     } catch (error: any) {
-      console.error('Error updating profile:', error);
+      console.error('Error updating profile:', error?.message || error);
       toast.error('Errore durante l\'aggiornamento del profilo');
       throw error;
     }
@@ -387,7 +387,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (error) throw error;
       toast.success('Password aggiornata con successo!');
     } catch (error: any) {
-      console.error('Error updating password:', error);
+      console.error('Error updating password:', error?.message || error);
       toast.error('Errore durante l\'aggiornamento della password');
       throw error;
     }
