@@ -348,6 +348,37 @@ const login = async (email: string, password: string) => {
     }
   };
 
+  // Aggiungi questa funzione dopo updatePassword e prima del value object
+
+const logout = async () => {
+  try {
+    await supabase.auth.signOut();
+    setUser(null);
+    setSession(null);
+    setUserProfile(null);
+    toast.success('Logout effettuato con successo!');
+  } catch (error: any) {
+    console.error('Logout error:', error?.message || error);
+    toast.error('Errore durante il logout');
+    throw error;
+  }
+};
+const register = async (email: string, password: string) => {
+  try {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+    });
+    if (error) throw error;
+    if (data.user) {
+      toast.success('Registrazione completata! Controlla la tua email per confermare l\'account.');
+    }
+  } catch (error: any) {
+    console.error('Registration error:', error?.message || error);
+    toast.error(error?.message || 'Errore durante la registrazione');
+    throw error;
+  }
+};
   const value: AuthContextType = {
     user,
     session,
