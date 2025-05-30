@@ -59,7 +59,7 @@ export interface DatabaseConversation extends DbConversation {
 
 // Marco Nigro's expert data
 export const EXPERT = {
-  id: "premium-user-id",
+  MARCO_NIGRO_ID: "'07c7fe19-33c3-4782-b9a0-4e87c8aa7044'",
   name: 'Plant Pathologist Marco Nigro', 
   specialty: 'Plant Diagnosis and Treatment', 
   avatar: '/lovable-uploads/c8ba9199-f82d-4a4f-a6ae-1c8e340ed1b5.png',
