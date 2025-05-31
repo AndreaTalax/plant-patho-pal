@@ -81,7 +81,7 @@ export const usePlantDiagnosis = () => {
       }
       
       // Add high-quality product recommendations
-      if (analysisResult.recommendedProducts?.length > 0) {
+      if (analysisResult.recommendedProducts && analysisResult.recommendedProducts.length > 0) {
         diseaseInfo.products = analysisResult.recommendedProducts;
       } else {
         // Select products based on plant type and health status
@@ -109,7 +109,6 @@ export const usePlantDiagnosis = () => {
           dataSource: "Multi-AI High-Accuracy Analysis"
         },
         risultatiCompleti: {
-          enhancedAIResult: analysisResult,
           plantInfo: plantInfo,
           accuracyGuarantee: "90%+"
         },

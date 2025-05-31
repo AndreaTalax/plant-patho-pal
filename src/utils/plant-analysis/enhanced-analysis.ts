@@ -228,6 +228,11 @@ function calculateHighConfidenceConsensus(results: any[], plantInfo: any) {
   let consensusLabel = '';
   let maxWeightedScore = 0;
   
+  // Extract additional properties from results
+  let scientificName = '';
+  let plantPart = 'whole plant';
+  let recommendedProducts: string[] = [];
+  
   for (const result of results) {
     const adjustedWeight = result.weight * result.confidence;
     totalWeight += adjustedWeight;
@@ -236,22 +241,48 @@ function calculateHighConfidenceConsensus(results: any[], plantInfo: any) {
     if (adjustedWeight > maxWeightedScore) {
       maxWeightedScore = adjustedWeight;
       consensusLabel = result.label;
+      scientificName = result.scientificName || '';
+      plantPart = result.plantPart || 'whole plant';
+    }
+    
+    // Collect recommended products
+    if (result.recommendedProducts) {
+      recommendedProducts = [...recommendedProducts, ...result.recommendedProducts];
     }
   }
   
   const finalConfidence = weightedConfidence / totalWeight;
   
-  // Enhanced result structure
+  // Determine plant part based on symptoms or analysis
+  if (plantInfo?.symptoms?.toLowerCase().includes('foglia') || 
+      plantInfo?.symptoms?.toLowerCase().includes('leaf')) {
+    plantPart = 'leaf';
+  }
+  
+  // Generate recommended products based on health status
+  if (recommendedProducts.length === 0) {
+    const isHealthy = results.every(r => r.healthy !== false);
+    if (!isHealthy) {
+      recommendedProducts = ['Fungicida biologico', 'Trattamento specifico', 'Nutriente riparatore'];
+    } else {
+      recommendedProducts = ['Fertilizzante biologico', 'Stimolante crescita'];
+    }
+  }
+  
+  // Enhanced result structure with all required properties
   return {
     label: consensusLabel,
     confidence: finalConfidence,
     plantName: consensusLabel,
+    scientificName: scientificName,
+    plantPart: plantPart,
     healthy: results.every(r => r.healthy !== false),
     disease: results.find(r => r.disease)?.disease || null,
     multiModelConsensus: true,
     sources: results.map(r => r.source),
     plantInfoContext: plantInfo,
-    accuracyLevel: finalConfidence >= 0.9 ? 'high' : 'medium'
+    accuracyLevel: finalConfidence >= 0.9 ? 'high' : 'medium',
+    recommendedProducts: recommendedProducts
   };
 }
 
