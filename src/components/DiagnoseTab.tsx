@@ -11,6 +11,7 @@ import { AuthRequiredDialog } from './auth/AuthRequiredDialog';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import { notifyExpert } from '@/components/expert/NotifyExpertService';
+import { EXPERT } from '@/components/chat/types';
 
 // Importing our components
 import DiagnoseHeader from './diagnose/DiagnoseHeader';
@@ -53,6 +54,71 @@ const DiagnoseTab = () => {
     stopCameraStream,
     setUploadedImage
   } = usePlantDiagnosis();
+
+  // Function to automatically send plant info to expert chat
+  const sendPlantInfoToExpertChat = async (plantData: PlantInfoFormValues) => {
+    if (!isAuthenticated || !userProfile) return;
+
+    try {
+      // Find or create conversation with expert
+      const { data: existingConversation } = await supabase
+        .from('conversations')
+        .select('id')
+        .eq('user_id', userProfile.id)
+        .eq('expert_id', EXPERT.id)
+        .single();
+
+      let conversationId;
+      if (!existingConversation) {
+        const { data: newConversation, error: convError } = await supabase
+          .from('conversations')
+          .insert({
+            user_id: userProfile.id,
+            expert_id: EXPERT.id,
+            status: 'active'
+          })
+          .select()
+          .single();
+
+        if (convError) {
+          console.error("Error creating conversation:", convError);
+          return;
+        }
+        conversationId = newConversation.id;
+      } else {
+        conversationId = existingConversation.id;
+      }
+
+      // Prepare message with plant information
+      let messageText = "🌿 Nuove informazioni sulla pianta:\n\n";
+      if (plantData.name) {
+        messageText += `📝 **Nome:** ${plantData.name}\n`;
+      }
+      messageText += `🏠 **Ambiente:** ${plantData.isIndoor ? 'Interno' : 'Esterno'}\n`;
+      messageText += `💧 **Frequenza irrigazione:** ${plantData.wateringFrequency} volte/settimana\n`;
+      messageText += `☀️ **Esposizione luce:** ${plantData.lightExposure}\n`;
+      messageText += `🔍 **Sintomi:** ${plantData.symptoms}\n`;
+
+      // Send message with plant information
+      const { error: msgError } = await supabase
+        .from('messages')
+        .insert({
+          conversation_id: conversationId,
+          sender_id: userProfile.id,
+          recipient_id: EXPERT.id,
+          text: messageText
+        });
+
+      if (msgError) {
+        console.error("Error sending plant information:", msgError);
+        return;
+      }
+
+      toast.success("Informazioni pianta inviate automaticamente all'esperto");
+    } catch (error) {
+      console.error("Error sending plant info to chat:", error);
+    }
+  };
 
   const handleImageUploadEvent = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!plantInfo.infoComplete) {
@@ -122,6 +188,11 @@ const DiagnoseTab = () => {
     };
     
     setPlantInfo(updatedPlantInfo);
+
+    // Automatically send plant info to expert chat if user is authenticated
+    if (isAuthenticated && userProfile) {
+      await sendPlantInfoToExpertChat(data);
+    }
     
     setTimeout(() => {
       window.scrollTo({
