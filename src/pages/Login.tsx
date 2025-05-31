@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -39,7 +40,7 @@ const handleLogin = async (e: React.FormEvent) => {
           description: "Accesso completo come amministratore",
           dismissible: true,
         });
-        navigate("/"); // Cambia in "/admin" se hai una rotta admin
+        navigate("/");
       } else {
         toast.success("Login successful", {
           description: "Welcome to your account!",
@@ -58,7 +59,6 @@ const handleLogin = async (e: React.FormEvent) => {
     setIsLoading(false);
   }
 };
-
 
   return (
     <div className="h-screen w-full bg-gradient-to-b from-drplant-blue-light via-white to-drplant-green/10 flex flex-col items-center justify-center px-4">

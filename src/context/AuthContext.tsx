@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User, Session } from '@supabase/supabase-js';
@@ -30,7 +29,7 @@ interface AuthContextType {
   isProfileComplete: boolean;
   isMasterAccount: boolean;
   loading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<{ success: boolean }>;
   logout: () => Promise<void>;
   register: (email: string, password: string) => Promise<void>;
   updateProfile: (updates: Partial<UserProfile> | string, value?: any) => Promise<void>;
@@ -131,7 +130,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-const login = async (email: string, password: string) => {
+const login = async (email: string, password: string): Promise<{ success: boolean }> => {
   try {
     console.log('Attempting login with:', email);
     
@@ -146,29 +145,18 @@ const login = async (email: string, password: string) => {
       setUser(data.user);
       setSession(data.session);
       toast.success('Login effettuato con successo!');
-      return { success: true }; // Restituisci successo esplicito
+      return { success: true };
     }
     
     // Se il login normale fallisce, verifica se è un'email whitelisted
     const whitelistedEmails = [
-  'test@gmail.com',
-  'premium@gmail.com',
-  'marco.nigro@drplant.it',
-  'fitopatologo@drplant.it',
-  'agrotecnicomarconigro@gmail.com' 
-];
-    // Aggiungi la gestione specifica per Marco
-if (email === 'agrotecnicomarconigro@gmail.com') {
-  // Crea il profilo per Marco se non esiste
-  await createOrUpdateProfile(loginData.user.id, {
-    email: email,
-    username: 'marco.nigro',
-    first_name: 'Marco',
-    last_name: 'Nigro',
-    role: 'expert',
-    subscription_plan: 'premium'
-  });
-}
+      'test@gmail.com',
+      'premium@gmail.com',
+      'marco.nigro@drplant.it',
+      'fitopatologo@drplant.it',
+      'agrotecnicomarconigro@gmail.com' 
+    ];
+    
     if (whitelistedEmails.includes(email)) {
       console.log('Checking whitelisted email:', email);
       
@@ -211,8 +199,21 @@ if (email === 'agrotecnicomarconigro@gmail.com') {
             birth_place: 'Roma'
           });
           
+          // Aggiungi la gestione specifica per Marco
+          if (email === 'agrotecnicomarconigro@gmail.com') {
+            // Crea il profilo per Marco se non esiste
+            await createOrUpdateProfile(loginData.user.id, {
+              email: email,
+              username: 'marco.nigro',
+              first_name: 'Marco',
+              last_name: 'Nigro',
+              role: 'expert',
+              subscription_plan: 'premium'
+            });
+          }
+          
           toast.success('Login effettuato con successo!');
-          return { success: true }; // Restituisci successo esplicito
+          return { success: true };
         }
       } catch (fallbackError) {
         console.log('Fallback registration failed, trying direct login');
@@ -238,10 +239,9 @@ if (email === 'agrotecnicomarconigro@gmail.com') {
     console.error('Login error:', error?.message || error);
     const errorMessage = error?.message || 'Errore durante il login';
     toast.error(errorMessage);
-    throw new Error(errorMessage); // Importante: fai throw dell'errore
+    throw new Error(errorMessage);
   }
 };
-
 
   const createOrUpdateProfile = async (userId: string, profileData: any) => {
     try {
@@ -287,70 +287,70 @@ if (email === 'agrotecnicomarconigro@gmail.com') {
   };
 
   const updateProfile = async (updates: Partial<UserProfile> | string, value?: any) => {
-  if (!user) throw new Error('User not authenticated');
-  
-  try {
-    console.log('Current user ID:', user.id);
-    console.log('User session:', session);
+    if (!user) throw new Error('User not authenticated');
     
-    let profileUpdates: any;
-    if (typeof updates === 'string') {
-      profileUpdates = { [updates]: value };
-    } else {
-      profileUpdates = updates;
-    }
-
-    // Map camelCase to snake_case for database
-    const dbUpdates: any = {};
-    Object.keys(profileUpdates).forEach(key => {
-      switch (key) {
-        case 'firstName':
-          dbUpdates.first_name = profileUpdates[key];
-          break;
-        case 'lastName':
-          dbUpdates.last_name = profileUpdates[key];
-          break;
-        case 'birthDate':
-          dbUpdates.birth_date = profileUpdates[key];
-          break;
-        case 'birthPlace':
-          dbUpdates.birth_place = profileUpdates[key];
-          break;
-        case 'avatarUrl':
-          dbUpdates.avatar_url = profileUpdates[key];
-          break;
-        default:
-          dbUpdates[key] = profileUpdates[key];
+    try {
+      console.log('Current user ID:', user.id);
+      console.log('User session:', session);
+      
+      let profileUpdates: any;
+      if (typeof updates === 'string') {
+        profileUpdates = { [updates]: value };
+      } else {
+        profileUpdates = updates;
       }
-    });
 
-    dbUpdates.updated_at = new Date().toISOString();
-    
-    console.log('Updating profile with:', dbUpdates);
-    console.log('User ID for update:', user.id);
+      // Map camelCase to snake_case for database
+      const dbUpdates: any = {};
+      Object.keys(profileUpdates).forEach(key => {
+        switch (key) {
+          case 'firstName':
+            dbUpdates.first_name = profileUpdates[key];
+            break;
+          case 'lastName':
+            dbUpdates.last_name = profileUpdates[key];
+            break;
+          case 'birthDate':
+            dbUpdates.birth_date = profileUpdates[key];
+            break;
+          case 'birthPlace':
+            dbUpdates.birth_place = profileUpdates[key];
+            break;
+          case 'avatarUrl':
+            dbUpdates.avatar_url = profileUpdates[key];
+            break;
+          default:
+            dbUpdates[key] = profileUpdates[key];
+        }
+      });
 
-    const { data, error } = await supabase
-      .from('profiles')
-      .update(dbUpdates)
-      .eq('id', user.id)
-      .select(); // Aggiungi select per vedere cosa viene restituito
+      dbUpdates.updated_at = new Date().toISOString();
+      
+      console.log('Updating profile with:', dbUpdates);
+      console.log('User ID for update:', user.id);
 
-    if (error) {
-      console.error('Supabase error details:', error);
+      const { data, error } = await supabase
+        .from('profiles')
+        .update(dbUpdates)
+        .eq('id', user.id)
+        .select();
+
+      if (error) {
+        console.error('Supabase error details:', error);
+        throw error;
+      }
+
+      console.log('Update successful, data:', data);
+      
+      // Refresh the profile data
+      await fetchUserProfile(user.id);
+      toast.success('Profilo aggiornato con successo!');
+    } catch (error: any) {
+      console.error('Error updating profile:', error?.message || error);
+      toast.error('Errore durante l\'aggiornamento del profilo');
       throw error;
     }
-
-    console.log('Update successful, data:', data);
-    
-    // Refresh the profile data
-    await fetchUserProfile(user.id);
-    toast.success('Profilo aggiornato con successo!');
-  } catch (error: any) {
-    console.error('Error updating profile:', error?.message || error);
-    toast.error('Errore durante l\'aggiornamento del profilo');
-    throw error;
-  }
-};
+  };
 
   const updateUsername = async (username: string) => {
     await updateProfile({ username });
@@ -368,37 +368,37 @@ if (email === 'agrotecnicomarconigro@gmail.com') {
     }
   };
 
-  // Aggiungi questa funzione dopo updatePassword e prima del value object
-
-const logout = async () => {
-  try {
-    await supabase.auth.signOut();
-    setUser(null);
-    setSession(null);
-    setUserProfile(null);
-    toast.success('Logout effettuato con successo!');
-  } catch (error: any) {
-    console.error('Logout error:', error?.message || error);
-    toast.error('Errore durante il logout');
-    throw error;
-  }
-};
-const register = async (email: string, password: string) => {
-  try {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-    });
-    if (error) throw error;
-    if (data.user) {
-      toast.success('Registrazione completata! Controlla la tua email per confermare l\'account.');
+  const logout = async () => {
+    try {
+      await supabase.auth.signOut();
+      setUser(null);
+      setSession(null);
+      setUserProfile(null);
+      toast.success('Logout effettuato con successo!');
+    } catch (error: any) {
+      console.error('Logout error:', error?.message || error);
+      toast.error('Errore durante il logout');
+      throw error;
     }
-  } catch (error: any) {
-    console.error('Registration error:', error?.message || error);
-    toast.error(error?.message || 'Errore durante la registrazione');
-    throw error;
-  }
-};
+  };
+
+  const register = async (email: string, password: string) => {
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+      });
+      if (error) throw error;
+      if (data.user) {
+        toast.success('Registrazione completata! Controlla la tua email per confermare l\'account.');
+      }
+    } catch (error: any) {
+      console.error('Registration error:', error?.message || error);
+      toast.error(error?.message || 'Errore durante la registrazione');
+      throw error;
+    }
+  };
+
   const value: AuthContextType = {
     user,
     session,

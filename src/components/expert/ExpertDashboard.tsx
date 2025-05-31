@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -30,8 +29,8 @@ interface Consultation {
 interface ConversationSummary {
   id: string;
   user_id: string;
-  last_message_text: string;
-  last_message_timestamp: string;
+  last_message_text?: string;
+  last_message_timestamp?: string;
   status: string;
   user_profile?: {
     first_name: string;
@@ -115,7 +114,7 @@ const ExpertDashboard = () => {
       if (conversationsError) {
         console.error('Error loading conversations:', conversationsError);
       } else {
-        // Get user profiles for each conversation
+        // Get user profiles for each conversation and map to ConversationSummary format
         const conversationsWithProfiles = await Promise.all(
           (conversationsData || []).map(async (conversation) => {
             const { data: profile, error: profileError } = await supabase
@@ -129,7 +128,11 @@ const ExpertDashboard = () => {
             }
             
             return {
-              ...conversation,
+              id: conversation.id,
+              user_id: conversation.user_id,
+              last_message_text: conversation.last_message_at ? 'Recent message' : 'No messages yet',
+              last_message_timestamp: conversation.last_message_at,
+              status: conversation.status || 'active',
               user_profile: profile
             };
           })
