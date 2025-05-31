@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { modelInfo } from '@/utils/aiDiagnosisUtils';
@@ -227,12 +226,9 @@ const DiagnoseTab = () => {
   }
 
   function navigateToChat() {
-    navigate('/');
-    // Using a slight timeout to ensure navigation completes before tab selection
-    setTimeout(() => {
-      const event = new CustomEvent('switchTab', { detail: 'chat' });
-      window.dispatchEvent(event);
-    }, 100);
+    // Invia evento personalizzato per switchare alla tab chat
+    const event = new CustomEvent('switchTab', { detail: 'chat' });
+    window.dispatchEvent(event);
   }
 
   function navigateToShop(productId?: string) {

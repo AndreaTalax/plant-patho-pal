@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import Header from "@/components/Header";
 import DiagnoseTab from "@/components/DiagnoseTab";
@@ -13,6 +13,19 @@ import BottomNavigation from "@/components/BottomNavigation";
 const Index = () => {
   const [activeTab, setActiveTab] = useState<string>("diagnose");
   const { isMasterAccount } = useAuth();
+
+  // Ascolta eventi personalizzati per il cambio tab
+  useEffect(() => {
+    const handleSwitchTab = (event: CustomEvent) => {
+      setActiveTab(event.detail);
+    };
+
+    window.addEventListener('switchTab', handleSwitchTab as EventListener);
+    
+    return () => {
+      window.removeEventListener('switchTab', handleSwitchTab as EventListener);
+    };
+  }, []);
 
   const renderTabContent = () => {
     switch (activeTab) {

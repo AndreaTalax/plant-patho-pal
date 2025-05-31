@@ -9,35 +9,71 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      consultations: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          expert_id: string | null
+          id: string
+          image_url: string | null
+          plant_type: string | null
+          status: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          expert_id?: string | null
+          id?: string
+          image_url?: string | null
+          plant_type?: string | null
+          status?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          expert_id?: string | null
+          id?: string
+          image_url?: string | null
+          plant_type?: string | null
+          status?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       conversations: {
         Row: {
-          created_at: string
-          expert_id: string
+          created_at: string | null
+          expert_id: string | null
           id: string
-          last_message_text: string | null
-          last_message_timestamp: string | null
+          last_message_at: string | null
           status: string | null
-          updated_at: string
+          title: string | null
+          updated_at: string | null
           user_id: string
         }
         Insert: {
-          created_at?: string
-          expert_id: string
+          created_at?: string | null
+          expert_id?: string | null
           id?: string
-          last_message_text?: string | null
-          last_message_timestamp?: string | null
+          last_message_at?: string | null
           status?: string | null
-          updated_at?: string
+          title?: string | null
+          updated_at?: string | null
           user_id: string
         }
         Update: {
-          created_at?: string
-          expert_id?: string
+          created_at?: string | null
+          expert_id?: string | null
           id?: string
-          last_message_text?: string | null
-          last_message_timestamp?: string | null
+          last_message_at?: string | null
           status?: string | null
-          updated_at?: string
+          title?: string | null
+          updated_at?: string | null
           user_id?: string
         }
         Relationships: []
@@ -133,15 +169,40 @@ export type Database = {
           sent_at?: string
           text?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "messages_conversation_id_fkey"
-            columns: ["conversation_id"]
-            isOneToOne: false
-            referencedRelation: "conversations"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
+      }
+      notifications: {
+        Row: {
+          created_at: string | null
+          data: Json | null
+          id: string
+          message: string
+          read: boolean | null
+          title: string
+          type: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          data?: Json | null
+          id?: string
+          message: string
+          read?: boolean | null
+          title: string
+          type?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          data?: Json | null
+          id?: string
+          message?: string
+          read?: boolean | null
+          title?: string
+          type?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
       }
       profiles: {
         Row: {
@@ -149,7 +210,7 @@ export type Database = {
           avatar_url: string | null
           birth_date: string | null
           birth_place: string | null
-          created_at: string
+          created_at: string | null
           email: string | null
           first_name: string | null
           id: string
@@ -157,7 +218,7 @@ export type Database = {
           phone: string | null
           role: string | null
           subscription_plan: string | null
-          updated_at: string
+          updated_at: string | null
           username: string | null
         }
         Insert: {
@@ -165,7 +226,7 @@ export type Database = {
           avatar_url?: string | null
           birth_date?: string | null
           birth_place?: string | null
-          created_at?: string
+          created_at?: string | null
           email?: string | null
           first_name?: string | null
           id: string
@@ -173,7 +234,7 @@ export type Database = {
           phone?: string | null
           role?: string | null
           subscription_plan?: string | null
-          updated_at?: string
+          updated_at?: string | null
           username?: string | null
         }
         Update: {
@@ -181,7 +242,7 @@ export type Database = {
           avatar_url?: string | null
           birth_date?: string | null
           birth_place?: string | null
-          created_at?: string
+          created_at?: string | null
           email?: string | null
           first_name?: string | null
           id?: string
@@ -189,7 +250,7 @@ export type Database = {
           phone?: string | null
           role?: string | null
           subscription_plan?: string | null
-          updated_at?: string
+          updated_at?: string | null
           username?: string | null
         }
         Relationships: []
