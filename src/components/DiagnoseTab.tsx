@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { modelInfo } from '@/utils/aiDiagnosisUtils';
@@ -173,7 +174,7 @@ const DiagnoseTab = () => {
     setShowCamera(true);
   };
 
-  function handlePlantInfoSubmit(data: PlantInfoFormValues) {
+  async function handlePlantInfoSubmit(data: PlantInfoFormValues) {
     const updatedPlantInfo = {
       isIndoor: data.isIndoor,
       wateringFrequency: data.wateringFrequency,
