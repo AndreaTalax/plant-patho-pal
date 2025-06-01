@@ -5,6 +5,9 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { useState } from "react";
 import { AuthRequiredDialog } from "@/components/auth/AuthRequiredDialog";
+import { supabase } from "@/integrations/supabase/client";
+import { MARCO_NIGRO_ID } from '@/components/phytopathologist';
+import { toast } from "sonner";
 
 interface ActionButtonsProps {
   onStartNewAnalysis: () => void;
@@ -13,6 +16,14 @@ interface ActionButtonsProps {
   saveLoading?: boolean;
   hasValidAnalysis: boolean;
   useAI?: boolean;
+  diagnosisData?: {
+    plantType?: string;
+    plantVariety?: string;
+    symptoms?: string;
+    imageUrl?: string;
+    diagnosisResult?: any;
+    plantInfo?: any;
+  };
 }
 
 const ActionButtons = ({ 
@@ -21,29 +32,86 @@ const ActionButtons = ({
   onChatWithExpert, 
   saveLoading = false,
   hasValidAnalysis,
-  useAI = false
+  useAI = false,
+  diagnosisData
 }: ActionButtonsProps) => {
-  const { user, userProfile } = useAuth(); // Usa 'user' invece di 'isAuthenticated'
+  const { user, userProfile } = useAuth();
   const navigate = useNavigate();
   const [showAuthDialog, setShowAuthDialog] = useState(false);
   
-  const isAuthenticated = !!user; // Calcola isAuthenticated dal user object
+  const isAuthenticated = !!user;
   
-  const handleChatWithExpert = () => {
+  const startChatWithExpert = async () => {
     if (!isAuthenticated) {
       setShowAuthDialog(true);
       return;
     }
-    
-    if (onChatWithExpert) {
-      onChatWithExpert();
-    } else {
-      // Fallback direct navigation if callback not provided
+
+    try {
+      // Prepare diagnosis data for the expert
+      const plantType = diagnosisData?.plantType || diagnosisData?.plantInfo?.name || 'Non specificato';
+      const symptoms = diagnosisData?.symptoms || diagnosisData?.plantInfo?.symptoms || 'Non specificati';
+      const imageUrl = diagnosisData?.imageUrl || null;
+      
+      // Create the conversation
+      const { data: conversation, error: convError } = await supabase
+        .from('conversations')
+        .insert({
+          user_id: user.id,
+          expert_id: MARCO_NIGRO_ID,
+          title: `Consulenza per ${plantType}`,
+          status: 'active'
+        })
+        .select()
+        .single();
+
+      if (convError) throw convError;
+
+      // Create initial message with diagnosis data
+      const initialMessage = `🌱 **Nuova richiesta di consulenza**
+
+**Tipo di pianta:** ${plantType}
+**Sintomi osservati:** ${symptoms}
+
+${imageUrl ? '📸 **Immagine allegata**' : ''}
+
+Ciao Marco, ho bisogno del tuo aiuto per questa pianta. Puoi darmi una diagnosi professionale?`;
+
+      // Insert the initial message
+      const { error: messageError } = await supabase
+        .from('messages')
+        .insert({
+          conversation_id: conversation.id,
+          sender_id: user.id,
+          recipient_id: MARCO_NIGRO_ID,
+          text: initialMessage
+        });
+
+      if (messageError) throw messageError;
+
+      // If there's an image, we could handle it here
+      // For now, the image URL is included in the message text
+
+      // Navigate to chat
       navigate('/');
       setTimeout(() => {
         const event = new CustomEvent('switchTab', { detail: 'chat' });
         window.dispatchEvent(event);
       }, 100);
+      
+      toast.success('Chat avviata con il fitopatologo!');
+
+    } catch (error) {
+      console.error("Errore nell'avvio della chat:", error);
+      toast.error("Errore nell'avvio della chat");
+    }
+  };
+  
+  const handleChatWithExpert = () => {
+    if (onChatWithExpert) {
+      onChatWithExpert();
+    } else {
+      startChatWithExpert();
     }
   };
 
@@ -69,15 +137,13 @@ const ActionButtons = ({
         </Button>
       )}
 
-      {!useAI && (
-        <Button
-          className="w-full bg-drplant-blue-dark hover:bg-drplant-blue-darker flex items-center justify-center gap-2"
-          onClick={handleChatWithExpert}
-        >
-          <MessageCircle className="h-4 w-4" />
-          <span>Vai alla chat con il fitopatologo</span>
-        </Button>
-      )}
+      <Button
+        className="w-full bg-drplant-blue-dark hover:bg-drplant-blue-darker flex items-center justify-center gap-2"
+        onClick={handleChatWithExpert}
+      >
+        <MessageCircle className="h-4 w-4" />
+        <span>Chat con il fitopatologo</span>
+      </Button>
       
       <Button 
         onClick={onStartNewAnalysis} 
@@ -95,12 +161,6 @@ const ActionButtons = ({
             <span>Per una diagnosi definitiva, consulta sempre un esperto</span>
           </div>
         </div>
-      )}
-      
-      {!useAI && (
-        <p className="text-xs text-center text-gray-500 pt-2">
-          La tua richiesta è stata inviata al fitopatologo. Riceverai una risposta al più presto nella sezione Chat.
-        </p>
       )}
       
       <AuthRequiredDialog 

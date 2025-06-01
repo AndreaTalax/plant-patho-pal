@@ -226,6 +226,7 @@ const DiagnosisStages: React.FC<DiagnosisStagesProps> = ({
           isAnalyzing={isAnalyzing}
           onStartNewAnalysis={onStartNewAnalysis}
           onChatWithExpert={handleNavigateToChat}
+          analysisDetails={analysisDetails}
         />
       </>
     );

@@ -78,6 +78,48 @@ export type Database = {
         }
         Relationships: []
       }
+      diagnoses: {
+        Row: {
+          created_at: string | null
+          diagnosis_result: Json | null
+          id: string
+          image_url: string | null
+          phytopathologist_id: string | null
+          plant_type: string | null
+          plant_variety: string | null
+          status: string | null
+          symptoms: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          diagnosis_result?: Json | null
+          id?: string
+          image_url?: string | null
+          phytopathologist_id?: string | null
+          plant_type?: string | null
+          plant_variety?: string | null
+          status?: string | null
+          symptoms?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          diagnosis_result?: Json | null
+          id?: string
+          image_url?: string | null
+          phytopathologist_id?: string | null
+          plant_type?: string | null
+          plant_variety?: string | null
+          status?: string | null
+          symptoms?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       diagnosi_piante: {
         Row: {
           accuratezza: number

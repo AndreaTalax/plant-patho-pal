@@ -1,288 +1,188 @@
 
 import { useState } from 'react';
-import { AnalysisDetails, DiagnosisResultProps } from '../types';
-import ImageDisplay from './ImageDisplay';
-import PlantInfoCard from './PlantInfoCard';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Loader2, Eye, EyeOff, Thermometer, Leaf } from 'lucide-react';
+import DiagnosisTabs from '../DiagnosisTabs';
 import ActionButtons from './ActionButtons';
-import AiServicesData from './AiServicesData';
-import EppoDataPanel from './EppoDataPanel';
-import { formatHuggingFaceResult } from '@/utils/plant-analysis';
-import { Loader2, Info, Leaf, Heart, AlertTriangle } from 'lucide-react';
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from 'sonner';
-import { useNavigate } from 'react-router-dom';
+import { DiagnosedDisease, PlantInfo, AnalysisDetails } from '../types';
 
-// Add a new component for care instructions
-const CareInstructionsCard = ({ careInstructions, habitat }) => {
-  if (!careInstructions && !habitat) return null;
-  
-  return (
-    <div className="bg-white rounded-lg shadow-md p-4 mb-4">
-      <div className="flex items-center mb-3">
-        <Leaf className="w-5 h-5 text-green-500 mr-2" />
-        <h3 className="text-lg font-medium">Cura della pianta e habitat</h3>
-      </div>
-      
-      {habitat && (
-        <div className="mb-3">
-          <h4 className="font-medium text-gray-700 mb-1">Habitat naturale:</h4>
-          <p className="text-gray-600 text-sm">{habitat}</p>
-        </div>
-      )}
-      
-      {careInstructions && (
-        <div className="space-y-2 mt-2">
-          <h4 className="font-medium text-gray-700">Consigli per la cura:</h4>
-          
-          {careInstructions.watering && (
-            <div className="text-sm">
-              <span className="font-medium text-gray-700">Irrigazione: </span>
-              <span className="text-gray-600">{careInstructions.watering}</span>
-            </div>
-          )}
-          
-          {careInstructions.light && (
-            <div className="text-sm">
-              <span className="font-medium text-gray-700">Luce: </span>
-              <span className="text-gray-600">{careInstructions.light}</span>
-            </div>
-          )}
-          
-          {careInstructions.soil && (
-            <div className="text-sm">
-              <span className="font-medium text-gray-700">Terreno: </span>
-              <span className="text-gray-600">{careInstructions.soil}</span>
-            </div>
-          )}
-          
-          {careInstructions.humidity && (
-            <div className="text-sm">
-              <span className="font-medium text-gray-700">Umidità: </span>
-              <span className="text-gray-600">{careInstructions.humidity}</span>
-            </div>
-          )}
-          
-          {careInstructions.temperature && (
-            <div className="text-sm">
-              <span className="font-medium text-gray-700">Temperatura: </span>
-              <span className="text-gray-600">{careInstructions.temperature}</span>
-            </div>
-          )}
-          
-          {careInstructions.fertilizer && (
-            <div className="text-sm">
-              <span className="font-medium text-gray-700">Fertilizzazione: </span>
-              <span className="text-gray-600">{careInstructions.fertilizer}</span>
-            </div>
-          )}
-          
-          {careInstructions.propagation && (
-            <div className="text-sm">
-              <span className="font-medium text-gray-700">Propagazione: </span>
-              <span className="text-gray-600">{careInstructions.propagation}</span>
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-};
+interface DiagnosisResultProps {
+  imageSrc: string;
+  plantInfo: PlantInfo;
+  analysisData: DiagnosedDisease | null;
+  isAnalyzing: boolean;
+  onStartNewAnalysis: () => void;
+  onChatWithExpert?: () => void;
+  analysisDetails?: AnalysisDetails | null;
+}
 
-// Add a new component for AI Services information
-const AIServicesInfoCard = ({ sources, privacyInfo }) => {
-  if (!sources && !privacyInfo) return null;
-  
-  return (
-    <div className="bg-white rounded-lg shadow-md p-4 mb-4">
-      <div className="flex items-center mb-3">
-        <Info className="w-5 h-5 text-blue-500 mr-2" />
-        <h3 className="text-lg font-medium">Informazioni sui servizi AI</h3>
-      </div>
-      
-      {sources && sources.length > 0 && (
-        <div className="mb-3">
-          <h4 className="font-medium text-gray-700 mb-1">Servizi AI utilizzati:</h4>
-          <div className="flex flex-wrap gap-2">
-            {sources.map((source, index) => (
-              <span key={index} className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
-                {source}
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
-      
-      {privacyInfo && (
-        <div className="mt-3 text-sm text-gray-600">
-          <h4 className="font-medium text-gray-700 mb-1">Informazioni sulla privacy:</h4>
-          <p className="mb-1">
-            {privacyInfo.dataUsage || "Le tue immagini vengono analizzate solo per fornirti consigli sulla pianta e non vengono condivise con terze parti."}
-          </p>
-          <p>
-            {privacyInfo.dataRetention || "Le immagini vengono conservate temporaneamente per il tempo necessario all'analisi e poi eliminate."}
-          </p>
-        </div>
-      )}
-    </div>
-  );
-};
-
-const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
+const DiagnosisResult = ({
   imageSrc,
   plantInfo,
   analysisData,
   isAnalyzing,
   onStartNewAnalysis,
-  onChatWithExpert
-}) => {
-  const [saveLoading, setSaveLoading] = useState(false);
-  const [analysisDetails, setAnalysisDetails] = useState<AnalysisDetails | null>(null);
-  const navigate = useNavigate();
+  onChatWithExpert,
+  analysisDetails
+}: DiagnosisResultProps) => {
+  const [showThermalMap, setShowThermalMap] = useState(false);
+  const [activeTab, setActiveTab] = useState('overview');
 
-  // Process raw analysis data when it becomes available
-  useState(() => {
-    if (analysisData && !analysisDetails) {
-      // Verifica se i dati sono già nel nuovo formato standardizzato
-      if (analysisData && typeof analysisData === 'object') {
-        const formattedData = formatHuggingFaceResult(analysisData);
-        setAnalysisDetails(formattedData);
-      }
-    }
-  });
-
-  // Save diagnosis to user profile
-  const saveDiagnosis = async () => {
-    if (!analysisData || !imageSrc) return;
-    
-    try {
-      setSaveLoading(true);
-      
-      // Check if user is logged in
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        toast.error("Devi accedere per salvare la diagnosi");
-        setSaveLoading(false);
-        return;
-      }
-      
-      // Create record in the database
-      const { error } = await supabase
-        .from('diagnosi_piante')
-        .insert({
-          immagine_nome: plantInfo?.name || 'Pianta non identificata',
-          malattia: analysisData.healthy ? 'Sana' : (analysisData.disease?.name || analysisData.name),
-          accuratezza: analysisData.confidence || analysisData.score || 0.7,
-          user_id: user.id,
-          risultati_completi: {
-            ...analysisData,
-            plantInfo: {
-              isIndoor: plantInfo.isIndoor,
-              wateringFrequency: plantInfo.wateringFrequency,
-              lightExposure: plantInfo.lightExposure,
-              symptoms: plantInfo.symptoms
-            },
-            standardFormat: {
-              label: analysisData.label,
-              plantPart: analysisData.plantPart || "whole plant",
-              healthy: analysisData.healthy === undefined ? true : analysisData.healthy,
-              disease: analysisData.disease,
-              score: analysisData.score || analysisData.confidence,
-              eppoRegulatedConcern: analysisData.eppoRegulatedConcern
-            }
-          }
-        });
-      
-      if (error) {
-        console.error("Errore nel salvataggio:", error);
-        toast.error("Errore nel salvataggio della diagnosi");
-        setSaveLoading(false);
-        return;
-      }
-      
-      toast.success("Diagnosi salvata con successo!");
-      setSaveLoading(false);
-    } catch (err) {
-      console.error("Errore:", err);
-      toast.error("Si è verificato un errore durante il salvataggio");
-      setSaveLoading(false);
-    }
-  };
-
-  if (isAnalyzing) {
-    return (
-      <div className="flex flex-col items-center justify-center h-64">
-        <Loader2 className="h-10 w-10 text-green-500 animate-spin mb-4" />
-        <p className="text-lg font-medium">Analisi in corso...</p>
-        <p className="text-sm text-gray-500">Stiamo esaminando la tua pianta utilizzando più servizi AI</p>
-      </div>
-    );
-  }
-
-  // Extract care instructions and source information
-  const careInstructions = analysisData?.careInstructions || null;
-  const habitat = analysisData?.habitat || null;
-  const sources = analysisData?.sources || 
-                 (analysisData?.source ? [analysisData.source] : null);
+  // Check if we have a thermal map
+  const hasThermalMap = analysisDetails?.thermalMap && !isAnalyzing;
   
-  // Privacy information
-  const privacyInfo = {
-    dataUsage: "Le tue immagini vengono analizzate solo per fornirti consigli sulla pianta e non vengono condivise con terze parti.",
-    dataRetention: "I dati delle immagini vengono conservati temporaneamente e poi eliminati dopo l'analisi."
+  // Get plant name from analytics or use a default
+  const plantName = analysisDetails?.multiServiceInsights?.plantName || 
+                   analysisDetails?.risultatiCompleti?.plantIdResult?.plantName ||
+                   analysisData?.name || "Pianta";
+  
+  // Check if multi-service identified a plant species
+  const plantSpecies = analysisDetails?.multiServiceInsights?.plantSpecies || plantName;
+
+  // Prepare diagnosis data for expert chat
+  const diagnosisData = {
+    plantType: plantName,
+    plantVariety: plantSpecies !== plantName ? plantSpecies : undefined,
+    symptoms: plantInfo.symptoms,
+    imageUrl: imageSrc,
+    diagnosisResult: analysisData,
+    plantInfo: plantInfo
   };
 
-  // Visualizza i risultati dell'analisi
+  const navigateToLibrary = (resourceId?: string) => {
+    // Implementation for library navigation
+  };
+
+  const navigateToShop = (productId?: string) => {
+    // Implementation for shop navigation
+  };
+
   return (
-    <div className="space-y-4">
-      <ImageDisplay 
-        imageSrc={imageSrc} 
-        isHealthy={analysisData?.healthy || analysisDetails?.multiServiceInsights?.isHealthy}
-      />
-      
-      <PlantInfoCard 
-        plantInfo={plantInfo}
-        analysisDetails={analysisDetails}
-        standardizedData={analysisData} // Pass the standardized data
-      />
-      
-      {/* Display care instructions and habitat information */}
-      <CareInstructionsCard 
-        careInstructions={careInstructions}
-        habitat={habitat}
-      />
-      
-      {plantInfo.useAI && analysisData && (
-        <>
-          <EppoDataPanel 
-            analysisDetails={analysisDetails}
-            userInput={plantInfo.symptoms}
-            eppoData={analysisData.eppoRegulatedConcern} // Pass the direct EPPO data
-          />
+    <Card className="bg-white p-6 shadow-md rounded-2xl w-full max-w-4xl">
+      <div className="flex flex-col lg:flex-row gap-6">
+        {/* Image Section */}
+        <div className="lg:w-2/5">
+          <div className="aspect-square w-full overflow-hidden rounded-xl mb-4 relative">
+            <img 
+              src={imageSrc} 
+              alt="Uploaded plant" 
+              className="w-full h-full object-cover"
+            />
+            
+            {/* Plant species badge */}
+            {plantSpecies && !isAnalyzing && (
+              <div className="absolute top-0 left-0 m-2">
+                <Badge className="bg-drplant-green text-white flex items-center gap-1 py-1.5">
+                  <Leaf className="h-3 w-3" />
+                  <span className="text-xs">{plantSpecies}</span>
+                </Badge>
+              </div>
+            )}
+            
+            {/* Thermal map overlay */}
+            {hasThermalMap && showThermalMap && (
+              <div className="absolute inset-0 mix-blend-overlay">
+                <img 
+                  src={analysisDetails.thermalMap} 
+                  alt="Thermal map" 
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            )}
+          </div>
           
-          <AiServicesData 
-            analysisDetails={analysisDetails}
-            isAnalyzing={isAnalyzing}
-            plantSymptoms={plantInfo.symptoms}
-            standardizedData={analysisData} // Pass the standardized data
+          {/* Thermal map toggle */}
+          {hasThermalMap && (
+            <div className="mb-4">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => setShowThermalMap(!showThermalMap)}
+                className={`flex items-center gap-1.5 w-full ${showThermalMap ? 'bg-drplant-blue-light text-drplant-blue' : ''}`}
+              >
+                {showThermalMap ? (
+                  <>
+                    <EyeOff className="h-4 w-4" /> Nascondi Scansione Termica
+                  </>
+                ) : (
+                  <>
+                    <Thermometer className="h-4 w-4" /> Mostra Scansione Termica
+                  </>
+                )}
+              </Button>
+            </div>
+          )}
+          
+          {/* Plant Info Summary */}
+          <div className="bg-drplant-green/10 p-3 rounded-lg mb-4">
+            <h4 className="font-medium mb-1">Informazioni Pianta</h4>
+            <div className="text-sm space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="text-gray-600">Ambiente:</span>
+                <span>{plantInfo.isIndoor ? "Interno" : "Esterno"}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-gray-600">Irrigazione:</span>
+                <span>{plantInfo.wateringFrequency} volte/settimana</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-gray-600">Nome pianta:</span>
+                <span className="font-medium">{plantName}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Analysis Section */}
+        <div className="lg:w-3/5">
+          {isAnalyzing ? (
+            <div className="flex flex-col items-center justify-center py-8 h-full">
+              <Loader2 className="h-8 w-8 text-drplant-blue animate-spin mb-4" />
+              <p className="text-drplant-blue font-medium mb-2">Analisi della pianta in corso...</p>
+              <p className="text-xs text-gray-500 mt-2 text-center">
+                Servizi AI multipli stanno analizzando la tua pianta
+              </p>
+            </div>
+          ) : analysisData ? (
+            <div className="h-full">
+              <div className="flex items-center gap-2 mb-4">
+                <Badge className="bg-amber-500">
+                  {Math.round(analysisData.confidence * 100)}% Sicurezza
+                </Badge>
+              </div>
+              
+              <DiagnosisTabs
+                disease={analysisData}
+                analysisDetails={analysisDetails}
+                activeTab={activeTab}
+                onTabChange={setActiveTab}
+                onNavigateToLibrary={navigateToLibrary}
+                onNavigateToShop={navigateToShop}
+              />
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-8 h-full">
+              <p className="text-gray-500">Carica un'immagine per iniziare la diagnosi</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Action Buttons */}
+      {!isAnalyzing && (
+        <div className="mt-6">
+          <ActionButtons
+            onStartNewAnalysis={onStartNewAnalysis}
+            onChatWithExpert={onChatWithExpert}
+            hasValidAnalysis={!!analysisData}
+            useAI={plantInfo.useAI}
+            diagnosisData={diagnosisData}
           />
-        </>
+        </div>
       )}
-      
-      {/* Display AI Services Information */}
-      <AIServicesInfoCard
-        sources={sources}
-        privacyInfo={privacyInfo}
-      />
-      
-      <ActionButtons 
-        onStartNewAnalysis={onStartNewAnalysis}
-        onSaveDiagnosis={plantInfo.useAI ? saveDiagnosis : undefined}
-        onChatWithExpert={onChatWithExpert}
-        saveLoading={saveLoading}
-        hasValidAnalysis={!!analysisData && !!analysisDetails && plantInfo.useAI}
-        useAI={plantInfo.useAI}
-      />
-    </div>
+    </Card>
   );
 };
 
