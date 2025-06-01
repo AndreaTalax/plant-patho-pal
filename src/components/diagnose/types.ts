@@ -1,3 +1,4 @@
+
 export interface DiagnosedDisease {
   id: string;
   name: string;
@@ -116,7 +117,8 @@ export interface AnalysisDetails {
     plexiAIResult?: any;
     rougenAIResult?: any;
     plantDiseasesAIResult?: any;
-    plantInfo?: PlantInfo; // Plant info is a valid property here
+    plantInfo?: PlantInfo;
+    accuracyGuarantee?: string; // Add the missing property
   };
   identifiedFeatures?: string[];
   alternativeDiagnoses?: {
