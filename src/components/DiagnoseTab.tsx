@@ -11,7 +11,6 @@ import { useAuth } from '@/context/AuthContext';
 import { AuthRequiredDialog } from './auth/AuthRequiredDialog';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
-import { notifyExpert } from '@/components/expert/NotifyExpertService';
 import { EXPERT } from '@/components/chat/types';
 
 // Importing our components
@@ -61,6 +60,8 @@ const DiagnoseTab = () => {
     if (!isAuthenticated || !userProfile) return;
 
     try {
+      console.log("Sending plant info to expert chat:", plantData);
+      
       // Find or create conversation with expert
       const { data: existingConversation } = await supabase
         .from('conversations')
@@ -76,6 +77,7 @@ const DiagnoseTab = () => {
           .insert({
             user_id: userProfile.id,
             expert_id: EXPERT.id,
+            title: `Consulenza per ${plantData.name || 'pianta'}`,
             status: 'active'
           })
           .select()
@@ -115,6 +117,7 @@ const DiagnoseTab = () => {
         return;
       }
 
+      console.log("Plant information sent successfully");
       toast.success("Informazioni pianta inviate automaticamente all'esperto");
     } catch (error) {
       console.error("Error sending plant info to chat:", error);
@@ -261,11 +264,69 @@ const DiagnoseTab = () => {
 
   async function sendToExpert() {
     try {
-      if (plantInfo.uploadedFile) {
-        await notifyExpert(plantInfo.uploadedFile, undefined, plantInfo);
-      } else if (uploadedImage) {
-        await notifyExpert(undefined, uploadedImage, plantInfo);
+      console.log("Sending to expert...", { uploadedImage, plantInfo });
+      
+      // Create conversation with expert directly
+      const { data: conversation, error: convError } = await supabase
+        .from('conversations')
+        .insert({
+          user_id: userProfile!.id,
+          expert_id: EXPERT.id,
+          title: `Consulenza per ${plantInfo.name || 'pianta'}`,
+          status: 'active'
+        })
+        .select()
+        .single();
+
+      if (convError) {
+        console.error("Error creating conversation:", convError);
+        throw convError;
       }
+
+      // Create initial message with diagnosis data
+      const initialMessage = `🌱 **Nuova richiesta di consulenza**
+
+**Tipo di pianta:** ${plantInfo.name || 'Non specificato'}
+**Sintomi osservati:** ${plantInfo.symptoms || 'Non specificati'}
+
+📸 **Immagine allegata**
+
+Ciao Marco, ho bisogno del tuo aiuto per questa pianta. Puoi darmi una diagnosi professionale?`;
+
+      // Insert the initial message
+      const { error: messageError } = await supabase
+        .from('messages')
+        .insert({
+          conversation_id: conversation.id,
+          sender_id: userProfile!.id,
+          recipient_id: EXPERT.id,
+          text: initialMessage
+        });
+
+      if (messageError) {
+        console.error("Error sending message:", messageError);
+        throw messageError;
+      }
+
+      // Send image as separate message if available
+      if (uploadedImage) {
+        const { error: imageMessageError } = await supabase
+          .from('messages')
+          .insert({
+            conversation_id: conversation.id,
+            sender_id: userProfile!.id,
+            recipient_id: EXPERT.id,
+            text: uploadedImage
+          });
+
+        if (imageMessageError) {
+          console.error("Error sending image message:", imageMessageError);
+          // Don't throw for image, continue
+        }
+      }
+
+      toast.success("Richiesta inviata con successo al fitopatologo!");
+      
     } catch (error) {
       console.error("Error notifying expert:", error);
       toast.error("Errore nell'invio della richiesta all'esperto");

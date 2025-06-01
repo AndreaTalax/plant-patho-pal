@@ -6,7 +6,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useState } from "react";
 import { AuthRequiredDialog } from "@/components/auth/AuthRequiredDialog";
 import { supabase } from "@/integrations/supabase/client";
-import { MARCO_NIGRO_ID } from '@/components/phytopathologist';
+import { EXPERT } from '@/components/chat/types';
 import { toast } from "sonner";
 
 interface ActionButtonsProps {
@@ -48,24 +48,33 @@ const ActionButtons = ({
     }
 
     try {
+      console.log("Starting chat with expert, diagnosisData:", diagnosisData);
+      
       // Prepare diagnosis data for the expert
       const plantType = diagnosisData?.plantType || diagnosisData?.plantInfo?.name || 'Non specificato';
       const symptoms = diagnosisData?.symptoms || diagnosisData?.plantInfo?.symptoms || 'Non specificati';
       const imageUrl = diagnosisData?.imageUrl || null;
+      
+      console.log("Prepared data - plantType:", plantType, "symptoms:", symptoms, "imageUrl:", imageUrl);
       
       // Create the conversation
       const { data: conversation, error: convError } = await supabase
         .from('conversations')
         .insert({
           user_id: user.id,
-          expert_id: MARCO_NIGRO_ID,
+          expert_id: EXPERT.id,
           title: `Consulenza per ${plantType}`,
           status: 'active'
         })
         .select()
         .single();
 
-      if (convError) throw convError;
+      if (convError) {
+        console.error("Error creating conversation:", convError);
+        throw convError;
+      }
+
+      console.log("Conversation created:", conversation);
 
       // Create initial message with diagnosis data
       const initialMessage = `🌱 **Nuova richiesta di consulenza**
@@ -77,20 +86,40 @@ ${imageUrl ? '📸 **Immagine allegata**' : ''}
 
 Ciao Marco, ho bisogno del tuo aiuto per questa pianta. Puoi darmi una diagnosi professionale?`;
 
+      console.log("Initial message:", initialMessage);
+
       // Insert the initial message
       const { error: messageError } = await supabase
         .from('messages')
         .insert({
           conversation_id: conversation.id,
           sender_id: user.id,
-          recipient_id: MARCO_NIGRO_ID,
+          recipient_id: EXPERT.id,
           text: initialMessage
         });
 
-      if (messageError) throw messageError;
+      if (messageError) {
+        console.error("Error sending message:", messageError);
+        throw messageError;
+      }
 
-      // If there's an image, we could handle it here
-      // For now, the image URL is included in the message text
+      // If there's an image, send it as a separate message
+      if (imageUrl) {
+        console.log("Sending image message:", imageUrl);
+        const { error: imageMessageError } = await supabase
+          .from('messages')
+          .insert({
+            conversation_id: conversation.id,
+            sender_id: user.id,
+            recipient_id: EXPERT.id,
+            text: imageUrl
+          });
+
+        if (imageMessageError) {
+          console.error("Error sending image message:", imageMessageError);
+          // Non blocchiamo per l'immagine, continuiamo
+        }
+      }
 
       // Navigate to chat
       navigate('/');

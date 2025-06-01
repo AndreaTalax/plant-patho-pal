@@ -26,8 +26,30 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, isExpertView = false
       );
     }
     
-    // Check if message is an image URL
-    if (message.text.match(/^https?:\/\/.*\.(jpg|jpeg|png|gif|webp)(\?.*)?$/i)) {
+    // Check if message contains plant info format
+    if (message.text.includes('🌿 Nuove informazioni sulla pianta') || message.text.includes('🌿 Informazioni sulla pianta')) {
+      return (
+        <div className="plant-info bg-blue-50 p-4 rounded-lg border-l-4 border-blue-500">
+          <div className="whitespace-pre-line text-sm">{message.text}</div>
+        </div>
+      );
+    }
+    
+    // Check if message is an image URL (base64 data URL or regular URL)
+    if (message.text.match(/^(data:image\/[a-zA-Z]*;base64,|https?:\/\/.*\.(jpg|jpeg|png|gif|webp)(\?.*)?)$/i)) {
+      return (
+        <div className="message-image">
+          <img 
+            src={message.text} 
+            alt="Immagine della pianta" 
+            className="max-w-xs rounded-lg shadow-md"
+          />
+        </div>
+      );
+    }
+    
+    // Check if message is a blob URL
+    if (message.text.startsWith('blob:')) {
       return (
         <div className="message-image">
           <img 
