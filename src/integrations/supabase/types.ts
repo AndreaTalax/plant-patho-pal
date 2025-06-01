@@ -184,6 +184,7 @@ export type Database = {
         Row: {
           conversation_id: string
           id: string
+          metadata: Json | null
           products: Json | null
           read: boolean
           recipient_id: string
@@ -194,6 +195,7 @@ export type Database = {
         Insert: {
           conversation_id: string
           id?: string
+          metadata?: Json | null
           products?: Json | null
           read?: boolean
           recipient_id: string
@@ -204,6 +206,7 @@ export type Database = {
         Update: {
           conversation_id?: string
           id?: string
+          metadata?: Json | null
           products?: Json | null
           read?: boolean
           recipient_id?: string
