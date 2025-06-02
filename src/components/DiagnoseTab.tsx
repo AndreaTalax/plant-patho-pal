@@ -55,12 +55,166 @@ const DiagnoseTab = () => {
     setUploadedImage
   } = usePlantDiagnosis();
 
-  // Function to automatically send plant info to expert chat
-  const sendPlantInfoToExpertChat = async (plantData: PlantInfoFormValues) => {
+  // Enhanced function to send comprehensive plant info to expert chat
+  const sendComprehensivePlantInfoToExpertChat = async (
+    plantData: PlantInfoFormValues, 
+    imageUrl?: string,
+    diagnosisResult?: any
+  ) => {
     if (!isAuthenticated || !userProfile) return;
 
     try {
-      console.log("Sending plant info to expert chat:", plantData);
+      console.log("Sending comprehensive plant info to expert chat:", { plantData, diagnosisResult });
+      
+      // Find or create conversation with expert
+      const { data: existingConversation } = await supabase
+        .from('conversations')
+        .select('id')
+        .eq('user_id', userProfile.id)
+        .eq('expert_id', EXPERT.id)
+        .single();
+
+      let conversationId;
+      if (!existingConversation) {
+        const { data: newConversation, error: convError } = await supabase
+          .from('conversations')
+          .insert({
+            user_id: userProfile.id,
+            expert_id: EXPERT.id,
+            title: `Consulenza per ${plantData.name || 'pianta'}`,
+            status: 'active'
+          })
+          .select()
+          .single();
+
+        if (convError) {
+          console.error("Error creating conversation:", convError);
+          return;
+        }
+        conversationId = newConversation.id;
+      } else {
+        conversationId = existingConversation.id;
+      }
+
+      // Prepare comprehensive message with all available information
+      let messageText = "🌿 **NUOVA CONSULENZA FITOSANITARIA**\n\n";
+      
+      // Basic plant information
+      messageText += "📋 **INFORMAZIONI PIANTA:**\n";
+      if (plantData.name) {
+        messageText += `• **Nome:** ${plantData.name}\n`;
+      }
+      messageText += `• **Ambiente:** ${plantData.isIndoor ? 'Interno' : 'Esterno'}\n`;
+      messageText += `• **Irrigazione:** ${plantData.wateringFrequency} volte/settimana\n`;
+      messageText += `• **Esposizione luce:** ${plantData.lightExposure}\n`;
+      messageText += `• **Sintomi osservati:** ${plantData.symptoms}\n\n`;
+
+      // Add diagnosis results if available
+      if (diagnosisResult && diagnosisResult.diseaseId) {
+        messageText += "🔬 **RISULTATI ANALISI AI:**\n";
+        messageText += `• **Malattia identificata:** ${diagnosisResult.diseaseId.replace('-', ' ')}\n`;
+        messageText += `• **Confidenza:** ${Math.round(diagnosisResult.confidence * 100)}%\n`;
+        
+        if (diagnosisResult.analysisDetails?.identifiedFeatures) {
+          messageText += `• **Caratteristiche identificate:**\n`;
+          diagnosisResult.analysisDetails.identifiedFeatures.forEach((feature: string) => {
+            messageText += `  - ${feature}\n`;
+          });
+        }
+
+        if (diagnosisResult.analysisDetails?.multiServiceInsights) {
+          const insights = diagnosisResult.analysisDetails.multiServiceInsights;
+          messageText += `• **Specie identificata:** ${insights.plantName || 'Non identificata'}\n`;
+          messageText += `• **Parte della pianta:** ${insights.plantPart || 'Non specificata'}\n`;
+          messageText += `• **Stato di salute:** ${insights.isHealthy ? 'Sana' : 'Problematica'}\n`;
+        }
+
+        if (diagnosisResult.analysisDetails?.plantixInsights) {
+          const plantix = diagnosisResult.analysisDetails.plantixInsights;
+          messageText += `• **Severità:** ${plantix.severity}\n`;
+          messageText += `• **Rischio diffusione:** ${plantix.spreadRisk}\n`;
+          
+          if (plantix.environmentalFactors && plantix.environmentalFactors.length > 0) {
+            messageText += `• **Fattori ambientali:**\n`;
+            plantix.environmentalFactors.forEach((factor: string) => {
+              messageText += `  - ${factor}\n`;
+            });
+          }
+        }
+
+        // Add EPPO warning if present
+        if (diagnosisResult.analysisDetails?.eppoData) {
+          messageText += "\n⚠️ **ATTENZIONE - ORGANISMO REGOLAMENTATO EPPO**\n";
+          messageText += `• **Status:** ${diagnosisResult.analysisDetails.eppoData.regulationStatus}\n`;
+          messageText += `• **Livello di allerta:** ${diagnosisResult.analysisDetails.eppoData.warningLevel}\n`;
+          if (diagnosisResult.analysisDetails.eppoData.reportAdvised) {
+            messageText += "• **Raccomandazione:** Segnalazione alle autorità fitosanitarie consigliata\n";
+          }
+        }
+
+        messageText += "\n";
+      }
+
+      // Add request for expert opinion
+      messageText += "💬 **RICHIESTA:**\n";
+      messageText += "Ciao Marco, ho bisogno della tua consulenza professionale per questa pianta. ";
+      
+      if (diagnosisResult) {
+        messageText += "Ho già effettuato un'analisi AI, ma vorrei il tuo parere esperto per confermare la diagnosi e ricevere consigli specifici per il trattamento.";
+      } else {
+        messageText += "Potresti aiutarmi a identificare il problema e suggerirmi il trattamento più appropriato?";
+      }
+
+      messageText += "\n\nGrazie per il tuo tempo e la tua expertise! 🙏";
+
+      // Send the comprehensive message
+      const { error: msgError } = await supabase
+        .from('messages')
+        .insert({
+          conversation_id: conversationId,
+          sender_id: userProfile.id,
+          recipient_id: EXPERT.id,
+          text: messageText
+        });
+
+      if (msgError) {
+        console.error("Error sending comprehensive plant information:", msgError);
+        return;
+      }
+
+      // Send image as separate message if available
+      if (imageUrl) {
+        const { error: imageMessageError } = await supabase
+          .from('messages')
+          .insert({
+            conversation_id: conversationId,
+            sender_id: userProfile.id,
+            recipient_id: EXPERT.id,
+            text: imageUrl
+          });
+
+        if (imageMessageError) {
+          console.error("Error sending image message:", imageMessageError);
+          // Don't throw for image, continue
+        }
+      }
+
+      console.log("Comprehensive plant information sent successfully");
+      toast.success("Informazioni complete inviate automaticamente all'esperto");
+      
+      return conversationId;
+    } catch (error) {
+      console.error("Error sending comprehensive plant info to chat:", error);
+      toast.error("Errore nell'invio automatico delle informazioni");
+    }
+  };
+
+  // Function to automatically send plant info to expert chat (basic version)
+  const sendPlantInfoToExpertChat = async (plantData: PlantInfoFormValues) => {
+    if (!isAuthenticated || !userProfile) return;
+    
+    try {
+      console.log("Sending basic plant info to expert chat:", plantData);
       
       // Find or create conversation with expert
       const { data: existingConversation } = await supabase
@@ -140,7 +294,6 @@ const DiagnoseTab = () => {
         toast.error("Seleziona un file immagine valido");
         return;
       }
-
       // Verifica dimensioni del file (max 10MB)
       if (file.size > 10 * 1024 * 1024) {
         toast.error("Il file è troppo grande. Dimensione massima: 10MB");
@@ -192,7 +345,7 @@ const DiagnoseTab = () => {
     };
     
     setPlantInfo(updatedPlantInfo);
-
+    
     // Automatically send plant info to expert chat if user is authenticated
     if (isAuthenticated && userProfile) {
       await sendPlantInfoToExpertChat(data);
@@ -219,272 +372,5 @@ const DiagnoseTab = () => {
     setPlantInfo({ ...plantInfo, useAI: true, sendToExpert: false });
     
     // If user uploaded a file, process with AI
-    if (plantInfo.uploadedFile) {
-      handleImageUpload(plantInfo.uploadedFile, plantInfo);
-    } else if (uploadedImage && uploadedImage.startsWith('data:image/')) {
-      // If it's a captured image (base64), process with AI
-      captureImage(uploadedImage, plantInfo);
-    }
-  }
-
-  function handleSelectExpert() {
-    // Check if user has uploaded an image
-    if (!uploadedImage) {
-      toast.warning("Carica prima un'immagine della pianta", {
-        dismissible: true,
-        duration: 3000
-      });
-      return;
-    }
-    
-    if (!isAuthenticated) {
-      setAuthDialogConfig({
-        title: "Devi effettuare il login per contattare l'esperto",
-        description: "Per inviare la tua richiesta all'esperto, devi prima accedere."
-      });
-      setShowAuthDialog(true);
-      return;
-    }
-    
-    // Check if user profile is complete
-    if (!userProfile?.firstName || !userProfile?.lastName || !userProfile?.birthDate || !userProfile?.birthPlace) {
-      toast.error("Completa il tuo profilo prima di inviare una richiesta", {
-        description: "Nome, cognome, data e luogo di nascita sono richiesti",
-        duration: 4000
-      });
-      navigate('/complete-profile');
-      return;
-    }
-    
-    setPlantInfo({ ...plantInfo, useAI: false, sendToExpert: true });
-    
-    // Send to expert immediately
-    sendToExpert();
-  }
-
-  async function sendToExpert() {
-    try {
-      console.log("Sending to expert...", { uploadedImage, plantInfo });
-      
-      // Create conversation with expert directly
-      const { data: conversation, error: convError } = await supabase
-        .from('conversations')
-        .insert({
-          user_id: userProfile!.id,
-          expert_id: EXPERT.id,
-          title: `Consulenza per ${plantInfo.name || 'pianta'}`,
-          status: 'active'
-        })
-        .select()
-        .single();
-
-      if (convError) {
-        console.error("Error creating conversation:", convError);
-        throw convError;
-      }
-
-      // Create initial message with diagnosis data
-      const initialMessage = `🌱 **Nuova richiesta di consulenza**
-
-**Tipo di pianta:** ${plantInfo.name || 'Non specificato'}
-**Sintomi osservati:** ${plantInfo.symptoms || 'Non specificati'}
-
-📸 **Immagine allegata**
-
-Ciao Marco, ho bisogno del tuo aiuto per questa pianta. Puoi darmi una diagnosi professionale?`;
-
-      // Insert the initial message
-      const { error: messageError } = await supabase
-        .from('messages')
-        .insert({
-          conversation_id: conversation.id,
-          sender_id: userProfile!.id,
-          recipient_id: EXPERT.id,
-          text: initialMessage
-        });
-
-      if (messageError) {
-        console.error("Error sending message:", messageError);
-        throw messageError;
-      }
-
-      // Send image as separate message if available
-      if (uploadedImage) {
-        const { error: imageMessageError } = await supabase
-          .from('messages')
-          .insert({
-            conversation_id: conversation.id,
-            sender_id: userProfile!.id,
-            recipient_id: EXPERT.id,
-            text: uploadedImage
-          });
-
-        if (imageMessageError) {
-          console.error("Error sending image message:", imageMessageError);
-          // Don't throw for image, continue
-        }
-      }
-
-      toast.success("Richiesta inviata con successo al fitopatologo!");
-      
-    } catch (error) {
-      console.error("Error notifying expert:", error);
-      toast.error("Errore nell'invio della richiesta all'esperto");
-    }
-  }
-
-  async function handleCaptureImage(imageDataUrl: string) {
-    setShowCamera(false);
-    
-    // Verifica che l'immagine sia valida
-    if (!imageDataUrl || !imageDataUrl.startsWith('data:image/')) {
-      toast.error("Immagine non valida");
-      return;
-    }
-    
-    // Pulisci l'immagine precedente se esiste
-    if (uploadedImage && uploadedImage.startsWith('blob:')) {
-      URL.revokeObjectURL(uploadedImage);
-    }
-    
-    // Store the captured image
-    setUploadedImage(imageDataUrl);
-    setPlantInfo({ ...plantInfo, uploadedFile: null, uploadedImageUrl: imageDataUrl });
-  }
-
-  function handleCancelCamera() {
-    console.log("Camera cancelled, cleaning up...");
-    setShowCamera(false);
-    // The camera cleanup is now handled by the CameraCapture component
-  }
-
-  function navigateToChat() {
-    // Invia evento personalizzato per switchare alla tab chat
-    const event = new CustomEvent('switchTab', { detail: 'chat' });
-    window.dispatchEvent(event);
-  }
-
-  function navigateToShop(productId?: string) {
-    navigate('/');
-    setTimeout(() => {
-      const event = new CustomEvent('switchTab', { detail: 'shop' });
-      window.dispatchEvent(event);
-    }, 100);
-  }
-
-  function navigateToLibrary(resourceId?: string) {
-    navigate('/');
-    setTimeout(() => {
-      const event = new CustomEvent('switchTab', { detail: 'library' });
-      window.dispatchEvent(event);
-    }, 100);
-  }
-
-  // Determine which stage we're in based on new flow
-  let currentStage: 'info' | 'capture' | 'options' | 'result' = 'info';
-  if (plantInfo.infoComplete) {
-    if (!uploadedImage) {
-      currentStage = 'capture';
-    } else if (!plantInfo.useAI && !plantInfo.sendToExpert) {
-      currentStage = 'options';
-    } else {
-      currentStage = 'result';
-    }
-  }
-
-  // Handle back navigation with proper state reset
-  const handleBack = () => {
-    if (currentStage === 'result') {
-      // From result, go back to options - reset diagnosis choice
-      setPlantInfo({ ...plantInfo, useAI: false, sendToExpert: false });
-      resetDiagnosis();
-    } else if (currentStage === 'options') {
-      // From options, go back to capture - remove image
-      setUploadedImage(null);
-      resetDiagnosis();
-      setPlantInfo({ ...plantInfo, uploadedFile: null, uploadedImageUrl: null });
-      stopCameraStream();
-    } else if (currentStage === 'capture') {
-      // From capture, go back to info - reset everything
-      setUploadedImage(null);
-      resetDiagnosis();
-      setPlantInfo({ ...plantInfo, infoComplete: false, useAI: false, sendToExpert: false, uploadedFile: null, uploadedImageUrl: null });
-      stopCameraStream();
-    }
-    
-    // Dismiss any active toasts when going back
-    toast.dismiss();
-  };
-
-  const shouldShowBackButton = currentStage !== 'info' && !showCamera;
-
-  return (
-    <div className="flex flex-col items-center justify-start px-4 pt-6 pb-24 min-h-full">
-      {/* Back Button */}
-      {shouldShowBackButton && (
-        <div className="w-full max-w-4xl mb-4">
-          <Button
-            variant="ghost"
-            onClick={handleBack}
-            className="flex items-center gap-2 text-gray-600 hover:text-gray-900"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Indietro
-          </Button>
-        </div>
-      )}
-
-      <DiagnoseHeader 
-        showModelInfo={showModelInfo} 
-        onToggleModelInfo={() => setShowModelInfo(!showModelInfo)} 
-      />
-      
-      {/* PlantNet Model Information Panel */}
-      {showModelInfo && (
-        <ModelInfoPanel modelInfo={modelInfo} onClose={() => setShowModelInfo(false)} />
-      )}
-      
-      <div className="w-full">
-        <DiagnosisStages
-          stage={currentStage}
-          showCamera={showCamera}
-          uploadedImage={uploadedImage}
-          isAnalyzing={isAnalyzing}
-          diagnosedDisease={diagnosedDisease}
-          analysisDetails={analysisDetails}
-          videoRef={videoRef}
-          canvasRef={canvasRef}
-          onPlantInfoComplete={handlePlantInfoSubmit}
-          onPlantInfoEdit={() => setPlantInfo({ ...plantInfo, infoComplete: false })}
-          onSelectAI={handleSelectAI}
-          onSelectExpert={handleSelectExpert}
-          onTakePhoto={takePicture}
-          onUploadPhoto={() => document.getElementById('file-upload')?.click()}
-          onCapture={handleCaptureImage}
-          onCancelCamera={handleCancelCamera}
-          onStartNewAnalysis={resetDiagnosis}
-          onChatWithExpert={navigateToChat}
-        />
-      </div>
-      
-      {/* Hidden file input for image uploads */}
-      <input
-        id="file-upload"
-        type="file"
-        accept="image/*"
-        className="hidden"
-        onChange={handleImageUploadEvent}
-      />
-      
-      {/* Authentication Dialog */}
-      <AuthRequiredDialog 
-        isOpen={showAuthDialog}
-        onClose={() => setShowAuthDialog(false)}
-        title={authDialogConfig.title}
-        description={authDialogConfig.description}
-      />
-    </div>
-  );
-};
-
-export default DiagnoseTab;
+    if (plant
+```
