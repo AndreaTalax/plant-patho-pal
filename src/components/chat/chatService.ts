@@ -1,8 +1,7 @@
-
-import { 
-  supabase, 
-  EXPERT_ID, 
-  DbMessage, 
+import {
+  supabase,
+  EXPERT_ID,
+  DbMessage,
   DbConversation,
   DbConversationInsert,
   DbMessageInsert,
@@ -15,9 +14,9 @@ import {
   asDbInsert,
   asDbUpdate
 } from '@/integrations/supabase/utils';
-import type { 
-  DatabaseConversation, 
-  DatabaseMessage, 
+import type {
+  DatabaseConversation,
+  DatabaseMessage,
   Message,
   Product,
   EXPERT
@@ -27,6 +26,12 @@ import { Json } from '@/integrations/supabase/types';
 // Load conversations from database
 export const loadConversations = async (isMasterAccount: boolean, userId: string) => {
   try {
+    // Validazione input
+    if (!userId || typeof userId !== 'string') {
+      console.error("Invalid userId provided");
+      return [];
+    }
+
     let query;
     
     if (isMasterAccount) {
@@ -62,6 +67,12 @@ export const loadConversations = async (isMasterAccount: boolean, userId: string
 // Find or create conversation between user and expert
 export const findOrCreateConversation = async (userId: string) => {
   try {
+    // Validazione input
+    if (!userId || typeof userId !== 'string') {
+      console.error("Invalid userId provided to findOrCreateConversation");
+      return null;
+    }
+
     // For testing accounts, create a mock conversation ID
     if (userId === "test@gmail.com" || userId === "test-user-id") {
       return {
@@ -119,6 +130,12 @@ export const findOrCreateConversation = async (userId: string) => {
 // Load messages for a specific conversation
 export const loadMessages = async (conversationId: string) => {
   try {
+    // Validazione input
+    if (!conversationId || typeof conversationId !== 'string') {
+      console.error("Invalid conversationId provided");
+      return [];
+    }
+
     // For mock conversations, return empty array
     if (conversationId === "mock-conversation-id") {
       return [];
@@ -146,102 +163,199 @@ export const loadMessages = async (conversationId: string) => {
 const convertProductsToJson = (products?: Product[]): Json => {
   if (!products || products.length === 0) return null;
   
-  return products as unknown as Json;
+  try {
+    // Assicuriamoci che i prodotti siano serializzabili
+    const serializedProducts = products.map(product => ({
+      ...product,
+      // Rimuovi eventuali proprietà non serializzabili
+      id: product.id?.toString(),
+      price: typeof product.price === 'number' ? product.price : parseFloat(product.price?.toString() || '0')
+    }));
+    
+    return serializedProducts as unknown as Json;
+  } catch (error) {
+    console.error("Error converting products to JSON:", error);
+    return null;
+  }
 };
 
 // Send a message
 export const sendMessage = async (
-  conversationId: string, 
-  senderId: string, 
-  recipientId: string, 
+  conversationId: string,
+  senderId: string,
+  recipientId: string,
   text: string,
   products?: Product[]
 ) => {
-  console.log(`Sending message in conversation ${conversationId}: ${text}`);
-  console.log(`Sender ID: ${senderId}, Recipient ID: ${recipientId}`);
-  
-  // For mock conversations, always return success
-  if (conversationId === "mock-conversation-id") {
+  try {
+    console.log(`Sending message in conversation ${conversationId}: ${text}`);
+    console.log(`Sender ID: ${senderId}, Recipient ID: ${recipientId}`);
+
+    // Validazione input
+    if (!conversationId || !senderId || !recipientId || !text) {
+      console.error("Missing required parameters for sendMessage");
+      return false;
+    }
+
+    if (typeof conversationId !== 'string' || typeof senderId !== 'string' || 
+        typeof recipientId !== 'string' || typeof text !== 'string') {
+      console.error("Invalid parameter types for sendMessage");
+      return false;
+    }
+
+    // Validazione lunghezza testo
+    if (text.trim().length === 0) {
+      console.error("Message text cannot be empty");
+      return false;
+    }
+
+    if (text.length > 10000) { // Limite ragionevole per i messaggi
+      console.error("Message text too long");
+      return false;
+    }
+
+    // For mock conversations, always return success
+    if (conversationId === "mock-conversation-id") {
+      return true;
+    }
+
+    const messageData = {
+      conversation_id: conversationId,
+      sender_id: senderId,
+      recipient_id: recipientId,
+      text: text.trim(),
+      products: convertProductsToJson(products),
+      sent_at: new Date().toISOString() // Aggiungi timestamp esplicito
+    };
+
+    console.log("Message data to insert:", messageData);
+
+    const { data, error } = await supabase
+      .from('messages')
+      .insert(messageData)
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Error sending message:", error);
+      console.error("Error details:", {
+        code: error.code,
+        message: error.message,
+        details: error.details,
+        hint: error.hint
+      });
+      return false;
+    }
+
+    console.log("Message sent successfully:", data);
+
+    // Aggiorna il timestamp della conversazione
+    try {
+      await supabase
+        .from('conversations')
+        .update({ updated_at: new Date().toISOString() })
+        .eq('id', conversationId);
+    } catch (updateError) {
+      console.error("Error updating conversation timestamp:", updateError);
+      // Non bloccare l'invio del messaggio per questo errore
+    }
+
+    // Invia notifica quando appropriato
+    try {
+      if (senderId === EXPERT_ID && recipientId !== EXPERT_ID) {
+        // Esperto che scrive a utente normale
+        console.log("Expert sending notification to regular user");
+        await supabase.functions.invoke('send-specialist-notification', {
+          body: {
+            conversation_id: conversationId,
+            sender_id: senderId,
+            recipient_id: recipientId,
+            message_text: text.trim()
+          }
+        });
+      } else if (senderId !== EXPERT_ID && recipientId === EXPERT_ID) {
+        // Utente normale che scrive all'esperto
+        console.log("Regular user sending notification to expert");
+        await supabase.functions.invoke('send-specialist-notification', {
+          body: {
+            conversation_id: conversationId,
+            sender_id: senderId,
+            recipient_id: recipientId,
+            message_text: text.trim()
+          }
+        });
+      }
+    } catch (notificationError) {
+      console.error("Error sending notification:", notificationError);
+      // Continuiamo anche se la notifica fallisce
+    }
+
     return true;
-  }
-  
-  const messageData = {
-    conversation_id: conversationId,
-    sender_id: senderId,
-    recipient_id: recipientId,
-    text,
-    products: convertProductsToJson(products)
-  };
-  
-  const { error } = await supabase
-    .from('messages')
-    .insert(messageData);
-  
-  if (error) {
-    console.error("Error sending message:", error);
+  } catch (error) {
+    console.error("Unexpected error in sendMessage:", error);
     return false;
   }
-
-  // Invia notifica quando:
-  // 1. Il mittente è un utente normale (non l'esperto) E il destinatario è l'esperto
-  // 2. Il mittente è l'esperto E il destinatario è un utente normale
-  if (senderId === EXPERT_ID && recipientId !== EXPERT_ID) {
-    // Esperto che scrive a utente normale
-    console.log("Expert sending notification to regular user");
-    try {
-      await supabase.functions.invoke('send-specialist-notification', {
-        body: {
-          conversation_id: conversationId,
-          sender_id: senderId,
-          recipient_id: recipientId,
-          message_text: text
-        }
-      });
-    } catch (notificationError) {
-      console.error("Error sending expert notification to user:", notificationError);
-      // Continuiamo anche se la notifica fallisce
-    }
-  } 
-  else if (senderId !== EXPERT_ID && recipientId === EXPERT_ID) {
-    // Utente normale che scrive all'esperto
-    console.log("Regular user sending notification to expert");
-    try {
-      await supabase.functions.invoke('send-specialist-notification', {
-        body: {
-          conversation_id: conversationId,
-          sender_id: senderId,
-          recipient_id: recipientId,
-          message_text: text
-        }
-      });
-    } catch (notificationError) {
-      console.error("Error sending user notification to expert:", notificationError);
-      // Continuiamo anche se la notifica fallisce
-    }
-  }
-    
-  return true;
 };
 
 // Update conversation status (archive, block, unblock)
 export const updateConversationStatus = async (conversationId: string, status: string) => {
-  const update = { status };
-  
-  const { error } = await supabase
-    .from('conversations')
-    .update(update)
-    .eq('id', conversationId);
-    
-  return !error;
+  try {
+    // Validazione input
+    if (!conversationId || !status) {
+      console.error("Missing required parameters for updateConversationStatus");
+      return false;
+    }
+
+    const validStatuses = ['active', 'archived', 'blocked'];
+    if (!validStatuses.includes(status)) {
+      console.error("Invalid status provided:", status);
+      return false;
+    }
+
+    const update = { 
+      status,
+      updated_at: new Date().toISOString()
+    };
+
+    const { error } = await supabase
+      .from('conversations')
+      .update(update)
+      .eq('id', conversationId);
+
+    if (error) {
+      console.error("Error updating conversation status:", error);
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error("Error in updateConversationStatus:", error);
+    return false;
+  }
 };
 
 // Convert database message to UI message
 export const convertToUIMessage = (dbMessage: DatabaseMessage): Message => {
-  return {
-    id: dbMessage.id,
-    sender: dbMessage.sender_id === EXPERT_ID ? 'expert' : 'user',
-    text: dbMessage.text,
-    time: new Date(dbMessage.sent_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    products: dbMessage.products as unknown as Product[] || undefined
-  };
+  try {
+    return {
+      id: dbMessage.id,
+      sender: dbMessage.sender_id === EXPERT_ID ? 'expert' : 'user',
+      text: dbMessage.text || '',
+      time: new Date(dbMessage.sent_at).toLocaleTimeString([], { 
+        hour: '2-digit', 
+        minute: '2-digit' 
+      }),
+      products: (dbMessage.products as unknown as Product[]) || undefined
+    };
+  } catch (error) {
+    console.error("Error converting database message to UI message:", error);
+    // Ritorna un messaggio di fallback
+    return {
+      id: dbMessage.id || 'unknown',
+      sender: 'user',
+      text: 'Errore nel caricamento del messaggio',
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      products: undefined
+    };
+  }
 };
