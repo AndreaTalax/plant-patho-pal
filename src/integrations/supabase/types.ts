@@ -51,6 +51,7 @@ export type Database = {
           expert_id: string | null
           id: string
           last_message_at: string | null
+          last_message_text: string | null
           status: string | null
           title: string | null
           updated_at: string | null
@@ -61,6 +62,7 @@ export type Database = {
           expert_id?: string | null
           id?: string
           last_message_at?: string | null
+          last_message_text?: string | null
           status?: string | null
           title?: string | null
           updated_at?: string | null
@@ -71,10 +73,47 @@ export type Database = {
           expert_id?: string | null
           id?: string
           last_message_at?: string | null
+          last_message_text?: string | null
           status?: string | null
           title?: string | null
           updated_at?: string | null
           user_id?: string
+        }
+        Relationships: []
+      }
+      conversations_backup: {
+        Row: {
+          created_at: string | null
+          expert_id: string | null
+          id: string | null
+          last_message_at: string | null
+          last_message_text: string | null
+          status: string | null
+          title: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          expert_id?: string | null
+          id?: string | null
+          last_message_at?: string | null
+          last_message_text?: string | null
+          status?: string | null
+          title?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          expert_id?: string | null
+          id?: string | null
+          last_message_at?: string | null
+          last_message_text?: string | null
+          status?: string | null
+          title?: string | null
+          updated_at?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }
