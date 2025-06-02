@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -24,8 +23,14 @@ const DiagnosisTabs = ({
   onNavigateToLibrary,
   onNavigateToShop
 }: DiagnosisTabsProps) => {
-  // Safely get products array, default to empty array if undefined
-  const products = disease.products || [];
+  // Safely get products array with multiple fallbacks
+  const products = disease?.products || [];
+  
+  // Safe helper function to check if a product is included
+  const hasProduct = (productId: string): boolean => {
+    if (!Array.isArray(products)) return false;
+    return products.includes(productId);
+  };
   
   return (
     <Tabs defaultValue="overview" value={activeTab} onValueChange={onTabChange} className="w-full">
@@ -37,11 +42,11 @@ const DiagnosisTabs = ({
       </TabsList>
       
       <TabsContent value="overview" className="h-full">
-        <h3 className="text-xl font-bold text-drplant-blue mb-2">{disease.name}</h3>
-        <p className="text-gray-700 mb-4">{disease.description}</p>
+        <h3 className="text-xl font-bold text-drplant-blue mb-2">{disease?.name || 'Unknown'}</h3>
+        <p className="text-gray-700 mb-4">{disease?.description || 'No description available'}</p>
         
         <h4 className="font-semibold text-gray-900 mb-2">Causes:</h4>
-        <p className="text-gray-700 mb-4">{disease.causes}</p>
+        <p className="text-gray-700 mb-4">{disease?.causes || 'Unknown causes'}</p>
         
         {analysisDetails && analysisDetails.identifiedFeatures && (
           <div className="mt-4 bg-blue-50 p-3 rounded-lg">
@@ -64,7 +69,7 @@ const DiagnosisTabs = ({
           <Button 
             size="sm"
             className="bg-drplant-green hover:bg-drplant-green-dark"
-            onClick={() => onNavigateToLibrary(disease.resources?.[0])}
+            onClick={() => onNavigateToLibrary(disease?.resources?.[0])}
           >
             <Book className="mr-2 h-4 w-4" /> Learn More
           </Button>
@@ -74,7 +79,7 @@ const DiagnosisTabs = ({
       <TabsContent value="details">
         <h3 className="text-xl font-bold text-drplant-blue mb-4">Disease Details</h3>
         
-        {disease.id in diseaseDetails && (
+        {disease?.id && disease.id in diseaseDetails && (
           <div className="space-y-4">
             <div>
               <h4 className="font-semibold text-gray-900 mb-1">Scientific Name:</h4>
@@ -157,7 +162,7 @@ const DiagnosisTabs = ({
       <TabsContent value="treatment">
         <h3 className="text-xl font-bold text-drplant-blue mb-4">Treatment Plan</h3>
         <ul className="space-y-3">
-          {disease.treatments.map((treatment, index) => (
+          {(disease?.treatments || []).map((treatment, index) => (
             <li key={index} className="flex items-start gap-2">
               <Check className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" />
               <span>{treatment}</span>
@@ -206,7 +211,7 @@ const DiagnosisTabs = ({
         <h3 className="text-xl font-bold text-drplant-blue mb-4">Recommended Products</h3>
         
         <div className="space-y-4">
-          {products.includes('1') && (
+          {hasProduct('1') && (
             <div className="border rounded-lg p-3 flex gap-3">
               <div className="w-16 h-16 bg-gray-100 rounded-md flex-shrink-0 overflow-hidden">
                 <img 
@@ -229,7 +234,7 @@ const DiagnosisTabs = ({
             </div>
           )}
           
-          {products.includes('2') && (
+          {hasProduct('2') && (
             <div className="border rounded-lg p-3 flex gap-3">
               <div className="w-16 h-16 bg-gray-100 rounded-md flex-shrink-0 overflow-hidden">
                 <img 
@@ -252,7 +257,7 @@ const DiagnosisTabs = ({
             </div>
           )}
           
-          {products.includes('3') && (
+          {hasProduct('3') && (
             <div className="border rounded-lg p-3 flex gap-3">
               <div className="w-16 h-16 bg-gray-100 rounded-md flex-shrink-0 overflow-hidden">
                 <img 
@@ -275,7 +280,7 @@ const DiagnosisTabs = ({
             </div>
           )}
           
-          {products.includes('4') && (
+          {hasProduct('4') && (
             <div className="border rounded-lg p-3 flex gap-3">
               <div className="w-16 h-16 bg-gray-100 rounded-md flex-shrink-0 overflow-hidden">
                 <img 
@@ -298,7 +303,7 @@ const DiagnosisTabs = ({
             </div>
           )}
           
-          {products.includes('5') && (
+          {hasProduct('5') && (
             <div className="border rounded-lg p-3 flex gap-3">
               <div className="w-16 h-16 bg-gray-100 rounded-md flex-shrink-0 overflow-hidden">
                 <img 
