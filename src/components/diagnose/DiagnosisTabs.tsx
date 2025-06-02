@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -23,6 +24,9 @@ const DiagnosisTabs = ({
   onNavigateToLibrary,
   onNavigateToShop
 }: DiagnosisTabsProps) => {
+  // Safely get products array, default to empty array if undefined
+  const products = disease.products || [];
+  
   return (
     <Tabs defaultValue="overview" value={activeTab} onValueChange={onTabChange} className="w-full">
       <TabsList className="grid grid-cols-4 mb-4">
@@ -39,7 +43,7 @@ const DiagnosisTabs = ({
         <h4 className="font-semibold text-gray-900 mb-2">Causes:</h4>
         <p className="text-gray-700 mb-4">{disease.causes}</p>
         
-        {analysisDetails && (
+        {analysisDetails && analysisDetails.identifiedFeatures && (
           <div className="mt-4 bg-blue-50 p-3 rounded-lg">
             <h4 className="font-semibold text-drplant-blue mb-2">Identified Symptoms:</h4>
             <ul className="space-y-1 text-sm text-gray-700">
@@ -60,7 +64,7 @@ const DiagnosisTabs = ({
           <Button 
             size="sm"
             className="bg-drplant-green hover:bg-drplant-green-dark"
-            onClick={() => onNavigateToLibrary(disease.resources[0])}
+            onClick={() => onNavigateToLibrary(disease.resources?.[0])}
           >
             <Book className="mr-2 h-4 w-4" /> Learn More
           </Button>
@@ -104,7 +108,7 @@ const DiagnosisTabs = ({
               </p>
             </div>
             
-            {analysisDetails && analysisDetails.alternativeDiagnoses.length > 0 && (
+            {analysisDetails && analysisDetails.alternativeDiagnoses && analysisDetails.alternativeDiagnoses.length > 0 && (
               <div>
                 <h4 className="font-semibold text-gray-900 mb-1">Alternative Diagnoses:</h4>
                 <ul className="space-y-2">
@@ -202,7 +206,7 @@ const DiagnosisTabs = ({
         <h3 className="text-xl font-bold text-drplant-blue mb-4">Recommended Products</h3>
         
         <div className="space-y-4">
-          {disease.products.includes('1') && (
+          {products.includes('1') && (
             <div className="border rounded-lg p-3 flex gap-3">
               <div className="w-16 h-16 bg-gray-100 rounded-md flex-shrink-0 overflow-hidden">
                 <img 
@@ -225,7 +229,7 @@ const DiagnosisTabs = ({
             </div>
           )}
           
-          {disease.products.includes('2') && (
+          {products.includes('2') && (
             <div className="border rounded-lg p-3 flex gap-3">
               <div className="w-16 h-16 bg-gray-100 rounded-md flex-shrink-0 overflow-hidden">
                 <img 
@@ -248,7 +252,7 @@ const DiagnosisTabs = ({
             </div>
           )}
           
-          {disease.products.includes('3') && (
+          {products.includes('3') && (
             <div className="border rounded-lg p-3 flex gap-3">
               <div className="w-16 h-16 bg-gray-100 rounded-md flex-shrink-0 overflow-hidden">
                 <img 
@@ -271,7 +275,7 @@ const DiagnosisTabs = ({
             </div>
           )}
           
-          {disease.products.includes('4') && (
+          {products.includes('4') && (
             <div className="border rounded-lg p-3 flex gap-3">
               <div className="w-16 h-16 bg-gray-100 rounded-md flex-shrink-0 overflow-hidden">
                 <img 
@@ -294,7 +298,7 @@ const DiagnosisTabs = ({
             </div>
           )}
           
-          {disease.products.includes('5') && (
+          {products.includes('5') && (
             <div className="border rounded-lg p-3 flex gap-3">
               <div className="w-16 h-16 bg-gray-100 rounded-md flex-shrink-0 overflow-hidden">
                 <img 
@@ -317,7 +321,7 @@ const DiagnosisTabs = ({
             </div>
           )}
           
-          {disease.products.length === 0 && (
+          {products.length === 0 && (
             <p className="text-gray-500">No specific products recommended for this condition.</p>
           )}
         </div>
