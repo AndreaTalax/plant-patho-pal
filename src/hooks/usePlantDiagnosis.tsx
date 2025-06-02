@@ -41,44 +41,49 @@ export const usePlantDiagnosis = () => {
       
       const analysisResult = await analyzeWithEnhancedAI(imageFile, plantInfo, progressCallback);
       
-      if (!analysisResult || analysisResult.confidence < 0.9) {
-        throw new Error(`Accuratezza insufficiente: ${Math.round((analysisResult?.confidence || 0) * 100)}%. Richiesta accuratezza minima: 90%`);
-      }
-      
-      console.log("High-accuracy analysis result:", analysisResult);
-      
-      // Process high-confidence result
-      const plantLabel = analysisResult.label;
-      const confidence = analysisResult.confidence;
-      const isHealthy = analysisResult.healthy;
-      
-      let diseaseInfo: DiagnosedDisease;
-      
-      if (!isHealthy && analysisResult.disease) {
-        // Disease detected with high confidence
-        diseaseInfo = {
-          id: `disease-${Date.now()}`,
-          name: analysisResult.disease.name,
-          description: analysisResult.disease.description || "Malattia identificata con alta precisione",
-          causes: analysisResult.disease.causes || "Cause specifiche identificate dall'analisi AI",
-          symptoms: analysisResult.disease.symptoms || ["Sintomi rilevati dall'analisi dell'immagine"],
-          treatments: analysisResult.disease.treatments || ["Trattamento specifico consigliato"],
-          confidence: confidence,
-          healthy: false
-        };
-      } else {
-        // Healthy plant with high confidence
-        diseaseInfo = {
-          id: "healthy-plant-hq",
-          name: plantLabel,
-          description: `${plantLabel} identificata con ${Math.round(confidence * 100)}% di accuratezza`,
-          causes: "N/A - Pianta sana",
-          symptoms: ["Nessun sintomo di malattia rilevato"],
-          treatments: ["Continua le cure standard per questa specie"],
-          confidence: confidence,
-          healthy: true
-        };
-      }
+      if (!analysisResult) {
+  throw new Error("Analisi fallita. Nessun risultato ottenuto.");
+}
+
+const plantLabel = analysisResult.label || "Specie sconosciuta";
+const confidence = analysisResult.confidence || 0;
+const isHealthy = analysisResult.healthy ?? null;
+const isHighConfidence = confidence >= 0.9;
+
+let diseaseInfo: DiagnosedDisease;
+
+if (!isHealthy && analysisResult.disease) {
+  diseaseInfo = {
+    id: `disease-${Date.now()}`,
+    name: analysisResult.disease.name || "Malattia non identificata",
+    description: analysisResult.disease.description || "Possibile malattia rilevata",
+    causes: analysisResult.disease.causes || "Cause non note",
+    symptoms: analysisResult.disease.symptoms || ["Sintomi non chiari"],
+    treatments: analysisResult.disease.treatments || ["Consigliato consulto esperto"],
+    confidence,
+    healthy: false,
+    disclaimer: !isHighConfidence
+      ? "L'analisi AI ha un'accuratezza inferiore al 90%. Si consiglia una consulenza con un esperto."
+      : undefined,
+    recommendExpertConsultation: !isHighConfidence,
+  };
+} else {
+  diseaseInfo = {
+    id: `healthy-${Date.now()}`,
+    name: plantLabel,
+    description: `Pianta sana${!isHighConfidence ? ' (con bassa accuratezza)' : ''}`,
+    causes: "N/A",
+    symptoms: ["Nessun sintomo rilevato"],
+    treatments: ["Monitoraggio e cura standard"],
+    confidence,
+    healthy: true,
+    disclaimer: !isHighConfidence
+      ? "L'immagine non è stata identificata con alta accuratezza. Per maggiore certezza, consulta un esperto."
+      : undefined,
+    recommendExpertConsultation: !isHighConfidence,
+  };
+}
+
       
       // Add high-quality product recommendations
       if (analysisResult.recommendedProducts && analysisResult.recommendedProducts.length > 0) {
