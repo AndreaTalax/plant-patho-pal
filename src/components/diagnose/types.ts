@@ -10,6 +10,8 @@ export interface DiagnosedDisease {
   confidence: number;
   healthy?: boolean;
   resources?: string[];
+  disclaimer?: string; // Add missing disclaimer property
+  recommendExpertConsultation?: boolean; // Add missing recommendation property
   
   // Add the new standardized properties
   label?: string;
