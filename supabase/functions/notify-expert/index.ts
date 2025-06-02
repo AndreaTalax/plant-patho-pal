@@ -1,7 +1,9 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const MARCO_NIGRO_ID = '07c7fe19-33c3-4782-b9a0-4e87c8aa7044';
+const MARCO_NIGRO_EMAIL = 'agrotecnicomarconigro@gmail.com';
 
 serve(async (req) => {
   try {
@@ -16,7 +18,7 @@ serve(async (req) => {
     const { error: notificationError } = await supabase
       .from('notifications')
       .insert({
-        user_id: MARCO_NIGRO_ID, // ✅ UUID corretto di Marco
+        user_id: MARCO_NIGRO_ID,
         title: 'Nuova richiesta di consulenza',
         message: `Nuova richiesta per ${plantInfo?.plantType || 'pianta'} da parte dell'utente`,
         type: 'consultation_request',
@@ -38,7 +40,7 @@ serve(async (req) => {
     const { error: updateError } = await supabase
       .from('consultations')
       .update({ 
-        expert_id: MARCO_NIGRO_ID, // ✅ UUID corretto di Marco
+        expert_id: MARCO_NIGRO_ID,
         status: 'assigned',
         updated_at: new Date().toISOString()
       })
@@ -49,14 +51,12 @@ serve(async (req) => {
       throw updateError
     }
 
-    // Opzionale: Invia email a Marco Nigro
-    // Puoi aggiungere qui la logica per inviare email
-
     return new Response(
       JSON.stringify({ 
         success: true, 
         message: 'Expert notified successfully',
-        expertId: MARCO_NIGRO_ID
+        expertId: MARCO_NIGRO_ID,
+        expertEmail: MARCO_NIGRO_EMAIL
       }),
       { 
         headers: { 'Content-Type': 'application/json' },

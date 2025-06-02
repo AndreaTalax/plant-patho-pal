@@ -1,4 +1,6 @@
 
+import { MARCO_NIGRO_PROFILE } from '@/components/phytopathologist';
+
 export interface Message {
   id: string;
   text: string;
@@ -39,12 +41,13 @@ export interface Product {
   image?: string;
 }
 
+// Marco Nigro come unico esperto
 export const EXPERT: User = {
-  id: 'expert-001',
-  name: 'Dott. Marco Rossi',
-  avatar: '/placeholder.svg',
-  isOnline: true,
-  specialty: 'Fitopatologo Specializzato'
+  id: MARCO_NIGRO_PROFILE.id,
+  name: MARCO_NIGRO_PROFILE.name,
+  avatar: MARCO_NIGRO_PROFILE.avatar,
+  isOnline: MARCO_NIGRO_PROFILE.isOnline,
+  specialty: MARCO_NIGRO_PROFILE.specialty
 };
 
 export const MOCK_PRODUCTS: Product[] = [

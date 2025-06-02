@@ -1,5 +1,5 @@
 
-import { Avatar, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { ChevronRight } from 'lucide-react';
 import { EXPERT } from '../types';
@@ -24,6 +24,7 @@ const ChatHeader = ({ onBackClick }: ChatHeaderProps) => {
       </Button>
       <Avatar className="h-8 w-8">
         <AvatarImage src={EXPERT.avatar} alt={EXPERT.name} />
+        <AvatarFallback>MN</AvatarFallback>
       </Avatar>
       <div>
         <h3 className="font-medium text-sm">{EXPERT.name}</h3>

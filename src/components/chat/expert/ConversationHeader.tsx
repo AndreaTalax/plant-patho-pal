@@ -1,6 +1,6 @@
 
 import { Button } from '@/components/ui/button';
-import { Avatar } from '@/components/ui/avatar';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { User, ShoppingBag, Ban, Trash2 } from 'lucide-react';
 
 interface ConversationHeaderProps {
@@ -22,7 +22,9 @@ const ConversationHeader = ({
     <div className="bg-white p-2 shadow-sm flex items-center justify-between border-b">
       <div className="flex items-center gap-2">
         <Avatar className="h-6 w-6">
-          <User className="h-4 w-4" />
+          <AvatarFallback>
+            <User className="h-4 w-4" />
+          </AvatarFallback>
         </Avatar>
         <div>
           <h3 className="font-medium text-sm">
