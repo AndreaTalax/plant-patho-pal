@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase, EXPERT_ID } from '@/integrations/supabase/client';
 import { Conversation, DatabaseConversation, Message, Product } from '../types';
@@ -34,11 +33,15 @@ export const useExpertConversation = (userId: string) => {
           const username = conv.user?.username || conv.user_id;
           return {
             id: conv.id,
-            username: username,
+            title: conv.title || `Chat with ${username}`,
             lastMessage: conv.last_message_text || "No messages yet",
-            unread: false, // TODO: Implement unread status
+            time: conv.last_message_at ? new Date(conv.last_message_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
+            unreadCount: 0, // TODO: Implement unread count
+            expertId: conv.expert_id,
+            username: username,
             blocked: conv.status === "blocked",
-            messages: []
+            messages: [],
+            unread: false // TODO: Implement unread status
           };
         });
         
