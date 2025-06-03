@@ -1,112 +1,147 @@
+import React from 'react'
+import { CheckCircle, AlertTriangle, Info, Lightbulb } from 'lucide-react'
 
-import React from 'react';
-import { Button } from '@/components/ui/button';
+const DiagnosisResult = ({ diagnosis }) => {
+  const getStatusIcon = (status) => {
+    switch (status?.toLowerCase()) {
+      case 'healthy':
+        return <CheckCircle size={24} color="#4CAF50" />
+      case 'diseased':
+        return <AlertTriangle size={24} color="#FF9800" />
+      default:
+        return <Info size={24} color="#2196F3" />
+    }
+  }
 
-interface DiagnosisResultsProps {
-  result: any;
-  onConsultExpert: () => void;
-}
-
-const DiagnosisResults: React.FC<DiagnosisResultsProps> = ({ result, onConsultExpert }) => {
-  const { enhancedResult, plantIdResult, shouldRecommendExpert } = result;
+  const getStatusColor = (status) => {
+    switch (status?.toLowerCase()) {
+      case 'healthy':
+        return '#4CAF50'
+      case 'diseased':
+        return '#FF9800'
+      default:
+        return '#2196F3'
+    }
+  }
 
   return (
-    <div className="space-y-4">
-      {/* Mostra disclaimer se presente */}
-      {enhancedResult?.disclaimer && (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-          <div className="flex items-start">
-            <div className="text-yellow-600 mr-2">⚠️</div>
-            <div>
-              <h4 className="font-semibold text-yellow-800 mb-1">
-                Attenzione
-              </h4>
-              <p className="text-yellow-700 text-sm">
-                {enhancedResult.disclaimer}
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
+    <div className="diagnosis-result">
+      <div className="diagnosis-title">
+        {getStatusIcon(diagnosis.status)}
+        Plant Health Analysis
+      </div>
 
-      {/* Risultati disponibili */}
-      {plantIdResult && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <h4 className="font-semibold text-blue-800 mb-2">
-            🔍 Identificazione Base
-          </h4>
-          <p><strong>Pianta:</strong> {plantIdResult.plantName || 'Non identificata'}</p>
-          {plantIdResult.confidence && (
-            <p><strong>Confidenza:</strong> {Math.round(plantIdResult.confidence * 100)}%</p>
-          )}
-        </div>
-      )}
+      <div className="diagnosis-content">
+        <div style={{ marginBottom: '1.5rem' }}>
+          <h3 style={{ 
+            color: getStatusColor(diagnosis.status), 
+            margin: '0 0 0.5rem 0',
+            fontSize: '1.3rem'
+          }}>
+            Status: {diagnosis.status || 'Unknown'}
+          </h3>
 
-      {/* Analisi potenziata se disponibile */}
-      {enhancedResult && !enhancedResult.analysisError && (
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-          <h4 className="font-semibold text-green-800 mb-2">
-            🧠 Analisi AI Avanzata
-          </h4>
-          {enhancedResult.isHighConfidence ? (
-            <div className="text-green-700">
-              <p>✅ Analisi ad alta confidenza (≥90%)</p>
-              {/* Mostra risultati dettagliati */}
-            </div>
-          ) : (
-            <div className="text-orange-700">
-              <p>⚠️ Analisi a bassa confidenza (&lt;90%)</p>
-              <p className="text-sm mt-1">
-                I risultati potrebbero non essere accurati. Si consiglia una consulenza esperta.
-              </p>
+          {diagnosis.confidence && (
+            <div className="confidence-score">
+              Confidence: {Math.round(diagnosis.confidence * 100)}%
             </div>
           )}
         </div>
-      )}
 
-      {/* Raccomandazione esperto */}
-      {shouldRecommendExpert && (
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h4 className="font-semibold text-green-800 mb-1">
-                🌿 Consulenza Esperta Raccomandata
-              </h4>
-              <p className="text-green-700 text-sm">
-                Per una diagnosi accurata e professionale, consulta il nostro fitopatologo.
-              </p>
-            </div>
-            <Button
-              onClick={onConsultExpert}
-              className="bg-green-600 text-white hover:bg-green-700"
-            >
-              Consulta Esperto
-            </Button>
+        {diagnosis.disease && (
+          <div style={{ marginBottom: '1.5rem' }}>
+            <h4 style={{ color: '#333', margin: '0 0 0.5rem 0' }}>
+              Detected Condition:
+            </h4>
+            <p style={{ margin: '0', fontWeight: '600', color: '#FF9800' }}>
+              {diagnosis.disease}
+            </p>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Se tutto è fallito, mostra solo l'opzione esperto */}
-      {!plantIdResult && enhancedResult?.analysisError && (
-        <div className="bg-gray-50 border border-gray-200 rounded-lg p-6 text-center">
-          <div className="text-4xl mb-2">🌱</div>
-          <h4 className="font-semibold text-gray-800 mb-2">
-            Analisi Non Disponibile
-          </h4>
-          <p className="text-gray-600 mb-4">
-            L'analisi automatica non è riuscita a processare l'immagine.
-            Il nostro esperto può aiutarti con una diagnosi professionale.
-          </p>
-          <Button
-            onClick={onConsultExpert}
-            className="bg-green-600 text-white hover:bg-green-700 px-6 py-3"
-          >
-            🌿 Consulta il Fitopatologo
-          </Button>
-        </div>
-      )}
+        {diagnosis.description && (
+          <div style={{ marginBottom: '1.5rem' }}>
+            <h4 style={{ color: '#333', margin: '0 0 0.5rem 0' }}>
+              Description:
+            </h4>
+            <p style={{ margin: '0', lineHeight: '1.6' }}>
+              {diagnosis.description}
+            </p>
+          </div>
+        )}
+
+        {diagnosis.symptoms && diagnosis.symptoms.length > 0 && (
+          <div style={{ marginBottom: '1.5rem' }}>
+            <h4 style={{ color: '#333', margin: '0 0 0.5rem 0' }}>
+              Observed Symptoms:
+            </h4>
+            <ul style={{ margin: '0', paddingLeft: '1.5rem' }}>
+              {diagnosis.symptoms.map((symptom, index) => (
+                <li key={index} style={{ marginBottom: '0.3rem' }}>
+                  {symptom}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {diagnosis.recommendations && diagnosis.recommendations.length > 0 && (
+          <div style={{ marginBottom: '1rem' }}>
+            <h4 style={{ 
+              color: '#333', 
+              margin: '0 0 0.5rem 0',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem'
+            }}>
+              <Lightbulb size={18} />
+              Treatment Recommendations:
+            </h4>
+            <ul style={{ margin: '0', paddingLeft: '1.5rem' }}>
+              {diagnosis.recommendations.map((recommendation, index) => (
+                <li key={index} style={{ 
+                  marginBottom: '0.5rem',
+                  lineHeight: '1.5'
+                }}>
+                  {recommendation}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {diagnosis.prevention && diagnosis.prevention.length > 0 && (
+          <div>
+            <h4 style={{ color: '#333', margin: '0 0 0.5rem 0' }}>
+              Prevention Tips:
+            </h4>
+            <ul style={{ margin: '0', paddingLeft: '1.5rem' }}>
+              {diagnosis.prevention.map((tip, index) => (
+                <li key={index} style={{ 
+                  marginBottom: '0.3rem',
+                  color: '#666'
+                }}>
+                  {tip}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
+
+      <div style={{ 
+        marginTop: '1.5rem', 
+        padding: '1rem',
+        backgroundColor: 'rgba(33, 150, 243, 0.1)',
+        borderRadius: '8px',
+        fontSize: '0.9rem',
+        color: '#666'
+      }}>
+        <strong>Note:</strong> This analysis is AI-generated and should be used as a reference. 
+        For serious plant health issues, consult with a professional plant pathologist or local agricultural extension service.
+      </div>
     </div>
-  );
-};
+  )
+}
 
-export default DiagnosisResults;
+export default DiagnosisResult
