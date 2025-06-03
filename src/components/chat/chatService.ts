@@ -1,4 +1,3 @@
-
 import {
   supabase,
   EXPERT_ID,
@@ -180,7 +179,7 @@ const convertProductsToJson = (products?: Product[]): Json => {
   }
 };
 
-// Send a message
+// Send a message - FIXED VERSION
 export const sendMessage = async (
   conversationId: string,
   senderId: string,
@@ -192,9 +191,14 @@ export const sendMessage = async (
     console.log(`Sending message in conversation ${conversationId}: ${text}`);
     console.log(`Sender ID: ${senderId}, Recipient ID: ${recipientId}`);
 
-    // Validazione input
+    // Validazione input rigorosa
     if (!conversationId || !senderId || !recipientId || !text) {
-      console.error("Missing required parameters for sendMessage");
+      console.error("Missing required parameters for sendMessage", {
+        conversationId: !!conversationId,
+        senderId: !!senderId,
+        recipientId: !!recipientId,
+        text: !!text
+      });
       return false;
     }
 
@@ -205,93 +209,107 @@ export const sendMessage = async (
     }
 
     // Validazione lunghezza testo
-    if (text.trim().length === 0) {
+    const trimmedText = text.trim();
+    if (trimmedText.length === 0) {
       console.error("Message text cannot be empty");
       return false;
     }
 
-    if (text.length > 10000) { // Limite ragionevole per i messaggi
+    if (trimmedText.length > 10000) {
       console.error("Message text too long");
       return false;
     }
 
     // For mock conversations, always return success
     if (conversationId === "mock-conversation-id") {
+      console.log("Mock conversation - returning success");
       return true;
     }
 
+    // Prepare message data with explicit timestamp
     const messageData = {
       conversation_id: conversationId,
       sender_id: senderId,
       recipient_id: recipientId,
-      text: text.trim(),
+      text: trimmedText,
       products: convertProductsToJson(products),
-      sent_at: new Date().toISOString() // Aggiungi timestamp esplicito
+      sent_at: new Date().toISOString()
     };
 
     console.log("Message data to insert:", messageData);
 
-    const { data, error } = await supabase
-      .from('messages')
-      .insert(messageData)
-      .select()
-      .single();
+    // Insert message with retry logic
+    let retries = 3;
+    let lastError: any = null;
+    
+    while (retries > 0) {
+      try {
+        const { data, error } = await supabase
+          .from('messages')
+          .insert(messageData)
+          .select()
+          .single();
 
-    if (error) {
-      console.error("Error sending message:", error);
-      console.error("Error details:", {
-        code: error.code,
-        message: error.message,
-        details: error.details,
-        hint: error.hint
-      });
-      return false;
-    }
+        if (error) {
+          throw error;
+        }
 
-    console.log("Message sent successfully:", data);
+        console.log("Message sent successfully:", data);
 
-    // Aggiorna il timestamp della conversazione
-    try {
-      await supabase
-        .from('conversations')
-        .update({ updated_at: new Date().toISOString() })
-        .eq('id', conversationId);
-    } catch (updateError) {
-      console.error("Error updating conversation timestamp:", updateError);
-      // Non bloccare l'invio del messaggio per questo errore
-    }
+        // Update conversation timestamp - don't fail if this fails
+        try {
+          await supabase
+            .from('conversations')
+            .update({ updated_at: new Date().toISOString() })
+            .eq('id', conversationId);
+        } catch (updateError) {
+          console.warn("Failed to update conversation timestamp:", updateError);
+        }
 
-    // Invia notifica quando appropriato
-    try {
-      if (senderId === EXPERT_ID && recipientId !== EXPERT_ID) {
-        // Esperto che scrive a utente normale
-        console.log("Expert sending notification to regular user");
-        await supabase.functions.invoke('send-specialist-notification', {
-          body: {
-            conversation_id: conversationId,
-            sender_id: senderId,
-            recipient_id: recipientId,
-            message_text: text.trim()
+        // Send notification - don't fail if this fails
+        try {
+          if (senderId === EXPERT_ID && recipientId !== EXPERT_ID) {
+            console.log("Expert sending notification to regular user");
+            await supabase.functions.invoke('send-specialist-notification', {
+              body: {
+                conversation_id: conversationId,
+                sender_id: senderId,
+                recipient_id: recipientId,
+                message_text: trimmedText
+              }
+            });
+          } else if (senderId !== EXPERT_ID && recipientId === EXPERT_ID) {
+            console.log("Regular user sending notification to expert");
+            await supabase.functions.invoke('send-specialist-notification', {
+              body: {
+                conversation_id: conversationId,
+                sender_id: senderId,
+                recipient_id: recipientId,
+                message_text: trimmedText
+              }
+            });
           }
-        });
-      } else if (senderId !== EXPERT_ID && recipientId === EXPERT_ID) {
-        // Utente normale che scrive all'esperto
-        console.log("Regular user sending notification to expert");
-        await supabase.functions.invoke('send-specialist-notification', {
-          body: {
-            conversation_id: conversationId,
-            sender_id: senderId,
-            recipient_id: recipientId,
-            message_text: text.trim()
-          }
-        });
+        } catch (notificationError) {
+          console.warn("Failed to send notification:", notificationError);
+        }
+
+        return true;
+
+      } catch (error) {
+        lastError = error;
+        retries--;
+        console.error(`Message send attempt failed (${3 - retries}/3):`, error);
+        
+        if (retries > 0) {
+          // Wait before retry
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
       }
-    } catch (notificationError) {
-      console.error("Error sending notification:", notificationError);
-      // Continuiamo anche se la notifica fallisce
     }
 
-    return true;
+    console.error("All message send attempts failed:", lastError);
+    return false;
+
   } catch (error) {
     console.error("Unexpected error in sendMessage:", error);
     return false;

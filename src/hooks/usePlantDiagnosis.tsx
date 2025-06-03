@@ -20,7 +20,7 @@ export const usePlantDiagnosis = () => {
   
   const streamRef = useRef<MediaStream | null>(null);
 
-  // Enhanced analysis function with comprehensive error handling
+  // Enhanced analysis function with flexible accuracy requirements
   const analyzeUploadedImage = async (imageFile: File, plantInfo?: PlantInfo) => {
     setIsAnalyzing(true);
     setDiagnosisResult(null);
@@ -28,7 +28,7 @@ export const usePlantDiagnosis = () => {
     setAnalysisProgress(0);
     setAnalysisDetails(null);
     
-    console.log('🔍 Starting plant analysis...', { 
+    console.log('🔍 Starting flexible plant analysis...', { 
       fileName: imageFile?.name, 
       fileSize: imageFile?.size,
       plantInfo 
@@ -44,9 +44,9 @@ export const usePlantDiagnosis = () => {
         };
 
         try {
-          // Enhanced AI analysis - requires 90% accuracy
-          console.log("🧠 Starting enhanced AI analysis with 90% accuracy requirement...");
-          toast.info("Analisi ad alta precisione in corso...", { duration: 3000 });
+          // Enhanced AI analysis - now accepts 60% accuracy
+          console.log("🧠 Starting enhanced AI analysis with flexible accuracy requirement...");
+          toast.info("Analisi in corso...", { duration: 3000 });
           
           progressCallback({ stage: 'initialization', percentage: 10, message: 'Inizializzazione analisi...' });
           
@@ -61,9 +61,10 @@ export const usePlantDiagnosis = () => {
           const plantLabel = enhancedResult.label || "Specie sconosciuta";
           const confidence = Math.max(0, Math.min(1, enhancedResult.confidence || 0));
           const isHealthy = enhancedResult.healthy ?? null;
-          const isHighConfidence = confidence >= 0.9;
+          const isGoodConfidence = confidence >= 0.6; // Lowered from 0.9 to 0.6
+          const isHighConfidence = confidence >= 0.8;
 
-          console.log('📊 Analysis results:', { plantLabel, confidence, isHealthy, isHighConfidence });
+          console.log('📊 Analysis results:', { plantLabel, confidence, isHealthy, isGoodConfidence });
 
           let diseaseInfo: DiagnosedDisease;
 
@@ -83,7 +84,7 @@ export const usePlantDiagnosis = () => {
               healthy: false,
               products: enhancedResult.recommendedProducts || [],
               disclaimer: !isHighConfidence
-                ? "L'analisi AI ha un'accuratezza inferiore al 90%. Si consiglia fortemente una consulenza con un fitopatologo esperto."
+                ? "L'analisi AI ha un'accuratezza moderata. Si consiglia una consulenza con un fitopatologo esperto per conferma."
                 : undefined,
               recommendExpertConsultation: !isHighConfidence,
             };
@@ -91,7 +92,7 @@ export const usePlantDiagnosis = () => {
             diseaseInfo = {
               id: `healthy-${Date.now()}`,
               name: plantLabel,
-              description: `Pianta apparentemente sana${!isHighConfidence ? ' (con bassa accuratezza)' : ''}`,
+              description: `Pianta apparentemente sana${!isHighConfidence ? ' (con accuratezza moderata)' : ''}`,
               causes: "N/A - Pianta sana",
               symptoms: ["Nessun sintomo di malattia rilevato"],
               treatments: ["Mantenere le cure standard", "Monitoraggio regolare"],
@@ -99,7 +100,7 @@ export const usePlantDiagnosis = () => {
               healthy: true,
               products: enhancedResult.recommendedProducts || [],
               disclaimer: !isHighConfidence
-                ? "L'immagine non è stata identificata con alta accuratezza. Per maggiore certezza sulla salute della pianta, consulta un fitopatologo."
+                ? "L'immagine è stata identificata con accuratezza moderata. Per maggiore certezza sulla salute della pianta, consulta un fitopatologo."
                 : undefined,
               recommendExpertConsultation: !isHighConfidence,
             };
@@ -125,11 +126,11 @@ export const usePlantDiagnosis = () => {
                 label: plantLabel,
                 score: confidence
               },
-              dataSource: "Multi-AI High-Accuracy Analysis"
+              dataSource: "Multi-AI Flexible Analysis"
             },
             risultatiCompleti: {
               plantInfo: plantInfo,
-              accuracyGuarantee: isHighConfidence ? "90%+" : "< 90%"
+              accuracyGuarantee: isHighConfidence ? "80%+" : "60%+"
             },
             identifiedFeatures: [
               plantLabel, 
@@ -142,7 +143,7 @@ export const usePlantDiagnosis = () => {
           
           progressCallback({ stage: 'finalizing', percentage: 95, message: 'Finalizzazione risultati...' });
           
-          return { diseaseInfo, detailedAnalysis, plantLabel, confidence, isHighConfidence };
+          return { diseaseInfo, detailedAnalysis, plantLabel, confidence, isGoodConfidence };
           
         } catch (analysisError) {
           console.error('❌ Enhanced analysis failed:', analysisError);
@@ -154,22 +155,22 @@ export const usePlantDiagnosis = () => {
     
     // Handle the result (success or graceful error)
     if (analysisResult) {
-      const { diseaseInfo, detailedAnalysis, plantLabel, confidence, isHighConfidence } = analysisResult;
+      const { diseaseInfo, detailedAnalysis, plantLabel, confidence, isGoodConfidence } = analysisResult;
       
       setDiagnosedDisease(diseaseInfo);
       setDiagnosisResult(`${plantLabel} identificata con ${Math.round(confidence * 100)}% di accuratezza`);
       setAnalysisDetails(detailedAnalysis);
       setAnalysisProgress(100);
       
-      if (isHighConfidence) {
+      if (confidence >= 0.8) {
         toast.success(`✅ Pianta identificata con alta accuratezza (${Math.round(confidence * 100)}%)!`, { duration: 4000 });
-      } else {
-        toast.warning(`⚠️ Identificazione completata con ${Math.round(confidence * 100)}% di accuratezza. Consulenza esperta raccomandata.`, { duration: 5000 });
+      } else if (isGoodConfidence) {
+        toast.success(`✅ Pianta identificata con ${Math.round(confidence * 100)}% di accuratezza. Consulenza esperta raccomandata per maggiore certezza.`, { duration: 5000 });
       }
     } else {
       // Analysis failed - create fallback result
       console.log('🔄 Creating fallback diagnosis result...');
-      const errorResult = handleAnalysisError(new Error("Analisi non completata - tutti i servizi AI non disponibili"));
+      const errorResult = handleAnalysisError(new Error("Analisi non completata - servizi AI non disponibili"));
       const fallbackDisease = createFallbackDiagnosisResult(errorResult);
       
       setDiagnosedDisease(fallbackDisease);
@@ -243,7 +244,7 @@ export const usePlantDiagnosis = () => {
       // Convert dataURL to File object for analysis
       const imageFile = dataURLtoFile(imageDataUrl, "camera-capture.jpg");
       
-      console.log("📸 Image captured, starting high-accuracy analysis...");
+      console.log("📸 Image captured, starting flexible analysis...");
       analyzeUploadedImage(imageFile, plantInfo);
     } catch (error) {
       console.error('❌ Error processing captured image:', error);
@@ -262,7 +263,7 @@ export const usePlantDiagnosis = () => {
       const result = event.target?.result;
       if (result) {
         setUploadedImage(result as string);
-        console.log("📁 Image uploaded, starting high-accuracy analysis...");
+        console.log("📁 Image uploaded, starting flexible analysis...");
         analyzeUploadedImage(file, plantInfo);
       } else {
         toast.error("Errore nella lettura del file");
