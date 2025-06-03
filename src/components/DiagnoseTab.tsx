@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { modelInfo } from '@/utils/aiDiagnosisUtils';
@@ -408,7 +409,9 @@ const DiagnoseTab = () => {
           isIndoor: plantInfo.isIndoor,
           wateringFrequency: plantInfo.wateringFrequency,
           lightExposure: plantInfo.lightExposure,
-          symptoms: plantInfo.symptoms
+          symptoms: plantInfo.symptoms,
+          useAI: false,
+          sendToExpert: true
         },
         uploadedImage
       );

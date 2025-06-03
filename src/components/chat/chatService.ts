@@ -1,3 +1,4 @@
+
 import {
   supabase,
   EXPERT_ID,
@@ -168,8 +169,8 @@ const convertProductsToJson = (products?: Product[]): Json => {
     const serializedProducts = products.map(product => ({
       ...product,
       // Rimuovi eventuali proprietà non serializzabili
-      id: product.id?.toString(),
-      price: typeof product.price === 'number' ? product.price : parseFloat(product.price?.toString() || '0')
+      id: product.id?.toString() || '',
+      price: typeof product.price === 'number' ? product.price : parseFloat(String(product.price) || '0')
     }));
     
     return serializedProducts as unknown as Json;
