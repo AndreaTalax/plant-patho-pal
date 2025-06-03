@@ -288,27 +288,27 @@ const DiagnoseTab = () => {
     }
   };
 
-  const handleImageUploadEvent = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!plantInfo.infoComplete) {
-      toast.warning("Inserisci prima le informazioni sulla pianta", {
-        dismissible: true,
-        duration: 3000
-      });
+const handleImageUploadEvent = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  if (!plantInfo.infoComplete) {
+    toast.warning("Inserisci prima le informazioni sulla pianta", {
+      dismissible: true,
+      duration: 3000
+    });
+    return;
+  }
+
+  const file = e.target.files?.[0];
+  if (file) {
+    // Verifica che il file sia un'immagine
+    if (!file.type.startsWith('image/')) {
+      toast.error("Seleziona un file immagine valido");
       return;
     }
-    
-    const file = e.target.files?.[0];
-    if (file) {
-      // Verifica che il file sia un'immagine
-      if (!file.type.startsWith('image/')) {
-        toast.error("Seleziona un file immagine valido");
-        return;
-      }
-      // Verifica dimensioni del file (max 10MB)
-      if (file.size > 10 * 1024 * 1024) {
-        toast.error("Il file è troppo grande. Dimensione massima: 10MB");
-        return;
-      }
+    // Verifica dimensioni del file (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("L'immagine deve essere inferiore a 10MB");
+      return;
+    }
       
       // Pulisci l'immagine precedente se esiste
       if (uploadedImage && uploadedImage.startsWith('blob:')) {
@@ -316,7 +316,8 @@ const DiagnoseTab = () => {
       }
       
       // Create a temporary URL for the uploaded image
-      const tempUrl = URL.createObjectURL(file);
+      
+     const imageUrl = await uploadImageToStorage(file);
       setUploadedImage(tempUrl);
       
       // Store the file for later use when user chooses diagnosis method
@@ -357,16 +358,9 @@ const DiagnoseTab = () => {
     setPlantInfo(updatedPlantInfo);
     
     // Automatically send plant info to expert chat if user is authenticated
-    if (isAuthenticated && userProfile) {
-      await sendPlantInfoToExpertChat({
-        name: data.name || "Pianta sconosciuta",
-        isIndoor: data.isIndoor,
-        wateringFrequency: data.wateringFrequency,
-        lightExposure: data.lightExposure,
-        symptoms: data.symptoms,
-        useAI: false,
-        sendToExpert: false
-      });
+    if (isAuthenticated && userProfile && plantInfo) {
+      await sendComprehensivePlantInfoToExpertChat(plantInfo, imageUrl);
+      toast.success("Dati e immagine inviati automaticamente al fitopatologo!");
     }
     
     setTimeout(() => {
