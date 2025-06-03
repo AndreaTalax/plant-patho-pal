@@ -1,3 +1,4 @@
+
 import { MARCO_NIGRO_ID } from '@/components/phytopathologist';
 import { supabase } from '@/integrations/supabase/client';
 import { uploadPlantImage, uploadBase64Image } from '@/utils/imageStorage';
@@ -48,7 +49,7 @@ export const notifyExpert = async (file?: File, imageUrl?: string, plantInfo?: P
       .from('conversations')
       .select('id')
       .eq('user_id', user.id)
-      .eq('expert_id', 'MARCO_NIGRO_ID')
+      .eq('expert_id', MARCO_NIGRO_ID)
       .single();
 
     let conversationId;
@@ -57,7 +58,7 @@ export const notifyExpert = async (file?: File, imageUrl?: string, plantInfo?: P
         .from('conversations')
         .insert({
           user_id: user.id,
-          expert_id: 'MARCO_NIGRO_ID',
+          expert_id: MARCO_NIGRO_ID,
           status: 'active'
         })
         .select()
@@ -95,13 +96,31 @@ export const notifyExpert = async (file?: File, imageUrl?: string, plantInfo?: P
       .insert({
         conversation_id: conversationId,
         sender_id: user.id,
-        recipient_id: 'MARCO_NIGRO_ID',
-        text: messageText,
-        image_url: finalImageUrl
+        recipient_id: MARCO_NIGRO_ID,
+        text: messageText
       });
 
     if (messageError) {
       console.error('Error sending message:', messageError);
+      toast.error('Errore nell\'invio del messaggio');
+      return;
+    }
+
+    // Send image as separate message if available
+    if (finalImageUrl) {
+      const { error: imageMessageError } = await supabase
+        .from('messages')
+        .insert({
+          conversation_id: conversationId,
+          sender_id: user.id,
+          recipient_id: MARCO_NIGRO_ID,
+          text: finalImageUrl
+        });
+
+      if (imageMessageError) {
+        console.error('Error sending image message:', imageMessageError);
+        // Don't fail the whole process for image
+      }
     }
 
     // Notify expert via edge function

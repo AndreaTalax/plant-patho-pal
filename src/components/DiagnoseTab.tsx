@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { modelInfo } from '@/utils/aiDiagnosisUtils';
@@ -372,5 +371,137 @@ const DiagnoseTab = () => {
     setPlantInfo({ ...plantInfo, useAI: true, sendToExpert: false });
     
     // If user uploaded a file, process with AI
-    if (plant
-```
+    if (plantInfo.uploadedFile) {
+      console.log("Starting AI analysis with uploaded file...");
+      handleImageUpload(plantInfo.uploadedFile, plantInfo);
+    }
+  }
+
+  const handleSelectExpert = async () => {
+    if (!isAuthenticated) {
+      setAuthDialogConfig({
+        title: "Accesso richiesto",
+        description: "Per contattare il fitopatologo devi prima accedere al tuo account."
+      });
+      setShowAuthDialog(true);
+      return;
+    }
+
+    if (!uploadedImage) {
+      toast.warning("Carica prima un'immagine della pianta", {
+        dismissible: true,
+        duration: 3000
+      });
+      return;
+    }
+    
+    try {
+      console.log("Sending to expert...", { uploadedImage, plantInfo });
+      
+      // Prepare expert consultation data
+      setPlantInfo({ ...plantInfo, sendToExpert: true, useAI: false });
+      
+      // Create conversation and send comprehensive info
+      await sendComprehensivePlantInfoToExpertChat(
+        {
+          name: plantInfo.name,
+          isIndoor: plantInfo.isIndoor,
+          wateringFrequency: plantInfo.wateringFrequency,
+          lightExposure: plantInfo.lightExposure,
+          symptoms: plantInfo.symptoms
+        },
+        uploadedImage
+      );
+      
+      // Navigate to chat after successful send
+      toast.success("Richiesta inviata con successo al fitopatologo!");
+      
+      setTimeout(() => {
+        navigate('/');
+        setTimeout(() => {
+          const event = new CustomEvent('switchTab', { detail: 'chat' });
+          window.dispatchEvent(event);
+        }, 100);
+      }, 1000);
+      
+    } catch (error) {
+      console.error("Error notifying expert:", error);
+      toast.error("Errore nell'invio della richiesta all'esperto");
+    }
+  };
+
+  // Determine current stage based on plant info and uploaded image
+  const getCurrentStage = () => {
+    if (!plantInfo.infoComplete) return 'info';
+    if (!uploadedImage) return 'capture';
+    if (!plantInfo.useAI && !plantInfo.sendToExpert) return 'options';
+    return 'result';
+  };
+
+  const currentStage = getCurrentStage();
+
+  return (
+    <div className="flex flex-col min-h-screen bg-gradient-to-br from-green-50 to-blue-50 pt-4 pb-24">
+      <div className="container mx-auto px-4 max-w-4xl">
+        {/* Header Component */}
+        <DiagnoseHeader 
+          showModelInfo={showModelInfo}
+          onToggleModelInfo={() => setShowModelInfo(!showModelInfo)}
+        />
+        
+        {/* Model Info Panel */}
+        {showModelInfo && (
+          <ModelInfoPanel 
+            modelInfo={modelInfo}
+            onClose={() => setShowModelInfo(false)}
+          />
+        )}
+
+        {/* Main Content */}
+        <div className="space-y-6">
+          <DiagnosisStages
+            stage={currentStage}
+            showCamera={showCamera}
+            uploadedImage={uploadedImage}
+            isAnalyzing={isAnalyzing}
+            diagnosedDisease={diagnosedDisease}
+            analysisDetails={analysisDetails}
+            videoRef={videoRef}
+            canvasRef={canvasRef}
+            onPlantInfoComplete={handlePlantInfoSubmit}
+            onPlantInfoEdit={() => setPlantInfo({ ...plantInfo, infoComplete: false })}
+            onSelectAI={handleSelectAI}
+            onSelectExpert={handleSelectExpert}
+            onTakePhoto={takePicture}
+            onUploadPhoto={() => document.getElementById('image-upload')?.click()}
+            onCapture={captureImage}
+            onCancelCamera={() => {
+              setShowCamera(false);
+              stopCameraStream();
+            }}
+            onStartNewAnalysis={resetDiagnosis}
+          />
+        </div>
+
+        {/* Hidden file input */}
+        <input
+          id="image-upload"
+          type="file"
+          accept="image/*"
+          onChange={handleImageUploadEvent}
+          className="hidden"
+        />
+
+        {/* Auth Dialog */}
+        <AuthRequiredDialog 
+          isOpen={showAuthDialog}
+          onClose={() => setShowAuthDialog(false)}
+          title={authDialogConfig.title}
+          description={authDialogConfig.description}
+        />
+      </div>
+    </div>
+  );
+};
+
+export default DiagnoseTab;
