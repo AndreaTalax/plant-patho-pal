@@ -1,5 +1,6 @@
 
 
+
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { modelInfo } from '@/utils/aiDiagnosisUtils';
@@ -169,34 +170,42 @@ const DiagnoseTab = () => {
       messageText += "\n\nGrazie per il tuo tempo e la tua expertise! 🙏";
 
       // Send the comprehensive message
-      const { error: msgError } = await supabase
+      const { data: messageData, error: msgError } = await supabase
         .from('messages')
         .insert({
           conversation_id: conversationId,
           sender_id: userProfile.id,
           recipient_id: EXPERT.id,
           text: messageText
-        });
+        })
+        .select()
+        .single();
 
       if (msgError) {
         console.error("Error sending comprehensive plant information:", msgError);
         return;
       }
 
+      console.log("Plant information message sent:", messageData);
+
       // Send image as separate message if available
       if (imageUrl) {
-        const { error: imageMessageError } = await supabase
+        const { data: imageMessageData, error: imageMessageError } = await supabase
           .from('messages')
           .insert({
             conversation_id: conversationId,
             sender_id: userProfile.id,
             recipient_id: EXPERT.id,
             text: imageUrl
-          });
+          })
+          .select()
+          .single();
 
         if (imageMessageError) {
           console.error("Error sending image message:", imageMessageError);
           // Don't throw for image, continue
+        } else {
+          console.log("Image message sent:", imageMessageData);
         }
       }
 
@@ -349,7 +358,15 @@ const DiagnoseTab = () => {
     
     // Automatically send plant info to expert chat if user is authenticated
     if (isAuthenticated && userProfile) {
-      await sendPlantInfoToExpertChat(data);
+      await sendPlantInfoToExpertChat({
+        name: data.name || "Pianta sconosciuta",
+        isIndoor: data.isIndoor,
+        wateringFrequency: data.wateringFrequency,
+        lightExposure: data.lightExposure,
+        symptoms: data.symptoms,
+        useAI: false,
+        sendToExpert: false
+      });
     }
     
     setTimeout(() => {
@@ -515,4 +532,5 @@ const DiagnoseTab = () => {
 };
 
 export default DiagnoseTab;
+
 

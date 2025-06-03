@@ -17,10 +17,19 @@ const ChatTab = () => {
   // Force refresh when switching tabs or on chat issues
   useEffect(() => {
     const handleRefreshChat = () => {
+      console.log("Forcing chat refresh...");
       setRefreshKey(Date.now());
     };
     
+    const handleTabSwitch = (event: any) => {
+      if (event.detail === 'chat') {
+        console.log("Switching to chat tab, refreshing...");
+        setRefreshKey(Date.now());
+      }
+    };
+    
     window.addEventListener('refreshChat', handleRefreshChat);
+    window.addEventListener('switchTab', handleTabSwitch);
     
     // Set up subscription for chat changes
     const channel = supabase
@@ -51,95 +60,11 @@ const ChatTab = () => {
       
     return () => {
       window.removeEventListener('refreshChat', handleRefreshChat);
+      window.removeEventListener('switchTab', handleTabSwitch);
       supabase.removeChannel(channel);
       supabase.removeChannel(conversationsChannel);
     };
   }, []);
-  
-  // Sync plant information to chat when it changes
-  useEffect(() => {
-    // Only sync if there's complete plant information and user is logged in
-    if (plantInfo.infoComplete && userProfile && userProfile.id && !synced) {
-      const syncPlantInfoToChat = async () => {
-        try {
-          console.log("Syncing plant info to chat...", plantInfo);
-          
-          // Find or create a conversation with the expert
-          const { data: existingConversation } = await supabase
-            .from('conversations')
-            .select('id')
-            .eq('user_id', userProfile.id)
-            .eq('expert_id', EXPERT.id)
-            .limit(1)
-            .single();
-            
-          let conversationId;
-          
-          if (existingConversation) {
-            conversationId = existingConversation.id;
-            console.log("Using existing conversation:", conversationId);
-          } else {
-            const { data: newConversation, error: convError } = await supabase
-              .from('conversations')
-              .insert({
-                user_id: userProfile.id,
-                expert_id: EXPERT.id,
-                title: `Consulenza per ${plantInfo.name || 'pianta'}`,
-                status: 'active'
-              })
-              .select()
-              .single();
-              
-            if (convError) {
-              console.error("Error creating conversation:", convError);
-              return;
-            }
-            
-            conversationId = newConversation.id;
-            console.log("Created new conversation:", conversationId);
-          }
-          
-          // Prepare message with plant information
-          let messageText = "🌿 Informazioni sulla pianta:\n\n";
-          if (plantInfo.name) {
-            messageText += `📝 **Nome:** ${plantInfo.name}\n`;
-          }
-          messageText += `🏠 **Ambiente:** ${plantInfo.isIndoor ? 'Interno' : 'Esterno'}\n`;
-          messageText += `💧 **Frequenza irrigazione:** ${plantInfo.wateringFrequency || 'Non specificata'} volte/settimana\n`;
-          messageText += `☀️ **Esposizione luce:** ${plantInfo.lightExposure || 'Non specificata'}\n`;
-          messageText += `🔍 **Sintomi:** ${plantInfo.symptoms || 'Non specificati'}\n`;
-          
-          console.log("Sending plant info message:", messageText);
-          
-          // Send message with plant information
-          const { error: msgError } = await supabase
-            .from('messages')
-            .insert({
-              conversation_id: conversationId,
-              sender_id: userProfile.id,
-              recipient_id: EXPERT.id,
-              text: messageText
-            });
-            
-          if (msgError) {
-            console.error("Error sending plant information:", msgError);
-            return;
-          }
-          
-          setSynced(true);
-          console.log("Plant info synced successfully");
-          
-          // Refresh chat to show the new message
-          setRefreshKey(Date.now());
-          
-        } catch (error) {
-          console.error("Error syncing plant info to chat:", error);
-        }
-      };
-      
-      syncPlantInfoToChat();
-    }
-  }, [plantInfo, userProfile, synced]);
   
   // Reset synced state when plant info changes
   useEffect(() => {

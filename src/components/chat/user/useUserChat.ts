@@ -16,25 +16,28 @@ export const useUserChat = (userId: string) => {
   const [currentDbConversation, setCurrentDbConversation] = useState<DatabaseConversation | null>(null);
   const [isSending, setIsSending] = useState(false);
   
-  // Initialize chat when activeChat changes
+  // Initialize chat when component mounts or userId changes
   useEffect(() => {
-    if (!activeChat || !userId) return;
+    if (!userId) return;
     
-    let messagesSubscription: any;
-    
-    const initializeChat = async () => {
+    const initializeExpertChat = async () => {
       try {
-        // Get or create conversation
+        console.log("Initializing expert chat for user:", userId);
+        
+        // Get or create conversation with expert
         const conversation = await findOrCreateConversation(userId);
         if (!conversation) {
-          toast("Could not start conversation with expert");
+          console.error("Could not start conversation with expert");
           return;
         }
         
+        console.log("Found/created conversation:", conversation.id);
         setCurrentDbConversation(conversation);
+        setActiveChat('expert'); // Always set expert as active chat
         
         // Load messages
         const messagesData = await loadMessages(conversation.id);
+        console.log("Loaded messages:", messagesData.length);
         
         // Convert to UI format
         const messagesForConversation = messagesData.map(msg => convertToUIMessage(msg));
@@ -51,42 +54,55 @@ export const useUserChat = (userId: string) => {
           setMessages(messagesForConversation);
         }
         
-        // Set up realtime subscription for messages in this conversation
-        messagesSubscription = supabase
-          .channel(`messages-channel-${conversation.id}`)
-          .on('postgres_changes', 
-            { 
-              event: 'INSERT', 
-              schema: 'public', 
-              table: 'messages',
-              filter: `conversation_id=eq.${conversation.id}`
-            }, 
-            (payload) => {
-              console.log('Message received:', payload);
-              const newMsg = payload.new;
-              
-              const formattedMessage = convertToUIMessage(newMsg as any);
-              
-              setMessages(prev => [...prev, formattedMessage]);
-            }
-          )
-          .subscribe();
-          
-        console.log("Subscribed to messages channel:", `messages-channel-${conversation.id}`);
       } catch (error) {
-        console.error("Error initializing chat:", error);
-        toast("Could not initialize chat with expert");
+        console.error("Error initializing expert chat:", error);
       }
     };
     
-    initializeChat();
+    initializeExpertChat();
+  }, [userId]);
+  
+  // Set up realtime subscription for messages when we have a conversation
+  useEffect(() => {
+    if (!currentDbConversation?.id) return;
+    
+    console.log("Setting up realtime subscription for conversation:", currentDbConversation.id);
+    
+    const messagesSubscription = supabase
+      .channel(`messages-channel-${currentDbConversation.id}`)
+      .on('postgres_changes', 
+        { 
+          event: 'INSERT', 
+          schema: 'public', 
+          table: 'messages',
+          filter: `conversation_id=eq.${currentDbConversation.id}`
+        }, 
+        (payload) => {
+          console.log('New message received via subscription:', payload);
+          const newMsg = payload.new;
+          
+          const formattedMessage = convertToUIMessage(newMsg as any);
+          
+          setMessages(prev => {
+            // Check if message already exists to avoid duplicates
+            const exists = prev.find(msg => msg.id === formattedMessage.id);
+            if (exists) {
+              return prev;
+            }
+            return [...prev, formattedMessage];
+          });
+        }
+      )
+      .subscribe();
+      
+    console.log("Subscribed to messages channel:", `messages-channel-${currentDbConversation.id}`);
     
     return () => {
       if (messagesSubscription) {
         supabase.removeChannel(messagesSubscription);
       }
     };
-  }, [activeChat, userId]);
+  }, [currentDbConversation?.id]);
   
   // Send message
   const handleSendMessage = async (text: string) => {
