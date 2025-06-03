@@ -1,4 +1,5 @@
 
+
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { modelInfo } from '@/utils/aiDiagnosisUtils';
@@ -403,7 +404,7 @@ const DiagnoseTab = () => {
       setPlantInfo({ ...plantInfo, sendToExpert: true, useAI: false });
       
       // Create conversation and send comprehensive info
-      await sendComprehensivePlantInfoToExpertChat(
+      const conversationId = await sendComprehensivePlantInfoToExpertChat(
         {
           name: plantInfo.name,
           isIndoor: plantInfo.isIndoor,
@@ -416,16 +417,22 @@ const DiagnoseTab = () => {
         uploadedImage
       );
       
-      // Navigate to chat after successful send
-      toast.success("Richiesta inviata con successo al fitopatologo!");
-      
-      setTimeout(() => {
-        navigate('/');
+      if (conversationId) {
+        // Navigate directly to chat tab and refresh chat to show the conversation
+        toast.success("Richiesta inviata con successo al fitopatologo!");
+        
+        // Switch to chat tab immediately with the expert conversation active
         setTimeout(() => {
           const event = new CustomEvent('switchTab', { detail: 'chat' });
           window.dispatchEvent(event);
-        }, 100);
-      }, 1000);
+          
+          // Force refresh chat to show the new conversation and messages
+          setTimeout(() => {
+            const refreshEvent = new CustomEvent('refreshChat');
+            window.dispatchEvent(refreshEvent);
+          }, 500);
+        }, 500);
+      }
       
     } catch (error) {
       console.error("Error notifying expert:", error);
@@ -508,3 +515,4 @@ const DiagnoseTab = () => {
 };
 
 export default DiagnoseTab;
+
