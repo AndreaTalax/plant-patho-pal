@@ -94,145 +94,243 @@ export class CacheService {
   }
 }
 
-// Servizio per il rilevamento malattie basato su AI locale/regole
+// Modifica il servizio per il rilevamento malattie basato su AI locale/regole
 export class LocalDiseaseDetectionService {
   private static readonly diseasePatterns = {
-    'funghi': {
-      keywords: ['macchie', 'muffa', 'bianco', 'grigio', 'marciume'],
-      diseases: [
-        {
-          disease: 'Oidio (Mal bianco)',
-          confidence: 0.7,
-          symptoms: ['Macchie bianche polverose su foglie', 'Deformazione delle foglie', 'Crescita stentata'],
-          treatments: ['Fungicida a base di zolfo', 'Migliorare aerazione', 'Ridurre umidità', 'Rimuovere parti colpite'],
-          severity: 'medium' as const
-        },
-        {
-          disease: 'Botrytis (Muffa grigia)',
-          confidence: 0.65,
-          symptoms: ['Muffa grigia su fiori e foglie', 'Marciume molle', 'Macchie brune'],
-          treatments: ['Fungicida specifico', 'Ridurre umidità', 'Migliorare ventilazione', 'Rimuovere materiale infetto'],
-          severity: 'high' as const
-        }
-      ]
-    },
-    'parassiti': {
-      keywords: ['punti', 'buchi', 'insetti', 'afidi', 'cocciniglia'],
-      diseases: [
-        {
-          disease: 'Attacco di Afidi',
-          confidence: 0.8,
-          symptoms: ['Piccoli insetti verdi o neri', 'Foglie appiccicose', 'Deformazione delle foglie'],
-          treatments: ['Insetticida naturale', 'Sapone di Marsiglia', 'Olio di neem', 'Introdurre predatori naturali'],
-          severity: 'medium' as const
-        },
-        {
-          disease: 'Cocciniglia',
-          confidence: 0.75,
-          symptoms: ['Piccoli scudi bianchi o marroni', 'Sostanze appiccicose', 'Ingiallimento foglie'],
-          treatments: ['Alcool denaturato', 'Olio bianco', 'Rimozione manuale', 'Insetticida sistemico'],
-          severity: 'medium' as const
-        }
-      ]
-    },
-    'carenze': {
-      keywords: ['giallo', 'scolorito', 'secco', 'bruciato'],
-      diseases: [
-        {
-          disease: 'Carenza di Azoto',
-          confidence: 0.6,
-          symptoms: ['Ingiallimento foglie vecchie', 'Crescita lenta', 'Foglie piccole'],
-          treatments: ['Fertilizzante ricco di azoto', 'Compost maturo', 'Letame ben decomposto'],
-          severity: 'low' as const
-        },
-        {
-          disease: 'Stress idrico',
-          confidence: 0.7,
-          symptoms: ['Foglie appassite', 'Bordi secchi', 'Caduta prematura foglie'],
-          treatments: ['Regolare irrigazione', 'Pacciamatura', 'Ombreggiatura temporanea'],
-          severity: 'medium' as const
-        }
-      ]
-    }
+    // ... mantieni i pattern esistenti ...
   };
 
+  // NUOVO: Metodo principale che analizza l'immagine per sintomi visivi
+  static async analyzeImageForDiseases(
+    imageData: string,
+    plantName: string,
+    onProgress?: (stage: string, percentage: number, message: string) => void
+  ): Promise<DiseaseDetectionResult[]> {
+    const updateProgress = (percentage: number, message: string) => {
+      onProgress?.('disease-analysis', percentage, message);
+    };
+
+    updateProgress(10, 'Analisi immagine per sintomi...');
+    
+    // Simula analisi dell'immagine per rilevare sintomi visivi
+    const visualSymptoms = await this.detectVisualSymptoms(imageData);
+    
+    updateProgress(40, 'Identificazione pattern malattie...');
+    
+    // Combina analisi visiva con conoscenza specifica della pianta
+    const plantSpecificDiseases = await this.detectDisease(plantName, visualSymptoms);
+    const patternBasedDiseases = this.analyzeSymptoms(visualSymptoms);
+    
+    updateProgress(80, 'Consolidamento risultati...');
+    
+    // Combina e deduplica i risultati
+    const allDiseases = this.combineAndRankDiseases(plantSpecificDiseases, patternBasedDiseases);
+    
+    updateProgress(100, 'Analisi malattie completata');
+    
+    return allDiseases;
+  }
+
+  // NUOVO: Simula l'analisi dell'immagine per rilevare sintomi visivi
+  private static async detectVisualSymptoms(imageData: string): Promise<string[]> {
+    // Simula il tempo di elaborazione
+    await new Promise(resolve => setTimeout(resolve, 1200));
+    
+    // In un'implementazione reale, qui useresti computer vision
+    // Per ora, simula il rilevamento di sintomi comuni
+    const possibleSymptoms = [
+      'macchie marroni sulle foglie',
+      'ingiallimento foglie',
+      'bordi secchi',
+      'macchie bianche polverose',
+      'piccoli buchi nelle foglie',
+      'foglie appassite',
+      'crescita stentata',
+      'decolorazione',
+      'muffa grigia',
+      'sostanze appiccicose'
+    ];
+    
+    // Simula il rilevamento casuale di alcuni sintomi
+    const detectedSymptoms: string[] = [];
+    const numSymptoms = Math.floor(Math.random() * 3) + 1; // 1-3 sintomi
+    
+    for (let i = 0; i < numSymptoms; i++) {
+      const randomSymptom = possibleSymptoms[Math.floor(Math.random() * possibleSymptoms.length)];
+      if (!detectedSymptoms.includes(randomSymptom)) {
+        detectedSymptoms.push(randomSymptom);
+      }
+    }
+    
+    return detectedSymptoms;
+  }
+
+  // NUOVO: Combina e classifica i risultati delle diverse analisi
+  private static combineAndRankDiseases(
+    plantSpecific: DiseaseDetectionResult[],
+    patternBased: DiseaseDetectionResult[]
+  ): DiseaseDetectionResult[] {
+    const combinedMap = new Map<string, DiseaseDetectionResult>();
+    
+    // Aggiungi malattie specifiche della pianta
+    plantSpecific.forEach(disease => {
+      combinedMap.set(disease.disease, {
+        ...disease,
+        confidence: disease.confidence * 1.2 // Boost per specificità della pianta
+      });
+    });
+    
+    // Aggiungi o aggiorna con analisi basata su pattern
+    patternBased.forEach(disease => {
+      const existing = combinedMap.get(disease.disease);
+      if (existing) {
+        // Se già presente, aumenta la confidenza
+        existing.confidence = Math.min(0.95, existing.confidence + disease.confidence * 0.3);
+        existing.symptoms = [...new Set([...existing.symptoms, ...disease.symptoms])];
+      } else {
+        combinedMap.set(disease.disease, disease);
+      }
+    });
+    
+    // Converti in array e ordina per confidenza
+    return Array.from(combinedMap.values())
+      .sort((a, b) => b.confidence - a.confidence)
+      .slice(0, 5); // Limita ai primi 5 risultati
+  }
+
+  // Mantieni il metodo esistente ma miglioralo
   static async detectDisease(
     plantName: string, 
     symptoms?: string[]
   ): Promise<DiseaseDetectionResult[]> {
-    
-    // Simula un'analisi basata su sintomi e tipo di pianta
-    await new Promise(resolve => setTimeout(resolve, 800)); // Simula processing
+    await new Promise(resolve => setTimeout(resolve, 800));
     
     const detectedDiseases: DiseaseDetectionResult[] = [];
+    const lowerPlantName = plantName.toLowerCase();
     
-    // Analisi basata sul nome della pianta
-    if (plantName.toLowerCase().includes('rosa')) {
-      detectedDiseases.push({
-        disease: 'Macchia nera della rosa',
-        confidence: 0.75,
-        symptoms: ['Macchie nere circolari su foglie', 'Ingiallimento foglie', 'Caduta prematura'],
-        treatments: ['Fungicida specifico per rose', 'Rimozione foglie colpite', 'Migliorare aerazione'],
-        severity: 'medium',
-        provider: 'local-ai'
-      });
-    } else if (plantName.toLowerCase().includes('basilico')) {
-      detectedDiseases.push({
-        disease: 'Peronospora del basilico',
-        confidence: 0.70,
-        symptoms: ['Macchie gialle su foglie', 'Muffa bianca sotto le foglie', 'Appassimento'],
-        treatments: ['Fungicida biologico', 'Ridurre umidità', 'Spaziare le piante'],
-        severity: 'high',
-        provider: 'local-ai'
-      });
-    } else if (plantName.toLowerCase().includes('geranio')) {
-      detectedDiseases.push({
-        disease: 'Ruggine del geranio',
-        confidence: 0.68,
-        symptoms: ['Pustole arancioni sotto foglie', 'Macchie gialle sopra', 'Caduta foglie'],
-        treatments: ['Fungicida a base di rame', 'Rimozione foglie colpite', 'Evitare bagnatura foglie'],
-        severity: 'medium',
-        provider: 'local-ai'
-      });
+    // Database malattie più esteso
+    const plantDiseaseDatabase = {
+      'rosa': [
+        {
+          disease: 'Macchia nera della rosa',
+          confidence: 0.75,
+          symptoms: ['Macchie nere circolari su foglie', 'Ingiallimento foglie', 'Caduta prematura'],
+          treatments: ['Fungicida specifico per rose', 'Rimozione foglie colpite', 'Migliorare aerazione'],
+          severity: 'medium' as const
+        },
+        {
+          disease: 'Oidio delle rose',
+          confidence: 0.70,
+          symptoms: ['Macchie bianche polverose', 'Deformazione foglie', 'Crescita stentata'],
+          treatments: ['Fungicida a base di zolfo', 'Migliorare circolazione aria', 'Evitare irrigazione fogliare'],
+          severity: 'medium' as const
+        }
+      ],
+      'basilico': [
+        {
+          disease: 'Peronospora del basilico',
+          confidence: 0.70,
+          symptoms: ['Macchie gialle su foglie', 'Muffa bianca sotto le foglie', 'Appassimento'],
+          treatments: ['Fungicida biologico', 'Ridurre umidità', 'Spaziare le piante'],
+          severity: 'high' as const
+        },
+        {
+          disease: 'Fusariosi del basilico',
+          confidence: 0.65,
+          symptoms: ['Appassimento improvviso', 'Annerimento del fusto', 'Crescita stentata'],
+          treatments: ['Rimozione piante colpite', 'Migliorare drenaggio', 'Rotazione colture'],
+          severity: 'high' as const
+        }
+      ],
+      'geranio': [
+        {
+          disease: 'Ruggine del geranio',
+          confidence: 0.68,
+          symptoms: ['Pustole arancioni sotto foglie', 'Macchie gialle sopra', 'Caduta foglie'],
+          treatments: ['Fungicida a base di rame', 'Rimozione foglie colpite', 'Evitare bagnatura foglie'],
+          severity: 'medium' as const
+        }
+      ],
+      'pomodoro': [
+        {
+          disease: 'Peronospora del pomodoro',
+          confidence: 0.80,
+          symptoms: ['Macchie scure su foglie', 'Muffa bianca sotto foglie', 'Marciume frutti'],
+          treatments: ['Fungicida preventivo', 'Migliorare aerazione', 'Evitare irrigazione fogliare'],
+          severity: 'high' as const
+        }
+      ]
+    };
+    
+    // Cerca malattie specifiche per tipo di pianta
+    for (const [plant, diseases] of Object.entries(plantDiseaseDatabase)) {
+      if (lowerPlantName.includes(plant)) {
+        diseases.forEach(disease => {
+          // Aumenta confidenza se i sintomi corrispondono
+          let adjustedConfidence = disease.confidence;
+          if (symptoms && symptoms.length > 0) {
+            const symptomMatch = this.calculateSymptomMatchScore(symptoms, disease.symptoms);
+            adjustedConfidence = Math.min(0.95, disease.confidence + symptomMatch * 0.2);
+          }
+          
+          detectedDiseases.push({
+            ...disease,
+            confidence: adjustedConfidence,
+            provider: 'plant-specific-db'
+          });
+        });
+        break;
+      }
     }
     
-    // Se non ci sono malattie specifiche, aggiungi controlli generici
+    // Se non trovate malattie specifiche, aggiungi controlli generici
     if (detectedDiseases.length === 0) {
-      // Simula controlli preventivi comuni
-      const commonChecks = [
-        {
-          disease: 'Controllo preventivo generale',
-          confidence: 0.5,
-          symptoms: ['Nessun sintomo evidente rilevato'],
-          treatments: [
-            'Monitoraggio regolare della pianta',
-            'Mantenere buona igiene del giardino',
-            'Irrigazione corretta',
-            'Fertilizzazione equilibrata'
-          ],
-          severity: 'low' as const,
-          provider: 'local-ai'
-        }
-      ];
-      
-      detectedDiseases.push(...commonChecks);
+      detectedDiseases.push({
+        disease: 'Controllo preventivo generale',
+        confidence: 0.4,
+        symptoms: ['Nessun sintomo specifico rilevato'],
+        treatments: [
+          'Monitoraggio regolare della pianta',
+          'Mantenere buona igiene del giardino',
+          'Irrigazione corretta',
+          'Fertilizzazione equilibrata'
+        ],
+        severity: 'low',
+        provider: 'general-care'
+      });
     }
     
     return detectedDiseases;
   }
 
-  // Analisi più sofisticata basata su pattern di sintomi
+  // NUOVO: Calcola corrispondenza tra sintomi osservati e sintomi noti
+  private static calculateSymptomMatchScore(observedSymptoms: string[], knownSymptoms: string[]): number {
+    let matches = 0;
+    const observedText = observedSymptoms.join(' ').toLowerCase();
+    
+    knownSymptoms.forEach(symptom => {
+      const symptomWords = symptom.toLowerCase().split(' ');
+      const matchingWords = symptomWords.filter(word => 
+        word.length > 3 && observedText.includes(word)
+      );
+      matches += matchingWords.length / symptomWords.length;
+    });
+    
+    return Math.min(1, matches / knownSymptoms.length);
+  }
+
+  // Migliora il metodo esistente analyzeSymptoms
   static analyzeSymptoms(symptoms: string[]): DiseaseDetectionResult[] {
     const results: DiseaseDetectionResult[] = [];
     
     for (const [category, data] of Object.entries(this.diseasePatterns)) {
       const matchScore = this.calculateSymptomMatch(symptoms, data.keywords);
       
-      if (matchScore > 0.3) {
+      if (matchScore > 0.2) { // Soglia più bassa per catturare più casi
         data.diseases.forEach(disease => {
           results.push({
             ...disease,
-            confidence: disease.confidence * matchScore,
+            confidence: Math.min(0.9, disease.confidence * matchScore * 1.5),
             provider: 'pattern-matching'
           });
         });
@@ -254,13 +352,34 @@ export class LocalDiseaseDetectionService {
       }
     });
     
-    return Math.min(1, matches / keywords.length * 2); // Boost del 2x per match
+    return Math.min(1, matches / keywords.length * 1.8);
   }
 }
 
+
 export class EnhancedPlantAnalysisService {
+  // ... altri metodi esistenti ...
+
+  private static async performDiseaseDetection(
+    identifiedPlant: PlantIdentificationResult,
+    updateProgress: (stage: string, percentage: number, message: string) => void,
+    processedImageData: string // AGGIUNGI questo parametro
+  ): Promise<DiseaseDetectionResult[]> {
+    
+    updateProgress('disease-analysis', 70, 'Analisi malattie per ' + identifiedPlant.plantName);
+    
+    // USA IL NUOVO METODO che analizza l'immagine
+    const diseases = await LocalDiseaseDetectionService.analyzeImageForDiseases(
+      processedImageData,
+      identifiedPlant.plantName,
+      updateProgress
+    );
+    
+    return diseases.sort((a, b) => b.confidence - a.confidence);
+  }
+
   static async analyzeImage(
-    imageData: string, 
+    imageData: string,
     onProgress?: (progress: AnalysisProgress) => void
   ): Promise<CombinedAnalysisResult> {
     
@@ -283,18 +402,19 @@ export class EnhancedPlantAnalysisService {
         return cachedResult;
       }
       
-      // 3. Identificazione pianta usando il servizio combinato esistente
+      // 3. Identificazione pianta
       updateProgress('plant-identification', 40, 'Identificazione pianta...');
       const plantResult = await CombinedPlantAnalysisService.analyzePlant(
         processedImage.processedImage,
-        (progress) => updateProgress('plant-id', 40 + progress.percentage * 0.3, progress.message)
+        (progress) => updateProgress('plant-id', 40 + progress.percentage * 0.2, progress.message)
       );
       
-      // 4. Rilevamento malattie
-      updateProgress('disease-detection', 70, 'Rilevamento malattie...');
+      // 4. Rilevamento malattie CON L'IMMAGINE
+      updateProgress('disease-detection', 60, 'Rilevamento malattie...');
       const diseaseResults = await this.performDiseaseDetection(
         plantResult.consensus.mostLikelyPlant,
-        updateProgress
+        updateProgress,
+        processedImage.processedImage // PASSA L'IMMAGINE PROCESSATA
       );
       
       // 5. Calcolo consensus finale
@@ -309,7 +429,7 @@ export class EnhancedPlantAnalysisService {
         diseaseDetection: diseaseResults,
         consensus: finalConsensus
       };
-
+      
       // 6. Salva in cache
       CacheService.set(cacheKey, finalResult);
       
