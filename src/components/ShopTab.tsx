@@ -1,73 +1,65 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Search, ShoppingBag, Filter, CreditCard, X } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { toast } from '@/components/ui/sonner';
+import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/context/AuthContext';
 
-// Mock product data with real product images
-const PRODUCTS = [
-  {
-    id: '1',
-    name: 'Organic Neem Oil',
-    category: 'Fungicides',
-    price: 19.99,
-    image: '/lovable-uploads/neem-oil.jpg', 
-    description: 'Natural remedy for powdery mildew and aphids. Safe for organic gardening.',
-  },
-  {
-    id: '2',
-    name: 'Plant Vitality Boost',
-    category: 'Nutrients',
-    price: 15.50,
-    image: '/lovable-uploads/plant-vitality.jpg',
-    description: 'Enhances plant immunity and growth. Ideal for recovering plants.',
-  },
-  {
-    id: '3',
-    name: 'Copper Fungicide',
-    category: 'Fungicides',
-    price: 24.95,
-    image: '/lovable-uploads/copper-fungicide.jpg',
-    description: 'Effective against leaf spots and blights. License-free formula.',
-  },
-  {
-    id: '4',
-    name: 'Insecticidal Soap',
-    category: 'Insecticides',
-    price: 12.99,
-    image: '/lovable-uploads/insecticidal-soap.jpg',
-    description: 'Controls aphids, mites and whiteflies. Safe for beneficial insects.',
-  },
-  {
-    id: '5',
-    name: 'Soil pH Tester Kit',
-    category: 'Tools',
-    price: 29.95,
-    image: '/lovable-uploads/soil-ph-tester.jpg',
-    description: 'Accurately measure soil pH levels. Essential for plant health diagnosis.',
-  }
-];
+interface Product {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  category: string;
+  image_url: string;
+  stock_quantity: number;
+}
+
+interface CartItem {
+  id: string;
+  quantity: number;
+  product?: Product;
+}
 
 const ShopTab = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [cart, setCart] = useState<Array<{id: string, quantity: number}>>([]);
+  const [cart, setCart] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [paymentStatus, setPaymentStatus] = useState<'idle' | 'processing' | 'success' | 'error'>('idle');
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
 
-  const filteredProducts = PRODUCTS.filter(product => {
-    const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          product.description.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = selectedCategory ? product.category === selectedCategory : true;
-    return matchesSearch && matchesCategory;
-  });
+  // Fetch products
+  useEffect(() => {
+    fetchProducts();
+  }, [selectedCategory, searchTerm]);
 
-  const categories = Array.from(new Set(PRODUCTS.map(p => p.category)));
+  const fetchProducts = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase.functions.invoke('get-products', {
+        body: { category: selectedCategory, search: searchTerm }
+      });
+
+      if (error) throw error;
+      setProducts(data.products || []);
+    } catch (error) {
+      console.error('Error fetching products:', error);
+      toast.error('Failed to load products');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const categories = Array.from(new Set(products.map(p => p.category)));
 
   const addToCart = (productId: string) => {
     setCart(currentCart => {
@@ -106,35 +98,62 @@ const ShopTab = () => {
   };
 
   const cartItems = cart.map(item => {
-    const product = PRODUCTS.find(p => p.id === item.id);
-    return {
-      ...item,
-      product
-    };
+    const product = products.find(p => p.id === item.id);
+    return { ...item, product };
   });
 
   const totalCartItems = cart.reduce((total, item) => total + item.quantity, 0);
   const subtotal = cartItems.reduce((total, item) => total + (item.product?.price || 0) * item.quantity, 0);
 
   const handleCheckout = () => {
+    if (!user) {
+      toast.error("Please login to continue");
+      return;
+    }
     setIsCartOpen(false);
     setIsCheckoutOpen(true);
   };
 
-  const processPayment = () => {
+  const processPayment = async () => {
+    if (!user) {
+      toast.error("Please login to continue");
+      return;
+    }
+
     setPaymentStatus('processing');
     
-    // Simulate payment processing
-    setTimeout(() => {
+    try {
+      const items = cartItems.map(item => ({
+        name: item.product?.name,
+        price: item.product?.price,
+        quantity: item.quantity
+      }));
+
+      const { data, error } = await supabase.functions.invoke('create-payment', {
+        body: {
+          items,
+          successUrl: `${window.location.origin}/payment-success`,
+          cancelUrl: `${window.location.origin}/payment-canceled`
+        }
+      });
+
+      if (error) throw error;
+
+      // Redirect to Stripe checkout
+      window.open(data.url, '_blank');
+      
       setPaymentStatus('success');
-      // Clear cart after successful payment
       setTimeout(() => {
         setCart([]);
         setIsCheckoutOpen(false);
         setPaymentStatus('idle');
-        toast.success("Payment successful! Your order has been placed.");
       }, 2000);
-    }, 3000);
+      
+    } catch (error) {
+      console.error('Payment error:', error);
+      setPaymentStatus('error');
+      toast.error('Payment failed. Please try again.');
+    }
   };
 
   return (
@@ -174,38 +193,45 @@ const ShopTab = () => {
         </div>
 
         {/* Products grid */}
-        <div className="grid grid-cols-2 gap-4">
-          {filteredProducts.map(product => (
-            <Card key={product.id} className="overflow-hidden">
-              <div className="aspect-square overflow-hidden">
-                <img 
-                  src={product.image} 
-                  alt={product.name} 
-                  className="w-full h-full object-cover"
-                />
-              </div>
-              <div className="p-3">
-                <h3 className="font-medium text-sm line-clamp-1">{product.name}</h3>
-                <p className="text-gray-500 text-xs mb-2">{product.category}</p>
-                <div className="flex justify-between items-center">
-                  <span className="font-bold text-drplant-green">${product.price.toFixed(2)}</span>
-                  <Button 
-                    size="sm" 
-                    className="h-8 w-8 p-0 rounded-full bg-drplant-blue hover:bg-drplant-blue-dark"
-                    onClick={() => addToCart(product.id)}
-                  >
-                    <ShoppingBag size={16} />
-                  </Button>
-                </div>
-              </div>
-            </Card>
-          ))}
-        </div>
+        {loading ? (
+          <div className="text-center py-8">Loading products...</div>
+        ) : (
+          <>
+            <div className="grid grid-cols-2 gap-4">
+              {products.map(product => (
+                <Card key={product.id} className="overflow-hidden">
+                  <div className="aspect-square overflow-hidden">
+                    <img 
+                      src={product.image_url} 
+                      alt={product.name} 
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <div className="p-3">
+                    <h3 className="font-medium text-sm line-clamp-1">{product.name}</h3>
+                    <p className="text-gray-500 text-xs mb-2">{product.category}</p>
+                    <div className="flex justify-between items-center">
+                      <span className="font-bold text-drplant-green">€{product.price.toFixed(2)}</span>
+                      <Button 
+                        size="sm" 
+                        className="h-8 w-8 p-0 rounded-full bg-drplant-blue hover:bg-drplant-blue-dark"
+                        onClick={() => addToCart(product.id)}
+                        disabled={product.stock_quantity === 0}
+                      >
+                        <ShoppingBag size={16} />
+                      </Button>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
 
-        {filteredProducts.length === 0 && (
-          <div className="text-center py-8 text-gray-500">
-            <p>No products found matching your search</p>
-          </div>
+            {products.length === 0 && (
+              <div className="text-center py-8 text-gray-500">
+                <p>No products found matching your search</p>
+              </div>
+            )}
+          </>
         )}
       </div>
       
@@ -243,14 +269,14 @@ const ShopTab = () => {
                   <div key={item.id} className="flex gap-4 border-b pb-4">
                     <div className="w-16 h-16 bg-gray-100 rounded-md flex-shrink-0 overflow-hidden">
                       <img 
-                        src={item.product?.image} 
+                        src={item.product?.image_url} 
                         alt={item.product?.name} 
                         className="w-full h-full object-cover"
                       />
                     </div>
                     <div className="flex-1">
                       <h4 className="font-medium">{item.product?.name}</h4>
-                      <p className="text-sm text-gray-500">${item.product?.price.toFixed(2)} each</p>
+                      <p className="text-sm text-gray-500">€{item.product?.price.toFixed(2)} each</p>
                       <div className="flex justify-between items-center mt-2">
                         <div className="flex items-center border rounded-md">
                           <Button 
@@ -287,7 +313,7 @@ const ShopTab = () => {
                 <div className="border-t pt-4">
                   <div className="flex justify-between mb-2">
                     <span>Subtotal</span>
-                    <span>${subtotal.toFixed(2)}</span>
+                    <span>€{subtotal.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between mb-4">
                     <span>Shipping</span>
@@ -295,7 +321,7 @@ const ShopTab = () => {
                   </div>
                   <div className="flex justify-between font-bold text-lg">
                     <span>Total</span>
-                    <span>${subtotal.toFixed(2)}</span>
+                    <span>€{subtotal.toFixed(2)}</span>
                   </div>
                 </div>
 
@@ -317,7 +343,7 @@ const ShopTab = () => {
           <DialogHeader>
             <DialogTitle>Checkout</DialogTitle>
             <DialogDescription>
-              Complete your order by entering payment details
+              Complete your order
             </DialogDescription>
           </DialogHeader>
           
@@ -329,36 +355,12 @@ const ShopTab = () => {
                   {cartItems.map(item => (
                     <div key={item.id} className="flex justify-between text-sm">
                       <span>{item.product?.name} x {item.quantity}</span>
-                      <span>${((item.product?.price || 0) * item.quantity).toFixed(2)}</span>
+                      <span>€{((item.product?.price || 0) * item.quantity).toFixed(2)}</span>
                     </div>
                   ))}
                   <div className="border-t pt-2 mt-2 font-bold flex justify-between">
                     <span>Total</span>
-                    <span>${subtotal.toFixed(2)}</span>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="border rounded-md p-4">
-                <h3 className="font-medium mb-4">Payment Information</h3>
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-sm text-gray-500 mb-1 block">Card Number</label>
-                    <Input placeholder="4242 4242 4242 4242" />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-sm text-gray-500 mb-1 block">Expiry Date</label>
-                      <Input placeholder="MM/YY" />
-                    </div>
-                    <div>
-                      <label className="text-sm text-gray-500 mb-1 block">CVC</label>
-                      <Input placeholder="123" />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="text-sm text-gray-500 mb-1 block">Cardholder Name</label>
-                    <Input placeholder="John Doe" />
+                    <span>€{subtotal.toFixed(2)}</span>
                   </div>
                 </div>
               </div>
@@ -367,20 +369,15 @@ const ShopTab = () => {
                 className="w-full bg-drplant-green hover:bg-drplant-green-dark mt-4"
                 onClick={processPayment}
               >
-                <CreditCard className="mr-2 h-4 w-4" /> Pay ${subtotal.toFixed(2)}
+                <CreditCard className="mr-2 h-4 w-4" /> Pay with Stripe
               </Button>
-              
-              <p className="text-xs text-center text-gray-500 mt-4">
-                Your payment is secured with SSL encryption. We do not store your card details.
-              </p>
             </div>
           )}
           
           {paymentStatus === 'processing' && (
             <div className="py-8 flex flex-col items-center justify-center">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-drplant-green mb-4"></div>
-              <p className="text-center">Processing your payment...</p>
-              <p className="text-center text-sm text-gray-500 mt-2">Please do not close this window</p>
+              <p className="text-center">Redirecting to payment...</p>
             </div>
           )}
           
@@ -391,9 +388,8 @@ const ShopTab = () => {
                   <path d="M5 13L9 17L19 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </div>
-              <h3 className="text-lg font-medium text-center">Payment Successful!</h3>
-              <p className="text-center text-gray-500 mt-2">Thank you for your purchase</p>
-              <p className="text-center text-gray-500 mt-4">Order confirmation has been sent to your email</p>
+              <h3 className="text-lg font-medium text-center">Redirected to Payment!</h3>
+              <p className="text-center text-gray-500 mt-2">Complete your payment in the new tab</p>
             </div>
           )}
           

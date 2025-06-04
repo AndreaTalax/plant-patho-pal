@@ -147,6 +147,59 @@ class ApiClient {
       body: JSON.stringify({ userId, plantType, plantVariety, symptoms, imageUrl, diagnosisResult }),
     });
   }
+
+  // Products APIs (Shop)
+  async getProducts(category?: string, search?: string) {
+    const params = new URLSearchParams();
+    if (category) params.append('category', category);
+    if (search) params.append('search', search);
+    
+    return this.makeRequest(`/api-router/products?${params.toString()}`);
+  }
+
+  // Orders APIs (Stripe)
+  async createPayment(items: any[], successUrl: string, cancelUrl: string) {
+    return this.makeRequest('/api-router/orders/create-payment', {
+      method: 'POST',
+      body: JSON.stringify({ items, successUrl, cancelUrl }),
+    });
+  }
+
+  async verifyPayment(sessionId: string) {
+    return this.makeRequest('/api-router/orders/verify-payment', {
+      method: 'POST',
+      body: JSON.stringify({ sessionId }),
+    });
+  }
+
+  async getUserOrders(userId: string) {
+    return this.makeRequest(`/api-router/orders?userId=${encodeURIComponent(userId)}`);
+  }
+
+  // Library Articles APIs
+  async getLibraryArticles(category?: string, search?: string) {
+    const params = new URLSearchParams();
+    if (category) params.append('category', category);
+    if (search) params.append('search', search);
+    
+    return this.makeRequest(`/api-router/library/articles?${params.toString()}`);
+  }
+
+  async getLibraryArticle(articleId: string) {
+    return this.makeRequest(`/api-router/library/articles/${encodeURIComponent(articleId)}`);
+  }
+
+  // Avatar Upload API
+  async uploadAvatar(file: File) {
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    return this.makeRequest('/api-router/upload-avatar', {
+      method: 'POST',
+      body: formData,
+      headers: {}, // Remove Content-Type to let browser set it for FormData
+    });
+  }
 }
 
 export const apiClient = new ApiClient();

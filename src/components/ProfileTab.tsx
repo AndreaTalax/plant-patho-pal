@@ -1,5 +1,5 @@
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -28,6 +28,15 @@ import SettingsModal from "./SettingsModal";
 import ChangeCredentialsModal from "./ChangeCredentialsModal";
 import { supabase } from "@/integrations/supabase/client";
 
+interface Order {
+  id: string;
+  amount: number;
+  currency: string;
+  status: string;
+  items: any[];
+  created_at: string;
+}
+
 const ProfileTab = () => {
   const [privacyPolicyOpen, setPrivacyPolicyOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -36,19 +45,32 @@ const ProfileTab = () => {
   const [editingAddress, setEditingAddress] = useState(false);
   const [phoneValue, setPhoneValue] = useState("");
   const [addressValue, setAddressValue] = useState("");
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loadingOrders, setLoadingOrders] = useState(true);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
   const { logout, userProfile, updateProfile } = useAuth();
 
   // Initialize state with user profile data
-  useState(() => {
+  useEffect(() => {
     setPhoneValue(userProfile.phone || "");
     setAddressValue(userProfile.address || "");
-    setAvatarUrl(userProfile.avatarUrl || null);
-  });
+    fetchOrders();
+  }, [userProfile]);
+
+  const fetchOrders = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke('get-user-orders');
+      if (error) throw error;
+      setOrders(data.orders || []);
+    } catch (error) {
+      console.error('Error fetching orders:', error);
+    } finally {
+      setLoadingOrders(false);
+    }
+  };
 
   const handleSignOut = () => {
     logout();
@@ -56,16 +78,24 @@ const ProfileTab = () => {
     navigate("/login");
   };
 
-  const handleSavePhone = () => {
-    updateProfile("phone", phoneValue);
-    setEditingPhone(false);
-    toast("Phone number updated");
+  const handleSavePhone = async () => {
+    try {
+      await updateProfile("phone", phoneValue);
+      setEditingPhone(false);
+      toast("Phone number updated");
+    } catch (error) {
+      toast("Failed to update phone number");
+    }
   };
 
-  const handleSaveAddress = () => {
-    updateProfile("address", addressValue);
-    setEditingAddress(false);
-    toast("Address updated");
+  const handleSaveAddress = async () => {
+    try {
+      await updateProfile("address", addressValue);
+      setEditingAddress(false);
+      toast("Address updated");
+    } catch (error) {
+      toast("Failed to update address");
+    }
   };
 
   const getInitials = () => {
@@ -85,43 +115,37 @@ const ProfileTab = () => {
       }
       
       const file = event.target.files[0];
-      const fileExt = file.name.split('.').pop();
       
-      if (!userProfile.id) {
-        toast("User profile not properly loaded");
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        toast("Please select an image file");
         return;
       }
       
-      const filePath = `${userProfile.id}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        toast("File size must be less than 5MB");
+        return;
+      }
       
       setUploading(true);
       
-      // Upload the file to Supabase Storage
-      const { error: uploadError } = await supabase
-        .storage
-        .from('avatars')
-        .upload(filePath, file);
-        
-      if (uploadError) {
-        throw uploadError;
-      }
+      const formData = new FormData();
+      formData.append('file', file);
       
-      // Get the public URL
-      const { data } = supabase
-        .storage
-        .from('avatars')
-        .getPublicUrl(filePath);
-        
-      const newAvatarUrl = data.publicUrl;
+      const { data, error } = await supabase.functions.invoke('upload-avatar', {
+        body: formData
+      });
+      
+      if (error) throw error;
       
       // Update the user's profile
-      await updateProfile("avatarUrl", newAvatarUrl);
-      setAvatarUrl(newAvatarUrl);
+      await updateProfile("avatarUrl", data.avatarUrl);
       
-      toast("Profile picture updated");
+      toast("Profile picture updated successfully!");
     } catch (error) {
       console.error("Error uploading avatar:", error);
-      toast("Error uploading image");
+      toast("Error uploading image. Please try again.");
     } finally {
       setUploading(false);
       if (fileInputRef.current) {
@@ -136,7 +160,7 @@ const ProfileTab = () => {
       <div className="flex flex-col items-center pt-8 pb-6">
         <div className="relative">
           <Avatar className="h-24 w-24 mb-4 cursor-pointer" onClick={handleAvatarClick}>
-            <AvatarImage src={avatarUrl || "/placeholder.svg"} alt="User avatar" />
+            <AvatarImage src={userProfile.avatarUrl || "/placeholder.svg"} alt="User avatar" />
             <AvatarFallback>{getInitials()}</AvatarFallback>
           </Avatar>
           <Button 
@@ -160,6 +184,7 @@ const ProfileTab = () => {
           {userProfile.firstName} {userProfile.lastName}
         </h2>
         <p className="text-gray-500">{userProfile.email}</p>
+        {uploading && <p className="text-sm text-gray-500 mt-1">Uploading...</p>}
       </div>
 
       {/* Activity Section */}
@@ -168,34 +193,46 @@ const ProfileTab = () => {
           <h3 className="text-lg font-semibold">Activity</h3>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue="diagnosis" className="w-full">
+          <Tabs defaultValue="orders" className="w-full">
             <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="diagnosis">Diagnosis</TabsTrigger>
               <TabsTrigger value="orders">Orders</TabsTrigger>
+              <TabsTrigger value="diagnosis">Diagnosis</TabsTrigger>
               <TabsTrigger value="saved">Saved</TabsTrigger>
             </TabsList>
+            <TabsContent value="orders" className="space-y-4 mt-4">
+              {loadingOrders ? (
+                <div className="text-center py-4">Loading orders...</div>
+              ) : orders.length > 0 ? (
+                orders.slice(0, 3).map((order) => (
+                  <div key={order.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <ShoppingBag className="h-5 w-5 text-drplant-blue" />
+                      <div>
+                        <h4 className="font-medium">Order #{order.id.slice(0, 8)}</h4>
+                        <p className="text-sm text-gray-500">
+                          {new Date(order.created_at).toLocaleDateString()} - €{(order.amount / 100).toFixed(2)}
+                        </p>
+                      </div>
+                    </div>
+                    <Badge className={order.status === 'completed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}>
+                      {order.status}
+                    </Badge>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-4 text-gray-500">No orders yet</div>
+              )}
+            </TabsContent>
             <TabsContent value="diagnosis" className="space-y-4 mt-4">
               <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                 <div className="flex items-center gap-3">
                   <History className="h-5 w-5 text-drplant-blue" />
                   <div>
-                    <h4 className="font-medium">Rose Black Spot</h4>
-                    <p className="text-sm text-gray-500">Diagnosed on April 15, 2025</p>
+                    <h4 className="font-medium">Recent Diagnoses</h4>
+                    <p className="text-sm text-gray-500">View your plant diagnosis history</p>
                   </div>
                 </div>
-                <Button variant="outline" size="sm">View Details</Button>
-              </div>
-            </TabsContent>
-            <TabsContent value="orders" className="space-y-4 mt-4">
-              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                <div className="flex items-center gap-3">
-                  <ShoppingBag className="h-5 w-5 text-drplant-blue" />
-                  <div>
-                    <h4 className="font-medium">Organic Fungicide</h4>
-                    <p className="text-sm text-gray-500">Ordered on April 16, 2025</p>
-                  </div>
-                </div>
-                <Button variant="outline" size="sm">Track Order</Button>
+                <Button variant="outline" size="sm">View All</Button>
               </div>
             </TabsContent>
             <TabsContent value="saved" className="space-y-4 mt-4">
@@ -203,11 +240,11 @@ const ProfileTab = () => {
                 <div className="flex items-center gap-3">
                   <Flower2 className="h-5 w-5 text-drplant-blue" />
                   <div>
-                    <h4 className="font-medium">Tomato Plant Care</h4>
-                    <p className="text-sm text-gray-500">Saved on April 14, 2025</p>
+                    <h4 className="font-medium">Saved Articles</h4>
+                    <p className="text-sm text-gray-500">Your bookmarked content</p>
                   </div>
                 </div>
-                <Button variant="outline" size="sm">View Guide</Button>
+                <Button variant="outline" size="sm">View Saved</Button>
               </div>
             </TabsContent>
           </Tabs>

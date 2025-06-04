@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
@@ -45,6 +44,24 @@ serve(async (req) => {
       
       case '/api/diagnoses':
         return await handleDiagnoses(req, supabase);
+      
+      case '/api/products':
+        return await handleProducts(req, supabase);
+      
+      case '/api/orders':
+        return await handleOrders(req, supabase);
+      
+      case '/api/orders/create-payment':
+        return await handleCreatePayment(req, supabase);
+      
+      case '/api/orders/verify-payment':
+        return await handleVerifyPayment(req, supabase);
+      
+      case '/api/library/articles':
+        return await handleLibraryArticles(req, supabase);
+      
+      case '/api/upload-avatar':
+        return await handleUploadAvatar(req, supabase);
       
       default:
         return new Response(
@@ -491,6 +508,164 @@ async function handleDiagnoses(req: Request, supabase: any) {
     
     return new Response(
       JSON.stringify({ diagnosis: data }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+}
+
+// New Products Endpoints
+async function handleProducts(req: Request, supabase: any) {
+  if (req.method === 'GET') {
+    const url = new URL(req.url);
+    const category = url.searchParams.get('category');
+    const search = url.searchParams.get('search');
+    
+    let query = supabase
+      .from('products')
+      .select('*')
+      .eq('is_active', true)
+      .order('created_at', { ascending: false });
+    
+    if (category) query = query.eq('category', category);
+    if (search) query = query.or(`name.ilike.%${search}%,description.ilike.%${search}%`);
+    
+    const { data, error } = await query;
+    
+    if (error) throw error;
+    
+    return new Response(
+      JSON.stringify({ products: data }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+}
+
+// Orders Endpoints
+async function handleOrders(req: Request, supabase: any) {
+  if (req.method === 'GET') {
+    const url = new URL(req.url);
+    const userId = url.searchParams.get('userId');
+    
+    if (!userId) {
+      return new Response(
+        JSON.stringify({ error: 'userId is required' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    const { data, error } = await supabase
+      .from('orders')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+    
+    if (error) throw error;
+    
+    return new Response(
+      JSON.stringify({ orders: data }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+}
+
+// Create Payment Endpoint
+async function handleCreatePayment(req: Request, supabase: any) {
+  if (req.method === 'POST') {
+    // Redirect to the Supabase function
+    const response = await supabase.functions.invoke('create-payment', {
+      body: await req.json(),
+      headers: {
+        Authorization: req.headers.get('Authorization') || ''
+      }
+    });
+    
+    if (response.error) throw new Error(response.error.message);
+    
+    return new Response(
+      JSON.stringify(response.data),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+}
+
+// Verify Payment Endpoint
+async function handleVerifyPayment(req: Request, supabase: any) {
+  if (req.method === 'POST') {
+    // Redirect to the Supabase function
+    const response = await supabase.functions.invoke('verify-payment', {
+      body: await req.json()
+    });
+    
+    if (response.error) throw new Error(response.error.message);
+    
+    return new Response(
+      JSON.stringify(response.data),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+}
+
+// Library Articles Endpoints
+async function handleLibraryArticles(req: Request, supabase: any) {
+  if (req.method === 'GET') {
+    const url = new URL(req.url);
+    const category = url.searchParams.get('category');
+    const search = url.searchParams.get('search');
+    const articleId = url.searchParams.get('id');
+    
+    if (articleId) {
+      // Get single article
+      const { data, error } = await supabase
+        .from('library_articles')
+        .select('*')
+        .eq('id', articleId)
+        .eq('is_published', true)
+        .single();
+      
+      if (error) throw error;
+      
+      return new Response(
+        JSON.stringify({ article: data }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    // Get multiple articles
+    let query = supabase
+      .from('library_articles')
+      .select('*')
+      .eq('is_published', true)
+      .order('created_at', { ascending: false });
+    
+    if (category) query = query.eq('category', category);
+    if (search) query = query.or(`title.ilike.%${search}%,content.ilike.%${search}%,excerpt.ilike.%${search}%`);
+    
+    const { data, error } = await query;
+    
+    if (error) throw error;
+    
+    return new Response(
+      JSON.stringify({ articles: data }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+}
+
+// Upload Avatar Endpoint
+async function handleUploadAvatar(req: Request, supabase: any) {
+  if (req.method === 'POST') {
+    // Redirect to the Supabase function
+    const response = await supabase.functions.invoke('upload-avatar', {
+      body: await req.formData(),
+      headers: {
+        Authorization: req.headers.get('Authorization') || ''
+      }
+    });
+    
+    if (response.error) throw new Error(response.error.message);
+    
+    return new Response(
+      JSON.stringify(response.data),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
