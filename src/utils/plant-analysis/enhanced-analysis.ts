@@ -1,300 +1,141 @@
 
-import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { ComputerVisionService, type VisionAnalysisResult } from '@/services/computerVisionService';
 import type { AnalysisProgress } from '../../services/aiProviders';
+import { toast } from 'sonner';
 
-// Enhanced AI analysis system with high accuracy requirements
 export const analyzeWithEnhancedAI = async (
-  imageFile: File, 
-  plantInfo: any = null, 
-  onProgress?: (progress: AnalysisProgress) => void
-) => {
-  const updateProgress = (stage: string, percentage: number, message: string) => {
-    onProgress?.({ stage, percentage, message });
-  };
-
+  imageFile: File,
+  plantInfo: any = null,
+  progressCallback?: (progress: AnalysisProgress) => void
+): Promise<any> => {
   try {
-    updateProgress('preprocessing', 10, 'Ottimizzazione immagine per massima accuratezza...');
+    console.log("🚀 Starting enhanced AI analysis with computer vision...");
     
-    // Enhanced image preprocessing for better accuracy
-    const optimizedImage = await enhanceImageQuality(imageFile);
+    progressCallback?.({
+      stage: 'initialization',
+      percentage: 10,
+      message: 'Inizializzazione analisi computer vision...'
+    });
     
-    updateProgress('multi-model', 30, 'Analisi con modelli AI multipli...');
+    // Analisi con computer vision
+    progressCallback?.({
+      stage: 'computer-vision',
+      percentage: 30,
+      message: 'Analisi computer vision in corso...'
+    });
     
-    // Use multiple AI models in parallel for consensus
-    const [plexiResult, plantIdResult, specializedResult] = await Promise.allSettled([
-      analyzeWithPlexiAI(optimizedImage, plantInfo),
-      analyzeWithPlantId(optimizedImage),
-      analyzeWithSpecializedModels(optimizedImage, plantInfo)
-    ]);
+    const visionResult = await ComputerVisionService.analyzeImageWithVision(imageFile);
     
-    updateProgress('consensus', 70, 'Calcolo consensus tra modelli AI...');
+    progressCallback?.({
+      stage: 'processing',
+      percentage: 70,
+      message: 'Elaborazione risultati...'
+    });
     
-    // Calculate consensus from multiple models
-    const results = [];
+    // Trasformazione in formato compatibile
+    const enhancedResult = transformVisionResultToStandardFormat(visionResult, plantInfo);
     
-    if (plexiResult.status === 'fulfilled' && plexiResult.value) {
-      results.push({
-        ...plexiResult.value,
-        source: 'PlexiAI',
-        weight: 0.4 // High weight for our primary service
-      });
-    }
+    progressCallback?.({
+      stage: 'finalizing',
+      percentage: 100,
+      message: 'Analisi completata'
+    });
     
-    if (plantIdResult.status === 'fulfilled' && plantIdResult.value) {
-      results.push({
-        ...plantIdResult.value,
-        source: 'Plant.id',
-        weight: 0.35 // High weight for specialized plant identification
-      });
-    }
-    
-    if (specializedResult.status === 'fulfilled' && specializedResult.value) {
-      results.push({
-        ...specializedResult.value,
-        source: 'Specialized',
-        weight: 0.25
-      });
-    }
-    
-    // Require minimum 2 successful analyses for high confidence
-    if (results.length < 2) {
-      throw new Error('Analisi insufficiente per garantire accuratezza del 90%');
-    }
-    
-    updateProgress('validation', 85, 'Validazione risultati...');
-    
-    // Calculate weighted consensus
-    const finalResult = calculateHighConfidenceConsensus(results, plantInfo);
-    
-    // Only return results with 90%+ confidence
-    if (finalResult.confidence < 0.9) {
-      throw new Error(`Accuratezza insufficiente: ${Math.round(finalResult.confidence * 100)}%. Richiesta accuratezza minima: 90%`);
-    }
-    
-    updateProgress('complete', 100, 'Analisi completata con alta accuratezza');
-    
-    return finalResult;
+    console.log("✅ Enhanced analysis completed:", enhancedResult);
+    return enhancedResult;
     
   } catch (error) {
-    console.error('Enhanced AI analysis failed:', error);
-    throw new Error(`Analisi AI potenziata fallita: ${error.message}`);
+    console.error("❌ Enhanced AI analysis failed:", error);
+    progressCallback?.({
+      stage: 'error',
+      percentage: 0,
+      message: 'Errore nell\'analisi'
+    });
+    throw error;
   }
 };
 
-// Enhanced image quality processing
-async function enhanceImageQuality(imageFile: File): Promise<File> {
-  return new Promise((resolve) => {
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    const img = new Image();
-    
-    img.onload = () => {
-      // Set optimal size for plant recognition (1024x1024)
-      const size = 1024;
-      canvas.width = size;
-      canvas.height = size;
-      
-      // Enhanced drawing with image smoothing
-      ctx.imageSmoothingEnabled = true;
-      ctx.imageSmoothingQuality = 'high';
-      
-      // Draw and enhance contrast
-      ctx.drawImage(img, 0, 0, size, size);
-      
-      // Apply slight contrast enhancement
-      const imageData = ctx.getImageData(0, 0, size, size);
-      const data = imageData.data;
-      
-      for (let i = 0; i < data.length; i += 4) {
-        // Enhance contrast slightly
-        data[i] = Math.min(255, data[i] * 1.1);     // Red
-        data[i + 1] = Math.min(255, data[i + 1] * 1.1); // Green
-        data[i + 2] = Math.min(255, data[i + 2] * 1.1); // Blue
+// Trasforma il risultato della computer vision nel formato standard
+function transformVisionResultToStandardFormat(
+  visionResult: VisionAnalysisResult, 
+  plantInfo: any
+): any {
+  const { plantIdentification, healthAssessment, visualFeatures, confidence } = visionResult;
+  
+  // Determina se la pianta è sana
+  const isHealthy = healthAssessment.isHealthy;
+  
+  // Prepara informazioni sulla malattia se presente
+  let diseaseInfo = null;
+  if (!isHealthy && healthAssessment.diseases.length > 0) {
+    const primaryDisease = healthAssessment.diseases[0];
+    diseaseInfo = {
+      name: primaryDisease.name,
+      description: primaryDisease.description,
+      confidence: primaryDisease.confidence,
+      treatments: primaryDisease.treatment,
+      severity: primaryDisease.severity,
+      symptoms: [primaryDisease.name, ...visualFeatures.symptoms]
+    };
+  }
+  
+  // Risultato nel formato standard
+  return {
+    label: plantIdentification.plantName,
+    confidence: confidence,
+    healthy: isHealthy,
+    disease: diseaseInfo,
+    plantPart: visualFeatures.plantPart,
+    scientificName: plantIdentification.scientificName,
+    sources: ['Computer Vision', 'Google Cloud Vision', 'Plant.id'],
+    analysisDetails: {
+      multiServiceInsights: {
+        plantName: plantIdentification.plantName,
+        plantSpecies: plantIdentification.scientificName,
+        plantPart: visualFeatures.plantPart,
+        isHealthy: isHealthy,
+        isValidPlantImage: true,
+        primaryService: "Computer Vision",
+        agreementScore: confidence,
+        dataSource: visionResult.dataSource
+      },
+      identifiedFeatures: [
+        plantIdentification.plantName,
+        `Confidenza: ${Math.round(confidence * 100)}%`,
+        `Parte: ${visualFeatures.plantPart}`,
+        `Stato: ${isHealthy ? 'Sana' : 'Problematica'}`,
+        ...visualFeatures.symptoms
+      ],
+      plantixInsights: healthAssessment.diseases.length > 0 ? {
+        severity: healthAssessment.diseases[0].severity,
+        spreadRisk: healthAssessment.diseases[0].severity === 'high' ? 'Alto' : 'Medio',
+        environmentalFactors: [`Salute generale: ${Math.round(healthAssessment.overallHealthScore * 100)}%`]
+      } : null,
+      visualAnalysis: {
+        colors: visualFeatures.colors,
+        leafCondition: visualFeatures.leafCondition,
+        symptoms: visualFeatures.symptoms
       }
-      
-      ctx.putImageData(imageData, 0, 0);
-      
-      canvas.toBlob((blob) => {
-        const enhancedFile = new File([blob], imageFile.name, {
-          type: 'image/jpeg',
-          lastModified: Date.now()
-        });
-        resolve(enhancedFile);
-      }, 'image/jpeg', 0.95);
-    };
-    
-    img.src = URL.createObjectURL(imageFile);
-  });
-}
-
-// PlexiAI analysis with enhanced parameters
-async function analyzeWithPlexiAI(imageFile: File, plantInfo: any) {
-  const formData = new FormData();
-  formData.append('image', imageFile);
-  formData.append('highAccuracy', 'true');
-  formData.append('plantInfo', JSON.stringify(plantInfo));
-  
-  const response = await supabase.functions.invoke('analyze-plant', {
-    body: formData
-  });
-  
-  if (response.error || !response.data) {
-    throw new Error('PlexiAI analysis failed');
-  }
-  
-  return {
-    ...response.data,
-    confidence: response.data.confidence || response.data.score || 0
-  };
-}
-
-// Plant.id analysis with enhanced parameters
-async function analyzeWithPlantId(imageFile: File) {
-  const base64 = await fileToBase64(imageFile);
-  
-  const response = await fetch('https://api.plant.id/v2/identify', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Api-Key': 'your-plant-id-key' // This should come from environment
     },
-    body: JSON.stringify({
-      images: [base64],
-      modifiers: ['crops_fast', 'similar_images'],
-      plant_language: 'it',
-      plant_details: [
-        'common_names',
-        'url',
-        'wiki_description',
-        'taxonomy',
-        'synonyms'
-      ]
-    })
-  });
-  
-  if (!response.ok) {
-    throw new Error('Plant.id analysis failed');
-  }
-  
-  const data = await response.json();
-  
-  if (!data.suggestions || data.suggestions.length === 0) {
-    throw new Error('No plant identification from Plant.id');
-  }
-  
-  const bestMatch = data.suggestions[0];
-  
-  return {
-    label: bestMatch.plant_name,
-    confidence: bestMatch.probability,
-    plantName: bestMatch.plant_name,
-    scientificName: bestMatch.plant_details?.scientific_name,
-    commonNames: bestMatch.plant_details?.common_names || [],
-    healthy: true, // Will be determined by health assessment
-    source: 'Plant.id'
+    recommendedProducts: getRecommendedProducts(isHealthy, diseaseInfo?.severity),
+    enhanced: true,
+    computerVisionEnabled: true
   };
 }
 
-// Specialized models based on plant type
-async function analyzeWithSpecializedModels(imageFile: File, plantInfo: any) {
-  // Determine plant type from context
-  const isIndoor = plantInfo?.isIndoor;
-  const symptoms = plantInfo?.symptoms?.toLowerCase() || '';
-  
-  let modelEndpoint = 'general-plant-analysis';
-  
-  if (isIndoor) {
-    modelEndpoint = 'houseplant-specialist';
-  } else if (symptoms.includes('malattia') || symptoms.includes('macchie')) {
-    modelEndpoint = 'disease-specialist';
+// Prodotti raccomandati basati sulla diagnosi
+function getRecommendedProducts(isHealthy: boolean, severity?: string): string[] {
+  if (isHealthy) {
+    return ['2', '5']; // Prodotti per manutenzione
   }
   
-  // This would call a specialized analysis service
-  // For now, simulate high-accuracy analysis
-  return {
-    label: 'Specialized Analysis Result',
-    confidence: 0.85,
-    source: 'Specialized',
-    healthy: !symptoms.includes('malattia')
-  };
-}
-
-// Calculate high-confidence consensus from multiple models
-function calculateHighConfidenceConsensus(results: any[], plantInfo: any) {
-  // Weight results by confidence and source reliability
-  let totalWeight = 0;
-  let weightedConfidence = 0;
-  let consensusLabel = '';
-  let maxWeightedScore = 0;
-  
-  // Extract additional properties from results
-  let scientificName = '';
-  let plantPart = 'whole plant';
-  let recommendedProducts: string[] = [];
-  
-  for (const result of results) {
-    const adjustedWeight = result.weight * result.confidence;
-    totalWeight += adjustedWeight;
-    weightedConfidence += result.confidence * adjustedWeight;
-    
-    if (adjustedWeight > maxWeightedScore) {
-      maxWeightedScore = adjustedWeight;
-      consensusLabel = result.label;
-      scientificName = result.scientificName || '';
-      plantPart = result.plantPart || 'whole plant';
-    }
-    
-    // Collect recommended products
-    if (result.recommendedProducts) {
-      recommendedProducts = [...recommendedProducts, ...result.recommendedProducts];
-    }
+  switch (severity) {
+    case 'high':
+      return ['1', '3', '4']; // Trattamenti intensivi
+    case 'medium':
+      return ['1', '3']; // Trattamenti medi
+    case 'low':
+    default:
+      return ['2', '1']; // Trattamenti leggeri
   }
-  
-  const finalConfidence = weightedConfidence / totalWeight;
-  
-  // Determine plant part based on symptoms or analysis
-  if (plantInfo?.symptoms?.toLowerCase().includes('foglia') || 
-      plantInfo?.symptoms?.toLowerCase().includes('leaf')) {
-    plantPart = 'leaf';
-  }
-  
-  // Generate recommended products based on health status
-  if (recommendedProducts.length === 0) {
-    const isHealthy = results.every(r => r.healthy !== false);
-    if (!isHealthy) {
-      recommendedProducts = ['Fungicida biologico', 'Trattamento specifico', 'Nutriente riparatore'];
-    } else {
-      recommendedProducts = ['Fertilizzante biologico', 'Stimolante crescita'];
-    }
-  }
-  
-  // Enhanced result structure with all required properties
-  return {
-    label: consensusLabel,
-    confidence: finalConfidence,
-    plantName: consensusLabel,
-    scientificName: scientificName,
-    plantPart: plantPart,
-    healthy: results.every(r => r.healthy !== false),
-    disease: results.find(r => r.disease)?.disease || null,
-    multiModelConsensus: true,
-    sources: results.map(r => r.source),
-    plantInfoContext: plantInfo,
-    accuracyLevel: finalConfidence >= 0.9 ? 'high' : 'medium',
-    recommendedProducts: recommendedProducts
-  };
-}
-
-// Helper function to convert file to base64
-async function fileToBase64(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = () => {
-      const base64 = reader.result as string;
-      resolve(base64.split(',')[1]);
-    };
-    reader.onerror = error => reject(error);
-  });
 }

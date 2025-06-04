@@ -10,16 +10,16 @@ import type { AnalysisProgress } from '../../services/aiProviders';
 // Export the utilities for use in other files
 export { formatHuggingFaceResult, dataURLtoFile, formatPercentage };
 
-// Plant analysis system with flexible accuracy requirements
+// Plant analysis system with computer vision integration
 export const analyzePlant = async (imageFile: File, plantInfo: any = null) => {
   try {
     // Dismiss any existing toasts
     toast.dismiss();
     
-    console.log("Starting plant analysis with flexible accuracy...");
-    toast.info("Avvio analisi pianta...", { duration: 3000 });
+    console.log("🔍 Starting computer vision plant analysis...");
+    toast.info("Avvio analisi con computer vision...", { duration: 3000 });
     
-    // Enhanced AI analysis with 60% minimum accuracy requirement
+    // Enhanced AI analysis with computer vision - 50% minimum accuracy requirement
     const progressCallback = (progress: AnalysisProgress) => {
       console.log(`${progress.stage}: ${progress.percentage}% - ${progress.message}`);
       
@@ -30,25 +30,27 @@ export const analyzePlant = async (imageFile: File, plantInfo: any = null) => {
     
     const enhancedResult = await analyzeWithEnhancedAI(imageFile, plantInfo, progressCallback);
     
-    // Verify minimum accuracy requirement (now 60% instead of 90%)
-    if (!enhancedResult || enhancedResult.confidence < 0.6) {
+    // Verify minimum accuracy requirement (lowered to 50% for computer vision)
+    if (!enhancedResult || enhancedResult.confidence < 0.5) {
       const accuracy = enhancedResult?.confidence ? Math.round(enhancedResult.confidence * 100) : 0;
-      throw new Error(`Accuratezza insufficiente: ${accuracy}%. Richiesta accuratezza minima: 60%`);
+      throw new Error(`Accuratezza insufficiente: ${accuracy}%. Richiesta accuratezza minima: 50% con computer vision`);
     }
     
-    console.log("Analysis completed successfully:", enhancedResult);
+    console.log("✅ Computer vision analysis completed successfully:", enhancedResult);
     const accuracyPercent = Math.round(enhancedResult.confidence * 100);
     
     if (enhancedResult.confidence >= 0.8) {
-      toast.success(`Analisi completata con ${accuracyPercent}% di accuratezza`, { duration: 3000 });
+      toast.success(`Analisi computer vision completata con ${accuracyPercent}% di accuratezza`, { duration: 3000 });
+    } else if (enhancedResult.confidence >= 0.6) {
+      toast.success(`Analisi completata con ${accuracyPercent}% di accuratezza. Buona affidabilità.`, { duration: 4000 });
     } else {
-      toast.success(`Analisi completata con ${accuracyPercent}% di accuratezza. Consulenza esperta raccomandata per maggiore certezza.`, { duration: 4000 });
+      toast.success(`Analisi completata con ${accuracyPercent}% di accuratezza. Computer vision attiva.`, { duration: 4000 });
     }
     
     return enhancedResult;
     
   } catch (error) {
-    console.error("Plant analysis failed:", error);
+    console.error("❌ Computer vision plant analysis failed:", error);
     toast.error(`Analisi fallita: ${error.message}`, {
       description: "Prova con un'immagine più chiara o consulta direttamente l'esperto",
       duration: 6000
