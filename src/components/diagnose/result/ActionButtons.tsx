@@ -94,7 +94,7 @@ Ciao Marco, ho bisogno del tuo aiuto per questa pianta. Puoi darmi una diagnosi 
         .insert({
           conversation_id: conversation.id,
           sender_id: user.id,
-          recipient_id: EXPERT.id,
+          recipient_id: MARCO_NIGRO_ID,
           text: initialMessage
         });
 
@@ -111,7 +111,7 @@ Ciao Marco, ho bisogno del tuo aiuto per questa pianta. Puoi darmi una diagnosi 
           .insert({
             conversation_id: conversation.id,
             sender_id: user.id,
-            recipient_id: EXPERT.id,
+            recipient_id: MARCO_NIGRO_ID,
             text: imageUrl
           });
 
