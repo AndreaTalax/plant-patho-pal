@@ -196,7 +196,7 @@ export const sendMessage = async (
       console.error("Missing required parameters for sendMessage", {
         conversationId: !!conversationId,
         senderId: !!senderId,
-        recipientId: !!recipientId,
+        recipientId: !!MARCO_NIGRO_ID,
         text: !!text
       });
       return false;
@@ -230,7 +230,7 @@ export const sendMessage = async (
     const messageData = {
       conversation_id: conversationId,
       sender_id: senderId,
-      recipient_id: recipientId,
+      recipient_id: MARCO_NIGRO_ID,
       text: trimmedText,
       products: convertProductsToJson(products),
       sent_at: new Date().toISOString()
@@ -268,23 +268,23 @@ export const sendMessage = async (
 
         // Send notification - don't fail if this fails
         try {
-          if (senderId === EXPERT_ID && recipientId !== EXPERT_ID) {
+          if (senderId === MARCO_NIGRO_ID && recipientId !== MARCO_NIGRO_ID) {
             console.log("Expert sending notification to regular user");
             await supabase.functions.invoke('send-specialist-notification', {
               body: {
                 conversation_id: conversationId,
                 sender_id: senderId,
-                recipient_id: recipientId,
+                recipient_id: MARCO_NIGRO_ID,
                 message_text: trimmedText
               }
             });
-          } else if (senderId !== EXPERT_ID && recipientId === EXPERT_ID) {
+          } else if (senderId !== MARCO_NIGRO_ID && recipientId === MARCO_NIGRO_ID) {
             console.log("Regular user sending notification to expert");
             await supabase.functions.invoke('send-specialist-notification', {
               body: {
                 conversation_id: conversationId,
                 sender_id: senderId,
-                recipient_id: recipientId,
+                recipient_id: MARCO_NIGRO_ID,
                 message_text: trimmedText
               }
             });
