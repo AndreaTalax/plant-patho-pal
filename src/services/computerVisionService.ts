@@ -219,7 +219,7 @@ export class ComputerVisionService {
         const severityScore = d.severity === 'high' ? 0.3 : d.severity === 'medium' ? 0.6 : 0.8;
         return sum + severityScore;
       }, 0) / diseases.length;
-      overallHealthScore = Math.max(0.1, severityScore);
+      overallHealthScore = Math.max(0.1, avgSeverity);
     }
     
     return {

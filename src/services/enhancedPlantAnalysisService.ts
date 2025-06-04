@@ -94,10 +94,41 @@ export class CacheService {
   }
 }
 
+// Definisce il tipo per i pattern delle malattie
+interface DiseasePattern {
+  keywords: string[];
+  diseases: DiseaseDetectionResult[];
+}
+
 // Modifica il servizio per il rilevamento malattie basato su AI locale/regole
 export class LocalDiseaseDetectionService {
-  private static readonly diseasePatterns = {
-    // ... mantieni i pattern esistenti ...
+  private static readonly diseasePatterns: Record<string, DiseasePattern> = {
+    fungalInfections: {
+      keywords: ['macchie', 'spots', 'muffa', 'funghi', 'mold'],
+      diseases: [
+        {
+          disease: 'Infezione fungina',
+          confidence: 0.7,
+          symptoms: ['Macchie scure su foglie', 'Crescita di muffa'],
+          treatments: ['Fungicida', 'Migliorare ventilazione'],
+          severity: 'medium',
+          provider: 'pattern-matching'
+        }
+      ]
+    },
+    viralInfections: {
+      keywords: ['ingiallimento', 'yellowing', 'mosaic', 'mosaico'],
+      diseases: [
+        {
+          disease: 'Possibile infezione virale',
+          confidence: 0.6,
+          symptoms: ['Ingiallimento foglie', 'Pattern a mosaico'],
+          treatments: ['Rimozione piante infette', 'Controllo vettori'],
+          severity: 'high',
+          provider: 'pattern-matching'
+        }
+      ]
+    }
   };
 
   // NUOVO: Metodo principale che analizza l'immagine per sintomi visivi
@@ -351,33 +382,12 @@ export class LocalDiseaseDetectionService {
         matches++;
       }
     });
-    
+
     return Math.min(1, matches / keywords.length * 1.8);
   }
 }
 
-
 export class EnhancedPlantAnalysisService {
-  // ... altri metodi esistenti ...
-
-  private static async performDiseaseDetection(
-    identifiedPlant: PlantIdentificationResult,
-    updateProgress: (stage: string, percentage: number, message: string) => void,
-    processedImageData: string // AGGIUNGI questo parametro
-  ): Promise<DiseaseDetectionResult[]> {
-    
-    updateProgress('disease-analysis', 70, 'Analisi malattie per ' + identifiedPlant.plantName);
-    
-    // USA IL NUOVO METODO che analizza l'immagine
-    const diseases = await LocalDiseaseDetectionService.analyzeImageForDiseases(
-      processedImageData,
-      identifiedPlant.plantName,
-      updateProgress
-    );
-    
-    return diseases.sort((a, b) => b.confidence - a.confidence);
-  }
-
   static async analyzeImage(
     imageData: string,
     onProgress?: (progress: AnalysisProgress) => void
@@ -414,7 +424,7 @@ export class EnhancedPlantAnalysisService {
       const diseaseResults = await this.performDiseaseDetection(
         plantResult.consensus.mostLikelyPlant,
         updateProgress,
-        processedImage.processedImage // PASSA L'IMMAGINE PROCESSATA
+        processedImage.processedImage
       );
       
       // 5. Calcolo consensus finale
@@ -457,36 +467,20 @@ export class EnhancedPlantAnalysisService {
   
   private static async performDiseaseDetection(
     identifiedPlant: PlantIdentificationResult,
-    updateProgress: (stage: string, percentage: number, message: string) => void
+    updateProgress: (stage: string, percentage: number, message: string) => void,
+    processedImageData: string
   ): Promise<DiseaseDetectionResult[]> {
     
-    updateProgress('disease-analysis', 75, 'Analisi malattie per ' + identifiedPlant.plantName);
+    updateProgress('disease-analysis', 70, 'Analisi malattie per ' + identifiedPlant.plantName);
     
-    // Usa il servizio locale per rilevamento malattie
-    const localDiseases = await LocalDiseaseDetectionService.detectDisease(
+    // USA IL NUOVO METODO che analizza l'immagine
+    const diseases = await LocalDiseaseDetectionService.analyzeImageForDiseases(
+      processedImageData,
       identifiedPlant.plantName,
-      identifiedPlant.commonDiseases
+      updateProgress
     );
     
-    // Se la pianta identificata ha malattie note, analizzale
-    if (identifiedPlant.commonDiseases && identifiedPlant.commonDiseases.length > 0) {
-      updateProgress('disease-pattern', 80, 'Analisi pattern sintomi...');
-      const patternDiseases = LocalDiseaseDetectionService.analyzeSymptoms(
-        identifiedPlant.commonDiseases
-      );
-      
-      // Combina i risultati evitando duplicati
-      const allDiseases = [...localDiseases];
-      patternDiseases.forEach(disease => {
-        if (!localDiseases.find(d => d.disease === disease.disease)) {
-          allDiseases.push(disease);
-        }
-      });
-      
-      return allDiseases.sort((a, b) => b.confidence - a.confidence);
-    }
-    
-    return localDiseases;
+    return diseases.sort((a, b) => b.confidence - a.confidence);
   }
 
   private static calculateEnhancedConsensus(
