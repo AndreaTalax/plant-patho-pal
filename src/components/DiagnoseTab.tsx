@@ -1,6 +1,3 @@
-
-
-
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { modelInfo } from '@/utils/aiDiagnosisUtils';
@@ -66,7 +63,7 @@ const DiagnoseTab = () => {
     if (!isAuthenticated || !userProfile) return;
 
     try {
-      console.log("Sending comprehensive plant info to expert chat:", { plantData, diagnosisResult });
+      console.log("🚀 Sending comprehensive plant info to expert chat:", { plantData, diagnosisResult });
       
       // Find or create conversation with expert
       const { data: existingConversation } = await supabase
@@ -83,42 +80,47 @@ const DiagnoseTab = () => {
           .insert({
             user_id: userProfile.id,
             expert_id: EXPERT.id,
-            title: `Consulenza per ${plantData.name || 'pianta'}`,
+            title: `Consulenza automatica per ${plantData.name || 'pianta'}`,
             status: 'active'
           })
           .select()
           .single();
 
         if (convError) {
-          console.error("Error creating conversation:", convError);
-          return;
+          console.error("❌ Error creating conversation:", convError);
+          throw convError;
         }
         conversationId = newConversation.id;
+        console.log("✅ Created new conversation:", conversationId);
       } else {
         conversationId = existingConversation.id;
+        console.log("✅ Found existing conversation:", conversationId);
       }
 
       // Prepare comprehensive message with all available information
-      let messageText = "🌿 **NUOVA CONSULENZA FITOSANITARIA**\n\n";
+      let messageText = "🌿 **RICHIESTA AUTOMATICA DI CONSULENZA FITOSANITARIA**\n\n";
       
       // Basic plant information
       messageText += "📋 **INFORMAZIONI PIANTA:**\n";
       if (plantData.name) {
         messageText += `• **Nome:** ${plantData.name}\n`;
       }
-      messageText += `• **Ambiente:** ${plantData.isIndoor ? 'Interno' : 'Esterno'}\n`;
-      messageText += `• **Irrigazione:** ${plantData.wateringFrequency} volte/settimana\n`;
-      messageText += `• **Esposizione luce:** ${plantData.lightExposure}\n`;
-      messageText += `• **Sintomi osservati:** ${plantData.symptoms}\n\n`;
+      messageText += `• **Ambiente:** ${plantData.isIndoor ? 'Interno 🏠' : 'Esterno 🌳'}\n`;
+      messageText += `• **Irrigazione:** ${plantData.wateringFrequency} volte/settimana 💧\n`;
+      messageText += `• **Esposizione luce:** ${plantData.lightExposure} ☀️\n`;
+      messageText += `• **Sintomi osservati:** ${plantData.symptoms} 🔍\n\n`;
 
-      // Add diagnosis results if available
-      if (diagnosisResult && diagnosisResult.diseaseId) {
-        messageText += "🔬 **RISULTATI ANALISI AI:**\n";
-        messageText += `• **Malattia identificata:** ${diagnosisResult.diseaseId.replace('-', ' ')}\n`;
-        messageText += `• **Confidenza:** ${Math.round(diagnosisResult.confidence * 100)}%\n`;
+      // Add AI diagnosis results if available
+      if (diagnosisResult) {
+        messageText += "🤖 **ANALISI AI PRELIMINARE:**\n";
+        
+        if (diagnosisResult.diseaseId) {
+          messageText += `• **Malattia identificata:** ${diagnosisResult.diseaseId.replace('-', ' ')}\n`;
+          messageText += `• **Confidenza AI:** ${Math.round(diagnosisResult.confidence * 100)}%\n`;
+        }
         
         if (diagnosisResult.analysisDetails?.identifiedFeatures) {
-          messageText += `• **Caratteristiche identificate:**\n`;
+          messageText += `• **Caratteristiche rilevate:**\n`;
           diagnosisResult.analysisDetails.identifiedFeatures.forEach((feature: string) => {
             messageText += `  - ${feature}\n`;
           });
@@ -126,48 +128,51 @@ const DiagnoseTab = () => {
 
         if (diagnosisResult.analysisDetails?.multiServiceInsights) {
           const insights = diagnosisResult.analysisDetails.multiServiceInsights;
-          messageText += `• **Specie identificata:** ${insights.plantName || 'Non identificata'}\n`;
-          messageText += `• **Parte della pianta:** ${insights.plantPart || 'Non specificata'}\n`;
-          messageText += `• **Stato di salute:** ${insights.isHealthy ? 'Sana' : 'Problematica'}\n`;
+          messageText += `• **Specie AI:** ${insights.plantName || 'Non identificata'}\n`;
+          messageText += `• **Parte pianta:** ${insights.plantPart || 'Non specificata'}\n`;
+          messageText += `• **Stato salute AI:** ${insights.isHealthy ? 'Apparentemente sana ✅' : 'Problematica ⚠️'}\n`;
         }
 
         if (diagnosisResult.analysisDetails?.plantixInsights) {
           const plantix = diagnosisResult.analysisDetails.plantixInsights;
-          messageText += `• **Severità:** ${plantix.severity}\n`;
+          messageText += `• **Severità stimata:** ${plantix.severity}\n`;
           messageText += `• **Rischio diffusione:** ${plantix.spreadRisk}\n`;
           
           if (plantix.environmentalFactors && plantix.environmentalFactors.length > 0) {
-            messageText += `• **Fattori ambientali:**\n`;
+            messageText += `• **Fattori ambientali rilevati:**\n`;
             plantix.environmentalFactors.forEach((factor: string) => {
               messageText += `  - ${factor}\n`;
             });
           }
         }
 
-        // Add EPPO warning if present
+        // Add EPPO regulatory warning if present
         if (diagnosisResult.analysisDetails?.eppoData) {
-          messageText += "\n⚠️ **ATTENZIONE - ORGANISMO REGOLAMENTATO EPPO**\n";
-          messageText += `• **Status:** ${diagnosisResult.analysisDetails.eppoData.regulationStatus}\n`;
-          messageText += `• **Livello di allerta:** ${diagnosisResult.analysisDetails.eppoData.warningLevel}\n`;
+          messageText += "\n⚠️ **ALERT - ORGANISMO POTENZIALMENTE REGOLAMENTATO EPPO**\n";
+          messageText += `• **Status normativo:** ${diagnosisResult.analysisDetails.eppoData.regulationStatus}\n`;
+          messageText += `• **Livello allerta:** ${diagnosisResult.analysisDetails.eppoData.warningLevel}\n`;
           if (diagnosisResult.analysisDetails.eppoData.reportAdvised) {
-            messageText += "• **Raccomandazione:** Segnalazione alle autorità fitosanitarie consigliata\n";
+            messageText += "• **⚠️ IMPORTANTE:** Possibile segnalazione alle autorità fitosanitarie\n";
           }
         }
 
         messageText += "\n";
       }
 
-      // Add request for expert opinion
-      messageText += "💬 **RICHIESTA:**\n";
-      messageText += "Ciao Marco, ho bisogno della tua consulenza professionale per questa pianta. ";
-      
+      // Add contextual request based on scenario
+      messageText += "💬 **RICHIESTA SPECIFICA:**\n";
       if (diagnosisResult) {
-        messageText += "Ho già effettuato un'analisi AI, ma vorrei il tuo parere esperto per confermare la diagnosi e ricevere consigli specifici per il trattamento.";
+        messageText += "Ciao Marco! Il sistema AI ha fornito una diagnosi preliminare, ma ho bisogno del tuo occhio esperto per:\n";
+        messageText += "• Confermare o correggere la diagnosi AI\n";
+        messageText += "• Ricevere un protocollo di trattamento specifico e professionale\n";
+        messageText += "• Valutare la gravità reale della situazione\n";
+        messageText += "• Consigli per prevenire recidive\n\n";
       } else {
-        messageText += "Potresti aiutarmi a identificare il problema e suggerirmi il trattamento più appropriato?";
+        messageText += "Ciao Marco! Ho bisogno del tuo aiuto professionale per identificare il problema di questa pianta e ricevere consigli specifici per il trattamento.\n\n";
       }
 
-      messageText += "\n\nGrazie per il tuo tempo e la tua expertise! 🙏";
+      messageText += "Grazie per la tua expertise! 🙏\n";
+      messageText += "_Messaggio inviato automaticamente dal sistema di diagnosi_";
 
       // Send the comprehensive message
       const { data: messageData, error: msgError } = await supabase
@@ -182,11 +187,11 @@ const DiagnoseTab = () => {
         .single();
 
       if (msgError) {
-        console.error("Error sending comprehensive plant information:", msgError);
-        return;
+        console.error("❌ Error sending comprehensive plant information:", msgError);
+        throw msgError;
       }
 
-      console.log("Plant information message sent:", messageData);
+      console.log("✅ Comprehensive message sent:", messageData.id);
 
       // Send image as separate message if available
       if (imageUrl) {
@@ -202,20 +207,27 @@ const DiagnoseTab = () => {
           .single();
 
         if (imageMessageError) {
-          console.error("Error sending image message:", imageMessageError);
-          // Don't throw for image, continue
+          console.error("⚠️ Error sending image message:", imageMessageError);
+          // Continue without throwing - image is optional
         } else {
-          console.log("Image message sent:", imageMessageData);
+          console.log("✅ Image message sent:", imageMessageData.id);
         }
       }
 
-      console.log("Comprehensive plant information sent successfully");
-      toast.success("Informazioni complete inviate automaticamente all'esperto");
+      console.log("🎉 All data sent successfully to expert");
+      toast.success("Informazioni complete inviate automaticamente all'esperto!", {
+        description: "Il fitopatologo ha ricevuto tutti i dettagli della tua pianta",
+        duration: 4000
+      });
       
       return conversationId;
     } catch (error) {
-      console.error("Error sending comprehensive plant info to chat:", error);
-      toast.error("Errore nell'invio automatico delle informazioni");
+      console.error("❌ Error in comprehensive data sending:", error);
+      toast.error("Errore nell'invio automatico delle informazioni", {
+        description: "Riprova o contatta l'esperto manualmente",
+        duration: 6000
+      });
+      throw error;
     }
   };
 
@@ -261,10 +273,10 @@ const DiagnoseTab = () => {
       if (plantData.name) {
         messageText += `📝 **Nome:** ${plantData.name}\n`;
       }
-      messageText += `🏠 **Ambiente:** ${plantData.isIndoor ? 'Interno' : 'Esterno'}\n`;
-      messageText += `💧 **Frequenza irrigazione:** ${plantData.wateringFrequency} volte/settimana\n`;
-      messageText += `☀️ **Esposizione luce:** ${plantData.lightExposure}\n`;
-      messageText += `🔍 **Sintomi:** ${plantData.symptoms}\n`;
+      messageText += `🏠 **Ambiente:** ${plantData.isIndoor ? 'Interno 🏠' : 'Esterno 🌳'}\n`;
+      messageText += `💧 **Frequenza irrigazione:** ${plantData.wateringFrequency} volte/settimana 💧\n`;
+      messageText += `☀️ **Esposizione luce:** ${plantData.lightExposure} ☀️\n`;
+      messageText += `🔍 **Sintomi:** ${plantData.symptoms} 🔍\n`;
 
       // Send message with plant information
       const { error: msgError } = await supabase
@@ -391,7 +403,7 @@ const DiagnoseTab = () => {
     
     // If user uploaded a file, process with AI
     if (plantInfo.uploadedFile) {
-      console.log("Starting AI analysis with uploaded file...");
+      console.log("🤖 Starting AI analysis with uploaded file...");
       handleImageUpload(plantInfo.uploadedFile, plantInfo);
     }
   }
@@ -415,45 +427,56 @@ const DiagnoseTab = () => {
     }
     
     try {
-      console.log("Sending to expert...", { uploadedImage, plantInfo });
+      console.log("🚀 Initiating expert consultation...", { uploadedImage, plantInfo });
       
-      // Prepare expert consultation data
+      // Show immediate feedback
+      toast.info("Preparazione dati per l'esperto...", { duration: 2000 });
+      
+      // Update plant info state
       setPlantInfo({ ...plantInfo, sendToExpert: true, useAI: false });
       
-      // Create conversation and send comprehensive info
+      // Prepare data for expert - include any AI analysis if available
+      const consultationData = {
+        name: plantInfo.name,
+        isIndoor: plantInfo.isIndoor,
+        wateringFrequency: plantInfo.wateringFrequency,
+        lightExposure: plantInfo.lightExposure,
+        symptoms: plantInfo.symptoms,
+        useAI: false,
+        sendToExpert: true
+      };
+
+      // Send comprehensive info including any AI diagnosis if available
       const conversationId = await sendComprehensivePlantInfoToExpertChat(
-        {
-          name: plantInfo.name,
-          isIndoor: plantInfo.isIndoor,
-          wateringFrequency: plantInfo.wateringFrequency,
-          lightExposure: plantInfo.lightExposure,
-          symptoms: plantInfo.symptoms,
-          useAI: false,
-          sendToExpert: true
-        },
-        uploadedImage
+        consultationData,
+        uploadedImage,
+        diagnosedDisease // Include AI diagnosis if available
       );
       
       if (conversationId) {
-        // Navigate directly to chat tab and refresh chat to show the conversation
-        toast.success("Richiesta inviata con successo al fitopatologo!");
+        console.log("✅ Expert consultation initiated successfully");
         
-        // Switch to chat tab immediately with the expert conversation active
+        // Immediate navigation to chat with expert conversation
         setTimeout(() => {
+          console.log("🔄 Switching to chat tab...");
           const event = new CustomEvent('switchTab', { detail: 'chat' });
           window.dispatchEvent(event);
           
-          // Force refresh chat to show the new conversation and messages
+          // Force refresh chat to show the new conversation
           setTimeout(() => {
+            console.log("🔄 Refreshing chat view...");
             const refreshEvent = new CustomEvent('refreshChat');
             window.dispatchEvent(refreshEvent);
-          }, 500);
-        }, 500);
+          }, 300);
+        }, 800);
       }
       
     } catch (error) {
-      console.error("Error notifying expert:", error);
-      toast.error("Errore nell'invio della richiesta all'esperto");
+      console.error("❌ Error in expert consultation setup:", error);
+      toast.error("Errore nell'invio della richiesta all'esperto", {
+        description: "Riprova o contatta il supporto",
+        duration: 6000
+      });
     }
   };
 
@@ -532,5 +555,3 @@ const DiagnoseTab = () => {
 };
 
 export default DiagnoseTab;
-
-

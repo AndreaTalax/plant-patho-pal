@@ -54,16 +54,25 @@ const DiagnosisStages: React.FC<DiagnosisStagesProps> = ({
   const { plantInfo } = usePlantInfo();
   const navigate = useNavigate();
 
-  // Funzione per navigare alla chat
+  // Enhanced function to navigate to chat with automatic data sync
   const handleNavigateToChat = () => {
+    console.log("🔄 Navigating to chat with data sync...");
+    
     if (onChatWithExpert) {
       onChatWithExpert();
     } else {
-      // Naviga direttamente alla homepage e switcha alla tab chat
+      // Navigate to homepage and switch to chat tab
       navigate('/');
       setTimeout(() => {
+        console.log("🔄 Triggering chat tab switch...");
         const event = new CustomEvent('switchTab', { detail: 'chat' });
         window.dispatchEvent(event);
+        
+        // Also refresh the chat to ensure latest data is shown
+        setTimeout(() => {
+          const refreshEvent = new CustomEvent('refreshChat');
+          window.dispatchEvent(refreshEvent);
+        }, 200);
       }, 100);
     }
   };
@@ -138,7 +147,7 @@ const DiagnosisStages: React.FC<DiagnosisStagesProps> = ({
   }
 
   if (stage === 'result') {
-    // If the user selected expert option and sent the request
+    // Enhanced expert consultation result display
     if (plantInfo.sendToExpert && !plantInfo.useAI) {
       return (
         <div className="space-y-4">
@@ -153,31 +162,55 @@ const DiagnosisStages: React.FC<DiagnosisStagesProps> = ({
           />
           
           <div className="border rounded-lg p-4 bg-white shadow">
-            <h3 className="font-medium text-lg mb-3">Richiesta inviata al fitopatologo</h3>
+            <h3 className="font-medium text-lg mb-3 flex items-center gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-green-600">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+              </svg>
+              Dati inviati automaticamente al fitopatologo
+            </h3>
             
             {uploadedImage && (
-              <div className="aspect-square w-full max-w-xs mx-auto overflow-hidden rounded-xl mb-4">
+              <div className="aspect-square w-full max-w-xs mx-auto overflow-hidden rounded-xl mb-4 border-2 border-green-200">
                 <img 
                   src={uploadedImage} 
-                  alt="Immagine inviata" 
+                  alt="Immagine inviata automaticamente" 
                   className="w-full h-full object-cover"
                 />
               </div>
             )}
             
             <div className="bg-green-50 border border-green-200 rounded-lg p-4 my-4">
-              <p className="text-green-800 font-medium">
-                La tua richiesta è stata inviata con successo al fitopatologo.
-              </p>
-              <p className="text-green-700 text-sm mt-1">
-                Riceverai una risposta al più presto nella sezione Chat.
-              </p>
+              <div className="flex items-start gap-3">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-green-600 mt-0.5 flex-shrink-0">
+                  <path d="M20 6 9 17l-5-5"></path>
+                </svg>
+                <div>
+                  <p className="text-green-800 font-medium">
+                    Tutti i dati sono stati inviati con successo!
+                  </p>
+                  <p className="text-green-700 text-sm mt-1">
+                    Il fitopatologo ha ricevuto: informazioni della pianta, sintomi, foto e analisi AI (se disponibile).
+                  </p>
+                </div>
+              </div>
+            </div>
+            
+            {/* Show what was sent automatically */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+              <h4 className="font-medium text-blue-800 mb-2 text-sm">📋 Dati inviati automaticamente:</h4>
+              <ul className="text-xs text-blue-700 space-y-1">
+                <li>✅ Informazioni della pianta (ambiente, irrigazione, luce)</li>
+                <li>✅ Descrizione dettagliata dei sintomi</li>
+                <li>✅ Fotografia della pianta</li>
+                {diagnosedDisease && <li>✅ Risultati dell'analisi AI preliminare</li>}
+                <li>✅ Richiesta di consulenza professionale</li>
+              </ul>
             </div>
             
             <div className="space-y-3 mt-4">
               <button 
                 onClick={handleNavigateToChat}
-                className="w-full bg-drplant-blue hover:bg-drplant-blue-dark text-white font-medium py-2 px-4 rounded-lg flex items-center justify-center gap-2"
+                className="w-full bg-drplant-blue hover:bg-drplant-blue-dark text-white font-medium py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition-colors"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
@@ -187,7 +220,7 @@ const DiagnosisStages: React.FC<DiagnosisStagesProps> = ({
               
               <button 
                 onClick={onStartNewAnalysis} 
-                className="w-full border border-gray-300 hover:bg-gray-50 text-gray-700 font-medium py-2 px-4 rounded-lg flex items-center justify-center gap-2"
+                className="w-full border border-gray-300 hover:bg-gray-50 text-gray-700 font-medium py-2 px-4 rounded-lg flex items-center justify-center gap-2 transition-colors"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
@@ -200,7 +233,7 @@ const DiagnosisStages: React.FC<DiagnosisStagesProps> = ({
       );
     }
     
-    // Otherwise show the regular AI diagnosis result
+    // Regular AI diagnosis result
     return (
       <>
         <PlantInfoSummary 

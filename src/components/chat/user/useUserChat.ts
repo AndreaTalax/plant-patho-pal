@@ -22,32 +22,32 @@ export const useUserChat = (userId: string) => {
     
     const initializeExpertChat = async () => {
       try {
-        console.log("Initializing expert chat for user:", userId);
+        console.log("🔄 Initializing expert chat for user:", userId);
         
         // Get or create conversation with expert
         const conversation = await findOrCreateConversation(userId);
         if (!conversation) {
-          console.error("Could not start conversation with expert");
+          console.error("❌ Could not start conversation with expert");
           return;
         }
         
-        console.log("Found/created conversation:", conversation.id);
+        console.log("✅ Found/created conversation:", conversation.id);
         setCurrentDbConversation(conversation);
         setActiveChat('expert'); // Always set expert as active chat
         
         // Load messages
         const messagesData = await loadMessages(conversation.id);
-        console.log("Loaded messages:", messagesData.length);
+        console.log("📬 Loaded messages:", messagesData.length);
         
         // Convert to UI format
         const messagesForConversation = messagesData.map(msg => convertToUIMessage(msg));
         
         if (!messagesForConversation || messagesForConversation.length === 0) {
-          // Add only an offline message if no messages exist
+          // Add welcome message if no messages exist
           setMessages([{ 
-            id: '1', 
+            id: 'welcome-1', 
             sender: 'expert', 
-            text: 'Il fitopatologo risponderà al più presto alla tua richiesta.', 
+            text: '👋 Ciao! Sono Marco, il fitopatologo. Come posso aiutarti con le tue piante?', 
             time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) 
           }]);
         } else {
@@ -55,18 +55,18 @@ export const useUserChat = (userId: string) => {
         }
         
       } catch (error) {
-        console.error("Error initializing expert chat:", error);
+        console.error("❌ Error initializing expert chat:", error);
       }
     };
     
     initializeExpertChat();
   }, [userId]);
   
-  // Set up realtime subscription for messages when we have a conversation
+  // Enhanced realtime subscription for messages
   useEffect(() => {
     if (!currentDbConversation?.id) return;
     
-    console.log("Setting up realtime subscription for conversation:", currentDbConversation.id);
+    console.log("🔔 Setting up realtime subscription for conversation:", currentDbConversation.id);
     
     const messagesSubscription = supabase
       .channel(`messages-channel-${currentDbConversation.id}`)
@@ -78,7 +78,7 @@ export const useUserChat = (userId: string) => {
           filter: `conversation_id=eq.${currentDbConversation.id}`
         }, 
         (payload) => {
-          console.log('New message received via subscription:', payload);
+          console.log('📨 New message received via subscription:', payload);
           const newMsg = payload.new;
           
           const formattedMessage = convertToUIMessage(newMsg as any);
@@ -87,19 +87,31 @@ export const useUserChat = (userId: string) => {
             // Check if message already exists to avoid duplicates
             const exists = prev.find(msg => msg.id === formattedMessage.id);
             if (exists) {
+              console.log("⚠️ Message already exists, skipping:", formattedMessage.id);
               return prev;
             }
+            
+            console.log("✅ Adding new message to chat:", formattedMessage.id);
             return [...prev, formattedMessage];
           });
+          
+          // Show toast notification for new expert messages
+          if (formattedMessage.sender === 'expert') {
+            toast.info("Nuova risposta dal fitopatologo!", {
+              description: "Controlla la chat per leggere la risposta",
+              duration: 4000
+            });
+          }
         }
       )
       .subscribe();
       
-    console.log("Subscribed to messages channel:", `messages-channel-${currentDbConversation.id}`);
+    console.log("✅ Subscribed to messages channel:", `messages-channel-${currentDbConversation.id}`);
     
     return () => {
       if (messagesSubscription) {
         supabase.removeChannel(messagesSubscription);
+        console.log("🔌 Unsubscribed from messages channel");
       }
     };
   }, [currentDbConversation?.id]);
