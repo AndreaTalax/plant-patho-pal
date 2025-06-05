@@ -117,7 +117,8 @@ export const useUserChat = (userId: string) => {
   }, [currentDbConversation?.id]);
   
   // Send message
-  const handleSendMessage = async (text: string) => {
+  // Declare the function as async!
+const handleSendMessage = async (text: string) => {
   try {
     setIsSending(true);
 
@@ -132,31 +133,37 @@ export const useUserChat = (userId: string) => {
       setCurrentDbConversation(conversation);
     }
 
-    // ... (tempMessage code)
+    // Add message to UI immediately to improve UX
+    const tempMessage: Message = {
+      id: `temp-${Date.now()}`,
+      sender: 'user',
+      text: text,
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    };
+    setMessages(prev => [...prev, tempMessage]);
 
+    // Await must only be used inside async functions
     const success = await sendMessageService(
-      conversation.id, // <-- usa la variabile locale!
+      conversation.id,
       userId,
       EXPERT_ID,
       text
     );
 
-    // ... (resto invariato)
+    if (!success) {
+      setMessages(prev => prev.filter(msg => msg.id !== tempMessage.id));
+      toast("Error sending message");
+      setIsSending(false);
+      return;
+    }
+
+    setIsSending(false);
   } catch (error) {
-    // ...
+    console.error("Error in handleSendMessage:", error);
+    toast("Error sending message");
+    setIsSending(false);
   }
 };
-      
-      // Create conversation if it doesn't exist
-      if (!currentDbConversation) {
-        const conversation = await findOrCreateConversation(userId);
-        if (!conversation) {
-          toast("Could not create conversation");
-          setIsSending(false);
-          return;
-        }
-        setCurrentDbConversation(conversation);
-      }
       
       // Add message to UI immediately to improve UX
       const tempMessage: Message = {
