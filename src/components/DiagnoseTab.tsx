@@ -362,9 +362,11 @@ const DiagnoseTab = () => {
           toast.success("Dati e immagine inviati automaticamente al fitopatologo!");
         }
       } catch (error) {
-        toast.error("Errore nell'upload dell'immagine");
-        console.error(error);
-      }
+  toast.error("Errore nell'upload dell'immagine");
+  // Log dettagliato!
+  console.error("Errore upload supabase:", error);
+  alert("Errore upload: " + (error?.message || JSON.stringify(error)));
+}
     }
     
     // Reset dell'input file per permettere di selezionare lo stesso file di nuovo
