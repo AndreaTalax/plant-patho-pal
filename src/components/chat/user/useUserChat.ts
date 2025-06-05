@@ -118,8 +118,34 @@ export const useUserChat = (userId: string) => {
   
   // Send message
   const handleSendMessage = async (text: string) => {
-    try {
-      setIsSending(true);
+  try {
+    setIsSending(true);
+
+    let conversation = currentDbConversation;
+    if (!conversation) {
+      conversation = await findOrCreateConversation(userId);
+      if (!conversation) {
+        toast("Could not create conversation");
+        setIsSending(false);
+        return;
+      }
+      setCurrentDbConversation(conversation);
+    }
+
+    // ... (tempMessage code)
+
+    const success = await sendMessageService(
+      conversation.id, // <-- usa la variabile locale!
+      userId,
+      EXPERT_ID,
+      text
+    );
+
+    // ... (resto invariato)
+  } catch (error) {
+    // ...
+  }
+};
       
       // Create conversation if it doesn't exist
       if (!currentDbConversation) {
