@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -33,7 +32,7 @@ const DiagnosisResult = ({
   // Check if we have a thermal map
   const hasThermalMap = analysisDetails?.thermalMap && !isAnalyzing;
   
-  // Get plant name from analytics or use a default
+  // Get plant name from analytics or use a default - Fixed potential undefined access
   const plantName = analysisDetails?.multiServiceInsights?.plantName || 
                    analysisDetails?.risultatiCompleti?.plantIdResult?.plantName ||
                    analysisData?.name || "Pianta";
@@ -53,10 +52,12 @@ const DiagnosisResult = ({
 
   const navigateToLibrary = (resourceId?: string) => {
     // Implementation for library navigation
+    console.log('Navigate to library:', resourceId);
   };
 
   const navigateToShop = (productId?: string) => {
     // Implementation for shop navigation
+    console.log('Navigate to shop:', productId);
   };
 
   return (
@@ -85,7 +86,7 @@ const DiagnosisResult = ({
             {hasThermalMap && showThermalMap && (
               <div className="absolute inset-0 mix-blend-overlay">
                 <img 
-                  src={analysisDetails.thermalMap} 
+                  src={analysisDetails?.thermalMap} 
                   alt="Thermal map" 
                   className="w-full h-full object-cover"
                 />
@@ -149,7 +150,7 @@ const DiagnosisResult = ({
             <div className="h-full">
               <div className="flex items-center gap-2 mb-4">
                 <Badge className="bg-amber-500">
-                  {Math.round(analysisData.confidence * 100)}% Sicurezza
+                  {Math.round((analysisData.confidence || 0) * 100)}% Sicurezza
                 </Badge>
               </div>
               
@@ -187,3 +188,4 @@ const DiagnosisResult = ({
 };
 
 export default DiagnosisResult;
+  
