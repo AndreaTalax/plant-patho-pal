@@ -7,6 +7,7 @@ import { useState } from "react";
 import { AuthRequiredDialog } from "@/components/auth/AuthRequiredDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { EXPERT } from '@/components/chat/types';
+import { MARCO_NIGRO_ID } from '@/components/phytopathologist';
 import { toast } from "sonner";
 
 interface ActionButtonsProps {

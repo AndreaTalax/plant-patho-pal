@@ -8,7 +8,7 @@ export interface PlantInfo {
   symptoms: string;
   useAI: boolean;
   sendToExpert: boolean;
-  name: string;
+  name: string; // Made required
   infoComplete: boolean;
   uploadedFile?: File | null;
   uploadedImageUrl?: string | null;
@@ -27,7 +27,7 @@ const defaultPlantInfo: PlantInfo = {
   symptoms: '',
   useAI: false,
   sendToExpert: false,
-  name: '',
+  name: '', // Default to empty string
   infoComplete: false,
   uploadedFile: null,
   uploadedImageUrl: null

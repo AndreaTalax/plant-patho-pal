@@ -22,6 +22,7 @@ import type {
   EXPERT
 } from './types';
 import { Json } from '@/integrations/supabase/types';
+import { MARCO_NIGRO_ID } from '@/components/phytopathologist';
 
 // Load conversations from database
 export const loadConversations = async (isMasterAccount: boolean, userId: string) => {
@@ -196,7 +197,7 @@ export const sendMessage = async (
       console.error("Missing required parameters for sendMessage", {
         conversationId: !!conversationId,
         senderId: !!senderId,
-        recipientId: !!MARCO_NIGRO_ID,
+        recipientId: !!recipientId,
         text: !!text
       });
       return false;
@@ -230,7 +231,7 @@ export const sendMessage = async (
     const messageData = {
       conversation_id: conversationId,
       sender_id: senderId,
-      recipient_id: MARCO_NIGRO_ID,
+      recipient_id: recipientId,
       text: trimmedText,
       products: convertProductsToJson(products),
       sent_at: new Date().toISOString()
@@ -274,7 +275,7 @@ export const sendMessage = async (
               body: {
                 conversation_id: conversationId,
                 sender_id: senderId,
-                recipient_id: MARCO_NIGRO_ID,
+                recipient_id: recipientId,
                 message_text: trimmedText
               }
             });

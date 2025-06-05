@@ -1,5 +1,4 @@
 
-import { supabase } from "@/integrations/supabase/supabaseClient";
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { modelInfo } from '@/utils/aiDiagnosisUtils';
@@ -13,6 +12,7 @@ import { AuthRequiredDialog } from './auth/AuthRequiredDialog';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import { EXPERT } from '@/components/chat/types';
+import { MARCO_NIGRO_ID } from '@/components/phytopathologist';
 
 // Importing our components
 import DiagnoseHeader from './diagnose/DiagnoseHeader';
@@ -286,7 +286,7 @@ const DiagnoseTab = () => {
         .insert({
           conversation_id: conversationId,
           sender_id: userProfile.id,
-          recipient_id: EXPERT.id,
+          recipient_id: MARCO_NIGRO_ID,
           text: messageText
         });
 
@@ -407,7 +407,11 @@ const DiagnoseTab = () => {
 
   const handlePlantInfoSubmit = async (formData: PlantInfoFormValues) => {
     console.log("Plant info submitted:", formData);
-    setPlantInfo({ ...formData, infoComplete: true });
+    setPlantInfo({ 
+      ...formData, 
+      infoComplete: true,
+      name: formData.name || ''  // Ensure name is always a string
+    });
     
     setTimeout(() => {
       window.scrollTo({
@@ -469,7 +473,7 @@ const DiagnoseTab = () => {
       
       // Prepare data for expert - include any AI analysis if available
       const consultationData = {
-        name: plantInfo.name,
+        name: plantInfo.name || '',
         isIndoor: plantInfo.isIndoor,
         wateringFrequency: plantInfo.wateringFrequency,
         lightExposure: plantInfo.lightExposure,
