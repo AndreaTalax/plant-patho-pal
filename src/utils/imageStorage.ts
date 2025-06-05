@@ -3,12 +3,18 @@ import { supabase } from '@/integrations/supabase/client';
 
 export const uploadPlantImage = async (file: File, userId: string): Promise<string | null> => {
   try {
-    const fileExt = file.name.split('.').pop();
+    // Remove size and type restrictions for more flexibility
+    console.log(`Uploading file: ${file.name}, size: ${file.size}, type: ${file.type}`);
+    
+    const fileExt = file.name.split('.').pop() || 'jpg';
     const fileName = `${userId}/${Date.now()}.${fileExt}`;
     
     const { error: uploadError } = await supabase.storage
       .from('plant-images')
-      .upload(fileName, file);
+      .upload(fileName, file, {
+        cacheControl: '3600',
+        upsert: false
+      });
     
     if (uploadError) {
       console.error('Error uploading image:', uploadError);
@@ -19,6 +25,7 @@ export const uploadPlantImage = async (file: File, userId: string): Promise<stri
       .from('plant-images')
       .getPublicUrl(fileName);
     
+    console.log('Image uploaded successfully:', data.publicUrl);
     return data.publicUrl;
   } catch (error) {
     console.error('Error in uploadPlantImage:', error);
@@ -28,15 +35,22 @@ export const uploadPlantImage = async (file: File, userId: string): Promise<stri
 
 export const uploadBase64Image = async (base64Data: string, userId: string): Promise<string | null> => {
   try {
+    console.log('Uploading base64 image...');
+    
     // Convert base64 to blob
     const response = await fetch(base64Data);
     const blob = await response.blob();
+    
+    console.log(`Base64 image converted to blob, size: ${blob.size}, type: ${blob.type}`);
     
     const fileName = `${userId}/${Date.now()}.jpg`;
     
     const { error: uploadError } = await supabase.storage
       .from('plant-images')
-      .upload(fileName, blob);
+      .upload(fileName, blob, {
+        cacheControl: '3600',
+        upsert: false
+      });
     
     if (uploadError) {
       console.error('Error uploading base64 image:', uploadError);
@@ -47,6 +61,7 @@ export const uploadBase64Image = async (base64Data: string, userId: string): Pro
       .from('plant-images')
       .getPublicUrl(fileName);
     
+    console.log('Base64 image uploaded successfully:', data.publicUrl);
     return data.publicUrl;
   } catch (error) {
     console.error('Error in uploadBase64Image:', error);

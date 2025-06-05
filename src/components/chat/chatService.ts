@@ -1,3 +1,4 @@
+
 import {
   supabase,
   EXPERT_ID,
@@ -194,31 +195,35 @@ export const sendMessage = async (
 
     // Validazione input rigorosa
     if (!conversationId || !senderId || !recipientId || !text) {
-      console.error("Missing required parameters for sendMessage", {
+      const errorMsg = "Missing required parameters for sendMessage";
+      console.error(errorMsg, {
         conversationId: !!conversationId,
         senderId: !!senderId,
         recipientId: !!recipientId,
         text: !!text
       });
-      return false;
+      throw new Error(errorMsg);
     }
 
     if (typeof conversationId !== 'string' || typeof senderId !== 'string' || 
         typeof recipientId !== 'string' || typeof text !== 'string') {
-      console.error("Invalid parameter types for sendMessage");
-      return false;
+      const errorMsg = "Invalid parameter types for sendMessage";
+      console.error(errorMsg);
+      throw new Error(errorMsg);
     }
 
     // Validazione lunghezza testo
     const trimmedText = text.trim();
     if (trimmedText.length === 0) {
-      console.error("Message text cannot be empty");
-      return false;
+      const errorMsg = "Message text cannot be empty";
+      console.error(errorMsg);
+      throw new Error(errorMsg);
     }
 
     if (trimmedText.length > 10000) {
-      console.error("Message text too long");
-      return false;
+      const errorMsg = "Message text too long";
+      console.error(errorMsg);
+      throw new Error(errorMsg);
     }
 
     // For mock conversations, always return success
@@ -228,7 +233,7 @@ export const sendMessage = async (
     }
 
     // Prepare message data with explicit timestamp
-    const messageData = {
+    const messageData: DbMessageInsert = {
       conversation_id: conversationId,
       sender_id: senderId,
       recipient_id: recipientId,
@@ -252,7 +257,8 @@ export const sendMessage = async (
           .single();
 
         if (error) {
-          throw error;
+          console.error("Database error inserting message:", error);
+          throw new Error(`Database error: ${error.message}`);
         }
 
         console.log("Message sent successfully:", data);
@@ -309,11 +315,11 @@ export const sendMessage = async (
     }
 
     console.error("All message send attempts failed:", lastError);
-    return false;
+    throw new Error(`Failed to send message after 3 attempts: ${lastError?.message || 'Unknown error'}`);
 
   } catch (error) {
     console.error("Unexpected error in sendMessage:", error);
-    return false;
+    throw error;
   }
 };
 
