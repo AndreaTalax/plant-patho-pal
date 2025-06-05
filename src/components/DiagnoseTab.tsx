@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/supabaseClient";
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -302,48 +303,86 @@ const DiagnoseTab = () => {
   };
 
   // --- FUNZIONE DI UPLOAD SU SUPABASE STORAGE ---
-async function uploadImageToStorage(file: File): Promise<string> {
-  const fileExt = file.name.split('.').pop();
-  const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 8)}.${fileExt}`;
-  const filePath = `${fileName}`;
-  // Carica sul bucket "plant-images"
-  const { data, error } = await supabase.storage
-    .from('plant-images')
-    .upload(filePath, file, {
-      cacheControl: '3600',
-      upsert: true
-    });
+  async function uploadImageToStorage(file: File): Promise<string> {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 8)}.${fileExt}`;
+    const filePath = `${fileName}`;
+    // Carica sul bucket "plant-images"
+    const { data, error } = await supabase.storage
+      .from('plant-images')
+      .upload(filePath, file, {
+        cacheControl: '3600',
+        upsert: true
+      });
 
-  if (error) {
-    throw error;
+    if (error) {
+      throw error;
+    }
+
+    // Ottieni la URL pubblica del file
+    const { data: publicUrlData } = supabase.storage
+      .from('plant-images')
+      .getPublicUrl(filePath);
+
+    if (!publicUrlData?.publicUrl) {
+      throw new Error("Impossibile ottenere la URL pubblica dell'immagine");
+    }
+
+    return publicUrlData.publicUrl;
   }
-
-  // Ottieni la URL pubblica del file
-  const { data: publicUrlData } = supabase.storage
-    .from('plant-images')
-    .getPublicUrl(filePath);
-
-  if (!publicUrlData?.publicUrl) {
-    throw new Error("Impossibile ottenere la URL pubblica dell'immagine");
-  }
-
-  return publicUrlData.publicUrl;
-}
 
   // --- FORZATURA INVIO AUTOMATICO SU UPLOAD FILE ---
-const handleImageUploadEvent = async (e: React.ChangeEvent<HTMLInputElement>) => {
-  if (!plantInfo.infoComplete) {
-    toast.warning("Inserisci prima le informazioni sulla pianta", {
-      dismissible: true,
-      duration: 3000
-    });
-    return;
-  }
+  const handleImageUploadEvent = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!plantInfo.infoComplete) {
+      toast.warning("Inserisci prima le informazioni sulla pianta", {
+        dismissible: true,
+        duration: 3000
+      });
+      return;
+    }
 
-  const file = e.target.files?.[0];
-  if (file) {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (!file.type.startsWith('image/')) {
+        toast.error("Seleziona un file immagine valido");
+        return;
+      }
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error("L'immagine deve essere inferiore a 10MB");
+        return;
+      }
+
+      try {
+        const imageUrl = await uploadImageToStorage(file);
+        setUploadedImage(imageUrl);
+
+        // Invio automatico dati + immagine
+        if (isAuthenticated && userProfile && plantInfo) {
+          await sendComprehensivePlantInfoToExpertChat(plantInfo, imageUrl);
+          toast.success("Dati e immagine inviati automaticamente al fitopatologo!");
+        }
+      } catch (error) {
+        toast.error("Errore nell'upload dell'immagine");
+        console.error(error);
+      }
+    }
+    
+    // Reset dell'input file per permettere di selezionare lo stesso file di nuovo
+    e.target.value = '';
+  };
+
+  // --- FORZATURA INVIO AUTOMATICO SU FOTO DA FOTOCAMERA ---
+  const handleCameraCapture = async (file: File) => {
+    if (!plantInfo.infoComplete) {
+      toast.warning("Inserisci prima le informazioni sulla pianta", {
+        dismissible: true,
+        duration: 3000
+      });
+      return;
+    }
+
     if (!file.type.startsWith('image/')) {
-      toast.error("Seleziona un file immagine valido");
+      toast.error("Il file della fotocamera non è un'immagine valida");
       return;
     }
     if (file.size > 10 * 1024 * 1024) {
@@ -358,64 +397,17 @@ const handleImageUploadEvent = async (e: React.ChangeEvent<HTMLInputElement>) =>
       // Invio automatico dati + immagine
       if (isAuthenticated && userProfile && plantInfo) {
         await sendComprehensivePlantInfoToExpertChat(plantInfo, imageUrl);
-        toast.success("Dati e immagine inviati automaticamente al fitopatologo!");
+        toast.success("Dati e foto inviati automaticamente al fitopatologo!");
       }
     } catch (error) {
-      toast.error("Errore nell'upload dell'immagine");
+      toast.error("Errore nell'upload dell'immagine dalla fotocamera");
       console.error(error);
     }
-  }
-};
-      // Pulisci l'immagine precedente se esiste
-      if (uploadedImage && uploadedImage.startsWith('blob:')) {
-        URL.revokeObjectURL(uploadedImage);
-      }
-      
-      // Create a temporary URL for the uploaded image
-      const tempUrl = URL.createObjectURL(file);
-      setUploadedImage(tempUrl);
-      
-      // Store the file for later use when user chooses diagnosis method
-      setPlantInfo({ ...plantInfo, uploadedFile: file, uploadedImageUrl: tempUrl });
-    }
-    
-    // Reset dell'input file per permettere di selezionare lo stesso file di nuovo
-    e.target.value = '';
   };
 
-// --- FORZATURA INVIO AUTOMATICO SU FOTO DA FOTOCAMERA ---
-const handleCameraCapture = async (file: File) => {
-  if (!plantInfo.infoComplete) {
-    toast.warning("Inserisci prima le informazioni sulla pianta", {
-      dismissible: true,
-      duration: 3000
-    });
-    return;
-  }
-
-  if (!file.type.startsWith('image/')) {
-    toast.error("Il file della fotocamera non è un'immagine valida");
-    return;
-  }
-  if (file.size > 10 * 1024 * 1024) {
-    toast.error("L'immagine deve essere inferiore a 10MB");
-    return;
-  }
-
-  try {
-    const imageUrl = await uploadImageToStorage(file);
-    setUploadedImage(imageUrl);
-
-    // Invio automatico dati + immagine
-    if (isAuthenticated && userProfile && plantInfo) {
-      await sendComprehensivePlantInfoToExpertChat(plantInfo, imageUrl);
-      toast.success("Dati e foto inviati automaticamente al fitopatologo!");
-    }
-  } catch (error) {
-    toast.error("Errore nell'upload dell'immagine dalla fotocamera");
-    console.error(error);
-  }
-};
+  const handlePlantInfoSubmit = async (formData: PlantInfoFormValues) => {
+    console.log("Plant info submitted:", formData);
+    setPlantInfo({ ...formData, infoComplete: true });
     
     setTimeout(() => {
       window.scrollTo({
@@ -423,7 +415,11 @@ const handleCameraCapture = async (file: File) => {
         behavior: 'smooth'
       });
     }, 300);
-  }
+  };
+
+  const takePicture = () => {
+    setShowCamera(true);
+  };
 
   function handleSelectAI() {
     // Check if user has uploaded an image
