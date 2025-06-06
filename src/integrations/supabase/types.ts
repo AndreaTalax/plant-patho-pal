@@ -497,7 +497,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      update_conversation_last_message: {
+        Args: { conversation_id: number; last_message: string }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never

@@ -115,7 +115,7 @@ export const useUserChat = (userId: string) => {
     };
   }, [currentDbConversation?.id]);
   
-  // Send message function - fixed to be properly async
+  // Send message function - properly async
   const handleSendMessage = async (text: string) => {
     if (!text.trim()) {
       toast.error("Il messaggio non può essere vuoto");
