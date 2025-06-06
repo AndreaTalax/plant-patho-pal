@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { modelInfo } from '@/utils/aiDiagnosisUtils';
@@ -331,7 +330,7 @@ const DiagnoseTab = () => {
     return publicUrlData.publicUrl;
   }
 
-  // --- FORZATURA INVIO AUTOMATICO SU UPLOAD FILE ---
+  // Fixed image upload with proper error handling
   const handleImageUploadEvent = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!plantInfo.infoComplete) {
       toast.warning("Inserisci prima le informazioni sulla pianta", {
@@ -342,38 +341,38 @@ const DiagnoseTab = () => {
     }
 
     const file = e.target.files?.[0];
-    if (file) {
-      if (!file.type.startsWith('image/')) {
-        toast.error("Seleziona un file immagine valido");
+    if (!file) {
+      toast.error("Nessun file selezionato");
+      return;
+    }
+
+    try {
+      console.log("📤 Starting image upload...");
+      const imageUrl = await uploadPlantImage(file, userProfile?.id || '');
+      
+      if (!imageUrl) {
+        toast.error("Errore nell'upload dell'immagine");
         return;
       }
-      if (file.size > 10 * 1024 * 1024) {
-        toast.error("L'immagine deve essere inferiore a 10MB");
-        return;
+      
+      setUploadedImage(imageUrl);
+      console.log("✅ Image uploaded successfully:", imageUrl);
+
+      // Send comprehensive data to expert if authenticated
+      if (isAuthenticated && userProfile && plantInfo) {
+        await sendComprehensivePlantInfoToExpertChat(plantInfo, imageUrl);
+        toast.success("Dati e immagine inviati automaticamente al fitopatologo!");
       }
-
-      try {
-        const imageUrl = await uploadImageToStorage(file);
-        setUploadedImage(imageUrl);
-
-        // Invio automatico dati + immagine
-        if (isAuthenticated && userProfile && plantInfo) {
-          await sendComprehensivePlantInfoToExpertChat(plantInfo, imageUrl);
-          toast.success("Dati e immagine inviati automaticamente al fitopatologo!");
-        }
-      } catch (error) {
-  toast.error("Errore nell'upload dell'immagine");
-  // Log dettagliato!
-  console.error("Errore upload supabase:", error);
-  alert("Errore upload: " + (error?.message || JSON.stringify(error)));
-}
+    } catch (error) {
+      console.error("❌ Error in image upload:", error);
+      toast.error(error instanceof Error ? error.message : "Errore nell'upload dell'immagine");
     }
     
-    // Reset dell'input file per permettere di selezionare lo stesso file di nuovo
+    // Reset file input
     e.target.value = '';
   };
 
-  // --- FORZATURA INVIO AUTOMATICO SU FOTO DA FOTOCAMERA ---
+  // Fixed camera capture with proper error handling
   const handleCameraCapture = async (file: File) => {
     if (!plantInfo.infoComplete) {
       toast.warning("Inserisci prima le informazioni sulla pianta", {
@@ -383,27 +382,26 @@ const DiagnoseTab = () => {
       return;
     }
 
-    if (!file.type.startsWith('image/')) {
-      toast.error("Il file della fotocamera non è un'immagine valida");
-      return;
-    }
-    if (file.size > 10 * 1024 * 1024) {
-      toast.error("L'immagine deve essere inferiore a 10MB");
-      return;
-    }
-
     try {
-      const imageUrl = await uploadImageToStorage(file);
+      console.log("📸 Starting camera capture upload...");
+      const imageUrl = await uploadPlantImage(file, userProfile?.id || '');
+      
+      if (!imageUrl) {
+        toast.error("Errore nell'upload dell'immagine dalla fotocamera");
+        return;
+      }
+      
       setUploadedImage(imageUrl);
+      console.log("✅ Camera image uploaded successfully:", imageUrl);
 
-      // Invio automatico dati + immagine
+      // Send comprehensive data to expert if authenticated
       if (isAuthenticated && userProfile && plantInfo) {
         await sendComprehensivePlantInfoToExpertChat(plantInfo, imageUrl);
         toast.success("Dati e foto inviati automaticamente al fitopatologo!");
       }
     } catch (error) {
-      toast.error("Errore nell'upload dell'immagine dalla fotocamera");
-      console.error(error);
+      console.error("❌ Error in camera capture upload:", error);
+      toast.error(error instanceof Error ? error.message : "Errore nell'upload dell'immagine dalla fotocamera");
     }
   };
 
