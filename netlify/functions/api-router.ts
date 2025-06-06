@@ -1,672 +1,195 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, GET, OPTIONS, PUT, DELETE',
-};
+import { Handler } from "@netlify/functions";
+import fetch from "node-fetch";
 
-serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
-  }
+// API credentials
+const SUPABASE_URL = process.env.SUPABASE_URL || "";
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+const PLANT_ID_API_KEY = process.env.PLANT_ID_API_KEY || "";
+const HUGGINGFACE_ACCESS_TOKEN = process.env.HUGGINGFACE_ACCESS_TOKEN || "";
+const EPPO_API_KEY = process.env.EPPO_API_KEY || "";
 
-  const url = new URL(req.url);
-  const path = url.pathname;
-  const method = req.method;
+export const handler: Handler = async (event) => {
+  // Get the path parameters
+  const path = event.path.replace(/^\/\.netlify\/functions\/api-router\//, "");
+  const segments = path.split("/");
+  const resource = segments[0];
+  const method = segments[1];
+  
+  console.log(`API Router: ${event.httpMethod} ${path}`);
 
   try {
-    // Initialize Supabase client
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    // Configure CORS for responses
+    const corsHeaders = {
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Headers": "Content-Type, Authorization",
+      "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS"
+    };
 
-    // Route handler
-    switch (path) {
-      case '/api/plants/analyze':
-        return await handlePlantAnalysis(req, supabase);
-      
-      case '/api/conversations':
-        return await handleConversations(req, supabase);
-      
-      case '/api/messages':
-        return await handleMessages(req, supabase);
-      
-      case '/api/consultations':
-        return await handleConsultations(req, supabase);
-      
-      case '/api/profiles':
-        return await handleProfiles(req, supabase);
-      
-      case '/api/notifications':
-        return await handleNotifications(req, supabase);
-      
-      case '/api/diagnoses':
-        return await handleDiagnoses(req, supabase);
-      
-      case '/api/products':
-        return await handleProducts(req, supabase);
-      
-      case '/api/orders':
-        return await handleOrders(req, supabase);
-      
-      case '/api/orders/create-payment':
-        return await handleCreatePayment(req, supabase);
-      
-      case '/api/orders/verify-payment':
-        return await handleVerifyPayment(req, supabase);
-      
-      case '/api/library/articles':
-        return await handleLibraryArticles(req, supabase);
-      
-      case '/api/upload-avatar':
-        return await handleUploadAvatar(req, supabase);
-      
+    // Handle preflight OPTIONS request
+    if (event.httpMethod === "OPTIONS") {
+      return {
+        statusCode: 200,
+        headers: corsHeaders,
+        body: ""
+      };
+    }
+
+    // Handle different API resources
+    switch (resource) {
+      case "plants":
+        return handlePlantRequests(event, corsHeaders);
+        
+      case "conversations":
+        return handleConversationRequests(event, corsHeaders);
+        
+      case "messages":
+        return handleMessageRequests(event, corsHeaders);
+        
+      case "user":
+        return handleUserRequests(event, corsHeaders);
+        
       default:
-        return new Response(
-          JSON.stringify({ error: 'Endpoint not found' }),
-          { 
-            status: 404, 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-          }
-        );
+        return {
+          statusCode: 404,
+          headers: corsHeaders,
+          body: JSON.stringify({ error: "Resource not found" })
+        };
     }
   } catch (error) {
-    console.error('API Router Error:', error);
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      { 
-        status: 500, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    console.error("API Router error:", error);
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ error: "Internal server error" })
+    };
+  }
+};
+
+// Handle requests to /plants endpoints
+async function handlePlantRequests(event: any, corsHeaders: any) {
+  const method = event.httpMethod;
+  const segments = event.path.replace(/^\/\.netlify\/functions\/api-router\/plants\//, "").split("/");
+  const action = segments[0];
+  
+  if (action === "analyze") {
+    if (method === "POST") {
+      try {
+        const payload = JSON.parse(event.body || "{}");
+        const { imageData, plantInfo, userId } = payload;
+        
+        if (!imageData) {
+          return {
+            statusCode: 400,
+            headers: corsHeaders,
+            body: JSON.stringify({ error: "Image data is required" })
+          };
+        }
+        
+        // Call the plant-diagnosis edge function
+        const response = await fetch(`${SUPABASE_URL}/functions/v1/plant-diagnosis`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
+          },
+          body: JSON.stringify({
+            imageData,
+            plantInfo,
+            userId
+          })
+        });
+        
+        const result = await response.json();
+        
+        return {
+          statusCode: response.status,
+          headers: corsHeaders,
+          body: JSON.stringify(result)
+        };
+      } catch (error) {
+        console.error("Error in plant analysis:", error);
+        return {
+          statusCode: 500,
+          headers: corsHeaders,
+          body: JSON.stringify({ error: "Failed to analyze plant" })
+        };
       }
-    );
-  }
-});
-
-// Plant Analysis Endpoints
-async function handlePlantAnalysis(req: Request, supabase: any) {
-  if (req.method === 'POST') {
-    const { imageData, plantInfo, userId } = await req.json();
-    
-    // Call existing plant analysis function
-    const analysisResult = await supabase.functions.invoke('analyze-plant', {
-      body: { imageData, plantInfo, userId }
-    });
-    
-    if (analysisResult.error) {
-      throw new Error(analysisResult.error.message);
-    }
-    
-    return new Response(
-      JSON.stringify(analysisResult.data),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-  }
-  
-  if (req.method === 'GET') {
-    const url = new URL(req.url);
-    const userId = url.searchParams.get('userId');
-    
-    if (!userId) {
-      return new Response(
-        JSON.stringify({ error: 'userId is required' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-    
-    const { data, error } = await supabase
-      .from('diagnosi_piante')
-      .select('*')
-      .eq('user_id', userId)
-      .order('data', { ascending: false });
-    
-    if (error) throw error;
-    
-    return new Response(
-      JSON.stringify({ diagnoses: data }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-  }
-}
-
-// Conversations Endpoints
-async function handleConversations(req: Request, supabase: any) {
-  if (req.method === 'GET') {
-    const url = new URL(req.url);
-    const userId = url.searchParams.get('userId');
-    const expertId = url.searchParams.get('expertId');
-    
-    if (!userId) {
-      return new Response(
-        JSON.stringify({ error: 'userId is required' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-    
-    let query = supabase
-      .from('conversations')
-      .select('*, user:user_id(id, username, first_name, last_name), expert:expert_id(id, username, first_name, last_name)')
-      .order('updated_at', { ascending: false });
-    
-    if (expertId) {
-      query = query.eq('expert_id', expertId);
-    } else {
-      query = query.eq('user_id', userId);
-    }
-    
-    const { data, error } = await query;
-    
-    if (error) throw error;
-    
-    return new Response(
-      JSON.stringify({ conversations: data }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-  }
-  
-  if (req.method === 'POST') {
-    const { userId, expertId, title } = await req.json();
-    
-    const { data, error } = await supabase
-      .from('conversations')
-      .insert({
-        user_id: userId,
-        expert_id: expertId,
-        title: title || 'Nuova conversazione',
-        status: 'active'
-      })
-      .select()
-      .single();
-    
-    if (error) throw error;
-    
-    return new Response(
-      JSON.stringify({ conversation: data }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-  }
-}
-
-// Messages Endpoints
-async function handleMessages(req: Request, supabase: any) {
-  if (req.method === 'GET') {
-    const url = new URL(req.url);
-    const conversationId = url.searchParams.get('conversationId');
-    
-    if (!conversationId) {
-      return new Response(
-        JSON.stringify({ error: 'conversationId is required' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-    
-    const { data, error } = await supabase
-      .from('messages')
-      .select('*')
-      .eq('conversation_id', conversationId)
-      .order('sent_at', { ascending: true });
-    
-    if (error) throw error;
-    
-    return new Response(
-      JSON.stringify({ messages: data }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-  }
-  
-  if (req.method === 'POST') {
-    const { conversationId, senderId, recipientId, text, products } = await req.json();
-    
-    const { data, error } = await supabase
-      .from('messages')
-      .insert({
-        conversation_id: conversationId,
-        sender_id: senderId,
-        recipient_id: recipientId,
-        text: text,
-        products: products || null,
-        sent_at: new Date().toISOString()
-      })
-      .select()
-      .single();
-    
-    if (error) throw error;
-    
-    // Update conversation timestamp
-    await supabase
-      .from('conversations')
-      .update({ updated_at: new Date().toISOString() })
-      .eq('id', conversationId);
-    
-    return new Response(
-      JSON.stringify({ message: data }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-  }
-}
-
-// Consultations Endpoints
-async function handleConsultations(req: Request, supabase: any) {
-  if (req.method === 'GET') {
-    const url = new URL(req.url);
-    const userId = url.searchParams.get('userId');
-    const expertId = url.searchParams.get('expertId');
-    const status = url.searchParams.get('status');
-    
-    let query = supabase
-      .from('expert_consultations')
-      .select('*')
-      .order('created_at', { ascending: false });
-    
-    if (userId) query = query.eq('user_id', userId);
-    if (expertId) query = query.eq('expert_id', expertId);
-    if (status) query = query.eq('status', status);
-    
-    const { data, error } = await query;
-    
-    if (error) throw error;
-    
-    return new Response(
-      JSON.stringify({ consultations: data }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-  }
-  
-  if (req.method === 'POST') {
-    const { userId, plantInfo, symptoms, imageUrl } = await req.json();
-    
-    const { data, error } = await supabase
-      .from('expert_consultations')
-      .insert({
-        user_id: userId,
-        plant_info: plantInfo,
-        symptoms: symptoms,
-        image_url: imageUrl,
-        status: 'pending'
-      })
-      .select()
-      .single();
-    
-    if (error) throw error;
-    
-    return new Response(
-      JSON.stringify({ consultation: data }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-  }
-  
-  if (req.method === 'PUT') {
-    const { consultationId, status, response } = await req.json();
-    
-    const updateData: any = { status };
-    if (response) updateData.response = response;
-    
-    const { data, error } = await supabase
-      .from('expert_consultations')
-      .update(updateData)
-      .eq('id', consultationId)
-      .select()
-      .single();
-    
-    if (error) throw error;
-    
-    return new Response(
-      JSON.stringify({ consultation: data }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-  }
-}
-
-// Profiles Endpoints
-async function handleProfiles(req: Request, supabase: any) {
-  if (req.method === 'GET') {
-    const url = new URL(req.url);
-    const userId = url.searchParams.get('userId');
-    
-    if (!userId) {
-      return new Response(
-        JSON.stringify({ error: 'userId is required' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-    
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', userId)
-      .single();
-    
-    if (error) throw error;
-    
-    return new Response(
-      JSON.stringify({ profile: data }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-  }
-  
-  if (req.method === 'PUT') {
-    const { userId, profileData } = await req.json();
-    
-    const { data, error } = await supabase
-      .from('profiles')
-      .update({
-        ...profileData,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', userId)
-      .select()
-      .single();
-    
-    if (error) throw error;
-    
-    return new Response(
-      JSON.stringify({ profile: data }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-  }
-}
-
-// Notifications Endpoints
-async function handleNotifications(req: Request, supabase: any) {
-  if (req.method === 'GET') {
-    const url = new URL(req.url);
-    const userId = url.searchParams.get('userId');
-    const unreadOnly = url.searchParams.get('unreadOnly') === 'true';
-    
-    if (!userId) {
-      return new Response(
-        JSON.stringify({ error: 'userId is required' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-    
-    let query = supabase
-      .from('notifications')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false });
-    
-    if (unreadOnly) {
-      query = query.eq('read', false);
-    }
-    
-    const { data, error } = await query;
-    
-    if (error) throw error;
-    
-    return new Response(
-      JSON.stringify({ notifications: data }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-  }
-  
-  if (req.method === 'POST') {
-    const { userId, title, message, type, data } = await req.json();
-    
-    const { data: notification, error } = await supabase
-      .from('notifications')
-      .insert({
-        user_id: userId,
-        title: title,
-        message: message,
-        type: type || 'general',
-        data: data || null,
-        read: false
-      })
-      .select()
-      .single();
-    
-    if (error) throw error;
-    
-    return new Response(
-      JSON.stringify({ notification }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-  }
-  
-  if (req.method === 'PUT') {
-    const { notificationId, read } = await req.json();
-    
-    const { data, error } = await supabase
-      .from('notifications')
-      .update({ read: read })
-      .eq('id', notificationId)
-      .select()
-      .single();
-    
-    if (error) throw error;
-    
-    return new Response(
-      JSON.stringify({ notification: data }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-  }
-}
-
-// Diagnoses Endpoints
-async function handleDiagnoses(req: Request, supabase: any) {
-  if (req.method === 'GET') {
-    const url = new URL(req.url);
-    const userId = url.searchParams.get('userId');
-    const diagnosisId = url.searchParams.get('diagnosisId');
-    
-    if (diagnosisId) {
-      const { data, error } = await supabase
-        .from('diagnoses')
-        .select('*')
-        .eq('id', diagnosisId)
-        .single();
+    } else if (method === "GET") {
+      // Handle GET request to retrieve user diagnoses
+      const userId = event.queryStringParameters?.userId;
       
-      if (error) throw error;
-      
-      return new Response(
-        JSON.stringify({ diagnosis: data }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-    
-    if (!userId) {
-      return new Response(
-        JSON.stringify({ error: 'userId is required' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-    
-    const { data, error } = await supabase
-      .from('diagnoses')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false });
-    
-    if (error) throw error;
-    
-    return new Response(
-      JSON.stringify({ diagnoses: data }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-  }
-  
-  if (req.method === 'POST') {
-    const { userId, plantType, plantVariety, symptoms, imageUrl, diagnosisResult } = await req.json();
-    
-    const { data, error } = await supabase
-      .from('diagnoses')
-      .insert({
-        user_id: userId,
-        plant_type: plantType,
-        plant_variety: plantVariety,
-        symptoms: symptoms,
-        image_url: imageUrl,
-        diagnosis_result: diagnosisResult,
-        status: 'completed'
-      })
-      .select()
-      .single();
-    
-    if (error) throw error;
-    
-    return new Response(
-      JSON.stringify({ diagnosis: data }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-  }
-}
-
-// New Products Endpoints
-async function handleProducts(req: Request, supabase: any) {
-  if (req.method === 'GET') {
-    const url = new URL(req.url);
-    const category = url.searchParams.get('category');
-    const search = url.searchParams.get('search');
-    
-    let query = supabase
-      .from('products')
-      .select('*')
-      .eq('is_active', true)
-      .order('created_at', { ascending: false });
-    
-    if (category) query = query.eq('category', category);
-    if (search) query = query.or(`name.ilike.%${search}%,description.ilike.%${search}%`);
-    
-    const { data, error } = await query;
-    
-    if (error) throw error;
-    
-    return new Response(
-      JSON.stringify({ products: data }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-  }
-}
-
-// Orders Endpoints
-async function handleOrders(req: Request, supabase: any) {
-  if (req.method === 'GET') {
-    const url = new URL(req.url);
-    const userId = url.searchParams.get('userId');
-    
-    if (!userId) {
-      return new Response(
-        JSON.stringify({ error: 'userId is required' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-    
-    const { data, error } = await supabase
-      .from('orders')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false });
-    
-    if (error) throw error;
-    
-    return new Response(
-      JSON.stringify({ orders: data }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-  }
-}
-
-// Create Payment Endpoint
-async function handleCreatePayment(req: Request, supabase: any) {
-  if (req.method === 'POST') {
-    // Redirect to the Supabase function
-    const response = await supabase.functions.invoke('create-payment', {
-      body: await req.json(),
-      headers: {
-        Authorization: req.headers.get('Authorization') || ''
+      if (!userId) {
+        return {
+          statusCode: 400,
+          headers: corsHeaders,
+          body: JSON.stringify({ error: "userId is required" })
+        };
       }
-    });
-    
-    if (response.error) throw new Error(response.error.message);
-    
-    return new Response(
-      JSON.stringify(response.data),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-  }
-}
-
-// Verify Payment Endpoint
-async function handleVerifyPayment(req: Request, supabase: any) {
-  if (req.method === 'POST') {
-    // Redirect to the Supabase function
-    const response = await supabase.functions.invoke('verify-payment', {
-      body: await req.json()
-    });
-    
-    if (response.error) throw new Error(response.error.message);
-    
-    return new Response(
-      JSON.stringify(response.data),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-  }
-}
-
-// Library Articles Endpoints
-async function handleLibraryArticles(req: Request, supabase: any) {
-  if (req.method === 'GET') {
-    const url = new URL(req.url);
-    const category = url.searchParams.get('category');
-    const search = url.searchParams.get('search');
-    const articleId = url.searchParams.get('id');
-    
-    if (articleId) {
-      // Get single article
-      const { data, error } = await supabase
-        .from('library_articles')
-        .select('*')
-        .eq('id', articleId)
-        .eq('is_published', true)
-        .single();
       
-      if (error) throw error;
-      
-      return new Response(
-        JSON.stringify({ article: data }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-    
-    // Get multiple articles
-    let query = supabase
-      .from('library_articles')
-      .select('*')
-      .eq('is_published', true)
-      .order('created_at', { ascending: false });
-    
-    if (category) query = query.eq('category', category);
-    if (search) query = query.or(`title.ilike.%${search}%,content.ilike.%${search}%,excerpt.ilike.%${search}%`);
-    
-    const { data, error } = await query;
-    
-    if (error) throw error;
-    
-    return new Response(
-      JSON.stringify({ articles: data }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-  }
-}
-
-// Upload Avatar Endpoint
-async function handleUploadAvatar(req: Request, supabase: any) {
-  if (req.method === 'POST') {
-    // Redirect to the Supabase function
-    const response = await supabase.functions.invoke('upload-avatar', {
-      body: await req.formData(),
-      headers: {
-        Authorization: req.headers.get('Authorization') || ''
+      try {
+        // Call Supabase directly to retrieve diagnoses
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/diagnoses?user_id=eq.${userId}&order=created_at.desc`, {
+          headers: {
+            "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+            "apikey": SUPABASE_SERVICE_ROLE_KEY
+          }
+        });
+        
+        if (!response.ok) {
+          throw new Error(`Supabase error: ${response.status}`);
+        }
+        
+        const diagnoses = await response.json();
+        
+        return {
+          statusCode: 200,
+          headers: corsHeaders,
+          body: JSON.stringify(diagnoses)
+        };
+      } catch (error) {
+        console.error("Error fetching diagnoses:", error);
+        return {
+          statusCode: 500,
+          headers: corsHeaders,
+          body: JSON.stringify({ error: "Failed to fetch diagnoses" })
+        };
       }
-    });
-    
-    if (response.error) throw new Error(response.error.message);
-    
-    return new Response(
-      JSON.stringify(response.data),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    }
   }
+  
+  return {
+    statusCode: 404,
+    headers: corsHeaders,
+    body: JSON.stringify({ error: "Endpoint not found" })
+  };
+}
+
+// Handle requests to /conversations endpoints
+async function handleConversationRequests(event: any, corsHeaders: any) {
+  // Implementation for conversations API
+  return {
+    statusCode: 200,
+    headers: corsHeaders,
+    body: JSON.stringify({ message: "Conversations endpoint" })
+  };
+}
+
+// Handle requests to /messages endpoints
+async function handleMessageRequests(event: any, corsHeaders: any) {
+  // Implementation for messages API
+  return {
+    statusCode: 200,
+    headers: corsHeaders,
+    body: JSON.stringify({ message: "Messages endpoint" })
+  };
+}
+
+// Handle requests to /user endpoints
+async function handleUserRequests(event: any, corsHeaders: any) {
+  // Implementation for user API
+  return {
+    statusCode: 200,
+    headers: corsHeaders,
+    body: JSON.stringify({ message: "User endpoint" })
+  };
 }

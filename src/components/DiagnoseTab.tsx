@@ -12,7 +12,8 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import { EXPERT } from '@/components/chat/types';
 import { MARCO_NIGRO_ID } from '@/components/phytopathologist';
-import { uploadPlantImage } from '@/utils/imageStorage';
+import { uploadPlantImage, uploadBase64Image, processAndUploadCameraCapture } from '@/utils/imageStorage';
+import PlantDiagnosisService from '@/services/plantDiagnosisService';
 
 // Importing our components
 import DiagnoseHeader from './diagnose/DiagnoseHeader';
@@ -62,7 +63,10 @@ const DiagnoseTab = () => {
     imageUrl?: string,
     diagnosisResult?: any
   ) => {
-    if (!isAuthenticated || !userProfile) return;
+    if (!isAuthenticated || !userProfile) {
+      console.log("User not authenticated, cannot send to expert");
+      return;
+    }
 
     try {
       console.log("🚀 Sending comprehensive plant info to expert chat:", { plantData, diagnosisResult });
@@ -349,7 +353,7 @@ const DiagnoseTab = () => {
 
     try {
       console.log("📤 Starting image upload...");
-      const imageUrl = await uploadPlantImage(file, userProfile?.id || '');
+      const imageUrl = await uploadPlantImage(file, userProfile?.id || 'anonymous');
       
       if (!imageUrl) {
         toast.error("Errore nell'upload dell'immagine");
@@ -363,6 +367,24 @@ const DiagnoseTab = () => {
       if (isAuthenticated && userProfile && plantInfo) {
         await sendComprehensivePlantInfoToExpertChat(plantInfo, imageUrl);
         toast.success("Dati e immagine inviati automaticamente al fitopatologo!");
+      }
+      
+      // If AI analysis is selected, start the diagnosis
+      if (plantInfo.useAI) {
+        try {
+          const diagnosisResult = await PlantDiagnosisService.diagnosePlant(
+            imageUrl,
+            plantInfo,
+            userProfile?.id
+          );
+          
+          if (diagnosisResult) {
+            console.log("✅ AI Diagnosis completed:", diagnosisResult);
+          }
+        } catch (diagnosisError) {
+          console.error("❌ Error in AI diagnosis:", diagnosisError);
+          toast.error("Errore nell'analisi AI della pianta");
+        }
       }
     } catch (error) {
       console.error("❌ Error in image upload:", error);
@@ -385,7 +407,7 @@ const DiagnoseTab = () => {
 
     try {
       console.log("📸 Starting camera capture upload...");
-      const imageUrl = await uploadPlantImage(file, userProfile?.id || '');
+      const imageUrl = await uploadPlantImage(file, userProfile?.id || 'anonymous');
       
       if (!imageUrl) {
         toast.error("Errore nell'upload dell'immagine dalla fotocamera");
@@ -399,6 +421,24 @@ const DiagnoseTab = () => {
       if (isAuthenticated && userProfile && plantInfo) {
         await sendComprehensivePlantInfoToExpertChat(plantInfo, imageUrl);
         toast.success("Dati e foto inviati automaticamente al fitopatologo!");
+      }
+      
+      // If AI analysis is selected, start the diagnosis
+      if (plantInfo.useAI) {
+        try {
+          const diagnosisResult = await PlantDiagnosisService.diagnosePlant(
+            imageUrl,
+            plantInfo,
+            userProfile?.id
+          );
+          
+          if (diagnosisResult) {
+            console.log("✅ AI Diagnosis completed:", diagnosisResult);
+          }
+        } catch (diagnosisError) {
+          console.error("❌ Error in AI diagnosis:", diagnosisError);
+          toast.error("Errore nell'analisi AI della pianta");
+        }
       }
     } catch (error) {
       console.error("❌ Error in camera capture upload:", error);
