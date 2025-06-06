@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import { EXPERT } from '@/components/chat/types';
 import { MARCO_NIGRO_ID } from '@/components/phytopathologist';
+import { uploadPlantImage } from '@/utils/imageStorage';
 
 // Importing our components
 import DiagnoseHeader from './diagnose/DiagnoseHeader';
