@@ -1,203 +1,156 @@
-import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
+
+import React, { useState } from 'react';
 import { Card } from '@/components/ui/card';
-import { Textarea } from '@/components/ui/textarea';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage, Form } from '@/components/ui/form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm } from 'react-hook-form';
-import * as z from 'zod';
-
-export interface PlantInfoFormValues {
-  isIndoor: boolean;
-  wateringFrequency: string;
-  lightExposure: string;
-  symptoms: string;
-  useAI: boolean;
-  sendToExpert: boolean;
-  name?: string;
-}
-
-const formSchema = z.object({
-  isIndoor: z.boolean(),
-  wateringFrequency: z.string().min(1, "La frequenza di irrigazione è obbligatoria"),
-  lightExposure: z.string().min(1, "L'esposizione alla luce è obbligatoria"),
-  symptoms: z.string().min(10, "Si prega di fornire una descrizione dettagliata dei sintomi (min. 10 caratteri)"),
-  name: z.string().optional(),
-})
 
 interface PlantInfoFormProps {
-  onComplete: (data: PlantInfoFormValues) => void;
+  onComplete: (data: any) => void;
+  initialData?: any;
 }
 
-const PlantInfoForm = ({ onComplete }: PlantInfoFormProps) => {
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      isIndoor: false,
-      wateringFrequency: '',
-      lightExposure: '',
-      symptoms: '',
-      name: '',
-    }
+const PlantInfoForm: React.FC<PlantInfoFormProps> = ({ onComplete, initialData = {} }) => {
+  const [formData, setFormData] = useState({
+    plantName: initialData.plantName || '',
+    isIndoor: initialData.isIndoor || 'indoor',
+    wateringFrequency: initialData.wateringFrequency || '',
+    lightExposure: initialData.lightExposure || '',
+    symptoms: initialData.symptoms || '',
+    plantAge: initialData.plantAge || '',
+    potSize: initialData.potSize || '',
+    fertilizer: initialData.fertilizer || ''
   });
 
-  const handleSubmit = (values: z.infer<typeof formSchema>) => {
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!formData.symptoms.trim()) {
+      alert('Please describe the symptoms you\'ve observed');
+      return;
+    }
+
     onComplete({
-      isIndoor: values.isIndoor,
-      wateringFrequency: values.wateringFrequency,
-      lightExposure: values.lightExposure,
-      symptoms: values.symptoms,
-      useAI: true,
-      sendToExpert: true,
-      name: values.name,
+      ...formData,
+      isIndoor: formData.isIndoor === 'indoor',
+      wateringFrequency: parseInt(formData.wateringFrequency) || 0
     });
   };
 
+  const updateField = (field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
   return (
-    <Card className="bg-white p-6 shadow-md rounded-2xl">
-      <div className="space-y-6">
+    <Card className="p-6 max-w-2xl mx-auto">
+      <h2 className="text-2xl font-bold mb-6 text-center">Plant Information</h2>
+      
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Plant Name */}
         <div>
-          <h3 className="text-lg font-medium text-gray-900 mb-2">Informazioni sulla pianta</h3>
-          <p className="text-sm text-gray-500 mb-4">
-            Fornisci alcune informazioni sulla tua pianta per ottenere una diagnosi accurata.
+          <Label htmlFor="plantName">Plant Name (if known)</Label>
+          <Input
+            id="plantName"
+            value={formData.plantName}
+            onChange={(e) => updateField('plantName', e.target.value)}
+            placeholder="e.g., Rose, Tomato, Peace Lily..."
+          />
+        </div>
+
+        {/* Indoor/Outdoor */}
+        <div>
+          <Label>Plant Environment</Label>
+          <RadioGroup
+            value={formData.isIndoor}
+            onValueChange={(value) => updateField('isIndoor', value)}
+            className="flex gap-6 mt-2"
+          >
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="indoor" id="indoor" />
+              <Label htmlFor="indoor">Indoor Plant</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="outdoor" id="outdoor" />
+              <Label htmlFor="outdoor">Outdoor Plant</Label>
+            </div>
+          </RadioGroup>
+        </div>
+
+        {/* Watering Frequency */}
+        <div>
+          <Label htmlFor="watering">Watering Frequency (times per week)</Label>
+          <Select value={formData.wateringFrequency} onValueChange={(value) => updateField('wateringFrequency', value)}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select watering frequency" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="0">Never / Very rarely</SelectItem>
+              <SelectItem value="1">Once a week</SelectItem>
+              <SelectItem value="2">Twice a week</SelectItem>
+              <SelectItem value="3">3 times a week</SelectItem>
+              <SelectItem value="4">4 times a week</SelectItem>
+              <SelectItem value="5">5 times a week</SelectItem>
+              <SelectItem value="7">Daily</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Light Exposure */}
+        <div>
+          <Label htmlFor="light">Light Exposure</Label>
+          <Select value={formData.lightExposure} onValueChange={(value) => updateField('lightExposure', value)}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select light exposure" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="low">Low light (shade)</SelectItem>
+              <SelectItem value="medium">Medium light (indirect)</SelectItem>
+              <SelectItem value="high">High light (direct sun)</SelectItem>
+              <SelectItem value="artificial">Artificial light only</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Plant Age */}
+        <div>
+          <Label htmlFor="age">Plant Age (approximate)</Label>
+          <Select value={formData.plantAge} onValueChange={(value) => updateField('plantAge', value)}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select plant age" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="seedling">Seedling (less than 3 months)</SelectItem>
+              <SelectItem value="young">Young (3-12 months)</SelectItem>
+              <SelectItem value="mature">Mature (1-3 years)</SelectItem>
+              <SelectItem value="old">Old (more than 3 years)</SelectItem>
+              <SelectItem value="unknown">Unknown</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Symptoms (Required) */}
+        <div>
+          <Label htmlFor="symptoms">Symptoms Description *</Label>
+          <Textarea
+            id="symptoms"
+            value={formData.symptoms}
+            onChange={(e) => updateField('symptoms', e.target.value)}
+            placeholder="Describe what you've observed: yellow leaves, brown spots, wilting, pest damage, etc."
+            className="min-h-[100px]"
+            required
+          />
+          <p className="text-sm text-gray-500 mt-1">
+            Detailed symptom description helps our AI provide more accurate analysis
           </p>
         </div>
 
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-5">
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Nome della pianta (opzionale)</FormLabel>
-                  <FormControl>
-                    <Input 
-                      placeholder="Inserisci il nome della pianta se lo conosci" 
-                      {...field} 
-                    />
-                  </FormControl>
-                  <FormDescription>
-                    Se conosci il nome della pianta, aiuterà l'analisi
-                  </FormDescription>
-                </FormItem>
-              )}
-            />
-            
-            <FormField
-              control={form.control}
-              name="isIndoor"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Tipo di ambiente</FormLabel>
-                  <Select 
-                    onValueChange={(value) => field.onChange(value === 'indoor')}
-                    defaultValue={field.value ? 'indoor' : 'outdoor'}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Seleziona tipo di ambiente" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="indoor">Ambiente interno (chiuso)</SelectItem>
-                      <SelectItem value="outdoor">Ambiente esterno (aperto)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </FormItem>
-              )}
-            />
-            
-            <FormField
-              control={form.control}
-              name="wateringFrequency"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Frequenza di irrigazione (volte a settimana) *</FormLabel>
-                  <Select 
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Seleziona frequenza" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="1">1 volta</SelectItem>
-                      <SelectItem value="2">2 volte</SelectItem>
-                      <SelectItem value="3">3 volte</SelectItem>
-                      <SelectItem value="4">4 o più volte</SelectItem>
-                      <SelectItem value="0">Raramente / Mai</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <FormField
-              control={form.control}
-              name="lightExposure"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Esposizione alla luce *</FormLabel>
-                  <Select 
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Seleziona esposizione" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="full-sun">Sole pieno / luce diretta</SelectItem>
-                      <SelectItem value="partial-sun">Parzialmente in ombra</SelectItem>
-                      <SelectItem value="shade">Ombra / luce indiretta</SelectItem>
-                      <SelectItem value="low-light">Luce scarsa</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <FormField
-              control={form.control}
-              name="symptoms"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Descrivi i sintomi *</FormLabel>
-                  <FormControl>
-                    <Textarea 
-                      placeholder="Descrivi i sintomi della pianta (foglie ingiallite, macchie, appassimento, ecc.)"
-                      className="min-h-[120px]"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormDescription>
-                    Fornisci una descrizione dettagliata di tutti i sintomi visibili
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <div className="pt-2">
-              <Button 
-                type="submit" 
-                className="w-full mt-4 bg-drplant-green hover:bg-drplant-green/90"
-              >
-                Continua
-              </Button>
-            </div>
-          </form>
-        </Form>
-      </div>
+        <Button type="submit" className="w-full">
+          Continue to Image Upload
+        </Button>
+      </form>
     </Card>
   );
 };
