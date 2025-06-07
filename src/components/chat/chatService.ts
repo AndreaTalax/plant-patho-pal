@@ -1,3 +1,4 @@
+
 import {
   supabase,
   EXPERT_ID,
@@ -170,7 +171,7 @@ const convertProductsToJson = (products?: Product[]): Json => {
       name: product.name || '',
       price: typeof product.price === 'number' ? product.price : parseFloat(String(product.price) || '0'),
       description: product.description || '',
-      image_url: product.image_url || ''
+      image_url: product.image || '' // Fixed: use 'image' instead of 'image_url'
     }));
     
     return serializedProducts as unknown as Json;
