@@ -127,7 +127,7 @@ console.log('🔍 Validation passed:', {
             conversation_id: conversation.id,
             sender_id: userId,
             recipient_id: MARCO_NIGRO_ID,
-            text: `Plant image: ${diagnosisData.imageUrl}`, // Use 'text' field
+            content: `Plant image: ${diagnosisData.imageUrl}`, // Use 'text' field
             sent_at: new Date().toISOString(),
             read: false
           });
