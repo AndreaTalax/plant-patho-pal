@@ -61,6 +61,17 @@ export class AutoExpertNotificationService {
 
       const messageContent = this.createExpertMessage(userName, diagnosisData);
 
+      // Prepare metadata for database storage (simplified for JSON compatibility)
+      const messageMetadata = {
+        type: 'automatic_diagnosis',
+        plantType: diagnosisData.plantType,
+        plantVariety: diagnosisData.plantVariety || '',
+        symptoms: diagnosisData.symptoms,
+        confidence: diagnosisData.confidence,
+        isHealthy: diagnosisData.isHealthy,
+        timestamp: new Date().toISOString()
+      };
+
       // Send the message
       const { error: messageError } = await supabase
         .from('messages')
@@ -69,11 +80,7 @@ export class AutoExpertNotificationService {
           sender_id: userId,
           recipient_id: MARCO_NIGRO_ID,
           text: messageContent,
-          metadata: {
-            type: 'automatic_diagnosis',
-            diagnosisData,
-            timestamp: new Date().toISOString()
-          }
+          metadata: messageMetadata
         });
 
       if (messageError) {

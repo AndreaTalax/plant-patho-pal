@@ -7,9 +7,9 @@ import { toast } from 'sonner';
 import { useAuth } from '@/context/AuthContext';
 import { usePlantInfo } from '@/context/PlantInfoContext';
 import PlantInfoForm from './diagnose/PlantInfoForm';
-import PlantAnalysisResult from './diagnose/PlantAnalysisResult';
+import PlantAnalysisResultComponent from './diagnose/PlantAnalysisResult';
 import CameraCapture from './diagnose/CameraCapture';
-import { RealPlantAnalysisService, PlantAnalysisResult } from '@/services/realPlantAnalysisService';
+import { RealPlantAnalysisService, PlantAnalysisResult as AnalysisResult } from '@/services/realPlantAnalysisService';
 import { AutoExpertNotificationService } from './chat/AutoExpertNotificationService';
 import { uploadPlantImage } from '@/utils/imageStorage';
 
@@ -21,7 +21,7 @@ const DiagnoseTab = () => {
   const [currentStage, setCurrentStage] = useState<'info' | 'capture' | 'analyzing' | 'result'>('info');
   const [showCamera, setShowCamera] = useState(false);
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
-  const [analysisResult, setAnalysisResult] = useState<PlantAnalysisResult | null>(null);
+  const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [autoSentToExpert, setAutoSentToExpert] = useState(false);
   
@@ -149,7 +149,16 @@ const DiagnoseTab = () => {
     setUploadedImage(null);
     setAnalysisResult(null);
     setAutoSentToExpert(false);
-    setPlantInfo({});
+    setPlantInfo({
+      isIndoor: true,
+      wateringFrequency: '',
+      lightExposure: '',
+      symptoms: '',
+      useAI: false,
+      sendToExpert: false,
+      name: '',
+      infoComplete: false
+    });
   }, [setPlantInfo]);
 
   // Render based on current stage
@@ -237,7 +246,7 @@ const DiagnoseTab = () => {
             )}
 
             {analysisResult && uploadedImage && (
-              <PlantAnalysisResult
+              <PlantAnalysisResultComponent
                 analysisResult={analysisResult}
                 imageUrl={uploadedImage}
                 onNewAnalysis={handleNewAnalysis}
