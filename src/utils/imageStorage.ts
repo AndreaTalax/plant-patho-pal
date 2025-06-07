@@ -3,10 +3,22 @@ import { supabase } from '@/integrations/supabase/client';
 
 export const uploadPlantImage = async (file: File, userId: string): Promise<string> => {
   try {
-    const fileExt = file.name.split('.').pop();
+    console.log('📸 Starting plant image upload...');
+    console.log('File info:', { name: file.name, size: file.size, type: file.type });
+    console.log('User ID:', userId);
+    
+    if (!file.type.startsWith('image/')) {
+      throw new Error('File must be an image');
+    }
+    
+    if (file.size > 10 * 1024 * 1024) { // 10MB limit
+      throw new Error('File size must be less than 10MB');
+    }
+    
+    const fileExt = file.name.split('.').pop() || 'jpg';
     const fileName = `${userId}/${Date.now()}.${fileExt}`;
     
-    console.log('📸 Uploading plant image to storage...');
+    console.log('Uploading to path:', fileName);
     
     const { data, error } = await supabase.storage
       .from('plant-images')
@@ -20,6 +32,8 @@ export const uploadPlantImage = async (file: File, userId: string): Promise<stri
       throw new Error(`Upload failed: ${error.message}`);
     }
 
+    console.log('Upload successful, getting public URL...');
+    
     const { data: { publicUrl } } = supabase.storage
       .from('plant-images')
       .getPublicUrl(fileName);
@@ -34,10 +48,16 @@ export const uploadPlantImage = async (file: File, userId: string): Promise<stri
 
 export const uploadAvatarImage = async (file: File, userId: string): Promise<string> => {
   try {
-    const fileExt = file.name.split('.').pop();
+    console.log('👤 Starting avatar image upload...');
+    
+    if (!file.type.startsWith('image/')) {
+      throw new Error('File must be an image');
+    }
+    
+    const fileExt = file.name.split('.').pop() || 'jpg';
     const fileName = `${userId}/avatar.${fileExt}`;
     
-    console.log('👤 Uploading avatar image to storage...');
+    console.log('Uploading avatar to path:', fileName);
     
     const { data, error } = await supabase.storage
       .from('avatars')
@@ -65,13 +85,19 @@ export const uploadAvatarImage = async (file: File, userId: string): Promise<str
 
 export const uploadBase64Image = async (base64Data: string, userId: string): Promise<string> => {
   try {
+    console.log('📸 Starting base64 image upload...');
+    
     // Convert base64 to blob
     const base64Response = await fetch(base64Data);
     const blob = await base64Response.blob();
     
+    if (blob.size > 10 * 1024 * 1024) { // 10MB limit
+      throw new Error('Image size must be less than 10MB');
+    }
+    
     const fileName = `${userId}/${Date.now()}.jpg`;
     
-    console.log('📸 Uploading base64 image to storage...');
+    console.log('Uploading base64 image to path:', fileName);
     
     const { data, error } = await supabase.storage
       .from('plant-images')

@@ -36,6 +36,11 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
         stream.getTracks().forEach(track => track.stop());
       }
 
+      // Check if getUserMedia is supported
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error('Camera not supported on this device');
+      }
+
       // Request camera permissions with constraints
       const constraints: MediaStreamConstraints = {
         video: {
@@ -47,6 +52,7 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
         audio: false
       };
 
+      console.log('Requesting camera access with constraints:', constraints);
       const mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
       setStream(mediaStream);
 
@@ -54,18 +60,19 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
         videoRef.current.srcObject = mediaStream;
         
         // Wait for video to be ready
-        await new Promise<void>((resolve) => {
+        videoRef.current.onloadedmetadata = () => {
           if (videoRef.current) {
-            videoRef.current.onloadedmetadata = () => {
-              videoRef.current?.play().then(() => {
-                resolve();
-              }).catch((playError) => {
-                console.error('Error playing video:', playError);
-                resolve(); // Continue anyway
-              });
-            };
+            videoRef.current.play().then(() => {
+              console.log('Camera initialized successfully');
+              setIsLoading(false);
+              toast.success('Camera initialized successfully');
+            }).catch((playError) => {
+              console.error('Error playing video:', playError);
+              setError('Error starting video playback');
+              setIsLoading(false);
+            });
           }
-        });
+        };
 
         // Check for flash capability
         const videoTrack = mediaStream.getVideoTracks()[0];
@@ -75,12 +82,24 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
         }
       }
 
-      setIsLoading(false);
-      toast.success('Camera initialized successfully');
-
     } catch (err) {
       console.error('Camera initialization error:', err);
-      const errorMessage = err instanceof Error ? err.message : 'Camera access denied';
+      let errorMessage = 'Unknown camera error';
+      
+      if (err instanceof Error) {
+        if (err.name === 'NotAllowedError') {
+          errorMessage = 'Camera access denied. Please allow camera permissions.';
+        } else if (err.name === 'NotFoundError') {
+          errorMessage = 'No camera found on this device.';
+        } else if (err.name === 'NotReadableError') {
+          errorMessage = 'Camera is being used by another application.';
+        } else if (err.name === 'OverconstrainedError') {
+          errorMessage = 'Camera configuration not supported.';
+        } else {
+          errorMessage = err.message || 'Unable to access camera';
+        }
+      }
+      
       setError(errorMessage);
       setIsLoading(false);
       toast.error(`Camera error: ${errorMessage}`);
@@ -94,14 +113,20 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
     // Cleanup on unmount
     return () => {
       if (stream) {
-        stream.getTracks().forEach(track => track.stop());
+        stream.getTracks().forEach(track => {
+          track.stop();
+          console.log('Camera track stopped:', track.kind);
+        });
       }
     };
   }, [initializeCamera]);
 
   // Toggle flash
   const toggleFlash = useCallback(async () => {
-    if (!stream || !hasFlash) return;
+    if (!stream || !hasFlash) {
+      toast.error('Flash not supported on this device');
+      return;
+    }
 
     try {
       const videoTrack = stream.getVideoTracks()[0];
@@ -156,6 +181,7 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
         stream.getTracks().forEach(track => track.stop());
       }
 
+      console.log('Photo captured successfully');
       toast.success('Photo captured successfully!');
       onCapture(imageDataUrl);
 

@@ -4,66 +4,70 @@ import { toast } from 'sonner';
 
 export interface PlantAnalysisResult {
   plantName: string;
-  scientificName: string;
+  scientificName?: string;
   confidence: number;
   isHealthy: boolean;
-  diseases?: Array<{
+  diseases: Array<{
     name: string;
     probability: number;
-    description: string;
-    treatment: string;
+    description?: string;
+    treatment?: string;
   }>;
-  suggestions?: Array<{
-    plantName: string;
-    probability: number;
-    similarImages: string[];
-  }>;
+  recommendations: string[];
+  analysisDetails: {
+    plantId?: any;
+    huggingFace?: any;
+    eppo?: any;
+  };
 }
 
 export class RealPlantAnalysisService {
   static async analyzePlantWithRealAPIs(
-    imageData: string,
-    plantInfo?: any
+    imageDataUrl: string,
+    plantInfo: any
   ): Promise<PlantAnalysisResult> {
     try {
-      console.log('🔍 Starting real plant analysis with multiple APIs...');
-      toast.info('Analyzing plant with real AI services...', { duration: 3000 });
-
-      // Call our enhanced plant diagnosis function
+      console.log('🔍 Starting real plant analysis...');
+      
+      // Convert data URL to blob for API calls
+      const response = await fetch(imageDataUrl);
+      const blob = await response.blob();
+      
+      // Convert blob to base64 for API calls
+      const base64 = await this.blobToBase64(blob);
+      
+      // Call the plant diagnosis edge function
       const { data, error } = await supabase.functions.invoke('plant-diagnosis', {
         body: {
-          imageData,
-          plantInfo,
-          useRealAPIs: true
+          image: base64,
+          plantInfo: plantInfo
         }
       });
-
+      
       if (error) {
-        console.error('Plant diagnosis error:', error);
-        throw new Error(`Analysis failed: ${error.message}`);
+        console.error('Edge function error:', error);
+        throw new Error('Analysis service temporarily unavailable');
       }
-
-      if (!data || !data.success) {
-        throw new Error('No valid analysis results received');
-      }
-
-      const result: PlantAnalysisResult = {
-        plantName: data.analysisDetails?.multiServiceInsights?.plantName || 'Unknown Plant',
-        scientificName: data.analysisDetails?.multiServiceInsights?.plantSpecies || '',
-        confidence: data.confidence || 0,
-        isHealthy: data.healthy || false,
-        diseases: data.analysisDetails?.diseases || [],
-        suggestions: data.analysisDetails?.plantIdResult?.suggestions || []
-      };
-
-      console.log('✅ Real plant analysis completed:', result);
-      toast.success(`Plant analyzed successfully with ${Math.round(result.confidence * 100)}% confidence`, { duration: 4000 });
-
-      return result;
+      
+      console.log('✅ Analysis completed successfully');
+      return data;
+      
     } catch (error) {
-      console.error('❌ Real plant analysis failed:', error);
-      toast.error(`Analysis failed: ${error.message}`);
-      throw error;
+      console.error('❌ Analysis failed:', error);
+      
+      // Return fallback analysis
+      return {
+        plantName: plantInfo.name || 'Unknown Plant',
+        confidence: 0.5,
+        isHealthy: false,
+        diseases: [{
+          name: 'Unable to analyze',
+          probability: 0.5,
+          description: 'Analysis service temporarily unavailable'
+        }],
+        recommendations: ['Please consult with our expert for detailed analysis'],
+        analysisDetails: {}
+      };
     }
   }
 
@@ -71,36 +75,57 @@ export class RealPlantAnalysisService {
     userId: string,
     imageUrl: string,
     analysis: PlantAnalysisResult,
-    plantInfo?: any
-  ) {
+    plantInfo: any
+  ): Promise<void> {
     try {
+      console.log('💾 Saving analysis to database...');
+      
+      const diagnosisData = {
+        user_id: userId,
+        plant_type: analysis.plantName,
+        plant_variety: analysis.scientificName,
+        symptoms: plantInfo.symptoms || 'AI analysis performed',
+        image_url: imageUrl,
+        status: 'completed',
+        diagnosis_result: {
+          confidence: analysis.confidence,
+          isHealthy: analysis.isHealthy,
+          diseases: analysis.diseases,
+          recommendations: analysis.recommendations,
+          analysisDetails: analysis.analysisDetails
+        }
+      };
+      
       const { data, error } = await supabase
         .from('diagnoses')
-        .insert({
-          user_id: userId,
-          plant_type: analysis.plantName,
-          plant_variety: analysis.scientificName,
-          symptoms: plantInfo?.symptoms || 'Analyzed via image upload',
-          image_url: imageUrl,
-          diagnosis_result: {
-            ...analysis,
-            timestamp: new Date().toISOString(),
-            apiSources: ['Plant.id', 'Hugging Face', 'EPPO Database']
-          },
-          status: 'completed'
-        })
+        .insert(diagnosisData)
         .select()
         .single();
-
+      
       if (error) {
-        console.error('Error saving analysis:', error);
-        throw error;
+        console.error('Database save error:', error);
+        throw new Error('Failed to save analysis');
       }
-
-      return data;
+      
+      console.log('✅ Analysis saved to database:', data.id);
+      
     } catch (error) {
-      console.error('Failed to save analysis to database:', error);
-      throw error;
+      console.error('❌ Failed to save analysis:', error);
+      toast.error('Failed to save analysis to database');
     }
+  }
+
+  private static blobToBase64(blob: Blob): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result as string;
+        // Remove data URL prefix
+        const base64 = result.split(',')[1];
+        resolve(base64);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
   }
 }

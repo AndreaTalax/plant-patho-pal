@@ -165,12 +165,12 @@ const convertProductsToJson = (products?: Product[]): Json => {
   if (!products || products.length === 0) return null;
   
   try {
-    // Assicuriamoci che i prodotti siano serializzabili
     const serializedProducts = products.map(product => ({
-      ...product,
-      // Rimuovi eventuali proprietà non serializzabili
       id: product.id?.toString() || '',
-      price: typeof product.price === 'number' ? product.price : parseFloat(String(product.price) || '0')
+      name: product.name || '',
+      price: typeof product.price === 'number' ? product.price : parseFloat(String(product.price) || '0'),
+      description: product.description || '',
+      image_url: product.image_url || ''
     }));
     
     return serializedProducts as unknown as Json;
@@ -180,7 +180,7 @@ const convertProductsToJson = (products?: Product[]): Json => {
   }
 };
 
-// Send a message - IMPROVED VERSION with better error handling
+// Fixed send message function with better error handling
 export const sendMessage = async (
   conversationId: string,
   senderId: string,
@@ -192,38 +192,16 @@ export const sendMessage = async (
     console.log(`💬 Sending message in conversation ${conversationId}`);
     console.log(`👤 From: ${senderId} → To: ${recipientId}`);
 
-    // Strict input validation
+    // Validation
     if (!conversationId || !senderId || !recipientId || !text) {
       const errorMsg = "Missing required parameters for sendMessage";
-      console.error(errorMsg, {
-        conversationId: !!conversationId,
-        senderId: !!senderId,
-        recipientId: !!recipientId,
-        text: !!text
-      });
-      throw new Error(errorMsg);
-    }
-
-    // Type validation
-    if (typeof conversationId !== 'string' || typeof senderId !== 'string' || 
-        typeof recipientId !== 'string' || typeof text !== 'string') {
-      const errorMsg = "Invalid parameter types for sendMessage";
       console.error(errorMsg);
       throw new Error(errorMsg);
     }
 
-    // Text validation
     const trimmedText = text.trim();
     if (trimmedText.length === 0) {
-      const errorMsg = "Message text cannot be empty";
-      console.error(errorMsg);
-      throw new Error(errorMsg);
-    }
-
-    if (trimmedText.length > 10000) {
-      const errorMsg = "Message text too long (max 10000 characters)";
-      console.error(errorMsg);
-      throw new Error(errorMsg);
+      throw new Error("Message text cannot be empty");
     }
 
     // For mock conversations, always return success
@@ -232,8 +210,8 @@ export const sendMessage = async (
       return true;
     }
 
-    // Prepare message data with proper timestamp
-    const messageData: DbMessageInsert = {
+    // Prepare message data
+    const messageData = {
       conversation_id: conversationId,
       sender_id: senderId,
       recipient_id: recipientId,
@@ -243,15 +221,9 @@ export const sendMessage = async (
       read: false
     };
 
-    console.log("📨 Inserting message data:", {
-      conversation_id: messageData.conversation_id,
-      sender_id: messageData.sender_id,
-      recipient_id: messageData.recipient_id,
-      text_length: messageData.text.length,
-      has_products: !!messageData.products
-    });
+    console.log("📨 Inserting message data");
 
-    // Insert message with enhanced error handling
+    // Insert message
     const { data, error } = await supabase
       .from('messages')
       .insert(messageData)
@@ -261,12 +233,10 @@ export const sendMessage = async (
     if (error) {
       console.error("❌ Database error inserting message:", error);
       
-      // Handle specific RLS errors
       if (error.message.includes('row-level security')) {
         throw new Error('Permission denied: Cannot send message. Please check your authentication.');
       }
       
-      // Handle other database errors
       throw new Error(`Database error: ${error.message}`);
     }
 
@@ -284,7 +254,6 @@ export const sendMessage = async (
         .eq('id', conversationId);
     } catch (updateError) {
       console.warn("⚠️ Failed to update conversation timestamp:", updateError);
-      // Don't fail the main operation for this
     }
 
     // Send notification (non-blocking)
@@ -312,7 +281,6 @@ export const sendMessage = async (
       }
     } catch (notificationError) {
       console.warn("⚠️ Failed to send notification:", notificationError);
-      // Don't fail the main operation for this
     }
 
     return true;

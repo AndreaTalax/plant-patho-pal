@@ -61,18 +61,7 @@ export class AutoExpertNotificationService {
 
       const messageContent = this.createExpertMessage(userName, diagnosisData);
 
-      // Prepare metadata for database storage (simplified for JSON compatibility)
-      const messageMetadata = {
-        type: 'automatic_diagnosis',
-        plantType: diagnosisData.plantType,
-        plantVariety: diagnosisData.plantVariety || '',
-        symptoms: diagnosisData.symptoms,
-        confidence: diagnosisData.confidence,
-        isHealthy: diagnosisData.isHealthy,
-        timestamp: new Date().toISOString()
-      };
-
-      // Send the message
+      // Send the main message
       const { error: messageError } = await supabase
         .from('messages')
         .insert({
@@ -80,10 +69,12 @@ export class AutoExpertNotificationService {
           sender_id: userId,
           recipient_id: MARCO_NIGRO_ID,
           text: messageContent,
-          metadata: messageMetadata
+          sent_at: new Date().toISOString(),
+          read: false
         });
 
       if (messageError) {
+        console.error('Message insert error:', messageError);
         throw new Error('Failed to send message to expert');
       }
 
@@ -95,11 +86,9 @@ export class AutoExpertNotificationService {
             conversation_id: conversation.id,
             sender_id: userId,
             recipient_id: MARCO_NIGRO_ID,
-            text: diagnosisData.imageUrl,
-            metadata: {
-              type: 'plant_image',
-              timestamp: new Date().toISOString()
-            }
+            text: `Plant image: ${diagnosisData.imageUrl}`,
+            sent_at: new Date().toISOString(),
+            read: false
           });
       }
 
