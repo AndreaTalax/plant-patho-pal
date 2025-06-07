@@ -20,6 +20,8 @@ export class AutoExpertNotificationService {
   ): Promise<boolean> {
     try {
       console.log('📨 Sending diagnosis automatically to expert...');
+      console.log('👤 User ID:', userId);
+      console.log('🌿 Diagnosis data:', diagnosisData);
 
       // Get user profile for personalized message
       const { data: userProfile } = await supabase
@@ -27,6 +29,8 @@ export class AutoExpertNotificationService {
         .select('first_name, last_name, email')
         .eq('id', userId)
         .single();
+
+      console.log('👤 User profile:', userProfile);
 
       // Find or create conversation with expert
       let { data: conversation, error: convError } = await supabase
@@ -37,6 +41,7 @@ export class AutoExpertNotificationService {
         .single();
 
       if (convError || !conversation) {
+        console.log('🆕 Creating new conversation with expert');
         const { data: newConversation, error: newConvError } = await supabase
           .from('conversations')
           .insert({
@@ -49,10 +54,13 @@ export class AutoExpertNotificationService {
           .single();
 
         if (newConvError) {
+          console.error('Failed to create conversation:', newConvError);
           throw new Error('Failed to create conversation with expert');
         }
         conversation = newConversation;
       }
+
+      console.log('💬 Using conversation:', conversation.id);
 
       // Create comprehensive message content
       const userName = userProfile 
@@ -61,14 +69,16 @@ export class AutoExpertNotificationService {
 
       const messageContent = this.createExpertMessage(userName, diagnosisData);
 
-      // Send the main message
+      console.log('📝 Message content:', messageContent);
+
+      // Send the main message with correct field name
       const { error: messageError } = await supabase
         .from('messages')
         .insert({
           conversation_id: conversation.id,
           sender_id: userId,
           recipient_id: MARCO_NIGRO_ID,
-          text: messageContent,
+          text: messageContent, // Use 'text' field, not 'content'
           sent_at: new Date().toISOString(),
           read: false
         });
@@ -78,15 +88,18 @@ export class AutoExpertNotificationService {
         throw new Error('Failed to send message to expert');
       }
 
+      console.log('✅ Main message sent to expert');
+
       // Send image as separate message if available
       if (diagnosisData.imageUrl) {
+        console.log('📸 Sending image message');
         await supabase
           .from('messages')
           .insert({
             conversation_id: conversation.id,
             sender_id: userId,
             recipient_id: MARCO_NIGRO_ID,
-            text: `Plant image: ${diagnosisData.imageUrl}`,
+            text: `Plant image: ${diagnosisData.imageUrl}`, // Use 'text' field
             sent_at: new Date().toISOString(),
             read: false
           });
@@ -94,6 +107,7 @@ export class AutoExpertNotificationService {
 
       // Notify expert via edge function
       try {
+        console.log('📧 Sending expert notification');
         await supabase.functions.invoke('send-specialist-notification', {
           body: {
             conversation_id: conversation.id,

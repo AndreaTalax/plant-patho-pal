@@ -28,13 +28,17 @@ export class RealPlantAnalysisService {
   ): Promise<PlantAnalysisResult> {
     try {
       console.log('🔍 Starting real plant analysis...');
+      console.log('📷 Image data URL length:', imageDataUrl.length);
+      console.log('🌿 Plant info:', plantInfo);
       
-      // Convert data URL to blob for API calls
-      const response = await fetch(imageDataUrl);
-      const blob = await response.blob();
+      // Convert data URL to base64 for API calls
+      const base64 = imageDataUrl.includes(',') ? imageDataUrl.split(',')[1] : imageDataUrl;
       
-      // Convert blob to base64 for API calls
-      const base64 = await this.blobToBase64(blob);
+      if (!base64 || base64.length === 0) {
+        throw new Error('Invalid image data - no base64 content found');
+      }
+      
+      console.log('📸 Base64 data length:', base64.length);
       
       // Call the plant diagnosis edge function
       const { data, error } = await supabase.functions.invoke('plant-diagnosis', {
@@ -49,7 +53,7 @@ export class RealPlantAnalysisService {
         throw new Error('Analysis service temporarily unavailable');
       }
       
-      console.log('✅ Analysis completed successfully');
+      console.log('✅ Analysis completed successfully:', data);
       return data;
       
     } catch (error) {
@@ -57,13 +61,14 @@ export class RealPlantAnalysisService {
       
       // Return fallback analysis
       return {
-        plantName: plantInfo.name || 'Unknown Plant',
+        plantName: plantInfo?.name || 'Unknown Plant',
         confidence: 0.5,
         isHealthy: false,
         diseases: [{
           name: 'Unable to analyze',
           probability: 0.5,
-          description: 'Analysis service temporarily unavailable'
+          description: 'Analysis service temporarily unavailable. Please consult with our expert for detailed analysis.',
+          treatment: 'Consult with phytopathologist expert'
         }],
         recommendations: ['Please consult with our expert for detailed analysis'],
         analysisDetails: {}
@@ -79,12 +84,15 @@ export class RealPlantAnalysisService {
   ): Promise<void> {
     try {
       console.log('💾 Saving analysis to database...');
+      console.log('👤 User ID:', userId);
+      console.log('📸 Image URL:', imageUrl);
+      console.log('🔬 Analysis:', analysis);
       
       const diagnosisData = {
         user_id: userId,
         plant_type: analysis.plantName,
         plant_variety: analysis.scientificName,
-        symptoms: plantInfo.symptoms || 'AI analysis performed',
+        symptoms: plantInfo?.symptoms || 'AI analysis performed',
         image_url: imageUrl,
         status: 'completed',
         diagnosis_result: {
@@ -96,6 +104,8 @@ export class RealPlantAnalysisService {
         }
       };
       
+      console.log('📝 Diagnosis data to insert:', diagnosisData);
+      
       const { data, error } = await supabase
         .from('diagnoses')
         .insert(diagnosisData)
@@ -104,28 +114,22 @@ export class RealPlantAnalysisService {
       
       if (error) {
         console.error('Database save error:', error);
+        
+        if (error.message.includes('row-level security')) {
+          console.error('❌ RLS Error: User not authenticated or missing permissions');
+          toast.error('Permission denied: Please ensure you are logged in');
+          return;
+        }
+        
         throw new Error('Failed to save analysis');
       }
       
       console.log('✅ Analysis saved to database:', data.id);
+      toast.success('Analysis saved successfully');
       
     } catch (error) {
       console.error('❌ Failed to save analysis:', error);
       toast.error('Failed to save analysis to database');
     }
-  }
-
-  private static blobToBase64(blob: Blob): Promise<string> {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const result = reader.result as string;
-        // Remove data URL prefix
-        const base64 = result.split(',')[1];
-        resolve(base64);
-      };
-      reader.onerror = reject;
-      reader.readAsDataURL(blob);
-    });
   }
 }

@@ -28,7 +28,8 @@ import { MARCO_NIGRO_ID } from '@/components/phytopathologist';
 // Load conversations from database
 export const loadConversations = async (isMasterAccount: boolean, userId: string) => {
   try {
-    // Validazione input
+    console.log("📋 Loading conversations for user:", userId, "isMasterAccount:", isMasterAccount);
+    
     if (!userId || typeof userId !== 'string') {
       console.error("Invalid userId provided");
       return [];
@@ -37,14 +38,12 @@ export const loadConversations = async (isMasterAccount: boolean, userId: string
     let query;
     
     if (isMasterAccount) {
-      // Expert fetches all conversations where they're the expert
       query = supabase
         .from('conversations')
         .select('*, user:user_id(id, username, first_name, last_name)')
         .eq('expert_id', EXPERT_ID)
         .order('updated_at', { ascending: false });
     } else {
-      // Regular users fetch their conversations
       query = supabase
         .from('conversations')
         .select('*, expert:expert_id(id, username, first_name, last_name)')
@@ -59,6 +58,7 @@ export const loadConversations = async (isMasterAccount: boolean, userId: string
       return [];
     }
     
+    console.log("✅ Conversations loaded:", data?.length || 0);
     return (data || []) as unknown as DatabaseConversation[];
   } catch (error) {
     console.error("Error in loadConversations:", error);
@@ -69,7 +69,8 @@ export const loadConversations = async (isMasterAccount: boolean, userId: string
 // Find or create conversation between user and expert
 export const findOrCreateConversation = async (userId: string) => {
   try {
-    // Validazione input
+    console.log("🔍 Finding or creating conversation for user:", userId);
+    
     if (!userId || typeof userId !== 'string') {
       console.error("Invalid userId provided to findOrCreateConversation");
       return null;
@@ -101,6 +102,7 @@ export const findOrCreateConversation = async (userId: string) => {
     }
     
     if (existingConversations && existingConversations.length > 0) {
+      console.log("✅ Found existing conversation:", existingConversations[0].id);
       return existingConversations[0] as unknown as DatabaseConversation;
     }
     
@@ -111,6 +113,7 @@ export const findOrCreateConversation = async (userId: string) => {
       status: 'active'
     };
     
+    console.log("🆕 Creating new conversation");
     const { data: newConversation, error: createError } = await supabase
       .from('conversations')
       .insert(newConversationData)
@@ -122,6 +125,7 @@ export const findOrCreateConversation = async (userId: string) => {
       return null;
     }
     
+    console.log("✅ Created new conversation:", newConversation.id);
     return newConversation as unknown as DatabaseConversation;
   } catch (error) {
     console.error("Error in findOrCreateConversation:", error);
@@ -132,13 +136,13 @@ export const findOrCreateConversation = async (userId: string) => {
 // Load messages for a specific conversation
 export const loadMessages = async (conversationId: string) => {
   try {
-    // Validazione input
+    console.log("📬 Loading messages for conversation:", conversationId);
+    
     if (!conversationId || typeof conversationId !== 'string') {
       console.error("Invalid conversationId provided");
       return [];
     }
 
-    // For mock conversations, return empty array
     if (conversationId === "mock-conversation-id") {
       return [];
     }
@@ -154,6 +158,7 @@ export const loadMessages = async (conversationId: string) => {
       return [];
     }
     
+    console.log("✅ Messages loaded:", data?.length || 0);
     return (data || []) as unknown as DatabaseMessage[];
   } catch (error) {
     console.error("Error in loadMessages:", error);
@@ -171,7 +176,7 @@ const convertProductsToJson = (products?: Product[]): Json => {
       name: product.name || '',
       price: typeof product.price === 'number' ? product.price : parseFloat(String(product.price) || '0'),
       description: product.description || '',
-      image_url: product.image || '' // Fixed: use 'image' instead of 'image_url'
+      image_url: product.image || ''
     }));
     
     return serializedProducts as unknown as Json;
@@ -181,7 +186,7 @@ const convertProductsToJson = (products?: Product[]): Json => {
   }
 };
 
-// Fixed send message function with better error handling
+// Send message function with proper error handling
 export const sendMessage = async (
   conversationId: string,
   senderId: string,
@@ -192,6 +197,7 @@ export const sendMessage = async (
   try {
     console.log(`💬 Sending message in conversation ${conversationId}`);
     console.log(`👤 From: ${senderId} → To: ${recipientId}`);
+    console.log(`📝 Message text: "${text}"`);
 
     // Validation
     if (!conversationId || !senderId || !recipientId || !text) {
@@ -211,18 +217,18 @@ export const sendMessage = async (
       return true;
     }
 
-    // Prepare message data
+    // Prepare message data with correct field name
     const messageData = {
       conversation_id: conversationId,
       sender_id: senderId,
       recipient_id: recipientId,
-      text: trimmedText,
+      text: trimmedText, // Use 'text' field, not 'content'
       products: convertProductsToJson(products),
       sent_at: new Date().toISOString(),
       read: false
     };
 
-    console.log("📨 Inserting message data");
+    console.log("📨 Inserting message data:", messageData);
 
     // Insert message
     const { data, error } = await supabase
@@ -253,6 +259,8 @@ export const sendMessage = async (
           last_message_at: new Date().toISOString()
         })
         .eq('id', conversationId);
+      
+      console.log("✅ Conversation updated");
     } catch (updateError) {
       console.warn("⚠️ Failed to update conversation timestamp:", updateError);
     }
@@ -295,7 +303,6 @@ export const sendMessage = async (
 // Update conversation status (archive, block, unblock)
 export const updateConversationStatus = async (conversationId: string, status: string) => {
   try {
-    // Validazione input
     if (!conversationId || !status) {
       console.error("Missing required parameters for updateConversationStatus");
       return false;
@@ -344,7 +351,6 @@ export const convertToUIMessage = (dbMessage: DatabaseMessage): Message => {
     };
   } catch (error) {
     console.error("Error converting database message to UI message:", error);
-    // Ritorna un messaggio di fallback
     return {
       id: dbMessage.id || 'unknown',
       sender: 'user',
