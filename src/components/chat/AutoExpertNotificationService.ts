@@ -98,6 +98,25 @@ if (messageError) {
 
 
       console.log('✅ Main message sent to expert');
+// Add validation before inserting
+if (!conversation?.id) {
+  throw new Error('Invalid conversation ID');
+}
+
+if (!userId || !MARCO_NIGRO_ID) {
+  throw new Error('Missing user or expert ID');
+}
+
+if (!messageContent || messageContent.trim().length === 0) {
+  throw new Error('Message content is empty');
+}
+
+console.log('🔍 Validation passed:', {
+  conversationId: conversation.id,
+  senderId: userId,
+  recipientId: MARCO_NIGRO_ID,
+  messageLength: messageContent.length
+});
 
       // Send image as separate message if available
       if (diagnosisData.imageUrl) {
