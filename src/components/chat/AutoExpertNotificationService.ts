@@ -71,22 +71,31 @@ export class AutoExpertNotificationService {
 
       console.log('📝 Message content:', messageContent);
 
-      // Send the main message with correct field name
-      const { error: messageError } = await supabase
-        .from('messages')
-        .insert({
-          conversation_id: conversation.id,
-          sender_id: userId,
-          recipient_id: MARCO_NIGRO_ID,
-          text: messageContent, // Use 'text' field, not 'content'
-          sent_at: new Date().toISOString(),
-          read: false
-        });
+// Send the main message with better error handling
+const { data: messageData, error: messageError } = await supabase
+  .from('messages')
+  .insert({
+    conversation_id: conversation.id,
+    sender_id: userId,
+    recipient_id: MARCO_NIGRO_ID,
+    text: messageContent,
+    sent_at: new Date().toISOString(),
+    read: false
+  })
+  .select()
+  .single();
 
-      if (messageError) {
-        console.error('Message insert error:', messageError);
-        throw new Error('Failed to send message to expert');
-      }
+if (messageError) {
+  console.error('Detailed message insert error:', {
+    error: messageError,
+    code: messageError.code,
+    message: messageError.message,
+    details: messageError.details,
+    hint: messageError.hint
+  });
+  throw new Error(`Failed to send message to expert: ${messageError.message}`);
+}
+
 
       console.log('✅ Main message sent to expert');
 
