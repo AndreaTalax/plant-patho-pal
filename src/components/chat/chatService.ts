@@ -1,4 +1,3 @@
-
 import {
   supabase,
   EXPERT_ID,
@@ -181,7 +180,7 @@ const convertProductsToJson = (products?: Product[]): Json => {
   }
 };
 
-// Send a message - FIXED VERSION
+// Send a message - IMPROVED VERSION with better error handling
 export const sendMessage = async (
   conversationId: string,
   senderId: string,
@@ -190,10 +189,10 @@ export const sendMessage = async (
   products?: Product[]
 ) => {
   try {
-    console.log(`Sending message in conversation ${conversationId}: ${text}`);
-    console.log(`Sender ID: ${senderId}, Recipient ID: ${recipientId}`);
+    console.log(`💬 Sending message in conversation ${conversationId}`);
+    console.log(`👤 From: ${senderId} → To: ${recipientId}`);
 
-    // Validazione input rigorosa
+    // Strict input validation
     if (!conversationId || !senderId || !recipientId || !text) {
       const errorMsg = "Missing required parameters for sendMessage";
       console.error(errorMsg, {
@@ -205,6 +204,7 @@ export const sendMessage = async (
       throw new Error(errorMsg);
     }
 
+    // Type validation
     if (typeof conversationId !== 'string' || typeof senderId !== 'string' || 
         typeof recipientId !== 'string' || typeof text !== 'string') {
       const errorMsg = "Invalid parameter types for sendMessage";
@@ -212,7 +212,7 @@ export const sendMessage = async (
       throw new Error(errorMsg);
     }
 
-    // Validazione lunghezza testo
+    // Text validation
     const trimmedText = text.trim();
     if (trimmedText.length === 0) {
       const errorMsg = "Message text cannot be empty";
@@ -221,104 +221,104 @@ export const sendMessage = async (
     }
 
     if (trimmedText.length > 10000) {
-      const errorMsg = "Message text too long";
+      const errorMsg = "Message text too long (max 10000 characters)";
       console.error(errorMsg);
       throw new Error(errorMsg);
     }
 
     // For mock conversations, always return success
     if (conversationId === "mock-conversation-id") {
-      console.log("Mock conversation - returning success");
+      console.log("📝 Mock conversation - returning success");
       return true;
     }
 
-    // Prepare message data with explicit timestamp
+    // Prepare message data with proper timestamp
     const messageData: DbMessageInsert = {
       conversation_id: conversationId,
       sender_id: senderId,
       recipient_id: recipientId,
       text: trimmedText,
       products: convertProductsToJson(products),
-      sent_at: new Date().toISOString()
+      sent_at: new Date().toISOString(),
+      read: false
     };
 
-    console.log("Message data to insert:", messageData);
+    console.log("📨 Inserting message data:", {
+      conversation_id: messageData.conversation_id,
+      sender_id: messageData.sender_id,
+      recipient_id: messageData.recipient_id,
+      text_length: messageData.text.length,
+      has_products: !!messageData.products
+    });
 
-    // Insert message with retry logic
-    let retries = 3;
-    let lastError: any = null;
-    
-    while (retries > 0) {
-      try {
-        const { data, error } = await supabase
-          .from('messages')
-          .insert(messageData)
-          .select()
-          .single();
+    // Insert message with enhanced error handling
+    const { data, error } = await supabase
+      .from('messages')
+      .insert(messageData)
+      .select()
+      .single();
 
-        if (error) {
-          console.error("Database error inserting message:", error);
-          throw new Error(`Database error: ${error.message}`);
-        }
-
-        console.log("Message sent successfully:", data);
-
-        // Update conversation timestamp - don't fail if this fails
-        try {
-          await supabase
-            .from('conversations')
-            .update({ updated_at: new Date().toISOString() })
-            .eq('id', conversationId);
-        } catch (updateError) {
-          console.warn("Failed to update conversation timestamp:", updateError);
-        }
-
-        // Send notification - don't fail if this fails
-        try {
-          if (senderId === MARCO_NIGRO_ID && recipientId !== MARCO_NIGRO_ID) {
-            console.log("Expert sending notification to regular user");
-            await supabase.functions.invoke('send-specialist-notification', {
-              body: {
-                conversation_id: conversationId,
-                sender_id: senderId,
-                recipient_id: recipientId,
-                message_text: trimmedText
-              }
-            });
-          } else if (senderId !== MARCO_NIGRO_ID && recipientId === MARCO_NIGRO_ID) {
-            console.log("Regular user sending notification to expert");
-            await supabase.functions.invoke('send-specialist-notification', {
-              body: {
-                conversation_id: conversationId,
-                sender_id: senderId,
-                recipient_id: MARCO_NIGRO_ID,
-                message_text: trimmedText
-              }
-            });
-          }
-        } catch (notificationError) {
-          console.warn("Failed to send notification:", notificationError);
-        }
-
-        return true;
-
-      } catch (error) {
-        lastError = error;
-        retries--;
-        console.error(`Message send attempt failed (${3 - retries}/3):`, error);
-        
-        if (retries > 0) {
-          // Wait before retry
-          await new Promise(resolve => setTimeout(resolve, 1000));
-        }
+    if (error) {
+      console.error("❌ Database error inserting message:", error);
+      
+      // Handle specific RLS errors
+      if (error.message.includes('row-level security')) {
+        throw new Error('Permission denied: Cannot send message. Please check your authentication.');
       }
+      
+      // Handle other database errors
+      throw new Error(`Database error: ${error.message}`);
     }
 
-    console.error("All message send attempts failed:", lastError);
-    throw new Error(`Failed to send message after 3 attempts: ${lastError?.message || 'Unknown error'}`);
+    console.log("✅ Message sent successfully:", data);
+
+    // Update conversation timestamp (non-blocking)
+    try {
+      await supabase
+        .from('conversations')
+        .update({ 
+          updated_at: new Date().toISOString(),
+          last_message_text: trimmedText,
+          last_message_at: new Date().toISOString()
+        })
+        .eq('id', conversationId);
+    } catch (updateError) {
+      console.warn("⚠️ Failed to update conversation timestamp:", updateError);
+      // Don't fail the main operation for this
+    }
+
+    // Send notification (non-blocking)
+    try {
+      if (senderId === MARCO_NIGRO_ID && recipientId !== MARCO_NIGRO_ID) {
+        console.log("📧 Expert sending notification to regular user");
+        await supabase.functions.invoke('send-specialist-notification', {
+          body: {
+            conversation_id: conversationId,
+            sender_id: senderId,
+            recipient_id: recipientId,
+            message_text: trimmedText
+          }
+        });
+      } else if (senderId !== MARCO_NIGRO_ID && recipientId === MARCO_NIGRO_ID) {
+        console.log("📧 Regular user sending notification to expert");
+        await supabase.functions.invoke('send-specialist-notification', {
+          body: {
+            conversation_id: conversationId,
+            sender_id: senderId,
+            recipient_id: MARCO_NIGRO_ID,
+            message_text: trimmedText
+          }
+        });
+      }
+    } catch (notificationError) {
+      console.warn("⚠️ Failed to send notification:", notificationError);
+      // Don't fail the main operation for this
+    }
+
+    return true;
 
   } catch (error) {
-    console.error("Unexpected error in sendMessage:", error);
+    console.error("❌ Unexpected error in sendMessage:", error);
     throw error;
   }
 };
@@ -379,7 +379,7 @@ export const convertToUIMessage = (dbMessage: DatabaseMessage): Message => {
     return {
       id: dbMessage.id || 'unknown',
       sender: 'user',
-      text: 'Errore nel caricamento del messaggio',
+      text: 'Error loading message',
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       products: undefined
     };
