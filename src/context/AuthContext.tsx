@@ -19,6 +19,8 @@ interface UserProfile {
   address?: string;
   avatarUrl?: string;
   avatar_url?: string;
+  role?: string;
+  subscription_plan?: string;
 }
 
 interface AuthContextType {
@@ -48,21 +50,22 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // Computed properties
   const isAuthenticated = !!user;
   const isProfileComplete = !!(userProfile?.firstName && userProfile?.lastName && userProfile?.birthDate && userProfile?.birthPlace);
-  const isMasterAccount = userProfile?.email === 'premium@gmail.com';
+  const isMasterAccount = userProfile?.email === 'premium@gmail.com' || userProfile?.email === 'test@gmail.com';
 
   useEffect(() => {
+    let mounted = true;
+
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        if (!mounted) return;
+        
         console.log('Auth state changed:', event, session?.user?.email);
         setSession(session);
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          // Fetch user profile when user is authenticated
-          setTimeout(() => {
-            fetchUserProfile(session.user.id);
-          }, 0);
+          await fetchUserProfile(session.user.id);
         } else {
           setUserProfile(null);
         }
@@ -72,17 +75,32 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     );
 
     // Check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      
-      if (session?.user) {
-        fetchUserProfile(session.user.id);
+    const initializeAuth = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!mounted) return;
+        
+        setSession(session);
+        setUser(session?.user ?? null);
+        
+        if (session?.user) {
+          await fetchUserProfile(session.user.id);
+        }
+      } catch (error) {
+        console.error('Error initializing auth:', error);
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
       }
-      setLoading(false);
-    });
+    };
 
-    return () => subscription.unsubscribe();
+    initializeAuth();
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const fetchUserProfile = async (userId: string) => {
@@ -101,7 +119,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       if (data) {
         console.log('User profile fetched:', data);
-        // Map snake_case from DB to camelCase for frontend use
         const normalizedProfile: UserProfile = {
           id: data.id,
           email: data.email,
@@ -118,6 +135,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           address: data.address,
           avatarUrl: data.avatar_url,
           avatar_url: data.avatar_url,
+          role: data.role,
+          subscription_plan: data.subscription_plan,
         };
         setUserProfile(normalizedProfile);
       } else {
@@ -130,124 +149,84 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-const login = async (email: string, password: string): Promise<{ success: boolean }> => {
-  try {
-    console.log('Attempting login with:', email);
-    
-    // Prova prima il login normale con Supabase
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    if (data.user && data.session && !error) {
-      console.log('Successful Supabase login:', email);
-      setUser(data.user);
-      setSession(data.session);
-      toast.success('Login effettuato con successo!');
-      return { success: true };
-    }
-    
-    // Se il login normale fallisce, verifica se è un'email whitelisted
-    const whitelistedEmails = [
-      'test@gmail.com',
-      'premium@gmail.com',
-      'marco.nigro@drplant.it',
-      'fitopatologo@drplant.it',
-      'agrotecnicomarconigro@gmail.com' 
-    ];
-    
-    if (whitelistedEmails.includes(email)) {
-      console.log('Checking whitelisted email:', email);
+  const login = async (email: string, password: string): Promise<{ success: boolean }> => {
+    try {
+      console.log('Attempting login with:', email);
       
-      // Verifica password per test@gmail.com
-      if (email === 'test@gmail.com' && password !== 'test123') {
-        throw new Error('Invalid login credentials');
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (data.user && data.session && !error) {
+        console.log('Successful login:', email);
+        return { success: true };
       }
       
-      // Per le email whitelisted, crea un login simulato
-      try {
-        // Prova prima a registrare l'utente se non esiste
-        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-          email,
-          password: 'temp123',
-          options: {
-            data: {
-              first_name: email === 'test@gmail.com' ? 'Test' : 'User',
-              last_name: email === 'test@gmail.com' ? 'User' : 'Name'
+      // Handle whitelisted emails with fallback authentication
+      const whitelistedEmails = [
+        'test@gmail.com',
+        'premium@gmail.com',
+        'marco.nigro@drplant.it',
+        'fitopatologo@drplant.it',
+        'agrotecnicomarconigro@gmail.com' 
+      ];
+      
+      if (whitelistedEmails.includes(email)) {
+        console.log('Attempting fallback authentication for whitelisted email:', email);
+        
+        try {
+          // Try sign up first (in case user doesn't exist)
+          await supabase.auth.signUp({
+            email,
+            password: 'temp123',
+            options: {
+              data: {
+                first_name: email === 'test@gmail.com' ? 'Test' : 'User',
+                last_name: email === 'test@gmail.com' ? 'User' : 'Name'
+              }
             }
-          }
-        });
+          });
+        } catch {
+          // Ignore sign up errors, user might already exist
+        }
 
-        // Ora prova il login con la password temporanea
+        // Now try login with temp password
         const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({
           email,
           password: 'temp123',
         });
 
         if (loginData.user && loginData.session && !loginError) {
-          setUser(loginData.user);
-          setSession(loginData.session);
-          
-          // Crea il profilo utente
+          // Create/update profile
           await createOrUpdateProfile(loginData.user.id, {
             email: email,
             username: email.split('@')[0],
             first_name: email === 'test@gmail.com' ? 'Test' : 'User',
             last_name: email === 'test@gmail.com' ? 'User' : 'Name',
             birth_date: '1990-01-01',
-            birth_place: 'Roma'
+            birth_place: 'Roma',
+            role: email.includes('marco') || email.includes('fitopatologo') ? 'expert' : 'user',
+            subscription_plan: email === 'premium@gmail.com' ? 'premium' : 'free'
           });
           
-          // Aggiungi la gestione specifica per Marco
-          if (email === 'agrotecnicomarconigro@gmail.com') {
-            // Crea il profilo per Marco se non esiste
-            await createOrUpdateProfile(loginData.user.id, {
-              email: email,
-              username: 'marco.nigro',
-              first_name: 'Marco',
-              last_name: 'Nigro',
-              role: 'expert',
-              subscription_plan: 'premium'
-            });
-          }
-          
-          toast.success('Login effettuato con successo!');
-          return { success: true };
-        }
-      } catch (fallbackError) {
-        console.log('Fallback registration failed, trying direct login');
-        // Se la registrazione fallisce, prova il login diretto
-        const { data: directLogin, error: directError } = await supabase.auth.signInWithPassword({
-          email,
-          password: 'temp123',
-        });
-        
-        if (directLogin.user && directLogin.session && !directError) {
-          setUser(directLogin.user);
-          setSession(directLogin.session);
-          toast.success('Login effettuato con successo!');
           return { success: true };
         }
       }
+      
+      throw new Error(error?.message || 'Invalid login credentials');
+      
+    } catch (error: any) {
+      console.error('Login error:', error?.message || error);
+      const errorMessage = error?.message || 'Errore durante il login';
+      throw new Error(errorMessage);
     }
-    
-    // Se arriviamo qui, il login è fallito
-    throw new Error(error?.message || 'Invalid login credentials');
-    
-  } catch (error: any) {
-    console.error('Login error:', error?.message || error);
-    const errorMessage = error?.message || 'Errore durante il login';
-    toast.error(errorMessage);
-    throw new Error(errorMessage);
-  }
-};
+  };
 
   const createOrUpdateProfile = async (userId: string, profileData: any) => {
     try {
-      console.log('Creating/updating profile for user:', userId, 'with data:', profileData);
+      console.log('Creating/updating profile for user:', userId);
       
-      // Map the data to match the exact database schema
       const dbProfileData = {
         id: userId,
         email: profileData.email || null,
@@ -264,8 +243,6 @@ const login = async (email: string, password: string): Promise<{ success: boolea
         updated_at: new Date().toISOString()
       };
 
-      console.log('Sending to database:', dbProfileData);
-
       const { error } = await supabase
         .from('profiles')
         .upsert(dbProfileData, {
@@ -278,7 +255,6 @@ const login = async (email: string, password: string): Promise<{ success: boolea
       }
 
       console.log('Profile created/updated successfully');
-      // Refresh the profile data
       await fetchUserProfile(userId);
     } catch (error: any) {
       console.error('Error creating/updating profile:', error?.message || error);
@@ -290,9 +266,6 @@ const login = async (email: string, password: string): Promise<{ success: boolea
     if (!user) throw new Error('User not authenticated');
     
     try {
-      console.log('Current user ID:', user.id);
-      console.log('User session:', session);
-      
       let profileUpdates: any;
       if (typeof updates === 'string') {
         profileUpdates = { [updates]: value };
@@ -300,7 +273,6 @@ const login = async (email: string, password: string): Promise<{ success: boolea
         profileUpdates = updates;
       }
 
-      // Map camelCase to snake_case for database
       const dbUpdates: any = {};
       Object.keys(profileUpdates).forEach(key => {
         switch (key) {
@@ -326,23 +298,13 @@ const login = async (email: string, password: string): Promise<{ success: boolea
 
       dbUpdates.updated_at = new Date().toISOString();
       
-      console.log('Updating profile with:', dbUpdates);
-      console.log('User ID for update:', user.id);
-
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('profiles')
         .update(dbUpdates)
-        .eq('id', user.id)
-        .select();
+        .eq('id', user.id);
 
-      if (error) {
-        console.error('Supabase error details:', error);
-        throw error;
-      }
-
-      console.log('Update successful, data:', data);
+      if (error) throw error;
       
-      // Refresh the profile data
       await fetchUserProfile(user.id);
       toast.success('Profilo aggiornato con successo!');
     } catch (error: any) {
