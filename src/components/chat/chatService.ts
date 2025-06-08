@@ -2,6 +2,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { MARCO_NIGRO_ID } from '@/components/phytopathologist';
+import { Message, DatabaseConversation, DatabaseMessage } from './types';
 
 export interface ConversationData {
   id: string;
@@ -20,7 +21,7 @@ export interface MessageData {
   conversation_id: string;
   sender_id: string;
   recipient_id: string;
-  text: string; // Changed from content to text
+  text: string;
   sent_at: string;
   read: boolean;
   products?: any[];
@@ -77,7 +78,7 @@ export class ChatService {
     conversationId: string,
     senderId: string,
     recipientId: string,
-    text: string, // Changed from content to text
+    text: string,
     products?: any[]
   ): Promise<boolean> {
     try {
@@ -97,7 +98,7 @@ export class ChatService {
           conversation_id: conversationId,
           sender_id: senderId,
           recipient_id: recipientId,
-          text: text, // Changed from content to text
+          text: text,
           products: products || null,
           read: false
         });
@@ -192,3 +193,124 @@ export class ChatService {
     }
   }
 }
+
+// Additional exported functions for compatibility
+export const loadConversations = async (isExpertView: boolean, userId: string): Promise<DatabaseConversation[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('conversations')
+      .select(`
+        *,
+        user:profiles!conversations_user_id_fkey(id, username, first_name, last_name)
+      `)
+      .or(isExpertView ? `expert_id.eq.${userId}` : `user_id.eq.${userId}`)
+      .order('updated_at', { ascending: false });
+
+    if (error) {
+      console.error('Error loading conversations:', error);
+      throw error;
+    }
+
+    return data || [];
+  } catch (error) {
+    console.error('Error in loadConversations:', error);
+    return [];
+  }
+};
+
+export const loadMessages = async (conversationId: string): Promise<DatabaseMessage[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('messages')
+      .select('*')
+      .eq('conversation_id', conversationId)
+      .order('sent_at', { ascending: true });
+
+    if (error) {
+      console.error('Error loading messages:', error);
+      throw error;
+    }
+
+    return data || [];
+  } catch (error) {
+    console.error('Error in loadMessages:', error);
+    return [];
+  }
+};
+
+export const convertToUIMessage = (dbMessage: DatabaseMessage): Message => {
+  return {
+    id: dbMessage.id,
+    text: dbMessage.text,
+    sender: dbMessage.sender_id === MARCO_NIGRO_ID ? 'expert' : 'user',
+    time: new Date(dbMessage.sent_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    products: Array.isArray(dbMessage.products) ? dbMessage.products : undefined
+  };
+};
+
+export const sendMessage = async (
+  conversationId: string,
+  senderId: string,
+  recipientId: string,
+  text: string,
+  products?: any[]
+): Promise<boolean> => {
+  return ChatService.sendMessage(conversationId, senderId, recipientId, text, products);
+};
+
+export const findOrCreateConversation = async (userId: string): Promise<DatabaseConversation | null> => {
+  try {
+    // Check if conversation already exists
+    const { data: existingConversation } = await supabase
+      .from('conversations')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('expert_id', MARCO_NIGRO_ID)
+      .single();
+
+    if (existingConversation) {
+      return existingConversation;
+    }
+
+    // Create new conversation
+    const { data, error } = await supabase
+      .from('conversations')
+      .insert({
+        user_id: userId,
+        expert_id: MARCO_NIGRO_ID,
+        title: 'Consulenza esperto',
+        status: 'active'
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error creating conversation:', error);
+      return null;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error in findOrCreateConversation:', error);
+    return null;
+  }
+};
+
+export const updateConversationStatus = async (conversationId: string, status: string): Promise<boolean> => {
+  try {
+    const { error } = await supabase
+      .from('conversations')
+      .update({ status })
+      .eq('id', conversationId);
+
+    if (error) {
+      console.error('Error updating conversation status:', error);
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error in updateConversationStatus:', error);
+    return false;
+  }
+};

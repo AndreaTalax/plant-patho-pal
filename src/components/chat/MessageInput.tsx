@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -7,34 +6,60 @@ import { ChatService } from './chatService';
 import { toast } from 'sonner';
 
 interface MessageInputProps {
-  conversationId: string;
-  senderId: string;
-  recipientId: string;
-  onMessageSent: () => void;
+  conversationId?: string;
+  senderId?: string;
+  recipientId?: string;
+  onMessageSent?: () => void;
+  onSendMessage?: (text: string) => void | Promise<void>;
+  isSending?: boolean;
+  isMasterAccount?: boolean;
 }
 
-const MessageInput = ({ conversationId, senderId, recipientId, onMessageSent }: MessageInputProps) => {
+const MessageInput = ({ 
+  conversationId, 
+  senderId, 
+  recipientId, 
+  onMessageSent, 
+  onSendMessage,
+  isSending: externalIsSending = false,
+  isMasterAccount = false
+}: MessageInputProps) => {
   const [message, setMessage] = useState('');
-  const [isSending, setIsSending] = useState(false);
+  const [internalIsSending, setInternalIsSending] = useState(false);
+  
+  const isSending = externalIsSending || internalIsSending;
 
   const handleSend = async () => {
     if (!message.trim() || isSending) return;
 
+    // If onSendMessage is provided, use it (for hooks-based components)
+    if (onSendMessage) {
+      await onSendMessage(message.trim());
+      setMessage('');
+      return;
+    }
+
+    // Otherwise use the legacy ChatService approach
+    if (!conversationId || !senderId || !recipientId) {
+      toast.error('Errore: parametri mancanti');
+      return;
+    }
+
     console.log('🔄 Sending message...', { conversationId, senderId, recipientId, text: message });
     
-    setIsSending(true);
+    setInternalIsSending(true);
     
     try {
       const success = await ChatService.sendMessage(
         conversationId,
         senderId,
         recipientId,
-        message.trim() // Using the text field correctly
+        message.trim()
       );
 
       if (success) {
         setMessage('');
-        onMessageSent();
+        onMessageSent?.();
         console.log('✅ Message sent successfully');
       } else {
         console.error('❌ Failed to send message');
@@ -43,7 +68,7 @@ const MessageInput = ({ conversationId, senderId, recipientId, onMessageSent }: 
       console.error('❌ Error sending message:', error);
       toast.error('Errore nell\'invio del messaggio');
     } finally {
-      setIsSending(false);
+      setInternalIsSending(false);
     }
   };
 
