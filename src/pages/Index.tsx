@@ -47,11 +47,13 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-drplant-green/5">
       <Header />
       <main className="pb-20 pt-16">
-        <div className="container mx-auto px-4 py-4">
-          {renderTabContent()}
+        <div className="container mx-auto px-4 py-6">
+          <div className="bg-white/70 backdrop-blur-sm rounded-3xl shadow-lg border border-drplant-green/10 overflow-hidden">
+            {renderTabContent()}
+          </div>
         </div>
       </main>
       <BottomNavigation 
