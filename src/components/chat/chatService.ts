@@ -24,7 +24,7 @@ export interface MessageData {
   text: string;
   sent_at: string;
   read: boolean;
-  products?: any[];
+  products?: any;
   metadata?: any;
 }
 
@@ -65,7 +65,20 @@ export class ChatService {
         throw error;
       }
 
-      return data || [];
+      // Transform the data to match MessageData interface
+      const transformedData: MessageData[] = (data || []).map(msg => ({
+        id: msg.id,
+        conversation_id: msg.conversation_id,
+        sender_id: msg.sender_id,
+        recipient_id: msg.recipient_id,
+        text: msg.text,
+        sent_at: msg.sent_at,
+        read: msg.read,
+        products: Array.isArray(msg.products) ? msg.products : (msg.products ? [msg.products] : undefined),
+        metadata: msg.metadata
+      }));
+
+      return transformedData;
     } catch (error) {
       console.error('Error in getMessages:', error);
       toast.error('Errore nel caricamento dei messaggi');
@@ -126,7 +139,6 @@ export class ChatService {
     }
   }
 
-  // Create a new conversation with expert
   static async createConversationWithExpert(userId: string, title?: string): Promise<string | null> {
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -175,7 +187,6 @@ export class ChatService {
     }
   }
 
-  // Mark messages as read
   static async markMessagesAsRead(conversationId: string, userId: string): Promise<void> {
     try {
       const { error } = await supabase
@@ -197,12 +208,10 @@ export class ChatService {
 // Additional exported functions for compatibility
 export const loadConversations = async (isExpertView: boolean, userId: string): Promise<DatabaseConversation[]> => {
   try {
+    // Simplified query without join to avoid foreign key issues
     const { data, error } = await supabase
       .from('conversations')
-      .select(`
-        *,
-        user:profiles!conversations_user_id_fkey(id, username, first_name, last_name)
-      `)
+      .select('*')
       .or(isExpertView ? `expert_id.eq.${userId}` : `user_id.eq.${userId}`)
       .order('updated_at', { ascending: false });
 
@@ -211,7 +220,13 @@ export const loadConversations = async (isExpertView: boolean, userId: string): 
       throw error;
     }
 
-    return data || [];
+    // Transform to match expected interface
+    const transformedData: DatabaseConversation[] = (data || []).map(conv => ({
+      ...conv,
+      user: undefined // Remove user field to avoid type issues
+    }));
+
+    return transformedData;
   } catch (error) {
     console.error('Error in loadConversations:', error);
     return [];
