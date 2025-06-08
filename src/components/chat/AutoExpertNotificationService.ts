@@ -1,6 +1,6 @@
 
-import { supabase } from '@/integrations/supabase/client';
 import { MARCO_NIGRO_ID } from '@/components/phytopathologist';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 export interface DiagnosisData {
@@ -14,24 +14,21 @@ export interface DiagnosisData {
 }
 
 export class AutoExpertNotificationService {
-  static async sendDiagnosisToExpert(
-    userId: string,
-    diagnosisData: DiagnosisData
-  ): Promise<boolean> {
+  static async sendDiagnosisToExpert(userId: string, diagnosisData: DiagnosisData): Promise<boolean> {
     try {
       console.log('📨 Sending diagnosis automatically to expert...');
       console.log('👤 User ID:', userId);
       console.log('🌿 Diagnosis data:', diagnosisData);
 
-      // Check authentication first
+      // Get current user to include their info
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user || user.id !== userId) {
-        console.error('❌ Authentication failed or user mismatch');
-        toast.error('Authentication required to send diagnosis');
+      if (!user) {
+        console.error('❌ User not authenticated');
+        toast.error('Errore di autenticazione');
         return false;
       }
 
-      // Get user profile for personalized message
+      // Get user profile for better context
       const { data: userProfile } = await supabase
         .from('profiles')
         .select('first_name, last_name, email')
@@ -40,143 +37,55 @@ export class AutoExpertNotificationService {
 
       console.log('👤 User profile:', userProfile);
 
-      // Find or create conversation with expert
-      let { data: conversation, error: convError } = await supabase
+      // Check if conversation exists with the expert
+      let conversationId: string;
+      const { data: existingConversation } = await supabase
         .from('conversations')
         .select('id')
         .eq('user_id', userId)
         .eq('expert_id', MARCO_NIGRO_ID)
         .single();
 
-      if (convError || !conversation) {
+      if (existingConversation) {
+        conversationId = existingConversation.id;
+      } else {
         console.log('🆕 Creating new conversation with expert');
-        const { data: newConversation, error: newConvError } = await supabase
+        const { data: newConversation, error: conversationError } = await supabase
           .from('conversations')
           .insert({
             user_id: userId,
             expert_id: MARCO_NIGRO_ID,
             status: 'active',
-            title: `Plant Diagnosis - ${diagnosisData.plantType}`
+            title: `Consulenza per ${diagnosisData.plantType}`
           })
           .select()
           .single();
 
-        if (newConvError) {
-          console.error('Failed to create conversation:', newConvError);
-          throw new Error('Failed to create conversation with expert');
+        if (conversationError) {
+          console.error('❌ Error creating conversation:', conversationError);
+          toast.error('Errore nella creazione della conversazione');
+          return false;
         }
-        conversation = newConversation;
+
+        conversationId = newConversation.id;
       }
 
-      console.log('💬 Using conversation:', conversation.id);
+      console.log('💬 Using conversation:', conversationId);
 
       // Create comprehensive message content
-      const userName = userProfile 
-        ? `${userProfile.first_name} ${userProfile.last_name}` 
-        : 'User';
+      const messageContent = `🌿 **Automatic Plant Diagnosis Request**
 
-      const messageContent = this.createExpertMessage(userName, diagnosisData);
-
-      console.log('📝 Message content:', messageContent);
-
-      // Send the main message with better error handling
-      const { data: messageData, error: messageError } = await supabase
-        .from('messages')
-        .insert({
-          conversation_id: conversation.id,
-          sender_id: userId,
-          recipient_id: MARCO_NIGRO_ID,
-          text: messageContent,
-          sent_at: new Date().toISOString(),
-          read: false
-        })
-        .select()
-        .single();
-
-      if (messageError) {
-        console.error('Detailed message insert error:', {
-          error: messageError,
-          code: messageError.code,
-          message: messageError.message,
-          details: messageError.details,
-          hint: messageError.hint
-        });
-        throw new Error(`Failed to send message to expert: ${messageError.message}`);
-      }
-
-      console.log('✅ Main message sent to expert');
-
-      // Send image as separate message if available
-      if (diagnosisData.imageUrl) {
-        console.log('📸 Sending image message');
-        const { error: imageError } = await supabase
-          .from('messages')
-          .insert({
-            conversation_id: conversation.id,
-            sender_id: userId,
-            recipient_id: MARCO_NIGRO_ID,
-            text: `Plant image: ${diagnosisData.imageUrl}`,
-            sent_at: new Date().toISOString(),
-            read: false
-          });
-
-        if (imageError) {
-          console.warn('Image message failed:', imageError);
-          // Don't fail the whole process if image fails
-        }
-      }
-
-      // Notify expert via edge function
-      try {
-        console.log('📧 Sending expert notification');
-        await supabase.functions.invoke('send-specialist-notification', {
-          body: {
-            conversation_id: conversation.id,
-            sender_id: userId,
-            recipient_id: MARCO_NIGRO_ID,
-            message_text: messageContent,
-            expert_email: 'marco.nigro@drplant.it',
-            user_name: userName,
-            image_url: diagnosisData.imageUrl,
-            plant_details: {
-              plantType: diagnosisData.plantType,
-              symptoms: diagnosisData.symptoms,
-              confidence: diagnosisData.confidence,
-              isHealthy: diagnosisData.isHealthy
-            },
-            user_details: userProfile
-          }
-        });
-      } catch (notificationError) {
-        console.warn('Expert notification failed:', notificationError);
-        // Don't fail the whole process if notification fails
-      }
-
-      console.log('✅ Diagnosis sent to expert successfully');
-      toast.success('Diagnosis automatically sent to phytopathologist expert!');
-      return true;
-
-    } catch (error) {
-      console.error('❌ Failed to send diagnosis to expert:', error);
-      toast.error('Failed to send diagnosis to expert');
-      return false;
-    }
-  }
-
-  private static createExpertMessage(userName: string, data: DiagnosisData): string {
-    return `🌿 **Automatic Plant Diagnosis Request**
-
-**User:** ${userName}
-**Plant Type:** ${data.plantType}
-${data.plantVariety ? `**Scientific Name:** ${data.plantVariety}` : ''}
+**User:** ${userProfile?.first_name || 'User'} ${userProfile?.last_name || ''}
+**Plant Type:** ${diagnosisData.plantType}
+**Scientific Name:** ${diagnosisData.plantVariety || 'Not identified'}
 
 **Analysis Results:**
-- **Health Status:** ${data.isHealthy ? 'Healthy' : 'Potential Issues Detected'}
-- **AI Confidence:** ${Math.round(data.confidence * 100)}%
-- **Symptoms:** ${data.symptoms}
+- **Health Status:** ${diagnosisData.isHealthy ? 'Healthy' : 'Potential Issues Detected'}
+- **AI Confidence:** ${Math.round(diagnosisData.confidence * 100)}%
+- **Symptoms:** ${diagnosisData.symptoms}
 
 **AI Analysis Summary:**
-${data.analysisResult ? JSON.stringify(data.analysisResult, null, 2) : 'No detailed analysis available'}
+${JSON.stringify(diagnosisData.analysisResult, null, 2)}
 
 **API Sources Used:**
 - Plant.id API for species identification
@@ -186,5 +95,64 @@ ${data.analysisResult ? JSON.stringify(data.analysisResult, null, 2) : 'No detai
 Please review the analysis and provide your professional assessment. The user is awaiting your expert opinion.
 
 *This message was sent automatically following AI plant analysis.*`;
+
+      console.log('📝 Message content:', messageContent);
+
+      // Insert the message using the correct field name 'text'
+      const { error: messageError } = await supabase
+        .from('messages')
+        .insert({
+          conversation_id: conversationId,
+          sender_id: userId,
+          recipient_id: MARCO_NIGRO_ID,
+          text: messageContent, // Changed from 'content' to 'text'
+          metadata: {
+            type: 'automatic_diagnosis',
+            confidence: diagnosisData.confidence,
+            isHealthy: diagnosisData.isHealthy,
+            plantType: diagnosisData.plantType
+          }
+        });
+
+      if (messageError) {
+        console.error('Detailed message insert error:', messageError);
+        throw new Error(`Failed to send message to expert: ${messageError.message}`);
+      }
+
+      // Send image as separate message if available
+      if (diagnosisData.imageUrl) {
+        const { error: imageMessageError } = await supabase
+          .from('messages')
+          .insert({
+            conversation_id: conversationId,
+            sender_id: userId,
+            recipient_id: MARCO_NIGRO_ID,
+            text: diagnosisData.imageUrl, // Changed from 'content' to 'text'
+            metadata: {
+              type: 'image',
+              isPlantImage: true
+            }
+          });
+
+        if (imageMessageError) {
+          console.error('❌ Error sending image message:', imageMessageError);
+          // Don't fail the whole process for image message
+        }
+      }
+
+      console.log('✅ Successfully sent diagnosis to expert');
+      toast.success('Diagnosi inviata automaticamente all\'esperto!', {
+        description: 'Riceverai una risposta professionale a breve'
+      });
+
+      return true;
+
+    } catch (error) {
+      console.error('❌ Failed to send diagnosis to expert:', error);
+      toast.error('Impossibile contattare l\'esperto', {
+        description: 'Prova a inviare manualmente dalla chat'
+      });
+      return false;
+    }
   }
 }

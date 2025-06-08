@@ -1,103 +1,92 @@
 
 import { useState } from 'react';
-import { Send, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Input } from '@/components/ui/input';
-import { useTheme } from '@/context/ThemeContext';
+import { Send, Loader2 } from 'lucide-react';
+import { ChatService } from './chatService';
+import { toast } from 'sonner';
 
 interface MessageInputProps {
-  onSendMessage: (text: string) => void;
-  disabled?: boolean;
-  isSending: boolean;
-  isMasterAccount?: boolean;
+  conversationId: string;
+  senderId: string;
+  recipientId: string;
+  onMessageSent: () => void;
 }
 
-const MessageInput = ({
-  onSendMessage,
-  disabled = false,
-  isSending,
-  isMasterAccount = false
-}: MessageInputProps) => {
-  const { t } = useTheme();
-  const [newMessage, setNewMessage] = useState('');
+const MessageInput = ({ conversationId, senderId, recipientId, onMessageSent }: MessageInputProps) => {
+  const [message, setMessage] = useState('');
+  const [isSending, setIsSending] = useState(false);
 
-  const handleSend = () => {
-    if (newMessage.trim() === '' || isSending) return;
+  const handleSend = async () => {
+    if (!message.trim() || isSending) return;
+
+    console.log('🔄 Sending message...', { conversationId, senderId, recipientId, text: message });
     
-    onSendMessage(newMessage);
-    setNewMessage('');
+    setIsSending(true);
+    
+    try {
+      const success = await ChatService.sendMessage(
+        conversationId,
+        senderId,
+        recipientId,
+        message.trim() // Using the text field correctly
+      );
+
+      if (success) {
+        setMessage('');
+        onMessageSent();
+        console.log('✅ Message sent successfully');
+      } else {
+        console.error('❌ Failed to send message');
+      }
+    } catch (error) {
+      console.error('❌ Error sending message:', error);
+      toast.error('Errore nell\'invio del messaggio');
+    } finally {
+      setIsSending(false);
+    }
   };
 
-  // Master account uses textarea, regular users use input
-  if (isMasterAccount) {
-    return (
-      <div className="p-6 bg-gradient-to-r from-white/90 to-drplant-green/5 border-t border-drplant-green/20 backdrop-blur-sm">
-        <div className="flex gap-4 max-w-4xl mx-auto">
-          <div className="flex-1 relative">
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  };
+
+  return (
+    <div className="border-t border-drplant-green/20 bg-white/80 backdrop-blur-sm p-6">
+      <div className="max-w-4xl mx-auto">
+        <div className="flex gap-4 items-end">
+          <div className="flex-1">
             <Textarea
-              value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
-              placeholder="Scrivi la tua risposta esperta..."
-              className="min-h-[80px] resize-none border-drplant-green/30 focus:border-drplant-green focus:ring-drplant-green/20 bg-white/80 backdrop-blur-sm rounded-2xl shadow-sm"
-              onKeyPress={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  if (!isSending) handleSend();
-                }
-              }}
-              disabled={disabled}
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              onKeyPress={handleKeyPress}
+              placeholder="Scrivi il tuo messaggio all'esperto..."
+              className="min-h-[80px] resize-none border-drplant-green/30 focus:border-drplant-blue focus:ring-drplant-blue/20 rounded-2xl bg-white/90 backdrop-blur-sm"
+              disabled={isSending}
             />
-            <div className="absolute bottom-3 right-3 text-xs text-gray-400">
-              Premi Invio per inviare
-            </div>
           </div>
-          <Button 
-            size="lg"
-            className="bg-gradient-to-r from-drplant-green to-drplant-green-dark hover:from-drplant-green-dark hover:to-drplant-green text-white px-8 py-6 h-auto self-end rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300"
+          <Button
             onClick={handleSend}
-            disabled={isSending || disabled}
+            disabled={!message.trim() || isSending}
+            className="h-[80px] px-6 bg-gradient-to-r from-drplant-green to-drplant-green-dark hover:from-drplant-green-dark hover:to-drplant-green text-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 disabled:opacity-50"
           >
             {isSending ? (
-              <div className="h-6 w-6 animate-spin rounded-full border-2 border-white border-t-transparent" />
+              <Loader2 className="h-5 w-5 animate-spin" />
             ) : (
-              <>
-                <Send className="h-6 w-6 mr-2" />
-                <span className="hidden sm:inline">Invia</span>
-              </>
+              <Send className="h-5 w-5" />
             )}
           </Button>
         </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="p-6 bg-gradient-to-r from-white/90 to-drplant-blue/5 border-t border-drplant-blue/20 backdrop-blur-sm">
-      <div className="flex gap-4 max-w-2xl mx-auto">
-        <div className="flex-1 relative">
-          <Input
-            value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
-            placeholder={t("typeYourMessage") || "Scrivi il tuo messaggio..."}
-            className="border-drplant-blue/30 focus:border-drplant-blue focus:ring-drplant-blue/20 rounded-2xl bg-white/80 backdrop-blur-sm shadow-sm h-12"
-            onKeyPress={(e) => e.key === 'Enter' && !isSending && handleSend()}
-            disabled={isSending || disabled}
-          />
-          <Sparkles className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-drplant-blue/40" />
+        
+        <div className="mt-3 text-center">
+          <p className="text-sm text-gray-500">
+            Premi <kbd className="px-2 py-1 bg-gray-100 rounded text-xs">Enter</kbd> per inviare, 
+            <kbd className="px-2 py-1 bg-gray-100 rounded text-xs ml-1">Shift+Enter</kbd> per andare a capo
+          </p>
         </div>
-        <Button 
-          size="default"
-          className="bg-gradient-to-r from-drplant-blue to-drplant-blue-light hover:from-drplant-blue-dark hover:to-drplant-blue text-white px-6 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 h-12"
-          onClick={handleSend}
-          disabled={isSending || disabled}
-        >
-          {isSending ? (
-            <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
-          ) : (
-            <Send className="h-5 w-5" />
-          )}
-        </Button>
       </div>
     </div>
   );
