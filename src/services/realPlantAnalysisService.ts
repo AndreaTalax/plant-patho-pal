@@ -1,6 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
+import { showErrorToast, showSuccessToast } from '@/components/ui/error-toast';
 
 export interface PlantAnalysisResult {
   plantName: string;
@@ -88,6 +88,17 @@ export class RealPlantAnalysisService {
       console.log('📸 Image URL:', imageUrl);
       console.log('🔬 Analysis:', analysis);
       
+      // Check authentication first
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user || user.id !== userId) {
+        console.error('❌ Authentication failed or user mismatch');
+        showErrorToast({
+          title: 'Authentication Error',
+          description: 'Please ensure you are logged in to save analysis'
+        });
+        return;
+      }
+      
       const diagnosisData = {
         user_id: userId,
         plant_type: analysis.plantName,
@@ -117,7 +128,10 @@ export class RealPlantAnalysisService {
         
         if (error.message.includes('row-level security')) {
           console.error('❌ RLS Error: User not authenticated or missing permissions');
-          toast.error('Permission denied: Please ensure you are logged in');
+          showErrorToast({
+            title: 'Permission Denied',
+            description: 'Please ensure you are logged in to save diagnosis'
+          });
           return;
         }
         
@@ -125,11 +139,14 @@ export class RealPlantAnalysisService {
       }
       
       console.log('✅ Analysis saved to database:', data.id);
-      toast.success('Analysis saved successfully');
+      showSuccessToast('Analysis saved successfully');
       
     } catch (error) {
       console.error('❌ Failed to save analysis:', error);
-      toast.error('Failed to save analysis to database');
+      showErrorToast({
+        title: 'Save Failed',
+        description: 'Failed to save analysis to database'
+      });
     }
   }
 }

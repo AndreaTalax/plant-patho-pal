@@ -23,6 +23,14 @@ export class AutoExpertNotificationService {
       console.log('👤 User ID:', userId);
       console.log('🌿 Diagnosis data:', diagnosisData);
 
+      // Check authentication first
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user || user.id !== userId) {
+        console.error('❌ Authentication failed or user mismatch');
+        toast.error('Authentication required to send diagnosis');
+        return false;
+      }
+
       // Get user profile for personalized message
       const { data: userProfile } = await supabase
         .from('profiles')
@@ -71,66 +79,51 @@ export class AutoExpertNotificationService {
 
       console.log('📝 Message content:', messageContent);
 
-// Send the main message with better error handling
-const { data: messageData, error: messageError } = await supabase
-  .from('messages')
-  .insert({
-    conversation_id: conversation.id,
-    sender_id: userId,
-    recipient_id: MARCO_NIGRO_ID,
-    text: messageContent,
-    sent_at: new Date().toISOString(),
-    read: false
-  })
-  .select()
-  .single();
+      // Send the main message with better error handling
+      const { data: messageData, error: messageError } = await supabase
+        .from('messages')
+        .insert({
+          conversation_id: conversation.id,
+          sender_id: userId,
+          recipient_id: MARCO_NIGRO_ID,
+          text: messageContent,
+          sent_at: new Date().toISOString(),
+          read: false
+        })
+        .select()
+        .single();
 
-if (messageError) {
-  console.error('Detailed message insert error:', {
-    error: messageError,
-    code: messageError.code,
-    message: messageError.message,
-    details: messageError.details,
-    hint: messageError.hint
-  });
-  throw new Error(`Failed to send message to expert: ${messageError.message}`);
-}
-
+      if (messageError) {
+        console.error('Detailed message insert error:', {
+          error: messageError,
+          code: messageError.code,
+          message: messageError.message,
+          details: messageError.details,
+          hint: messageError.hint
+        });
+        throw new Error(`Failed to send message to expert: ${messageError.message}`);
+      }
 
       console.log('✅ Main message sent to expert');
-// Add validation before inserting
-if (!conversation?.id) {
-  throw new Error('Invalid conversation ID');
-}
-
-if (!userId || !MARCO_NIGRO_ID) {
-  throw new Error('Missing user or expert ID');
-}
-
-if (!messageContent || messageContent.trim().length === 0) {
-  throw new Error('Message content is empty');
-}
-
-console.log('🔍 Validation passed:', {
-  conversationId: conversation.id,
-  senderId: userId,
-  recipientId: MARCO_NIGRO_ID,
-  messageLength: messageContent.length
-});
 
       // Send image as separate message if available
       if (diagnosisData.imageUrl) {
         console.log('📸 Sending image message');
-        await supabase
+        const { error: imageError } = await supabase
           .from('messages')
           .insert({
             conversation_id: conversation.id,
             sender_id: userId,
             recipient_id: MARCO_NIGRO_ID,
-            content: `Plant image: ${diagnosisData.imageUrl}`, // Use 'text' field
+            text: `Plant image: ${diagnosisData.imageUrl}`,
             sent_at: new Date().toISOString(),
             read: false
           });
+
+        if (imageError) {
+          console.warn('Image message failed:', imageError);
+          // Don't fail the whole process if image fails
+        }
       }
 
       // Notify expert via edge function

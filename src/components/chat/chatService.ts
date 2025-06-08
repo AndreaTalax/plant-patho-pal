@@ -76,6 +76,13 @@ export const findOrCreateConversation = async (userId: string) => {
       return null;
     }
 
+    // Check authentication
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      console.error("User not authenticated");
+      return null;
+    }
+
     // For testing accounts, create a mock conversation ID
     if (userId === "test@gmail.com" || userId === "test-user-id") {
       return {
@@ -176,7 +183,7 @@ const convertProductsToJson = (products?: Product[]): Json => {
       name: product.name || '',
       price: typeof product.price === 'number' ? product.price : parseFloat(String(product.price) || '0'),
       description: product.description || '',
-      image_url: product.image || ''
+      image: product.image || ''
     }));
     
     return serializedProducts as unknown as Json;
@@ -211,6 +218,12 @@ export const sendMessage = async (
       throw new Error("Message text cannot be empty");
     }
 
+    // Check authentication
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      throw new Error("User not authenticated");
+    }
+
     // For mock conversations, always return success
     if (conversationId === "mock-conversation-id") {
       console.log("📝 Mock conversation - returning success");
@@ -222,7 +235,7 @@ export const sendMessage = async (
       conversation_id: conversationId,
       sender_id: senderId,
       recipient_id: recipientId,
-      text: trimmedText, // Use 'text' field, not 'content'
+      text: trimmedText,
       products: convertProductsToJson(products),
       sent_at: new Date().toISOString(),
       read: false
