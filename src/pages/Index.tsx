@@ -9,12 +9,18 @@ import ShopTab from "@/components/ShopTab";
 import ProfileTab from "@/components/ProfileTab";
 import ExpertTab from "@/components/ExpertTab";
 import BottomNavigation from "@/components/BottomNavigation";
+import { ensureStorageBuckets } from "@/utils/storageSetup";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState<string>("diagnose");
   const { isMasterAccount } = useAuth();
 
-  // Ascolta eventi personalizzati per il cambio tab
+  // Initialize storage buckets on app start
+  useEffect(() => {
+    ensureStorageBuckets();
+  }, []);
+
+  // Listen for custom tab switch events
   useEffect(() => {
     const handleSwitchTab = (event: CustomEvent) => {
       setActiveTab(event.detail);

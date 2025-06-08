@@ -29,6 +29,7 @@ export const useCamera = ({
   onCameraLoad
 }: UseCameraOptions) => {
   const [currentStream, setCurrentStream] = useState<MediaStream | null>(null);
+  const [hasFlash, setHasFlash] = useState(false);
 
   // Clean up stream when component unmounts
   useEffect(() => {
@@ -67,6 +68,13 @@ export const useCamera = ({
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         setCurrentStream(stream);
+        
+        // Check for flash capability
+        const videoTrack = stream.getVideoTracks()[0];
+        if (videoTrack && 'getCapabilities' in videoTrack) {
+          const capabilities = videoTrack.getCapabilities() as ExtendedMediaTrackCapabilities;
+          setHasFlash(!!capabilities.torch);
+        }
         
         // Wait for video to be ready
         videoRef.current.onloadedmetadata = () => {
@@ -123,52 +131,31 @@ export const useCamera = ({
   };
 
   // Toggle flash
-  const toggleFlash = async (): Promise<boolean> => {
-    try {
-      if (!currentStream) {
-        toast.error("Fotocamera non attiva", { duration: 2000 });
-        return false;
-      }
+  const toggleFlash = async () => {
+    if (!currentStream || !hasFlash) {
+      toast.error('Flash non supportato su questo dispositivo');
+      return;
+    }
 
-      const track = currentStream.getVideoTracks()[0];
-      if (!track) {
-        toast.error("Nessun track video disponibile", { duration: 2000 });
-        return false;
-      }
-      
-      // Check if flashlight is supported
-      const capabilities = track.getCapabilities() as ExtendedMediaTrackCapabilities;
-      if (!capabilities.torch) {
-        toast.error("Flash non supportato su questo dispositivo", { 
-          duration: 2000 
+    try {
+      const videoTrack = currentStream.getVideoTracks()[0];
+      if (videoTrack && 'applyConstraints' in videoTrack) {
+        await videoTrack.applyConstraints({
+          advanced: [{ torch: flashMode } as ExtendedMediaTrackConstraintSet]
         });
-        return false;
+        toast.success(`Flash ${flashMode ? 'attivato' : 'disattivato'}`);
       }
-      
-      // Toggle flash state
-      const newFlashMode = !flashMode;
-      
-      // Apply to track
-      await track.applyConstraints({
-        advanced: [{ torch: newFlashMode } as ExtendedMediaTrackConstraintSet]
-      });
-      
-      toast.success(newFlashMode ? "Flash attivato" : "Flash disattivato", {
-        duration: 1500
-      });
-      
-      return newFlashMode;
     } catch (error) {
-      console.error("Errore toggle flash:", error);
-      toast.error("Impossibile attivare il flash", { duration: 2000 });
-      return false;
+      console.error('Errore toggle flash:', error);
+      toast.error('Impossibile cambiare il flash');
     }
   };
 
   return {
+    currentStream,
+    hasFlash,
     startCamera,
     stopCamera,
-    toggleFlash,
-    currentStream
+    toggleFlash
   };
 };
