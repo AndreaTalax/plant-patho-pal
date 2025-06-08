@@ -1,9 +1,8 @@
-
 import { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Eye, EyeOff, Thermometer, Leaf, Sparkles, Activity } from 'lucide-react';
+import { Loader2, Eye, EyeOff, Thermometer, Leaf, Sparkles, Activity, Camera } from 'lucide-react';
 import DiagnosisTabs from '../DiagnosisTabs';
 import ActionButtons from './ActionButtons';
 import { DiagnosedDisease, PlantInfo, AnalysisDetails } from '../types';
