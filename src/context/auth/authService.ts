@@ -125,11 +125,26 @@ export const fetchUserProfile = async (userId: string): Promise<UserProfile | nu
     }
 
     if (data) {
-      console.log('User profile fetched:', data);
+      console.log('User profile fetched successfully:', data);
       return data;
     } else {
-      console.log('No profile found for user:', userId);
-      return null;
+      console.log('No profile found for user, creating default profile:', userId);
+      
+      // Create a default profile if none exists
+      const defaultProfile = {
+        id: userId,
+        email: null,
+        username: null,
+        first_name: null,
+        last_name: null,
+        birth_date: null,
+        birth_place: null,
+        role: 'user',
+        subscription_plan: 'free'
+      };
+      
+      await createOrUpdateProfile(userId, defaultProfile);
+      return defaultProfile;
     }
   } catch (error: any) {
     console.error('Error fetching user profile:', error?.message || error);

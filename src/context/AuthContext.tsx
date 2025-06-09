@@ -45,15 +45,19 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          const profile = await fetchUserProfile(session.user.id);
-          if (mounted && profile) {
-            setUserProfile(normalizeProfile(profile));
-          }
+          // Use setTimeout to avoid blocking the auth state change
+          setTimeout(async () => {
+            if (!mounted) return;
+            const profile = await fetchUserProfile(session.user.id);
+            if (mounted && profile) {
+              setUserProfile(normalizeProfile(profile));
+            }
+            setLoading(false);
+          }, 0);
         } else {
           setUserProfile(null);
+          setLoading(false);
         }
-        
-        setLoading(false);
       }
     );
 

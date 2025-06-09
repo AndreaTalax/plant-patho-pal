@@ -7,13 +7,14 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Leaf, LockKeyhole, Mail } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/context/AuthContext";
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,25 +31,12 @@ const Login = () => {
     }
 
     try {
-      console.log('Attempting login for:', email);
+      console.log('Starting login process for:', email);
       
-      // Use Supabase directly for more control
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
-        password: password
-      });
-
-      if (error) {
-        console.error("Login error:", error);
-        toast.error("Login fallito", {
-          description: error.message || "Credenziali non valide. Riprova.",
-          dismissible: true
-        });
-        return;
-      }
-
-      if (data.user && data.session) {
-        console.log('Login successful, user:', data.user.email);
+      const result = await login(email.trim(), password);
+      
+      if (result.success) {
+        console.log('Login successful');
         toast.success("Login effettuato con successo", {
           description: "Benvenuto nell'applicazione!",
           dismissible: true
@@ -57,12 +45,17 @@ const Login = () => {
         // Navigate after a short delay to ensure auth state is updated
         setTimeout(() => {
           navigate("/", { replace: true });
-        }, 100);
+        }, 500);
+      } else {
+        toast.error("Login fallito", {
+          description: "Credenziali non valide. Riprova.",
+          dismissible: true
+        });
       }
     } catch (error: any) {
-      console.error("Unexpected login error:", error);
+      console.error("Login error:", error);
       toast.error("Login fallito", {
-        description: "Si è verificato un errore imprevisto. Riprova.",
+        description: error.message || "Si è verificato un errore. Riprova.",
         dismissible: true
       });
     } finally {

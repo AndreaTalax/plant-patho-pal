@@ -3,50 +3,35 @@ import { supabase } from '@/integrations/supabase/client';
 
 export const ensureStorageBuckets = async () => {
   try {
-    console.log('🪣 Checking storage buckets...');
+    console.log('Checking storage buckets...');
     
     // Check if plant-images bucket exists
-    const { data: plantBucket, error: plantBucketError } = await supabase.storage
-      .getBucket('plant-images');
+    const { data: buckets, error: listError } = await supabase.storage.listBuckets();
     
-    if (plantBucketError && plantBucketError.message.includes('not found')) {
-      console.log('🆕 Creating plant-images bucket...');
-      const { error: createError } = await supabase.storage
-        .createBucket('plant-images', {
-          public: true,
-          allowedMimeTypes: ['image/*'],
-          fileSizeLimit: 10485760 // 10MB
-        });
-      
-      if (createError) {
-        console.error('❌ Error creating plant-images bucket:', createError);
-      } else {
-        console.log('✅ Plant-images bucket created successfully');
-      }
+    if (listError) {
+      console.error('Error listing buckets:', listError);
+      return;
     }
     
-    // Check if avatars bucket exists
-    const { data: avatarBucket, error: avatarBucketError } = await supabase.storage
-      .getBucket('avatars');
+    const plantImagesBucket = buckets?.find(bucket => bucket.name === 'plant-images');
     
-    if (avatarBucketError && avatarBucketError.message.includes('not found')) {
-      console.log('🆕 Creating avatars bucket...');
-      const { error: createError } = await supabase.storage
-        .createBucket('avatars', {
-          public: true,
-          allowedMimeTypes: ['image/*'],
-          fileSizeLimit: 5242880 // 5MB
-        });
+    if (!plantImagesBucket) {
+      console.log('Creating plant-images bucket...');
+      const { error: createError } = await supabase.storage.createBucket('plant-images', {
+        public: true,
+        allowedMimeTypes: ['image/*'],
+        fileSizeLimit: 10485760 // 10MB
+      });
       
       if (createError) {
-        console.error('❌ Error creating avatars bucket:', createError);
+        console.error('Error creating bucket:', createError);
       } else {
-        console.log('✅ Avatars bucket created successfully');
+        console.log('Plant-images bucket created successfully');
       }
+    } else {
+      console.log('Plant-images bucket already exists');
     }
-    
-    console.log('✅ Storage buckets verified');
   } catch (error) {
-    console.error('❌ Error setting up storage buckets:', error);
+    console.error('Error in ensureStorageBuckets:', error);
   }
 };
