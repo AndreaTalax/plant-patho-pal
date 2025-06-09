@@ -1,4 +1,5 @@
 
+
 // Re-export everything from the new modular services
 export { ChatApi as default } from '@/services/chat/chatApi';
 export { ConversationService } from '@/services/chat/conversationService';
@@ -13,3 +14,5 @@ export const findOrCreateConversation = ConversationService.findOrCreateConversa
 export const updateConversationStatus = ChatApi.updateConversationStatus;
 
 import { ChatApi } from '@/services/chat/chatApi';
+import { ConversationService } from '@/services/chat/conversationService';
+
