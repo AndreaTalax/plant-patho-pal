@@ -1,7 +1,13 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { PostgrestError } from '@supabase/supabase-js';
-import { DbConversation, DbMessage, DbProfile, DbDiagnosiPiante } from './client';
+import { Database } from './types';
+
+// Type aliases for easier use
+type DbConversation = Database['public']['Tables']['conversations']['Row'];
+type DbMessage = Database['public']['Tables']['messages']['Row'];
+type DbProfile = Database['public']['Tables']['profiles']['Row'];
+type DbDiagnosiPiante = Database['public']['Tables']['diagnosi_piante']['Row'];
 
 // Helper functions for type safety when dealing with Supabase responses
 export function isError<T>(result: T | PostgrestError): result is PostgrestError {
