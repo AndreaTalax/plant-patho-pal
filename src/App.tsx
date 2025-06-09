@@ -21,14 +21,29 @@ const queryClient = new QueryClient();
 
 // Protected route component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { isAuthenticated, isProfileComplete, isMasterAccount } = useAuth();
+  const { isAuthenticated, isProfileComplete, isMasterAccount, loading } = useAuth();
+  
+  console.log('ProtectedRoute - Auth status:', { isAuthenticated, isProfileComplete, isMasterAccount, loading });
+  
+  if (loading) {
+    return (
+      <div className="h-screen w-full flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-drplant-blue mx-auto mb-4"></div>
+          <p className="text-gray-600">Caricamento...</p>
+        </div>
+      </div>
+    );
+  }
   
   if (!isAuthenticated) {
+    console.log('Not authenticated, redirecting to login');
     return <Navigate to="/login" replace />;
   }
   
-  // Verifica se il profilo è completo (esclusi gli account master)
+  // Skip profile completion for master accounts
   if (!isProfileComplete && !isMasterAccount) {
+    console.log('Profile incomplete, redirecting to complete-profile');
     return <Navigate to="/complete-profile" replace />;
   }
   
@@ -37,7 +52,18 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
 // Only used for complete-profile page
 const ProfileCompletionRoute = ({ children }: { children: React.ReactNode }) => {
-  const { isAuthenticated, isProfileComplete, isMasterAccount } = useAuth();
+  const { isAuthenticated, isProfileComplete, isMasterAccount, loading } = useAuth();
+  
+  if (loading) {
+    return (
+      <div className="h-screen w-full flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-drplant-blue mx-auto mb-4"></div>
+          <p className="text-gray-600">Caricamento...</p>
+        </div>
+      </div>
+    );
+  }
   
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
@@ -51,12 +77,47 @@ const ProfileCompletionRoute = ({ children }: { children: React.ReactNode }) => 
   return <>{children}</>;
 };
 
+// Auth route component (redirects if already logged in)
+const AuthRoute = ({ children }: { children: React.ReactNode }) => {
+  const { isAuthenticated, loading } = useAuth();
+  
+  if (loading) {
+    return (
+      <div className="h-screen w-full flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-drplant-blue mx-auto mb-4"></div>
+          <p className="text-gray-600">Caricamento...</p>
+        </div>
+      </div>
+    );
+  }
+  
+  if (isAuthenticated) {
+    console.log('Already authenticated, redirecting to home');
+    return <Navigate to="/" replace />;
+  }
+  
+  return <>{children}</>;
+};
+
 const AppRoutes = () => {
   return (
     <Routes>
-      <Route path="/login" element={<Login />} />
-      <Route path="/signup" element={<SignUp />} />
-      <Route path="/auth" element={<Auth />} />
+      <Route path="/login" element={
+        <AuthRoute>
+          <Login />
+        </AuthRoute>
+      } />
+      <Route path="/signup" element={
+        <AuthRoute>
+          <SignUp />
+        </AuthRoute>
+      } />
+      <Route path="/auth" element={
+        <AuthRoute>
+          <Auth />
+        </AuthRoute>
+      } />
       <Route path="/complete-profile" element={
         <ProfileCompletionRoute>
           <CompleteProfile />

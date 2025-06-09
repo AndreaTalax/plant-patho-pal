@@ -7,14 +7,13 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Leaf, LockKeyhole, Mail } from "lucide-react";
-import { useAuth } from "@/context/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
-  const { login } = useAuth();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,22 +31,38 @@ const Login = () => {
 
     try {
       console.log('Attempting login for:', email);
-      const result = await login(email, password);
       
-      if (result && result.success) {
-        console.log('Login successful, navigating to home');
+      // Use Supabase directly for more control
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password: password
+      });
+
+      if (error) {
+        console.error("Login error:", error);
+        toast.error("Login fallito", {
+          description: error.message || "Credenziali non valide. Riprova.",
+          dismissible: true
+        });
+        return;
+      }
+
+      if (data.user && data.session) {
+        console.log('Login successful, user:', data.user.email);
         toast.success("Login effettuato con successo", {
           description: "Benvenuto nell'applicazione!",
           dismissible: true
         });
-        navigate("/");
-      } else {
-        throw new Error('Login failed');
+        
+        // Navigate after a short delay to ensure auth state is updated
+        setTimeout(() => {
+          navigate("/", { replace: true });
+        }, 100);
       }
     } catch (error: any) {
-      console.error("Login error:", error);
+      console.error("Unexpected login error:", error);
       toast.error("Login fallito", {
-        description: error.message || "Credenziali non valide. Riprova.",
+        description: "Si è verificato un errore imprevisto. Riprova.",
         dismissible: true
       });
     } finally {
@@ -90,6 +105,7 @@ const Login = () => {
                     onChange={(e) => setEmail(e.target.value)}
                     type="email"
                     autoComplete="email"
+                    disabled={isLoading}
                   />
                 </div>
               </div>
@@ -105,6 +121,7 @@ const Login = () => {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     autoComplete="current-password"
+                    disabled={isLoading}
                   />
                 </div>
               </div>
