@@ -1,8 +1,9 @@
+
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Send, Loader2 } from 'lucide-react';
-import { ChatService } from './chatService';
+import { sendMessage } from './chatService';
 import { toast } from 'sonner';
 
 interface MessageInputProps {
@@ -50,14 +51,14 @@ const MessageInput = ({
     setInternalIsSending(true);
     
     try {
-      const success = await ChatService.sendMessage(
+      const result = await sendMessage(
         conversationId,
         senderId,
         recipientId,
         message.trim()
       );
 
-      if (success) {
+      if (result) {
         setMessage('');
         onMessageSent?.();
         console.log('✅ Message sent successfully');

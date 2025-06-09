@@ -9,7 +9,7 @@ export type { DatabaseConversation, DatabaseMessage, ConversationData, MessageDa
 export const loadConversations = ChatApi.loadConversations;
 export const loadMessages = ChatApi.loadMessages;
 export const sendMessage = ChatApi.sendMessage;
-export const findOrCreateConversation = ChatApi.findOrCreateConversation;
+export const findOrCreateConversation = ConversationService.findOrCreateConversation;
 export const updateConversationStatus = ChatApi.updateConversationStatus;
 
 import { ChatApi } from '@/services/chat/chatApi';

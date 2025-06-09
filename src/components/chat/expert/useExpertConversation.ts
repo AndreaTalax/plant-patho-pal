@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase, EXPERT_ID } from '@/integrations/supabase/client';
 import { Conversation, DatabaseConversation, Message, Product } from '../types';
@@ -23,7 +24,7 @@ export const useExpertConversation = (userId: string) => {
   useEffect(() => {
     const fetchConversations = async () => {
       try {
-        const data = await loadConversations(true, userId);
+        const data = await loadConversations(userId);
         
         // Set database conversations
         setDbConversations(data);
