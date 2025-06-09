@@ -52,11 +52,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             if (mounted && profile) {
               setUserProfile(normalizeProfile(profile));
             }
-            setLoading(false);
+            if (mounted) {
+              setLoading(false);
+            }
           }, 0);
         } else {
           setUserProfile(null);
-          setLoading(false);
+          if (mounted) {
+            setLoading(false);
+          }
         }
       }
     );
@@ -67,6 +71,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const { data: { session } } = await supabase.auth.getSession();
         if (!mounted) return;
         
+        console.log('Initial session check:', session?.user?.email);
         setSession(session);
         setUser(session?.user ?? null);
         
@@ -94,7 +99,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, []);
 
   const login = async (email: string, password: string): Promise<{ success: boolean }> => {
-    return authenticateUser(email, password);
+    try {
+      return await authenticateUser(email, password);
+    } catch (error) {
+      console.error('Login error in context:', error);
+      return { success: false };
+    }
   };
 
   const updateProfile = async (updates: Partial<UserProfile> | string, value?: any) => {

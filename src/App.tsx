@@ -27,7 +27,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   
   if (loading) {
     return (
-      <div className="h-screen w-full flex items-center justify-center">
+      <div className="h-screen w-full flex items-center justify-center bg-gradient-to-b from-drplant-blue-light via-white to-drplant-green/10">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-drplant-blue mx-auto mb-4"></div>
           <p className="text-gray-600">Caricamento...</p>
@@ -56,7 +56,7 @@ const ProfileCompletionRoute = ({ children }: { children: React.ReactNode }) => 
   
   if (loading) {
     return (
-      <div className="h-screen w-full flex items-center justify-center">
+      <div className="h-screen w-full flex items-center justify-center bg-gradient-to-b from-drplant-blue-light via-white to-drplant-green/10">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-drplant-blue mx-auto mb-4"></div>
           <p className="text-gray-600">Caricamento...</p>
@@ -83,7 +83,7 @@ const AuthRoute = ({ children }: { children: React.ReactNode }) => {
   
   if (loading) {
     return (
-      <div className="h-screen w-full flex items-center justify-center">
+      <div className="h-screen w-full flex items-center justify-center bg-gradient-to-b from-drplant-blue-light via-white to-drplant-green/10">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-drplant-blue mx-auto mb-4"></div>
           <p className="text-gray-600">Caricamento...</p>
