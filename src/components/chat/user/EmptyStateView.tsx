@@ -10,6 +10,19 @@ interface EmptyStateViewProps {
   onStartChat: () => void;
 }
 
+/**
+ * Render a view with information and a clickable card that initiates a chat with a plant expert.
+ * @example
+ * ({ onStartChat }) => { ... }
+ * <div className="px-4">...</div>
+ * @param {function} onStartChat - Callback function to start a chat when the expert card is clicked.
+ * @returns {JSX.Element} Returns a JSX element containing an empty state view with expert information.
+ * @description
+ *   - Uses translation functionality to provide localized strings with fallback options.
+ *   - The expert information is contained within a clickable card component styled with hover effects.
+ *   - An avatar image is displayed for the expert, with a fallback for initials if the image is not available.
+ *   - Displays a default message about the expert’s response time.
+ */
 const EmptyStateView = ({ onStartChat }: EmptyStateViewProps) => {
   const { t } = useTheme();
   

@@ -1,6 +1,21 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Send, User, Bot, Upload, Camera, Leaf } from 'lucide-react';
 
+/**
+* Virtual plant pathologist assisting with plant disease diagnosis
+* @example
+* PlantPathoChat({ userPlantData: {}, onDataSubmit: () => {}, initialMessage: "Hello" })
+* Returns a React component facilitating interactive communication with virtual plant pathologist
+* @param {Object} userPlantData - Data related to the user's plant, including type, symptoms, and environment details.
+* @param {Function} onDataSubmit - Callback function triggered when user plant data is processed.
+* @param {string} initialMessage - Initial message sent by the user to start the chat interaction.
+* @returns {JSX.Element} React component for chatting with a virtual plant pathologist.
+* @description
+*   - Handles automatic sending of plant data and welcomes the user with an introductory message.
+*   - Formats and presents plant data for user verification and bot analysis.
+*   - Simulates bot analysis and responses using provided plant data.
+*   - Implements smooth scrolling to keep chat interface user-friendly and updated.
+*/
 const PlantPathologistChat = ({ 
   userPlantData = null, 
   onDataSubmit = null,
@@ -80,6 +95,18 @@ const PlantPathologistChat = ({
     }
   }, [userPlantData, initialMessage, onDataSubmit]);
 
+  /**
+   * Formats plant data into a readable string with emojis
+   * @example
+   * formatPlantData({ plantType: "Ficus", symptoms: "Yellow leaves" })
+   * "🌱 Tipo di pianta: Ficus\n🔍 Sintomi: Yellow leaves\n"
+   * @param {Object} data - Plant data containing various attributes like plantType, symptoms, location, etc.
+   * @returns {string} A formatted string detailing the plant data or a default message if no data is provided.
+   * @description
+   *   - Returns "Nessun dato fornito" if data is null or undefined.
+   *   - Includes specific emojis to visually represent each property.
+   *   - Properties are included only if they exist within the data object.
+   */
   const formatPlantData = (data) => {
     if (!data) return "Nessun dato fornito";
     
@@ -96,6 +123,19 @@ const PlantPathologistChat = ({
     return formatted || "Dati della pianta forniti";
   };
 
+  /**
+  * Provides a preliminary plant health analysis based on symptoms.
+  * @example
+  * analyzePlantHealth({ symptoms: "foglie gialle, macchie" })
+  * "Grazie per le informazioni dettagliate! 🌿\n\nBasandomi sui sintomi descritti, ecco la mia analisi preliminare:..."
+  * @param {Object} data - Contains details about the plant's symptoms and conditions.
+  * @returns {string} Suggested analysis and recommendations for plant care.
+  * @description
+  *   - The function suggests potential causes for symptoms such as yellowing, spotting, and wilting of leaves.
+  *   - It provides specific recommendations for improving plant care based on the conditions described.
+  *   - Prompts the user to share plant photos for a more accurate assessment.
+  *   - A default message is returned if no data is provided.
+  */
   const generateAnalysisResponse = (data) => {
     if (!data) {
       return "Per fornirti un'analisi accurata, ho bisogno di più informazioni sulla tua pianta. Puoi descrivermi i sintomi che osservi, il tipo di pianta e le condizioni ambientali?";
@@ -140,6 +180,20 @@ const PlantPathologistChat = ({
     }
   };
 
+  /**
+   * Sends a user message and simulates a bot response in a chat interface.
+   * @example
+   * sync()
+   * The user message is added and a bot response follows after a delay.
+   * @param {string} input - User input message to send (may include trimmed whitespaces).
+   * @param {object|null} selectedImage - An image object selected by the user; null if no image is selected.
+   * @returns {void} No return value.
+   * @description
+   *   - Checks if input is empty and no image is selected, then exits without action.
+   *   - Creates a user message object with current timestamp and adds to message list.
+   *   - Simulates bot response based on user input and image selection after a random delay.
+   *   - Resets input fields and loading status post message sending.
+   */
   const handleSendMessage = async () => {
     if (!input.trim() && !selectedImage) return;
 
@@ -170,6 +224,18 @@ const PlantPathologistChat = ({
     }, 1000 + Math.random() * 2000);
   };
 
+  /**
+   * Provides feedback based on user input regarding plant symptoms, with enhanced analysis if an image is provided.
+   * @example
+   * analyzePlantSymptoms("La pianta ha delle foglie gialle", true)
+   * "Ottima foto! Dall'immagine posso vedere alcuni dettagli interessanti. ..."
+   * @param {string} userInput - A description of the plant symptoms provided by the user.
+   * @param {boolean} hasImage - Indicates whether there is an accompanying image for enhanced feedback.
+   * @returns {string} A message suggesting actions or observations based on the plant symptoms described.
+   * @description
+   *   - Returns a randomized general response if no image is provided.
+   *   - Provides a specific feedback related to visible stress symptoms when an image is available.
+   */
   const generateBotResponse = (userInput, hasImage) => {
     const responses = [
       "Grazie per le informazioni aggiuntive. Basandomi su quello che mi hai descritto, ti consiglio di monitorare attentamente la pianta nei prossimi giorni.",
@@ -335,6 +401,19 @@ const PlantPathologistChat = ({
 };
 
 // Esempio di utilizzo del componente
+/**
+ * Renders a plant health assistant interface and initiates a chat based on user's input.
+ * @example
+ * handleStartChat()
+ * Returns JSX element for the chat interface.
+ * @param {Object} plantData - Contains details of the plant including type, symptoms, location, environment, watering frequency, and problem duration.
+ * @returns {JSX.Element} JSX structure for rendering the chat interface if chat is initiated, otherwise displays plant data and a button.
+ * @description
+ *   - Uses `useState` to manage visibility of chat interface and plant data.
+ *   - Upon triggering `handleStartChat`, reveals a chat component for plant health insights.
+ *   - The chat interface features initial conversational prompts to assist with plant health issues.
+ *   - Displays plant data dynamically from the `plantData` object.
+ */
 const PlantPathoApp = () => {
   const [showChat, setShowChat] = useState(false);
   const [plantData, setPlantData] = useState({

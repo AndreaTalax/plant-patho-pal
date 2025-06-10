@@ -7,6 +7,20 @@ interface DiagnosisResultsProps {
   onConsultExpert: () => void;
 }
 
+/**
+* Renders diagnostic results based on provided data, including potential expert consultation recommendations.
+* @example
+* ({ result: sampleResult, onConsultExpert: sampleOnConsultExpert })
+* A react component displaying diagnostic result information.
+* @param {Object} result - The diagnostic result data containing enhanced results and plant identification results.
+* @param {Function} onConsultExpert - Callback function to be triggered for expert consultation.
+* @returns {JSX.Element} A series of styled diagnostic result sections based on provided data.
+* @description
+*   - Displays various sections with conditional rendering based on the diagnostic results.
+*   - Includes visual indications for confidence levels of AI analysis.
+*   - Provides an interactive button for expert consultation when recommended.
+*   - Handles cases where analysis fails, providing alternate expert consultation options.
+*/
 const DiagnosisResults: React.FC<DiagnosisResultsProps> = ({ result, onConsultExpert }) => {
   const { enhancedResult, plantIdResult, shouldRecommendExpert } = result;
 

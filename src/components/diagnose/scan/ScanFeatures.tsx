@@ -3,6 +3,18 @@ import React from 'react';
 import { Shield, Zap, Users, Award } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 
+/**
+ * Render diagnostic features in a grid layout.
+ * @example
+ * renderScanFeatures()
+ * <div>...</div>
+ * @returns {JSX.Element} A div element containing grid layout of diagnostic features.
+ * @description
+ *   - Utilizes a dynamic mapping to render feature cards.
+ *   - Features are displayed in a responsive grid adapting to screen size.
+ *   - Icons are centered within a styled div using flex utilities.
+ *   - Provides information about the scanner’s benefits including speed, accuracy, and connectivity to experts.
+ */
 const ScanFeatures = () => {
   const features = [
     {

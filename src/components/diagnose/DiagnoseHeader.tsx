@@ -6,6 +6,18 @@ interface DiagnoseHeaderProps {
   onToggleModelInfo: () => void;
 }
 
+/**
+ * Render the Diagnose Header component which displays the title and a button for toggling model information.
+ * @example
+ * DiagnoseHeader({ showModelInfo: true, onToggleModelInfo: () => {} })
+ * React Element
+ * @param {boolean} showModelInfo - Determines if the AI information is displayed.
+ * @param {function} onToggleModelInfo - Callback function triggered when the toggle button is clicked.
+ * @returns {JSX.Element} A React component containing the diagnose header UI.
+ * @description
+ *   - The header includes a title, subtitle, and a button that toggles AI info visibility.
+ *   - Styling incorporates flexbox layout for alignment and responsive design.
+ */
 const DiagnoseHeader: React.FC<DiagnoseHeaderProps> = ({ showModelInfo, onToggleModelInfo }) => {
   return (
     <>

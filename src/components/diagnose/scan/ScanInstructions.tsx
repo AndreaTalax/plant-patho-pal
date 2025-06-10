@@ -3,6 +3,18 @@ import React from 'react';
 import { CheckCircle, Camera, Sun, Focus } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 
+/**
+* Renders a set of plant care instructions as a card component.
+* @example
+* renderInstructions()
+* <Card className="p-6 mb-8">...</Card>
+* @returns {JSX.Element} A card component containing plant care instructions.
+* @description
+*   - Utilizes Flexbox for responsive layout.
+*   - Maps over a predefined set of instructions to generate UI components.
+*   - Incorporates icons for visual guidance.
+*   - Ensures UI consistency with padding and margin classes.
+*/
 const ScanInstructions = () => {
   const instructions = [
     {

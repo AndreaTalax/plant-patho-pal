@@ -6,6 +6,18 @@ type EmptyConversationStateProps = {
   onStartChat: () => void;
 };
 
+/**
+* Renders a UI component prompting the user to start a chat with a plant pathologist.
+* @example
+* onStartChat()
+* Renders a button which starts a chat when clicked.
+* @param {function} onStartChat - Callback function invoked to initiate a new conversation.
+* @returns {JSX.Element} Returns a JSX element rendering the empty conversation state UI.
+* @description
+*   - The component displays a message encouraging the user to start a chat.
+*   - It styles the button with specific classes for color and hover effects.
+*   - It uses Flexbox to center and align its contents.
+*/
 const EmptyConversationState: React.FC<EmptyConversationStateProps> = ({
   onStartChat,
 }) => (

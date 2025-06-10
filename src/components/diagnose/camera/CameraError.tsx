@@ -8,6 +8,21 @@ interface CameraErrorProps {
   onClose: () => void;
 }
 
+/**
+ * Renders an error overlay dialog when there is a camera error.
+ * @example
+ * displayCameraError({ error: "Camera not available", onClose: handleClose })
+ * Returns a JSX element displaying an error dialog.
+ * @param {object} props - The component properties.
+ * @param {string} props.error - The error message to display.
+ * @param {function} props.onClose - Callback function to execute when the dialog is closed.
+ * @returns {JSX.Element|null} Returns the error overlay if an error exists, otherwise null.
+ * @description
+ *   - The component overlays the error dialog over the entire viewport.
+ *   - Ensures that the error message is visible to the user.
+ *   - Includes suggestions for resolving common issues with camera access.
+ *   - Modal can be closed using the provided `onClose` function.
+ */
 const CameraError: React.FC<CameraErrorProps> = ({ error, onClose }) => {
   if (!error) return null;
   

@@ -33,6 +33,19 @@ export interface VisionAnalysisResult {
 
 export class ComputerVisionService {
   // Analisi completa usando computer vision
+  /**
+   * Performs a complete computer vision analysis on the provided image file.
+   * @example
+   * analyzeImageWithVision(imageFile)
+   * VisionAnalysisResult containing combined data from multiple AI services.
+   * @param {File} imageFile - The image file to be analyzed.
+   * @returns {Promise<VisionAnalysisResult>} A promise that resolves with the result of the image analysis.
+   * @description
+   *   - Converts the provided image file into base64 format to be compatible with Plant.id API.
+   *   - Utilizes Promise.allSettled to run multiple AI services in parallel and handle their results.
+   *   - Combines results from different vision analysis services into a single coherent result.
+   *   - Logs important statuses for debugging purposes.
+   */
   static async analyzeImageWithVision(imageFile: File): Promise<VisionAnalysisResult> {
     try {
       console.log("🔍 Starting computer vision analysis...");
@@ -65,6 +78,18 @@ export class ComputerVisionService {
   }
   
   // Analisi con Google Cloud Vision
+  /**
+   * Analyzes images using Cloud Vision and returns the result data.
+   * @example
+   * analyzeWithCloudVision(formData)
+   * { analyzeResult: {...} }
+   * @param {FormData} formData - The FormData object containing image data to be analyzed.
+   * @returns {Promise<any>} Returns the result of the Cloud Vision analysis if successful, otherwise null.
+   * @description
+   *   - The function appends 'type=all' to the form data for a complete analysis.
+   *   - Utilizes Supabase's function invocation for interaction with Cloud Vision.
+   *   - Catches and logs any errors encountered during the invocation process.
+   */
   private static async analyzeWithCloudVision(formData: FormData): Promise<any> {
     try {
       formData.append('type', 'all'); // Analisi completa
@@ -82,6 +107,18 @@ export class ComputerVisionService {
   }
   
   // Analisi con servizi specializzati per piante
+  /**
+  * Analyzes a plant image using external plant services and returns the result.
+  * @example
+  * analyzeWithPlantServices('data:image/jpeg;base64,...')
+  * { plantName: 'Rose', description: 'A type of flowering shrub.' }
+  * @param {string} imageBase64 - Base64 representation of the plant image to be analyzed.
+  * @returns {Promise<any>} Analysis result from plant services if successful; otherwise, returns null.
+  * @description
+  *   - Utilizes Supabase's serverless function to perform the image analysis.
+  *   - Converts the base64 image string into a Blob for API compatibility.
+  *   - Logs any errors encountered during the process to the console.
+  */
   private static async analyzeWithPlantServices(imageBase64: string): Promise<any> {
     try {
       const formData = new FormData();
@@ -102,6 +139,26 @@ export class ComputerVisionService {
   }
   
   // Combinazione intelligente dei risultati
+  /**
+   * Combines analysis results from vision data and plant data into a comprehensive result.
+   * @example
+   * combineAnalysisResults(visionDataSample, plantDataSample, "image01.png")
+   * {
+   *   plantIdentification: {...},
+   *   healthAssessment: {...},
+   *   visualFeatures: {...},
+   *   confidence: 0.85,
+   *   dataSource: "Computer Vision + AI Services"
+   * }
+   * @param {any} visionData - The vision analysis data retrieved from AI services.
+   * @param {any} plantData - The plant analysis data obtained from the database.
+   * @param {string} imageName - The name of the image being analyzed.
+   * @returns {VisionAnalysisResult} An object containing combined analysis data including identification, health assessment, and confidence levels.
+   * @description
+   *   - Integrates data from computer vision and AI services to enhance plant identification and health assessment.
+   *   - Utilizes internal extraction methods to derive necessary visual features.
+   *   - Logs the process of combining results for transparency and debugging purposes.
+   */
   private static combineAnalysisResults(
     visionData: any, 
     plantData: any, 
@@ -131,6 +188,20 @@ export class ComputerVisionService {
   }
   
   // Estrazione identificazione pianta
+  /**
+  * Extracts the best available plant identification result from provided vision and plant data.
+  * @example
+  * extractPlantIdentification(visionData, plantData)
+  * { plantName: "Rose", confidence: 0.85, scientificName: "Rosa", commonNames: ["Rose"], family: "Rosaceae" }
+  * @param {any} visionData - Vision data containing potential plant information and confidence scores.
+  * @param {any} plantData - Data containing plant identification results with associated confidence scores.
+  * @returns {Object} Contains the plantName, confidence, scientificName, commonNames, and family.
+  * @description
+  *   - Prioritizes Plant.id results with confidence above 0.7.
+  *   - Uses generic plantData if Plant.id results are not available or have lower confidence.
+  *   - Uses Cloud Vision data as further confirmation when available.
+  *   - Default return assigns a generic plant identification with low confidence.
+  */
   private static extractPlantIdentification(visionData: any, plantData: any) {
     let bestResult = {
       plantName: "Pianta non identificata",
@@ -175,6 +246,20 @@ export class ComputerVisionService {
   }
   
   // Estrazione valutazione salute
+  /**
+   * Extracts health assessment data from vision and plant information.
+   * @example
+   * extractHealthAssessment(visionData, plantData)
+   * { isHealthy: true, diseases: [], overallHealthScore: 0.8 }
+   * @param {any} visionData - Contains labels detected from a visual analysis.
+   * @param {any} plantData - Contains information about plant diseases from identification results.
+   * @returns {{isHealthy: boolean, diseases: any[], overallHealthScore: number}} Returns an object encompassing health status, identified diseases, and overall health score.
+   * @description
+   *   - It identifies diseases from plant data with a probability higher than 0.3.
+   *   - Diseases identified via visual analysis are noted if their confidence is greater than 0.5.
+   *   - Overall health score is adjusted based on the severity of found diseases.
+   *   - Diseases are sorted by confidence in descending order within the return object.
+   */
   private static extractHealthAssessment(visionData: any, plantData: any) {
     const diseases: any[] = [];
     let isHealthy = true;
@@ -230,6 +315,25 @@ export class ComputerVisionService {
   }
   
   // Estrazione caratteristiche visive
+  /**
+   * Extracts visual features from given vision and plant data.
+   * @example
+   * extractVisualFeatures(visionData, plantData)
+   * {
+   *   plantPart: "leaf",
+   *   colors: ["#34ebba", "#00ff1e", "#unknown"],
+   *   symptoms: ["yellow", "wilted"],
+   *   leafCondition: "problematica"
+   * }
+   * @param {any} visionData - Data from visual recognition API containing labels and colors.
+   * @param {any} plantData - Additional plant data containing plant parts.
+   * @returns {object} Extracted features including plant parts, colors, symptoms, and leaf condition.
+   * @description
+   *   - Chooses the plant part based either on provided plant data or recognized labels, prioritizing plant data.
+   *   - Identifies up to three dominant colors from the vision data hex codes.
+   *   - Detects visual symptoms by searching for specific keywords within recognized labels.
+   *   - Determines leaf condition based on identified symptoms and a confidence check from vision data.
+   */
   private static extractVisualFeatures(visionData: any, plantData: any) {
     const features = {
       plantPart: "whole plant",
@@ -290,6 +394,18 @@ export class ComputerVisionService {
   }
   
   // Utility: rileva malattie da etichette visive
+  /**
+  * Detects diseases from given labels based on predefined patterns.
+  * @example
+  * detectDiseaseFromLabels([{description: 'yellowing leaf', score: 0.9}, {description: 'brown spots', score: 0.8}])
+  * Returns an array of detected diseases with symptoms, treatment, confidence, and severity level.
+  * @param {any[]} labels - An array of label objects, each containing a description and a confidence score.
+  * @returns {any[]} An array of objects representing detected diseases with their symptoms, average confidence score, treatment recommendations, and severity level.
+  * @description
+  *   - The function matches label descriptions with keywords from predefined disease patterns.
+  *   - For each pattern matched, the function calculates the average confidence score from the labels.
+  *   - It identifies diseases and returns relevant information including symptoms, treatment, and severity.
+  */
   private static detectDiseaseFromLabels(labels: any[]): any[] {
     const diseasePatterns = [
       {
@@ -344,6 +460,17 @@ export class ComputerVisionService {
   }
   
   // Utility: estrai trattamento da malattia Plant.id
+  /**
+   * Extracts a list of treatments from a disease object.
+   * @example
+   * extractTreatmentFromDisease({ treatment: { biological: ['Treatment1', 'Treatment2'], chemical: ['Treatment3'] } })
+   * ['Treatment1', 'Treatment2', 'Treatment3']
+   * @param {any} disease - The disease object containing treatment information.
+   * @returns {string[]} An array of treatments extracted from the disease object. If no treatments are found, returns an array with 'Consulenza specialistica raccomandata'.
+   * @description
+   *   - Prioritizes biological and chemical treatments, extracting up to two entries from each category.
+   *   - Adds prevention treatments similarly if available.
+   */
   private static extractTreatmentFromDisease(disease: any): string[] {
     const treatments: string[] = [];
     

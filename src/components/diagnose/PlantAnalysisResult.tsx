@@ -23,6 +23,22 @@ interface PlantAnalysisResultProps {
   autoSentToExpert?: boolean;
 }
 
+/**
+ * Renders the plant analysis result and expert consultation status.
+ * @example
+ * renderPlantAnalysisResult({ analysisResult, imageUrl, onNewAnalysis, autoSentToExpert })
+ * Returns a JSX element displaying the analysis details and expert chat option.
+ * @param {object} analysisResult - The plant analysis result containing health status, diseases, and recommendations.
+ * @param {string} imageUrl - The URL of the image used for plant analysis.
+ * @param {function} onNewAnalysis - Function to initiate a new plant analysis.
+ * @param {boolean} autoSentToExpert - Indicates if the diagnosis was automatically sent to an expert.
+ * @returns {JSX.Element} A component displaying the analysis results, consultation status, and action buttons.
+ * @description
+ *   - Handles navigation to the chat tab and dispatches a custom event.
+ *   - Determines and applies color coding based on confidence level.
+ *   - Includes sections for health status, diseases detected, and expert recommendations.
+ *   - Displays various actionable buttons for user interactions, such as initiating a new analysis or chatting with an expert.
+ */
 const PlantAnalysisResultComponent: React.FC<PlantAnalysisResultProps> = ({
   analysisResult,
   imageUrl,

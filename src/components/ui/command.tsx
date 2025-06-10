@@ -124,6 +124,17 @@ const CommandItem = React.forwardRef<
 
 CommandItem.displayName = CommandPrimitive.Item.displayName
 
+/**
+* Renders a span element with specific styling and additional props.
+* @example
+* renderSpanElement("my-class", { id: "unique-id" })
+* <span class="ml-auto text-xs tracking-widest text-muted-foreground my-class" id="unique-id" />
+* @param {React.HTMLAttributes<HTMLSpanElement>} { className, ...props } - className defines additional CSS classes, and props are spread attributes for the span element.
+* @returns {JSX.Element} The span element with applied class and attributes.
+* @description
+*   - Combines preset and custom class names for styling.
+*   - Allows passing any HTMLSpanElement attributes through props.
+*/
 const CommandShortcut = ({
   className,
   ...props

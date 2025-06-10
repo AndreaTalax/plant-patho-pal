@@ -12,6 +12,24 @@ interface ConversationListProps {
   onToggleBlockUser: (id: string) => void;
 }
 
+/**
+ * This function renders a list of user conversations with options to select, delete, or block users.
+ * @example
+ * renderConversationList({
+ *   conversations: [{ id: '1', username: 'user1', lastMessage: 'Hello', blocked: false, unread: true }],
+ *   currentConversationId: '1',
+ *   onSelectConversation: (id) => console.log(id),
+ *   onDeleteConversation: (id) => console.log(id),
+ *   onToggleBlockUser: (id) => console.log(id)
+ * })
+ * <div>...</div>
+ * @param {Object} {conversations, currentConversationId, onSelectConversation, onDeleteConversation, onToggleBlockUser} - An object containing the list of conversations and related handlers.
+ * @returns {JSX.Element} A JSX element representing the list of conversations.
+ * @description
+ *   - Applies conditional styling for selected conversations and blocked users.
+ *   - Provides visual feedback for unread messages.
+ *   - Uses event.stopPropagation to prevent conversation selection when clicking delete/block buttons.
+ */
 const ConversationList = ({
   conversations,
   currentConversationId,

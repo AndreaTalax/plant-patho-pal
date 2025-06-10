@@ -51,6 +51,17 @@ const DialogContent = React.forwardRef<
 ))
 DialogContent.displayName = DialogPrimitive.Content.displayName
 
+/**
+ * Renders a customizable dialog component
+ * @example
+ * dialogComponent('my-class', { title: 'Hello' })
+ * <div class="flex flex-col space-y-1.5 text-center sm:text-left my-class"></div>
+ * @param {React.HTMLAttributes<HTMLDivElement>} className - Additional class names for styling.
+ * @returns {JSX.Element} Rendered dialog element customized with additional properties.
+ * @description
+ *   - Merges default and custom class names using the `cn` utility function.
+ *   - Accepts additional props to further customize the HTMLDivElement.
+ */
 const DialogHeader = ({
   className,
   ...props
@@ -65,6 +76,18 @@ const DialogHeader = ({
 )
 DialogHeader.displayName = "DialogHeader"
 
+/**
+* A React functional component that renders a div element with responsive flex layout classes.
+* @example
+* Dialog({ className: "custom-class", onClick: handleClick })
+* Returns a React element with specified classes and props.
+* @param {React.HTMLAttributes<HTMLDivElement>} {className, ...props} - Props including className and additional attributes.
+* @returns {JSX.Element} A div element containing applied classes and props.
+* @description
+*   - Uses Tailwind CSS for responsive styling.
+*   - Supports additional props and class names for customization.
+*   - Switches flex direction based on screen size.
+*/
 const DialogFooter = ({
   className,
   ...props

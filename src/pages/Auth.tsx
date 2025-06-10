@@ -5,6 +5,19 @@ import { Leaf } from "lucide-react";
 import { AuthForm } from "@/components/auth/AuthForm";
 import { supabase } from "@/integrations/supabase/client";
 
+/**
+ * Authenticates the user session and manages navigation post-authentication
+ * @example
+ * Auth()
+ * <div>...</div>
+ * @param none
+ * @returns {JSX.Element} Returns a JSX element representing the authentication page.
+ * @description
+ *   - Checks the current user's authentication session and navigates if already signed in.
+ *   - Listens for authentication state changes to handle navigation upon sign-in.
+ *   - Unsubscribes from authentication state change listener on component unmount.
+ *   - Returns structured JSX for rendering the authentication page interface.
+ */
 export default function Auth() {
   const navigate = useNavigate();
   

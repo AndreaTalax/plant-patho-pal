@@ -8,6 +8,19 @@ type PrivacyPolicyModalProps = {
   onOpenChange: (open: boolean) => void;
 };
 
+/**
+ * Renders a modal dialog displaying the privacy policy content, enabling users to view the policy in a structured format.
+ * @example
+ * renderPrivacyPolicyModal(open, onOpenChange)
+ * <Dialog open={true} .../>
+ * @param {boolean} open - Indicates if the privacy policy modal is currently open or closed.
+ * @param {function} onOpenChange - Callback function that handles the change in the modal's open state.
+ * @returns {JSX.Element} A dialog component containing the privacy policy details with structured sections for easy readability.
+ * @description
+ *   - Utilizes a dialog to present a structured privacy policy.
+ *   - The policy includes sections on definitions, information collection, usage, and contact details.
+ *   - Maintains security measures for user data display and interaction.
+ */
 const PrivacyPolicyModal = ({ open, onOpenChange }: PrivacyPolicyModalProps) => {
   const { t } = useTheme();
   

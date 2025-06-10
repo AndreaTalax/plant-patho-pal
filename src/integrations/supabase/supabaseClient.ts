@@ -4,6 +4,20 @@ import { User, Session } from '@supabase/supabase-js';
 
 // Funzione di registrazione utente
 export const EXPERT_USER_ID = '07c7fe19-33c3-4782-b9a0-4e87c8aa7044';
+/**
+ * Handles email registration using Supabase, including special cases for whitelisted emails.
+ * @example
+ * sync("user@example.com", "securePassword123")
+ * Returns user and session information along with confirmation requirements.
+ * @param {string} email - The email address of the user attempting to register.
+ * @param {string} password - The password for the new account.
+ * @returns {object} Registration result object containing user data, session info, and confirmation details.
+ * @description
+ *   - Allows direct registration without verification for specified whitelisted emails.
+ *   - Integrates with Supabase authentication for non-whitelisted emails.
+ *   - Handles rate limit exceeded errors by providing an appropriate response message.
+ *   - Manages cases where sign-ups are disabled by simulating successful registrations.
+ */
 export const signUp = async (email: string, password: string) => {
   try {
     // Per email specifiche, consentiamo l'accesso diretto senza chiamare supabase.auth.signUp
@@ -139,6 +153,20 @@ export const signUp = async (email: string, password: string) => {
 };
 
 // Funzione di login utente
+/**
+* Simulates login for specific whitelisted emails or uses Supabase for others.
+* @example
+* sync("test@gmail.com", "test123")
+* { user: mockUser, session: mockSession }
+* @param {string} email - The email address used for login.
+* @param {string} password - The password associated with the email.
+* @returns {object} An object containing user and session information.
+* @description
+*   - Allows direct access for whitelisted emails with predefined passwords without contacting Supabase.
+*   - Creates a mock user and session object for whitelisted emails.
+*   - If the email is not confirmed, throws an 'email_not_confirmed' error.
+*   - Handles login errors by utilizing Supabase's authentication system for non-whitelisted emails.
+*/
 export const signIn = async (email: string, password: string) => {
   try {
     // Per email specifiche, consentiamo l'accesso diretto senza chiamare supabase.auth.signInWithPassword
@@ -232,6 +260,19 @@ export const signIn = async (email: string, password: string) => {
 };
 
 // Funzione per inviare nuovamente l'email di conferma
+/**
+ * Resends a confirmation email to the specified email address.
+ * @example
+ * sync('user@example.com')
+ * { success: true, message: "Abbiamo inviato una nuova email di conferma. Controlla la tua casella di posta." }
+ * @param {string} email - The email address to which the confirmation email will be resent.
+ * @returns {Object} An object containing the success state and a message indicating the result.
+ * @description
+ *   - Checks if the email is in the whitelist for simulated successful sending.
+ *   - Attempts to resend the confirmation email using Supabase's standard API.
+ *   - Uses an edge function as a fallback if the standard API fails.
+ *   - Handles rate limit errors by providing a specific message.
+ */
 export const resendConfirmationEmail = async (email: string) => {
   try {
     // Per email nella whitelist, simuliamo un invio riuscito
@@ -313,6 +354,18 @@ export const deleteUser = async (userId: string) => {
 };
 
 // Funzione di logout utente
+/**
+* Logs out the current user from Supabase authentication.
+* @example
+* sync()
+* Logout effettuato con successo
+* @param {void} None - This function does not take any arguments.
+* @returns {void} This function returns nothing but logs the result of the logout attempt.
+* @description
+*   - Utilizes supabase.auth.signOut() to perform the logout operation.
+*   - Handles errors during logout by logging them and throwing the error.
+*   - Successfully logs a message on successful logout.
+*/
 export const signOut = async () => {
   try {
     const { error } = await supabase.auth.signOut();

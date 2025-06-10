@@ -9,6 +9,18 @@ interface ScanMethodsProps {
   onUploadPhoto: () => void;
 }
 
+/**
+* Renders a component with options to either take a photo or upload an image.
+* @example
+* renderPhotoOptions({ onTakePhoto: handleTakePhoto, onUploadPhoto: handleUploadPhoto })
+* // Renders the interface allowing the user to choose between taking a photo or uploading one.
+* @param {function} onTakePhoto - Callback function to be executed when the "Take Photo" option is selected.
+* @param {function} onUploadPhoto - Callback function to be executed when the "Upload Image" option is selected.
+* @returns {JSX.Element} A JSX element representing the component interface with two options for photo management.
+* @description
+*   - Utilizes the Camera and Upload icons to visually differentiate options.
+*   - Alterations in the style on hover to indicate interactivity.
+*/
 const ScanMethods: React.FC<ScanMethodsProps> = ({ onTakePhoto, onUploadPhoto }) => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">

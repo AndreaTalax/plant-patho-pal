@@ -39,6 +39,19 @@ export class PlantIdService {
   private static readonly API_URL = 'https://api.plant.id/v3/identification';
   private static readonly API_KEY = 'kaeFr1HprbQj7TfxgloAIDPQm6gOfJjiYgBO1TAwwWmpYoUH0O'; // Sostituire con la chiave reale
   
+  /**
+   * Identifies a plant based on provided image data.
+   * @example
+   * identifyPlant('data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/...')
+   * Returns a PlantIdentificationResult object with details about the identified plant.
+   * @param {string} imageData - Base64-encoded image data or image URL for the plant identification.
+   * @returns {Promise<PlantIdentificationResult>} An object containing the plant name, scientific name, confidence, habitat, care instructions, common diseases, and provider.
+   * @description
+   *   - Converts image data to base64 format if it's not already.
+   *   - In case of API error, the function throws an error and logs it to the console.
+   *   - Utilizes the Plant.id API with specific modifiers and plant details.
+   *   - Provide a fallback result if no suggestions are returned from the API.
+   */
   static async identifyPlant(imageData: string): Promise<PlantIdentificationResult> {
     try {
       // Converti l'immagine in base64 se necessario
@@ -96,6 +109,18 @@ export class PlantIdService {
     };
   }
 
+  /**
+  * Generates care instructions for a specified plant based on its name.
+  * @example
+  * generateCareInstructions('rosa')
+  * ['Annaffia regolarmente ma evita ristagni', 'Esponi alla luce solare diretta', 'Pota i fiori appassiti']
+  * @param {string} plantName - The name of the plant to retrieve care instructions for.
+  * @returns {string[]} An array of care instructions tailored to the specified plant.
+  * @description
+  *   - Searches for the plant's name in a local care instructions database.
+  *   - If the plant name is found as a substring, corresponding care instructions are returned.
+  *   - Defaults to common care instructions if no specific match is found.
+  */
   private static generateCareInstructions(plantName: string): string[] {
     // Database locale di istruzioni base per piante comuni
     const careDatabase: { [key: string]: string[] } = {
@@ -114,6 +139,18 @@ export class PlantIdService {
     return careDatabase['default'];
   }
 
+  /**
+   * Retrieves a list of common diseases for a given plant.
+   * @example
+   * getCommonDiseases('rosa')
+   * // returns ['Oidio', 'Ruggine', 'Macchia nera']
+   * @param {string} plantName - The name of the plant to retrieve diseases for.
+   * @returns {string[]} A list of common diseases associated with the specified plant.
+   * @description
+   *   - Converts the plant name to lowercase for case-insensitive matching.
+   *   - Falls back to a default list if no match is found.
+   *   - Utilizes a predefined disease database for plant-disease associations.
+   */
   private static getCommonDiseases(plantName: string): string[] {
     const diseaseDatabase: { [key: string]: string[] } = {
       'rosa': ['Oidio', 'Ruggine', 'Macchia nera'],
@@ -137,6 +174,18 @@ export class EPPOService {
   private static readonly API_BASE_URL = 'https://gd.eppo.int/taxon';
   private static readonly API_KEY = '279ad2d34aba9a168628a818d734df4b';
   
+  /**
+   * Identifies a plant from given image data using an indirect approach through EPPO.
+   * @example
+   * identifyPlant("someImageData")
+   * { plantName: "Rose", scientificName: "Rosa", confidence: 0.7, habitat: "Garden", careInstructions: "Water regularly", commonDiseases: ["Aphids"], provider: "eppo" }
+   * @param {string} imageData - The base64 encoded image data for identification.
+   * @returns {Promise<PlantIdentificationResult>} An object containing details about the identified plant.
+   * @description
+   *   - Uses EPPO service indirectly because it does not support direct image identification.
+   *   - First searches for common plants and retrieves specific details for the best match.
+   *   - Returns a fallback result in case of errors or no match found.
+   */
   static async identifyPlant(imageData: string): Promise<PlantIdentificationResult> {
     try {
       // EPPO non supporta identificazione diretta da immagine, quindi usiamo un approccio ibrido:
@@ -169,6 +218,19 @@ export class EPPOService {
   }
 
   // Cerca piante comuni nel database EPPO
+  /**
+   * Searches for common plants and retrieves their scientific names and codes.
+   * @example
+   * searchCommonPlants()
+   * [{ code: 'E1234', name: 'Rosa' }, { code: 'E5678', name: 'Basilicum' }]
+   * @param {string[]} commonPlants - List of plant names to search.
+   * @returns {Promise<any[]>} A promise that resolves to an array of objects containing plant codes and scientific names.
+   * @description
+   *   - The search is limited to the first two plants in the list to prevent server overload.
+   *   - Uses external API defined in `this.API_BASE_URL`.
+   *   - Fetch requests are made with the API key stored in `this.API_KEY`.
+   *   - Handles errors gracefully, returning an empty array if the search fails.
+   */
   private static async searchCommonPlants(): Promise<any[]> {
     try {
       // Lista di piante comuni da cercare
@@ -206,6 +268,19 @@ export class EPPOService {
   }
 
   // Ottieni dettagli specifici per una pianta
+  /**
+  * Retrieves detailed information about a plant given its plant code.
+  * @example
+  * getPlantDetails('ABC123')
+  * {preferredName: 'Plant Name', scientificName: 'Scientific Name', habitat: 'Habitat Info', pests: ['Pest'], taxonomy: 'Taxonomy Info', status: 'Status Info'}
+  * @param {string} plantCode - The code used to identify the plant within the database.
+  * @returns {Promise<any>} An object containing details about the plant, including names, habitat, pests, taxonomy, and status.
+  * @description
+  *   - Utilizes the EPPO API to fetch data about plants.
+  *   - Handles API errors by logging and returning an empty object.
+  *   - Returns default values if specific data fields are missing.
+  *   - Accesses a static base URL and a specific API key for requests.
+  */
   private static async getPlantDetails(plantCode: string): Promise<any> {
     try {
       const response = await fetch(`${this.API_BASE_URL}/${plantCode}?key=${this.API_KEY}`, {
@@ -236,6 +311,18 @@ export class EPPOService {
   }
 
   // Genera istruzioni di cura basate sui dati EPPO
+  /**
+  * Generates care instructions based on EPPO data for a given plant.
+  * @example
+  * generateCareFromEPPOData({ habitat: 'Mediterranean' })
+  * ['Preferisce clima mediterraneo con estati secche', 'Annaffia moderatamente, evita eccessi d\'acqua']
+  * @param {Object} plantDetails - Details about the plant, usually including habitat data.
+  * @returns {string[]} An array of care instructions tailored to the plant’s habitat.
+  * @description
+  *   - Utilizes EPPO data to determine care instructions based on plant habitat.
+  *   - Provides generic instructions if specific habitat-based data is unavailable.
+  *   - Supports 'Mediterranean' and 'Temperate' habitat types with dedicated care advice.
+  */
   private static generateCareFromEPPOData(plantDetails: any): string[] {
     const careInstructions = [];
     
@@ -262,6 +349,30 @@ export class EPPOService {
   }
 
   // Ricerca alternativa per nome scientifico o comune
+  /**
+   * Searches for plant identification information by plant name.
+   * @example
+   * searchByName('rose')
+   * [
+   *   {
+   *     plantName: 'Rosa',
+   *     scientificName: 'Rosa rubiginosa',
+   *     confidence: 0.95,
+   *     habitat: 'Temperate climates',
+   *     careInstructions: 'Requires full sun and well-drained soil',
+   *     commonDiseases: ['Black spot', 'Powdery mildew'],
+   *     provider: 'eppo'
+   *   },
+   *   ...
+   * ]
+   * @param {string} plantName - The name of the plant to search for.
+   * @returns {Promise<PlantIdentificationResult[]>} A list of plant identification results with details.
+   * @description
+   *   - Limits the number of search results to a maximum of 5.
+   *   - Utilizes the EPPO database for plant data retrieval.
+   *   - Calculates the confidence level based on the similarity between the input name and the scientific name.
+   *   - Fetches additional plant details like habitat and potential diseases.
+   */
   static async searchByName(plantName: string): Promise<PlantIdentificationResult[]> {
     try {
       const response = await fetch(`${this.API_BASE_URL}/search?q=${encodeURIComponent(plantName)}&key=${this.API_KEY}`, {
@@ -326,6 +437,19 @@ export class EPPOService {
   }
 
   // Calcolo distanza di Levenshtein
+  /**
+   * Calculates the Levenshtein distance between two strings.
+   * @example
+   * levenshteinDistance("kitten", "sitting")
+   * 3
+   * @param {string} str1 - The first string for comparison.
+   * @param {string} str2 - The second string for comparison.
+   * @returns {number} The Levenshtein distance, representing the minimum number of edits required to transform str1 into str2.
+   * @description
+   *   - Utilizes a dynamic programming approach to build a matrix that keeps track of the edit distances.
+   *   - Matrix rows represent the second string, str2, and columns represent the first string, str1.
+   *   - The algorithm considers substitution, insertion, and deletion operations for computing distances.
+   */
   private static levenshteinDistance(str1: string, str2: string): number {
     const matrix = [];
     
@@ -366,6 +490,18 @@ export class EPPOService {
 
 // Servizio simulato per test locali (quando le API non sono disponibili)
 export class MockPlantService {
+  /**
+   * Simulates the identification of a plant species based on image data.
+   * @example
+   * identifyPlant("image_data_string")
+   * Returns an object containing details about the identified plant.
+   * @param {string} imageData - Base64 encoded string of image data representing the plant.
+   * @returns {Promise<PlantIdentificationResult>} A promise that resolves to an object containing plant identification details such as name, confidence level, habitat, care instructions, common diseases, and provider.
+   * @description
+   *   - Delays the simulation to mimic the behavior of an actual API call.
+   *   - Returns simulated results with various common plants.
+   *   - Uses a random index to select one of several pre-defined mock results.
+   */
   static async identifyPlant(imageData: string): Promise<PlantIdentificationResult> {
     // Simula un delay della chiamata API
     await new Promise(resolve => setTimeout(resolve, 1000));
@@ -424,6 +560,19 @@ export class MockPlantService {
 
 // Servizio principale che combina i risultati
 export class CombinedPlantAnalysisService {
+  /**
+   * Analyzes a plant using multiple identification services and returns the most likely result.
+   * @example
+   * analyzePlant(imageData, progressCallback)
+   * // Returns a CombinedAnalysisResult containing the most likely plant identification.
+   * @param {string} imageData - Base64 encoded string of the image data for plant analysis.
+   * @param {function} [onProgress] - Optional callback function reporting progress of the analysis.
+   * @returns {Promise<CombinedAnalysisResult>} Contains plant identifications with confidence scores and consensus on the most likely plant.
+   * @description
+   *   - Utilizes multiple services: PlantIdService, EPPOService, and MockPlantService for identification.
+   *   - Provides progressive updates via the `onProgress` callback.
+   *   - Includes fallback mechanisms if services are unavailable, ensuring a result is returned.
+   */
   static async analyzePlant(
     imageData: string, 
     onProgress?: (progress: AnalysisProgress) => void
@@ -494,6 +643,19 @@ export class CombinedPlantAnalysisService {
 }
 
 // Esempio di utilizzo per immagini
+/**
+* Identifies a plant from a given image file utilizing a combined analysis service.
+* @example
+* identifyPlantFromImage(imageFile)
+* Promise { <CombinedAnalysisResult> }
+* @param {File} imageFile - An image file containing a picture of the plant to be identified.
+* @returns {Promise<CombinedAnalysisResult>} A promise that resolves to the result of the combined plant analysis.
+* @description
+*   - Utilizes FileReader API to read the image file as a data URL.
+*   - Provides real-time progress logging of the analysis stages and percentages.
+*   - Handles errors in both file reading and analysis processes.
+*   - Calls an external service for image analysis, which is asynchronous.
+*/
 export async function identifyPlantFromImage(imageFile: File): Promise<CombinedAnalysisResult> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -530,6 +692,20 @@ export async function searchPlantByName(plantName: string): Promise<PlantIdentif
 }
 
 // Esempio di utilizzo con ricerca per nome
+/**
+ * Identifies a plant using an image file or a plant name string.
+ * @example
+ * identifyPlantByNameOrImage(imageFile)
+ * // Returns: Promise<CombinedAnalysisResult>
+ *
+ * @param {File | string} input - An image file for plant identification or a string representing the plant name.
+ * @param {boolean} isImageFile - A flag indicating whether the input is an image file; defaults to true.
+ * @returns {Promise<CombinedAnalysisResult>} - An object with plant identification results, disease detection (empty if no disease detection), and a consensus containing the most likely plant and its confidence score.
+ * @description
+ *   - If input is an image, it calls the identifyPlantFromImage method.
+ *   - If input is a string, it searches the plant by name using the EPPO service.
+ *   - If both methods fail or inputs are invalid, it utilizes a mock service for fallback identification.
+ */
 export async function identifyPlantByNameOrImage(
   input: File | string, 
   isImageFile: boolean = true

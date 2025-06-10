@@ -12,6 +12,26 @@ interface CameraCaptureProps {
   canvasRef: React.RefObject<HTMLCanvasElement>;
 }
 
+/**
+ * Component for capturing photos using the device camera.
+ * @example
+ * CameraCapture({
+ *   onCapture: handleCapture,
+ *   onCancel: handleCancel,
+ *   videoRef: videoElementRef,
+ *   canvasRef: canvasElementRef
+ * });
+ * Returns a JSX element rendering the camera interface with controls.
+ * @param {function} {onCapture} - A callback function invoked with captured image data URL.
+ * @param {function} {onCancel} - A callback function invoked to handle the cancellation of the camera usage.
+ * @param {React.RefObject<HTMLVideoElement>} {videoRef} - A ref object pointing to the video HTML element used for camera stream.
+ * @param {React.RefObject<HTMLCanvasElement>} {canvasRef} - A ref object pointing to the canvas HTML element used for capturing photos.
+ * @returns {JSX.Element} Returns the rendered camera capture component interface.
+ * @description
+ *   - Initializes the camera and requests media permissions.
+ *   - Streams video to the HTML video element and provides control buttons for flash toggle, camera switch, cancel, and photo capture.
+ *   - Handles errors and provides user feedback through toast notifications.
+ */
 const CameraCapture: React.FC<CameraCaptureProps> = ({
   onCapture,
   onCancel,

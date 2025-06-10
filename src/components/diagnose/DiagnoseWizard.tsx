@@ -3,6 +3,18 @@ import { useState } from "react";
 import UserInfoForm from "./UserInfoForm";
 import PlantInfoForm from "./PlantInfoForm";
 
+/**
+* Builds a diagnosis message by combining personal user data and plant information.
+* @example
+* buildDiagnosisMessage(user, plant)
+* Returns a formatted string with user and plant details.
+* @param {any} user - Contains personal information such as name and email.
+* @param {any} plant - Contains plant details such as name, environment (indoor/outdoor), and symptoms.
+* @returns {string} A formatted message that consolidates user and plant information into a readable format.
+* @description
+*   - Constructs the message using template literals for clarity and readability.
+*   - Handles missing plant names by displaying a placeholder value ("-").
+*/
 function buildDiagnosisMessage(user: any, plant: any) {
   return `
 👤 **Dati personali**
@@ -24,6 +36,19 @@ async function sendAllToExpertChat(user: any, plant: any) {
   console.log("Sending to expert chat:", buildDiagnosisMessage(user, plant));
 }
 
+/**
+ * Component that manages the diagnostic steps for the wizard.
+ * @example
+ * <DiagnoseWizard />
+ * // Renders the UserInfoForm for the first step, 
+ * // and transitions to PlantInfoForm upon completion.
+ * @param {React.Component} None - This function represents a functional React component and does not take traditional arguments.
+ * @returns {JSX.Element} The rendered form elements for the current step of the wizard.
+ * @description
+ *   - Manages the state transitions between different steps of the wizard.
+ *   - Utilizes React's useState for step and user information management.
+ *   - Handles asynchronous operation when sending data to an expert chat.
+ */
 export default function DiagnoseWizard() {
   const [step, setStep] = useState(0);
   const [userInfo, setUserInfo] = useState(null);

@@ -16,6 +16,22 @@ interface BottomNavigationProps {
   showExpertTab?: boolean;
 }
 
+/**
+ * Renders the bottom navigation bar with different tabs and icons.
+ * @example
+ * BottomNavigation({ activeTab: 'diagnose', setActiveTab: () => {}, showExpertTab: true })
+ * // Returns JSX containing navigation bar with specified tabs
+ * @param {object} BottomNavigationProps - Contains props for bottom navigation.
+ * @param {string} BottomNavigationProps.activeTab - The ID of the currently active tab.
+ * @param {function} BottomNavigationProps.setActiveTab - Function to set the active tab.
+ * @param {boolean} BottomNavigationProps.showExpertTab - Conditional flag to show expert tab.
+ * @returns {JSX.Element} JSX element of the bottom navigation.
+ * @description
+ *   - The navigation bar is fixed at the bottom of the page.
+ *   - It supports five essential tabs: Diagnose, Chat, Library, Shop, and Profile.
+ *   - Notifications are highlighted on the chat tab if there are unread messages.
+ *   - An additional expert tab can be included based on the `showExpertTab` flag.
+ */
 const BottomNavigation = ({ activeTab, setActiveTab, showExpertTab = false }: BottomNavigationProps) => {
   const [unreadCount] = useState(0);
 

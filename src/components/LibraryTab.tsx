@@ -21,6 +21,18 @@ interface Article {
   created_at: string;
 }
 
+/**
+ * Renders a knowledge library with searchable and filterable article lists and detailed view for individual articles.
+ * @example
+ * LibraryTab()
+ * <div className="flex flex-col pt-6 pb-24">...</div>
+ * @param {Object} props - The properties object.
+ * @returns {JSX.Element} A React component representing the library tab.
+ * @description
+ *   - Utilizes Supabase functions to fetch articles and article details.
+ *   - Filters articles by category and search term.
+ *   - Displays a loading state while articles are being fetched.
+ */
 const LibraryTab = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeArticle, setActiveArticle] = useState<string | null>(null);
@@ -34,6 +46,19 @@ const LibraryTab = () => {
     fetchArticles();
   }, [activeTab, searchTerm]);
 
+  /**
+   * Fetches and updates the list of library articles based on the active tab and search term.
+   * @example
+   * sync()
+   * No direct return value, updates the component's state.
+   * @param {void} No parameters are required for this function.
+   * @returns {void} This function does not return a value, it updates the state.
+   * @description
+   *   - Uses Supabase's invoke function to fetch articles from the backend.
+   *   - Throws an error if there is a failure in fetching articles.
+   *   - Uses the try-catch-finally block to manage loading state and errors.
+   *   - Invokes toast notifications to display errors during data fetching.
+   */
   const fetchArticles = async () => {
     try {
       setLoading(true);
@@ -54,6 +79,19 @@ const LibraryTab = () => {
     }
   };
 
+  /**
+   * Fetches and sets the selected article based on the provided article ID.
+   * @example
+   * sync("12345")
+   * // Successfully sets the selected and active article.
+   * @param {string} articleId - The unique identifier of the article to fetch.
+   * @returns {Promise<void>} Executes asynchronous operations and returns no value.
+   * @description
+   *   - Invokes the 'get-library-articles' function from Supabase to retrieve article data.
+   *   - Sets the 'selected article' state using the retrieved article data.
+   *   - Sets the 'active article' state to the provided article ID.
+   *   - Displays an error toast notification if the invocation fails.
+   */
   const fetchArticleDetails = async (articleId: string) => {
     try {
       const { data, error } = await supabase.functions.invoke('get-library-articles', {

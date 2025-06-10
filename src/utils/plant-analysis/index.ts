@@ -11,6 +11,20 @@ import type { AnalysisProgress } from '../../services/aiProviders';
 export { formatHuggingFaceResult, dataURLtoFile, formatPercentage };
 
 // Plant analysis system with computer vision integration
+/**
+ * Conducts an enhanced computer vision plant analysis on an image file.
+ * @example
+ * sync(imageFile, plantInfo)
+ * { stage: 'analyzing', confidence: 0.85, ...}
+ * @param {File} imageFile - Image file of the plant to be analyzed.
+ * @param {any} plantInfo - (Optional) Additional information about the plant to enhance analysis.
+ * @returns {object|null} Returns analysis result with confidence or null if analysis fails.
+ * @description
+ *   - The analysis requires a minimum confidence level of 50%.
+ *   - Displays different toast messages based on the accuracy level obtained.
+ *   - Analysis progress is logged with a callback function.
+ *   - Handles errors and displays an error message to the user if analysis fails.
+ */
 export const analyzePlant = async (imageFile: File, plantInfo: any = null) => {
   try {
     // Dismiss any existing toasts

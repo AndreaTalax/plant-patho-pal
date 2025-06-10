@@ -34,6 +34,20 @@ interface SignUpFormProps {
   onSubmit: (values: SignUpFormValues) => Promise<void>;
 }
 
+/**
+* Renders a sign-up form allowing users to create a new account.
+* @example
+* SignUpForm({isLoading: false, onSubmit: handleSubmit})
+* JSX.Element
+* @param {boolean} isLoading - Indicates whether the form submission is in progress.
+* @param {function} onSubmit - Callback function to handle form submission.
+* @returns {JSX.Element} The rendered sign-up form component.
+* @description
+*   - Utilizes a form validation schema using Zod resolver.
+*   - Provides default empty values for email, password, and confirm password fields.
+*   - Conditional button text based on the isLoading state.
+*   - Provides links and messages for post-registration.
+*/
 export const SignUpForm = ({ isLoading, onSubmit }: SignUpFormProps) => {
   const form = useForm<SignUpFormValues>({
     resolver: zodResolver(signUpSchema),

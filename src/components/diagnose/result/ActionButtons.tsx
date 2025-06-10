@@ -27,6 +27,19 @@ interface ActionButtonsProps {
   };
 }
 
+/**
+ * Manages actions for starting new plant analysis, saving diagnosis, and chatting with an expert.
+ * @example
+ * ActionButtons({ useAI: true, hasValidAnalysis: true, diagnosisData, ... })
+ * Returns a component rendering action buttons for diagnosis management.
+ * @param {Object} ActionButtonsProps - Props containing functions and data for action buttons.
+ * @returns {JSX.Element} A component with interactive buttons for diagnosis actions.
+ * @description
+ *   - Uses authentication state to determine access to chat functionality.
+ *   - Facilitates AI-assisted diagnosis if enabled and valid analysis data is present.
+ *   - Displays authentication dialog when user is not logged in and attempts expert consultation.
+ *   - Directly navigates and switches UI tab post successful chat creation.
+ */
 const ActionButtons = ({ 
   onStartNewAnalysis, 
   onSaveDiagnosis, 
@@ -42,6 +55,19 @@ const ActionButtons = ({
   
   const isAuthenticated = !!user;
   
+  /**
+  * Initiates a chat with an expert for plant diagnosis.
+  * @example
+  * sync()
+  * // Initiates the process to start a chat after validating authentication and setting up conversation details.
+  * @param {none} - No parameters required.
+  * @returns {void} Does not return any value.
+  * @description
+  *   - Validates if the user is authenticated before proceeding.
+  *   - Prepares and uses plant diagnosis data to set up a new conversation and initial message.
+  *   - Handles any errors from database operations and continues despite non-critical image message errors.
+  *   - Navigates to the chat interface and provides feedback via toast notifications on the process initiation.
+  */
   const startChatWithExpert = async () => {
     if (!isAuthenticated) {
       setShowAuthDialog(true);

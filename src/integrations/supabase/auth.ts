@@ -2,6 +2,20 @@ import { supabase } from '@/integrations/supabase/client';
 import { User, Session } from '@supabase/supabase-js';
 
 // Function for user registration
+/**
+ * Handles user registration using Supabase. Allows direct access for whitelisted emails without calling supabase.auth.signUp.
+ * @example
+ * sync('example@example.com', 'password123')
+ * { confirmationRequired: true, message: "Please check your email to confirm your account.", data: {...} }
+ * @param {string} email - The email address of the user attempting to register.
+ * @param {string} password - The password provided by the user for registration.
+ * @returns {object} Contains registration status message, whether email confirmation is required, and user data.
+ * @description
+ *   - Provides a mock registration for selected whitelisted emails without needing email confirmation.
+ *   - Implements special handling for email rate limit errors, returning a specific rate limit exceeded flag.
+ *   - Manually sends confirmation emails using a designated Supabase function for newly registered users.
+ *   - Includes special error handling for cases where signups may be disabled by configuration.
+ */
 export const signUp = async (email: string, password: string) => {
   try {
     // For email specifics, allowing direct access without calling supabase.auth.signUp
@@ -142,6 +156,20 @@ export const signUp = async (email: string, password: string) => {
 };
 
 // User login function
+/**
+ * Simulates or executes email login authentication using Supabase.
+ * @example
+ * sync('test@gmail.com', 'test123')
+ * { user: mockUser, session: mockSession }
+ * @param {string} email - The email address of the user attempting to log in.
+ * @param {string} password - The password associated with the email address.
+ * @returns {object} Returns an object containing user and session data.
+ * @description
+ *   - Allows direct access for whitelisted emails without calling Supabase authentication.
+ *   - Generates mock user data when using whitelisted emails, providing a simulated login experience.
+ *   - Handles errors related to unconfirmed emails specifically when using Supabase.
+ *   - Logs detailed activity for security and debugging purposes during the authentication process.
+ */
 export const signIn = async (email: string, password: string) => {
   try {
     // For specific emails, allow direct access without calling supabase.auth.signInWithPassword
@@ -238,6 +266,18 @@ export const signIn = async (email: string, password: string) => {
 };
 
 // Function to resend confirmation email
+/**
+ * Simulates sending a confirmation email based on the given email address.
+ * @example
+ * sync('example@gmail.com')
+ * { success: true, message: "We've sent a new confirmation email. Check your inbox." }
+ * @param {string} email - The email address to which the confirmation email should be sent.
+ * @returns {Object} Contains a message and status indicators such as success or rate limit exceeded.
+ * @description
+ *   - Attempts to resend a confirmation email via Supabase API and, if it fails, attempts using an edge function.
+ *   - Uses a whitelist to simulate successful email sending for certain addresses.
+ *   - Error handling includes logging and throwing errors when necessary during email sending processes.
+ */
 export const resendConfirmationEmail = async (email: string) => {
   try {
     // For whitelisted emails, simulate successful sending
@@ -306,6 +346,18 @@ export const resendConfirmationEmail = async (email: string) => {
 };
 
 // User logout function
+/**
+* Logs out the current user from Supabase authentication.
+* @example
+* sync()
+* // Console output: 'Logout successful' or 'Logout error: [error message]'
+* @returns {void} This function does not return any value.
+* @description
+*   - Uses the Supabase auth object to perform sign-out.
+*   - Captures and throws errors during the logout process.
+*   - Outputs the result of the logout attempt to the console.
+*   - Ensures that any error thrown during logout is logged and propagated.
+*/
 export const signOut = async () => {
   try {
     const { error } = await supabase.auth.signOut();

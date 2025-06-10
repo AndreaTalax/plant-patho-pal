@@ -37,6 +37,19 @@ interface Order {
   created_at: string;
 }
 
+/**
+* This component manages the user's profile including personal information, orders, and avatar.
+* @example
+* ProfileTab()
+* Returns a JSX element for displaying and interacting with user profile data.
+* @param {none} No explicit parameters as it relies on hooks and context.
+* @returns {JSX.Element} Renders the UI for the user's profile including hero image, activity tabs, personal information, and actions like sign out.
+* @description
+*   - Initializes component state based on user profile context.
+*   - Handles asynchronous operations for fetching orders and updating profile information.
+*   - Detailed tabbed interface to navigate through user orders, diagnoses, and saved articles.
+*   - Validates avatar image before upload and updates upon successful upload.
+*/
 const ProfileTab = () => {
   const [privacyPolicyOpen, setPrivacyPolicyOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -108,6 +121,19 @@ const ProfileTab = () => {
     fileInputRef.current?.click();
   };
   
+  /**
+  * Handles image file upload from user input and updates user profile picture.
+  * @example
+  * sync(event)
+  * Uploads the selected image file and updates the profile picture.
+  * @param {React.ChangeEvent<HTMLInputElement>} event - The file input change event containing the selected files.
+  * @returns {void} No return value.
+  * @description
+  *   - Validates that the selected file is an image, and its size is less than 5MB.
+  *   - Uses Supabase function to upload the image and update the user's profile.
+  *   - Provides user feedback through toast notifications for success and error states.
+  *   - Resets file input value and uploading state after the operation.
+  */
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     try {
       if (!event.target.files || event.target.files.length === 0) {

@@ -12,12 +12,41 @@ interface AiServicesDataProps {
   standardizedData?: DiagnosedDisease | null;
 }
 
+/**
+* Generates a diagnostic explanation based on plant analysis data
+* @example
+* analysisDetails, isAnalyzing, plantSymptoms, standardizedData - the function evaluates plant health and provides diagnostic explanations.
+* Returns a formatted detailed explanation or null if analysis is ongoing or details are unavailable.
+* @param {Object} analysisDetails - Contains insights from the multi-service analysis, including health status.
+* @param {boolean} isAnalyzing - Indicates if diagnostic analysis is currently in process.
+* @param {string} plantSymptoms - Describes observed symptoms or conditions affecting the plant.
+* @param {Object} standardizedData - Provides standardized information about plant health, species, and possible diseases.
+* @returns {string|null} Explanation regarding the plant's health, potential diseases, and advice.
+* @description
+*   - Formats a detailed interpretation of plant analysis, integrating provided symptoms and AI insights.
+*   - Determines plant health status and potential issues using symptom keywords and AI results.
+*   - Provides actionable advice for maintaining plant health or seeking professional diagnosis.
+*/
 const AiServicesData = ({ analysisDetails, isAnalyzing, plantSymptoms, standardizedData }: AiServicesDataProps) => {
   if (isAnalyzing || !analysisDetails) {
     return null;
   }
 
   // Format analysis details into a more explanatory output
+  /**
+   * Provides an explanation of plant health based on analysis details and symptoms described.
+   * @example
+   * anonymousFunction(analysisDetails, plantSymptoms)
+   * Returns a comprehensive explanation of plant health status, potential diseases, causes, and advice.
+   * @param {Object} analysisDetails - The analysis details object containing insights about plant health and detected diseases.
+   * @param {string} plantSymptoms - A string describing various symptoms observed in the plant for analysis.
+   * @returns {string} A detailed explanation containing the plant health status, potential disease, causes, and advice.
+   * @description
+   *   - Extracts the plant name and disease information from provided analysis data.
+   *   - Identifies environmental and symptom-based factors affecting plant health.
+   *   - Offers advice for maintaining plant health based on symptoms and identified issues.
+   *   - Provides health explanation using information sourced from Plexi AI analysis.
+   */
   const generateDiagnosisExplanation = () => {
     if (!analysisDetails || !plantSymptoms) return '';
     

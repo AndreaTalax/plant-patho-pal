@@ -6,6 +6,20 @@ import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { Camera, MessageCircle, ShoppingBag, Leaf, User } from 'lucide-react';
 
+/**
+ * Renders a services page with various cards and actions representing different service offerings.
+ * @example
+ * renderServicesPage()
+ * <div>...</div>
+ * @param {Object} useTheme - A hook that provides theme-based functionalities.
+ * @param {Function} useNavigate - A hook used for navigation within the application.
+ * @returns {JSX.Element} The rendered component representing the services page.
+ * @description
+ *   - Utilizes translation hook 't' to display service titles and descriptions.
+ *   - Each service card provides an action when clicked, navigating the user to the homepage.
+ *   - Supports both standard and premium service offerings with respective layouts.
+ *   - Offers contact functionality for premium services through a dedicated button.
+ */
 const Services = () => {
   const { t } = useTheme();
   const navigate = useNavigate();

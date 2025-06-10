@@ -1,6 +1,18 @@
 import React from 'react'
 import { CheckCircle, AlertTriangle, Info, Lightbulb } from 'lucide-react'
 
+/**
+ * Renders a detailed health analysis of a plant based on a diagnosis object.
+ * @example
+ * DiagnosisResult({ status: 'healthy', confidence: 0.85, disease: 'None', description: 'No issues detected', symptoms: [], recommendations: [], prevention: [] })
+ * // Returns a React component displaying the plant health status, confidence score, and other details.
+ * @param {Object} diagnosis - The diagnosis data containing various aspects of plant health.
+ * @returns {JSX.Element} A React component summarizing the plant's health condition with visual icons and color coding.
+ * @description
+ *   - The function uses helper functions 'getStatusIcon' and 'getStatusColor' to dynamically select icons/colors based on the plant status.
+ *   - The component conditionally renders different sections such as confidence score, disease detection, and recommendations depending on the provided diagnosis data.
+ *   - The analysis includes a note highlighting the AI-generated nature of the diagnosis, advising consultation with a professional.
+ */
 const DiagnosisResult = ({ diagnosis }) => {
   const getStatusIcon = (status) => {
     switch (status?.toLowerCase()) {

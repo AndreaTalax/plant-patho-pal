@@ -3,6 +3,19 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
 
 // Function to verify if the image contains a plant
+/**
+ * Verifies if the given image contains a plant using AI-based analysis.
+ * @example
+ * sync(imageArrayBuffer, huggingFaceToken)
+ * { isPlant: true, confidence: 0.85, detectedPlantType: "flowering", aiServices: [...] }
+ * @param {ArrayBuffer} imageArrayBuffer - Image data buffer to be analyzed.
+ * @param {string | undefined} huggingFaceToken - Authorization token for accessing Hugging Face API.
+ * @returns {Promise<{ isPlant: boolean; confidence: number; detectedPlantType?: string; aiServices?: {serviceName: string; result: boolean; confidence: number}[] }>} - Analysis results including plant verification status and confidence level.
+ * @description
+ *   - The function defaults to assuming the image contains a plant if the Hugging Face token is not provided.
+ *   - If the API model fails, it defaults the plant verification to true with reduced confidence.
+ *   - High-confidence results are filtered out only with minimum score threshold of 0.1.
+ */
 export const verifyImageContainsPlant = async (imageArrayBuffer: ArrayBuffer, huggingFaceToken: string | undefined): Promise<{
   isPlant: boolean;
   confidence: number;
@@ -102,6 +115,19 @@ export const verifyImageContainsPlant = async (imageArrayBuffer: ArrayBuffer, hu
 };
 
 // Function to check if the image is specifically of a leaf
+/**
+ * Sends image data to a Hugging Face model to detect plant parts and verifies presence of leaves.
+ * @example
+ * sync(imageArrayBuffer, huggingFaceToken)
+ * returns true if leaf parts are detected with sufficient confidence.
+ * @param {ArrayBuffer} imageArrayBuffer - Contains the binary data of the image to be analyzed.
+ * @param {string | undefined} huggingFaceToken - Optional authorization token for Hugging Face API access.
+ * @returns {Promise<boolean>} Indicates whether leaf parts are detected with a confidence score higher than 0.3.
+ * @description
+ *   - The function initiates a fetch request to Hugging Face API using FormData to send the image.
+ *   - A Blob is constructed from the input buffer and appended to the FormData as JPEG.
+ *   - Timeout is set to 10 seconds for the API request.
+ */
 export const isLeafImage = async (imageArrayBuffer: ArrayBuffer, huggingFaceToken: string | undefined): Promise<boolean> => {
   try {
     if (!huggingFaceToken) {
@@ -144,6 +170,20 @@ export const isLeafImage = async (imageArrayBuffer: ArrayBuffer, huggingFaceToke
 };
 
 // Function to check if the plant might be an EPPO regulated pest/disease concern
+/**
+ * Analyzes an image for EPPO regulated pests or diseases using Hugging Face API.
+ * @example
+ * sync(imageArrayBuffer, huggingFaceToken)
+ * // returns { hasEppoConcern: true, concernName: 'Xylella fastidiosa', concernType: 'bacteria', eppoCode: 'XYLEFA', regulatoryStatus: 'Quarantine pest/disease', confidenceScore: 0.85 }
+ * @param {ArrayBuffer} imageArrayBuffer - The image data in ArrayBuffer format to be analyzed.
+ * @param {string | undefined} huggingFaceToken - The authentication token for accessing Hugging Face API.
+ * @returns {Promise<Object>} Resolves with an object indicating EPPO concern presence and details.
+ * @description
+ *   - Utilizes Hugging Face model to predict pest/disease concerns in the image.
+ *   - Applies a 10-second timeout for API requests using AbortSignal.
+ *   - Filters results with a confidence score greater than 0.7 and matches keywords like 'xylella', 'regulated', or 'quarantine'.
+ *   - Determines the EPPO code based on the detected pest/disease label.
+ */
 export const checkForEppoConcerns = async (
   imageArrayBuffer: ArrayBuffer, 
   huggingFaceToken: string | undefined

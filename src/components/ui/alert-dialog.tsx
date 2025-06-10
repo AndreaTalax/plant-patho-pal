@@ -43,6 +43,19 @@ const AlertDialogContent = React.forwardRef<
 ))
 AlertDialogContent.displayName = AlertDialogPrimitive.Content.displayName
 
+/**
+ * Renders a customizable HTML div element with predefined styles and additional props.
+ * @example
+ * renderDiv('custom-class', { id: 'unique-id', 'data-value': '42' })
+ * 
+ * @param {string} className - A custom class name to be appended to default styles.
+ * @param {React.HTMLAttributes<HTMLDivElement>} props - Additional HTML attributes and properties for the div element.
+ * @returns {JSX.Element} A styled div element with the applied class names and props.
+ * @description
+ *   - The function uses a utility function (cn) to concatenate class names from Tailwind CSS with custom ones.
+ *   - It supports responsive design with predefined text alignment for different screen sizes.
+ *   - All additional props are spread onto the div element, allowing extensive customization.
+ */
 const AlertDialogHeader = ({
   className,
   ...props
@@ -57,6 +70,18 @@ const AlertDialogHeader = ({
 )
 AlertDialogHeader.displayName = "AlertDialogHeader"
 
+/**
+ * Renders a styled alert dialog component.
+ * @example
+ * renderAlertDialog('custom-class', { role: 'alert' })
+ * <div class="custom-class flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2" role="alert"></div>
+ * @param {Object} props - React HTML attributes to customize the div element.
+ * @returns {JSX.Element} A div element representing the styled alert dialog with applied props and classes.
+ * @description
+ *   - Merges additional class names with default styles using the `cn` function.
+ *   - Applies responsive layout styles switching from column to row on small screens.
+ *   - Allows all standard React.HTMLAttributes to be passed and spread into the div.
+ */
 const AlertDialogFooter = ({
   className,
   ...props

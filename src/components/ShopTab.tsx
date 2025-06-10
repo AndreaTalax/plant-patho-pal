@@ -26,6 +26,20 @@ interface CartItem {
   product?: Product;
 }
 
+/**
+ * Provides the main functionality for a shopping tab,
+ * including product search, category selection, cart management, and checkout processing.
+ * @example
+ * ShopTab()
+ * [JSX Element]
+ * @param none
+ * @returns {JSX.Element} Complete shopping interface component with all functionalities.
+ * @description
+ *   - Utilizes useState hooks to manage search term, selected category, cart items, cart visibility, checkout visibility, payment status, product list, and loading state.
+ *   - Requests product data from a server using the Supabase cloud function 'get-products' based on search term and selected category.
+ *   - Includes functions for adding, removing, and updating items in the cart, handling user authentication checks.
+ *   - Facilitates payment via Stripe integration, managing payment status and user experience feedback.
+ */
 const ShopTab = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -42,6 +56,18 @@ const ShopTab = () => {
     fetchProducts();
   }, [selectedCategory, searchTerm]);
 
+  /**
+   * Fetches products based on selected category and search term.
+   * @example
+   * sync()
+   * No direct return value, but updates products and loading state.
+   * @param {void} - Does not take any direct arguments.
+   * @returns {void} No direct return value.
+   * @description
+   *   - Invokes 'get-products' function from Supabase to retrieve products.
+   *   - Throws an error if the products cannot be fetched.
+   *   - Updates loading and products state accordingly.
+   */
   const fetchProducts = async () => {
     try {
       setLoading(true);
@@ -61,6 +87,18 @@ const ShopTab = () => {
 
   const categories = Array.from(new Set(products.map(p => p.category)));
 
+  /**
+  * Adds a product to the cart, updating quantity if it already exists.
+  * @example
+  * addToCart("12345")
+  * // Product added to cart
+  * @param {string} productId - The unique identifier of the product to add to the cart.
+  * @returns {void} Does not return a value.
+  * @description
+  *   - Uses a toast message to inform the user when a product is added to the cart for the first time.
+  *   - Updates the quantity of the product in the cart if the product already exists.
+  *   - This function is part of the ShopTab component in the src/components directory.
+  */
   const addToCart = (productId: string) => {
     setCart(currentCart => {
       const existingItem = currentCart.find(item => item.id === productId);
@@ -82,6 +120,18 @@ const ShopTab = () => {
     toast.success("Product removed from cart");
   };
 
+  /**
+   * Updates product quantity in the shopping cart or removes it if the quantity is zero or less.
+   * @example
+   * updateProductQuantity("abc123", 5)
+   * Updates the product with ID "abc123" to quantity 5 in the cart.
+   * @param {string} productId - The ID of the product to update in the cart.
+   * @param {number} newQuantity - The new quantity for the product. If zero or less, the product is removed from the cart.
+   * @returns {void} Does not return any value.
+   * @description
+   *   - Automatically removes the product from the cart if the new quantity is zero or less.
+   *   - Updates the state of the cart using the `setCart` function.
+   */
   const updateQuantity = (productId: string, newQuantity: number) => {
     if (newQuantity <= 0) {
       removeFromCart(productId);
@@ -114,6 +164,18 @@ const ShopTab = () => {
     setIsCheckoutOpen(true);
   };
 
+  /**
+   * Initiates a payment process with user authentication and error handling.
+   * @example
+   * sync()
+   * // Initiates the payment process and redirects to Stripe if successful.
+   * @param {boolean} {user} - A boolean indicating whether the user is authenticated.
+   * @returns {void} Does not return anything.
+   * @description
+   *   - Redirects the user to Stripe checkout upon successful payment initiation.
+   *   - Updates and resets payment and cart status based on the success or failure of the operation.
+   *   - Displays error messages using toast notifications if the user is not logged in or if payment fails.
+   */
   const processPayment = async () => {
     if (!user) {
       toast.error("Please login to continue");

@@ -7,6 +7,20 @@ interface EPPOResponse {
   status?: string;
 }
 
+/**
+ * Handles HTTP request for EPPO database search with CORS support.
+ * @example
+ * sync(event, context)
+ * { statusCode: 200, headers: { 'Access-Control-Allow-Origin': '*', ... }, body: '{}' }
+ * @param {HandlerEvent} event - The HTTP event containing request parameters.
+ * @param {HandlerContext} context - The context in which the handler is executed.
+ * @returns {object} The HTTP response object containing status code, headers, and body.
+ * @description
+ *   - Manages OPTIONS requests for CORS by allowing necessary headers and methods.
+ *   - Ensures that only GET requests are processed; other methods return a 405 error.
+ *   - In case of missing query parameter 'q', returns a 400 error indicating requirement.
+ *   - Fetches data from EPPO API and returns it, handling any API errors gracefully.
+ */
 export const handler: Handler = async (event: HandlerEvent, context: HandlerContext) => {
   // Gestisci le richieste OPTIONS per CORS
   if (event.httpMethod === 'OPTIONS') {

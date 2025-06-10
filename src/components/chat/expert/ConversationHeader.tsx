@@ -11,6 +11,28 @@ interface ConversationHeaderProps {
   onDeleteConversation: () => void;
 }
 
+/**
+ * Renders a conversation header with user interaction buttons.
+ * @example
+ * ConversationHeader({
+ *   username: "JohnDoe",
+ *   isBlocked: false,
+ *   onRecommendProduct: () => {},
+ *   onToggleBlockUser: () => {},
+ *   onDeleteConversation: () => {}
+ * })
+ * // Returns a JSX element representing the conversation header with buttons.
+ * @param {string} username - The username of the conversation participant.
+ * @param {boolean} isBlocked - Indicates if the user is blocked, affecting button states.
+ * @param {function} onRecommendProduct - Callback for when the "Recommend" button is clicked.
+ * @param {function} onToggleBlockUser - Callback for toggling user block status.
+ * @param {function} onDeleteConversation - Callback for deleting the conversation.
+ * @returns {JSX.Element} A header element with user interaction buttons.
+ * @description
+ *   - The "Recommend" button is disabled if the user is blocked.
+ *   - Block status affects button appearance and hover text.
+ *   - Provides tooltips to guide users on button functionalities.
+ */
 const ConversationHeader = ({
   username,
   isBlocked,

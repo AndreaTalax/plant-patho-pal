@@ -13,6 +13,20 @@ interface PlantInfoFormProps {
   initialData?: Partial<PlantInfo>;
 }
 
+/**
+ * A form component for collecting detailed plant information to facilitate diagnosis.
+ * @example
+ * PlantInfoForm({ onComplete: handleFormCompletion, initialData: defaultPlantData })
+ * Renders a plant information form and calls onComplete with the updated data.
+ * @param {object} PlantInfoFormProps - Props for the PlantInfoForm component.
+ * @param {Function} PlantInfoFormProps.onComplete - Callback function to execute upon form submission, receiving the collected plant data.
+ * @param {object} [PlantInfoFormProps.initialData] - Optional initial values for the form fields.
+ * @returns {JSX.Element} A styled card containing the plant information form.
+ * @description
+ *   - Uses React's useState hook to manage form data locally.
+ *   - Includes validation logic to ensure required fields are filled before submission.
+ *   - Provides options for submitting the collected plant data either through AI diagnosis or expert consultation.
+ */
 const PlantInfoForm = ({ onComplete, initialData }: PlantInfoFormProps) => {
   const [formData, setFormData] = useState<PlantInfo>({
     isIndoor: initialData?.isIndoor ?? true,
@@ -27,6 +41,18 @@ const PlantInfoForm = ({ onComplete, initialData }: PlantInfoFormProps) => {
 
   const [diagnosisMethod, setDiagnosisMethod] = useState<'ai' | 'expert' | ''>('');
 
+  /**
+   * Handles form submission and updates form data based on the selected diagnosis method.
+   * @example
+   * handleFormSubmit(event)
+   * // No return value, updates state with new form data and triggers onComplete callback
+   * @param {React.FormEvent} e - The form event triggered on submission.
+   * @returns {void} Executes onComplete with updated form data.
+   * @description
+   *   - Aggregates choices from the diagnosis method selection to construct updatedData.
+   *   - Converts diagnosisMethod into boolean flags for options: useAI and sendToExpert.
+   *   - Ensures infoComplete flag is set in updatedData.
+   */
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     

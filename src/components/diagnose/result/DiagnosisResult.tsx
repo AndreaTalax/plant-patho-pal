@@ -25,6 +25,34 @@ interface DiagnosisResultProps {
   analysisDetails?: AnalysisDetails;
 }
 
+/**
+ * Displays diagnosis analysis results based on provided data.
+ * @example
+ * DiagnosisResult({
+ *   imageSrc: 'plantImage.jpg',
+ *   plantInfo: {...},
+ *   analysisData: {...},
+ *   isAnalyzing: true,
+ *   onStartNewAnalysis: () => {...},
+ *   onChatWithExpert: () => {...},
+ *   analysisDetails: {...}
+ * })
+ * Returns a JSX component displaying the diagnosis status and results.
+ * @param {Object} DiagnosisResultProps - Object containing the necessary properties for diagnosis results.
+ * @param {string} DiagnosisResultProps.imageSrc - Source URL for the image being analyzed.
+ * @param {Object} DiagnosisResultProps.plantInfo - Information about the plant.
+ * @param {Object} DiagnosisResultProps.analysisData - Data resulting from the plant analysis.
+ * @param {boolean} DiagnosisResultProps.isAnalyzing - Flag indicating if analysis is currently in progress.
+ * @param {Function} DiagnosisResultProps.onStartNewAnalysis - Function to initiate a new analysis.
+ * @param {Function} DiagnosisResultProps.onChatWithExpert - Function to contact an expert for further advice.
+ * @param {Object} DiagnosisResultProps.analysisDetails - Additional details from the AI analysis.
+ * @returns {JSX.Element} JSX component displaying the plant analysis status and results.
+ * @description
+ *   - Displays a loader and message during the plant analysis process.
+ *   - Provides visual feedback with icons and colors based on analysis confidence and health status.
+ *   - Offers actionable buttons for retrying analysis or consulting an expert.
+ *   - Includes specific sections like symptoms, treatments, and detailed AI analysis if data is available.
+ */
 const DiagnosisResult = ({
   imageSrc,
   plantInfo,

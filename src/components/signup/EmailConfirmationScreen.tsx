@@ -12,10 +12,35 @@ interface EmailConfirmationScreenProps {
   isRateLimited: boolean;
 }
 
+/**
+* Handles the email confirmation UI and resending confirmation emails.
+* @example
+* EmailConfirmationScreen({ email: "user@example.com", isRateLimited: false })
+* // Displays the email confirmation screen and handles resend logic.
+* @param {string} email - The email address to which the confirmation is sent.
+* @param {boolean} isRateLimited - Indicates if the user is currently rate limited.
+* @returns {JSX.Element} The email confirmation screen component.
+* @description
+*   - Displays a user interface prompting the user to check their email.
+*   - Provides functionality to resend the confirmation email if it was not received.
+*   - Displays different messages based on whether the user is rate limited.
+*/
 export const EmailConfirmationScreen = ({ email, isRateLimited }: EmailConfirmationScreenProps) => {
   const [isResendingEmail, setIsResendingEmail] = useState(false);
   const navigate = useNavigate();
 
+  /**
+   * Handles resending the confirmation email with appropriate user notifications.
+   * @example
+   * sync()
+   * Displays toast notifications based on the success or failure of email resending operation.
+   * @param {string} email - Email of the user to whom the confirmation link will be resent. Must be non-empty.
+   * @returns {Promise<void>} Resolves when the operation has completed, either successfully or with errors.
+   * @description
+   *   - Displays error toast when email is not provided.
+   *   - Uses toast notifications to inform the user about the process status, such as rate limit exceeded, success, or failure.
+   *   - Manages loading state through setIsResendingEmail().
+   */
   const handleResendConfirmation = async () => {
     if (!email) {
       toast.error("Email required", {

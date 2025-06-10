@@ -11,6 +11,19 @@ interface EppoDataPanelProps {
   eppoData?: any;
 }
 
+/**
+ * Renders the EPPO data panel displaying diagnosis based on plant data analysis.
+ * @example
+ * EppoDataPanel({ analysisDetails, userInput, eppoData })
+ * Returns a React component displaying the diagnosis information.
+ * @param {object} { analysisDetails, userInput, eppoData: initialEppoData } - Props providing analysis details, user input, and initial EPPO data.
+ * @returns {JSX.Element | null} React component displaying diagnosis details or null if inputs are invalid.
+ * @description
+ *   - Fetches EPPO data when analysis details or user inputs change.
+ *   - Handles state changes for loading, error, and fetched data.
+ *   - Integrates with Supabase edge function to query the EPPO API.
+ *   - Gracefully handles API errors with retry options.
+ */
 const EppoDataPanel = ({ analysisDetails, userInput, eppoData: initialEppoData }: EppoDataPanelProps) => {
   const [eppoData, setEppoData] = useState<any>(initialEppoData || null);
   const [explanation, setExplanation] = useState<string | null>(null);
@@ -28,6 +41,18 @@ const EppoDataPanel = ({ analysisDetails, userInput, eppoData: initialEppoData }
     }
   }, [analysisDetails, userInput, initialEppoData]);
 
+  /**
+   * Asynchronously fetches data from the EPPO API related to pests based on the analysis details.
+   * @example
+   * sync()
+   * // Expected outcome: Updates component state with fetched EPPO data or sets error message
+   * @returns {void} Updates component state with EPPO data or error message.
+   * @description
+   *   - Initializes loading state and resets error before making a request.
+   *   - Constructs a query string based on plant name from analysis details.
+   *   - Invokes 'eppo-api' edge function via Supabase to perform the API request.
+   *   - Handles API response or error by updating state accordingly or logging to console.
+   */
   const fetchEppoData = async () => {
     try {
       setIsLoading(true);

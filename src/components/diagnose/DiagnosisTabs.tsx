@@ -15,6 +15,27 @@ interface DiagnosisTabsProps {
   onNavigateToShop: (productId?: string) => void;
 }
 
+/**
+ * Render tabs component showing different aspects of a disease diagnosis.
+ * @example
+ * renderDiagnosisTabs({
+ *   disease: { name: 'Powdery Mildew', description: 'A fungal disease affecting plants.' },
+ *   analysisDetails: { identifiedFeatures: ['White fungal spots'], alternativeDiagnoses: [] },
+ *   activeTab: 'overview',
+ *   onTabChange: (newTab) => console.log(newTab),
+ *   onNavigateToLibrary: (resource) => console.log(resource),
+ *   onNavigateToShop: () => console.log('Navigate to shop')
+ * })
+ * <Tabs ...>
+ * 
+ * @param {object} props - DiagnosisTabsProps containing disease details, analysis details, active tab, and navigation functions.
+ * @returns {JSX.Element} React component rendering the tabs interface.
+ * @description
+ *   - Makes use of the 'Tabs' component to display information based on active tab value.
+ *   - Provides navigation interactions to 'Learn More' or to view 'Recommended Products'.
+ *   - Uses utility function 'hasProduct' to check for product recommendations.
+ *   - Displays a warning when the diagnosis confidence is below a certain threshold.
+ */
 const DiagnosisTabs = ({
   disease,
   analysisDetails,

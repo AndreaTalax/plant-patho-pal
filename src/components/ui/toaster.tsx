@@ -8,6 +8,17 @@ import {
   ToastViewport,
 } from "@/components/ui/toast"
 
+/**
+ * Renders a collection of toast notifications using a React component.
+ * @example
+ * Toaster()
+ * <ToastProvider>...</ToastProvider>
+ * @returns {JSX.Element} A React component representing a list of toast notifications with various properties.
+ * @description
+ *   - Utilizes the `useToast` hook to access the list of active toasts.
+ *   - Each toast can optionally include a title, description, and custom actions.
+ *   - The `ToastProvider` is used to encapsulate the toasts for proper context management.
+ */
 export function Toaster() {
   const { toasts } = useToast()
 

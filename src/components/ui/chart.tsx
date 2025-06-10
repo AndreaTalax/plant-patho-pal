@@ -65,6 +65,20 @@ const ChartContainer = React.forwardRef<
 })
 ChartContainer.displayName = "Chart"
 
+/**
+* Generates and returns a JSX style component with theme and color variables for a chart
+* @example
+* generateStyle({ id: 'chart1', config: chartConfig })
+* <style dangerouslySetInnerHTML={{ __html: '...' }} />
+* @param {Object} { id, config } - Object containing the chart ID and its configuration settings.
+* @param {string} id - The unique identifier for the chart.
+* @param {ChartConfig} config - Configuration object for the chart, which includes theme and color settings.
+* @returns {JSX.Element|null} Returns a JSX style element with CSS variables if any theme or color settings exist; otherwise, returns null.
+* @description
+*   - Filters the config to find any entries with theme or color properties.
+*   - Generates CSS variables prefixed with '--color-' using the theme or color from the config.
+*   - Utilizes `dangerouslySetInnerHTML` to inject inline styles for the specified chart.
+*/
 const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }) => {
   const colorConfig = Object.entries(config).filter(
     ([_, config]) => config.theme || config.color
@@ -315,6 +329,19 @@ const ChartLegendContent = React.forwardRef<
 ChartLegendContent.displayName = "ChartLegend"
 
 // Helper to extract item config from a payload.
+/**
+ * Retrieves chart configuration from a given payload object using a specified key.
+ * @example
+ * getPayloadConfigFromPayload(chartConfig, dataPayload, 'titleKey')
+ * someConfigObject
+ * @param {ChartConfig} config - Chart configuration object that maps keys to settings.
+ * @param {unknown} payload - Object containing potential mappings for configuration keys.
+ * @param {string} key - Key used to look up configuration settings within the payload.
+ * @returns {ChartConfig} Returns the configuration object associated with the resolved key.
+ * @description
+ *   - Automatically resolves keys from nested payload structures if applicable.
+ *   - Defaults to using the provided key if no matching payload key is found.
+ */
 function getPayloadConfigFromPayload(
   config: ChartConfig,
   payload: unknown,

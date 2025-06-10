@@ -10,6 +10,18 @@ interface ExpertChatViewProps {
   userId: string;
 }
 
+/**
+ * Render expert chat view including conversation list and body.
+ * @example
+ * ExpertChatViewProps(userId)
+ * <div>Rendered component structure</div>
+ * @param {Object} userId - The ID of the user participating in the expert chat.
+ * @returns {JSX.Element} A React element representing the expert chat view.
+ * @description
+ *   - Utilizes the useExpertConversation hook to manage chat state and actions.
+ *   - Structures the UI into sections for conversation list, conversation body, and product recommendation dialog.
+ *   - Handles chat initiation, conversation selection, deletion, blocking, message sending, and product recommendation interactions.
+ */
 const ExpertChatView = ({ userId }: ExpertChatViewProps) => {
   const {
     conversations,

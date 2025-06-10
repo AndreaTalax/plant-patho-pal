@@ -7,6 +7,20 @@ interface EPPOResponse {
   status?: string;
 }
 
+/**
+* Handles EPPO API search requests with CORS and method validations.
+* @example
+* sync(event, context)
+* Returns an HTTP response object based on the request and query parameter.
+* @param {HandlerEvent} event - The event containing the request information.
+* @param {HandlerContext} context - The context within which the request is handled.
+* @returns {Object} Response object with a status code, headers, and body.
+* @description
+*   - Only handles OPTIONS and GET requests.
+*   - Requires a query parameter "q" for GET requests.
+*   - Utilizes environment variable for EPPO API key with a hardcoded fallback.
+*   - Includes error handling for API response status and content-type.
+*/
 export const handler: Handler = async (event: HandlerEvent, context: HandlerContext) => {
   // Gestisci le richieste OPTIONS per CORS
   if (event.httpMethod === 'OPTIONS') {

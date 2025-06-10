@@ -14,6 +14,18 @@ type SettingsModalProps = {
   onOpenChange: (open: boolean) => void;
 };
 
+/**
+ * Renders a settings modal allowing users to adjust appearance and language preferences.
+ * @example
+ * functionName({ open: true, onOpenChange: (isOpen) => console.log(isOpen) })
+ * // Renders the settings modal with current preferences.
+ * @param {object} SettingsModalProps - Contains the current open state and function to change it.
+ * @returns {JSX.Element} A dialog component containing settings options for appearance and language.
+ * @description
+ *   - Uses local state to temporarily hold user preferences before saving.
+ *   - Resets temporary settings when the modal opens to reflect current preferences.
+ *   - Shows success toast notification upon saving preferences.
+ */
 const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
   const { mode, setMode, language, setLanguage, t } = useTheme();
   

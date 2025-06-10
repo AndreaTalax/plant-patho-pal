@@ -16,6 +16,32 @@ interface MessageInputProps {
   isMasterAccount?: boolean;
 }
 
+/**
+ * Handles message input and sending logic within a chat interface.
+ * @example
+ * MessageInput({
+ *   conversationId: '123',
+ *   senderId: '456',
+ *   recipientId: '789',
+ *   onMessageSent: () => console.log('Message sent callback'),
+ *   onSendMessage: async (message) => { console.log('Message:', message) },
+ *   isSending: false,
+ *   isMasterAccount: false
+ * });
+ * @param {string} conversationId - Unique identifier for the conversation.
+ * @param {string} senderId - ID of the user sending the message.
+ * @param {string} recipientId - ID of the user receiving the message.
+ * @param {function} onMessageSent - Callback function triggered after a successful message send.
+ * @param {function} onSendMessage - Optional function for custom message handling logic.
+ * @param {boolean} [isSending=false] - External sending state indicator.
+ * @param {boolean} [isMasterAccount=false] - Indicates if the current user is a master account.
+ * @returns {JSX.Element} Returns the rendered message input component.
+ * @description
+ *   - Uses a controlled component approach to handle message input state.
+ *   - Integrates both custom and legacy message sending approaches to support various use cases.
+ *   - Employs a mechanism to prevent message sends when inputs are invalid or during ongoing sends.
+ *   - Provides key-press handling to allow interaction using keyboard for improved UX.
+ */
 const MessageInput = ({ 
   conversationId, 
   senderId, 
@@ -30,6 +56,22 @@ const MessageInput = ({
   
   const isSending = externalIsSending || internalIsSending;
 
+  /**
+   * Sends a message using either a provided hook or a legacy service.
+   * @example
+   * sync()
+   * undefined
+   * @param {string} message - The message content to be sent.
+   * @param {boolean} isSending - Flag indicating if a message is currently being sent.
+   * @param {Function} onSendMessage - Optional function to send a message for hooks-based components.
+   * @param {Function} setMessage - Function to reset the message input field after sending.
+   * @returns {void} No return value.
+   * @description
+   *   - Requires `conversationId`, `senderId`, and `recipientId` for the legacy ChatService approach.
+   *   - Utilizes `setInternalIsSending` to manage UI state during the message sending process.
+   *   - Uses toast notifications for error handling.
+   *   - Executes `onMessageSent` callback after a message is successfully sent.
+   */
   const handleSend = async () => {
     if (!message.trim() || isSending) return;
 

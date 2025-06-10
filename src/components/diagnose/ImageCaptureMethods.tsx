@@ -7,6 +7,19 @@ interface ImageCaptureMethodsProps {
   onUploadPhoto: () => void;
 }
 
+/**
+ * Provides a UI component for capturing and uploading plant images.
+ * @example
+ * ImageCaptureMethods({ onTakePhoto: handleTakePhoto, onUploadPhoto: handleUploadPhoto })
+ * <div>Rendered image capturing interface</div>
+ * @param {function} onTakePhoto - Function to execute when "Scatta una foto della pianta" button is clicked.
+ * @param {function} onUploadPhoto - Function to execute when "Carica un'immagine dalla galleria" button is clicked.
+ * @returns {JSX.Element} A JSX element containing buttons and guides for capturing plant photos.
+ * @description
+ *   - Includes guiding instructions for taking high-quality photos of plants.
+ *   - Offers two main methods for image input: direct photo capture and upload from gallery.
+ *   - Provides context on specific plant parts that are supported for analysis.
+ */
 const ImageCaptureMethods = ({ onTakePhoto, onUploadPhoto }: ImageCaptureMethodsProps) => {
   return (
     <div className="space-y-6">

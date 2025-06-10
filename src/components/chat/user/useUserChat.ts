@@ -10,6 +10,24 @@ import {
   sendMessage as sendMessageService
 } from '../chatService';
 
+/**
+ * Initializes and manages the user chat with an expert, handling message interaction and real-time updates.
+ * @example
+ * userChat('12345')
+ * {
+ *   activeChat: 'expert',
+ *   setActiveChat: function,
+ *   messages: [],
+ *   isSending: false,
+ *   handleSendMessage: async function
+ * }
+ * @param {string} userId - Unique identifier for the user to initialize the chat.
+ * @returns {Object} An object containing the chat state and functionalities.
+ * @description
+ *   - Automatically subscribes to new messages for the active conversation using Postgres changes.
+ *   - Ensures that duplicate messages are not added to the conversation list.
+ *   - Integrates with a toast system to alert users when new expert messages arrive.
+ */
 export const useUserChat = (userId: string) => {
   const [activeChat, setActiveChat] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -20,6 +38,19 @@ export const useUserChat = (userId: string) => {
   useEffect(() => {
     if (!userId) return;
     
+    /**
+    * Initializes and configures the expert chat session for a specified user.
+    * @example
+    * sync(userId)
+    * undefined
+    * @param {string} userId - The unique identifier of the user initiating the chat.
+    * @returns {void} Does not return any data, it performs operations.
+    * @description
+    *   - Handles the setup of chat session including the retrieval and display of previous messages.
+    *   - Sets the expert chat as the active chat context.
+    *   - Provides a default welcome message if no previous messages exist in the conversation.
+    *   - Manages possible errors that might occur during the chat initialization.
+    */
     const initializeExpertChat = async () => {
       try {
         console.log("🔄 Initializing expert chat for user:", userId);
@@ -117,6 +148,19 @@ export const useUserChat = (userId: string) => {
   }, [currentDbConversation?.id]);
   
   // Send message function - properly async
+  /**
+   * Sends a message to a conversation ensuring all checks and UI updates.
+   * @example
+   * sync("Hello, World!");
+   * Sends the message "Hello, World!" to the active conversation.
+   * @param {string} text - The message text to be sent; must be non-empty.
+   * @returns {void} Function performs UI and backend operations, resulting in either success or error feedback.
+   * @description
+   *   - Checks if a message is already being sent to prevent duplicate operations.
+   *   - Automatically creates a new conversation if none exists.
+   *   - Immediately updates the UI for better user experience with a temporary message pending backend confirmation.
+   *   - Handles errors gracefully by removing temporary messages and providing user feedback.
+   */
   const handleSendMessage = async (text: string) => {
     if (!text.trim()) {
       toast.error("Il messaggio non può essere vuoto");

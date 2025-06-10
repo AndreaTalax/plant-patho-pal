@@ -39,6 +39,18 @@ interface ConversationSummary {
   } | null;
 }
 
+/**
+ * Loads and manages expert data including consultations and conversations, with real-time updates and error handling.
+ * @example
+ * expertDashboard()
+ * // no return value
+ * @param {void} No arguments are required for this function.
+ * @returns {JSX.Element} Returns a JSX element representing the expert dashboard interface.
+ * @description
+ *   - Utilizes Supabase for fetching and subscribing to real-time updates for consultations and conversations.
+ *   - Manages state for loading status, consultations, and conversations.
+ *   - Provides helper functions for handling consultation status updates and formatting user information.
+ */
 const ExpertDashboard = () => {
   const [consultations, setConsultations] = useState<Consultation[]>([]);
   const [conversations, setConversations] = useState<ConversationSummary[]>([]);
@@ -70,6 +82,17 @@ const ExpertDashboard = () => {
     };
   }, []);
 
+  /**
+   * Synchronizes expert consultations and conversations with user profiles.
+   * @example
+   * sync()
+   * // Initiates synchronization process
+   * @returns {void} No return value.
+   * @description
+   *   - Retrieves consultations and conversations from the Supabase database.
+   *   - Maps user profiles to each consultation and conversation based on the user_id.
+   *   - Displays error messages in the console and shows a toast notification on failure.
+   */
   const loadExpertData = async () => {
     try {
       // Load consultations first
@@ -148,6 +171,19 @@ const ExpertDashboard = () => {
     }
   };
 
+  /**
+  * Updates the consultation status in the database and provides user feedback
+  * @example
+  * sync('12345', 'completed')
+  * // Updates the status of consultation with id '12345' to 'completed' and shows a success or error toast message
+  * @param {string} consultationId - The unique identifier of the consultation to be updated.
+  * @param {string} newStatus - The new status to be set for the consultation.
+  * @returns {void} No return value.
+  * @description
+  *   - Utilizes Supabase as the backend service to update the consultation status in the database.
+  *   - Provides user feedback for success or failure using toast notifications.
+  *   - Reloads expert data upon successful update to ensure the UI reflects the current state.
+  */
   const updateConsultationStatus = async (consultationId: string, newStatus: string) => {
     try {
       const { error } = await supabase
@@ -168,6 +204,19 @@ const ExpertDashboard = () => {
     }
   };
 
+  /**
+  * Returns a styled badge component based on the provided status.
+  * @example
+  * getBadgeComponent('pending')
+  * "<Badge variant='outline' className='text-yellow-600'><Clock className='h-3 w-3 mr-1' />In attesa</Badge>"
+  * @param {string} status - The status to determine the badge styling.
+  * @returns {JSX.Element} Returns a badge element with specific styling and icon based on the status.
+  * @description
+  *   - Supports multiple predefined status values: 'pending', 'in_progress', 'completed'.
+  *   - Each status maps to a specific color and icon in the badge.
+  *   - If the status does not match any predefined values, it returns a default badge with the status text.
+  *   - Ensure that the status strings are passed in English, even though the display text is in Italian.
+  */
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'pending':

@@ -1,6 +1,19 @@
 
 import { supabase } from "@/integrations/supabase/client";
 
+/**
+* Executes plant analysis using provided image data and authentication token through Supabase function invocation.
+* @example
+* callPlantAnalysis('base64ImageData', 'your_huggingFaceToken')
+* // Returns an object containing the analysis result data.
+* @param {string} imageData - A base64-encoded string representing the image data for analysis.
+* @param {string} huggingFaceToken - Authentication token for accessing Hugging Face services.
+* @returns {Object} Object containing the plant analysis data from the Supabase function.
+* @description
+*   - Handles errors by logging them and rethrowing with additional context for troubleshooting.
+*   - Ensures that the response has valid data; throws an error if none is found.
+*   - Uses Supabase serverless functions to perform the analysis with specified configurations.
+*/
 export async function callPlantAnalysis(imageData: string, huggingFaceToken: string) {
   try {
     console.log('Calling plant analysis...');

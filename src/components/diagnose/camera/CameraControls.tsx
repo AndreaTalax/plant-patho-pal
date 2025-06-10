@@ -12,6 +12,31 @@ interface CameraControlsProps {
   isProcessing?: boolean; // Added the isProcessing prop as optional
 }
 
+/**
+ * Renders camera control buttons including capture, cancel, and optionally flip camera based on conditions.
+ * @example
+ * CameraControls({
+ *   onCapture: handleCapture,
+ *   onCancel: handleCancel,
+ *   isMobile: true,
+ *   canFlipCamera: true,
+ *   onFlipCamera: handleFlipCamera,
+ *   isProcessing: false
+ * })
+ * Returns the JSX element containing the camera controls.
+ * @param {function} onCapture - Callback function that triggers when the capture button is clicked.
+ * @param {function} onCancel - Callback function that triggers when the cancel button is clicked.
+ * @param {boolean} isMobile - Determines if the mobile-specific controls should be rendered.
+ * @param {boolean} [canFlipCamera=false] - Indicates if the flip camera functionality should be enabled.
+ * @param {function} onFlipCamera - Callback function that triggers when the flip camera button is clicked.
+ * @param {boolean} [isProcessing=false] - Disables capture button and shows a loading spinner when true.
+ * @returns {JSX.Element} JSX structure rendering camera controls.
+ * @description
+ *   - Uses conditional rendering to display the flip camera button only when certain prop values are met (isMobile, canFlipCamera, and onFlipCamera).
+ *   - Spinner animation is applied to the capture button when processing is true.
+ *   - Maintains layout spacing using a spacer div when the flip camera button is not displayed.
+ *   - Provides a subset of user interactions specific to mobile devices, such as flipping the camera.
+ */
 const CameraControls: React.FC<CameraControlsProps> = ({
   onCapture,
   onCancel,

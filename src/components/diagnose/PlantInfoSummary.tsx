@@ -13,6 +13,18 @@ interface PlantInfoSummaryProps {
   onEdit: () => void;
 }
 
+/**
+ * Displays a summary card containing information about a plant.
+ * @example
+ * plantInfoSummary({ plantInfo, onEdit })
+ * <Card>...</Card>
+ * @param {Object} plantInfo - Object containing details about the plant such as environment, watering frequency, light exposure, and symptoms.
+ * @param {Function} onEdit - Callback function to handle the edit action when the edit button is clicked.
+ * @returns {JSX.Element} JSX representing a styled card component displaying plant information.
+ * @description
+ *   - Renders plant-related icons with specific colors to visually distinguish different pieces of information.
+ *   - Conditionally displays symptoms if they are present in the `plantInfo` object.
+ */
 const PlantInfoSummary = ({ plantInfo, onEdit }: PlantInfoSummaryProps) => {
   return (
     <Card className="w-full max-w-2xl mx-auto mb-6">

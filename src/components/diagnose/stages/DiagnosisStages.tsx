@@ -31,6 +31,59 @@ interface DiagnosisStagesProps {
   onChatWithExpert?: () => void;
 }
 
+/**
+ * Renders the current diagnostic stage including camera views, plant information forms, 
+ * capture options, and result displays, with tailored actions based on the provided stage and inputs.
+ * @example
+ * DiagnosisStages({
+ *   stage: 'info',
+ *   showCamera: false,
+ *   uploadedImage: 'image_url',
+ *   isAnalyzing: false,
+ *   diagnosedDisease: { disease: 'example' },
+ *   analysisDetails: { additionalInfo: 'details' },
+ *   videoRef: videoElementReference,
+ *   canvasRef: canvasElementReference,
+ *   onPlantInfoComplete: () => {},
+ *   onPlantInfoEdit: () => {},
+ *   onSelectAI: () => {},
+ *   onSelectExpert: () => {},
+ *   onTakePhoto: () => {},
+ *   onUploadPhoto: () => {},
+ *   onCapture: () => {},
+ *   onCancelCamera: () => {},
+ *   onStartNewAnalysis: () => {},
+ *   onChatWithExpert: () => {}
+ * })
+ * // Return value will vary depending on current stage, may render components 
+ * // like <CameraCapture />, <PlantInfoForm />, <PlantInfoSummary />, etc.
+ * 
+ * @param {Object} params - Input parameters for rendering the diagnosis stage.
+ * @param {string} params.stage - Current stage of the diagnosis process.
+ * @param {boolean} params.showCamera - Flag to show the camera view.
+ * @param {string} params.uploadedImage - URL of the uploaded image.
+ * @param {boolean} params.isAnalyzing - Whether the analysis is currently in progress.
+ * @param {Object} params.diagnosedDisease - Details about the diagnosed disease.
+ * @param {Object} params.analysisDetails - Additional analysis information.
+ * @param {HTMLVideoElement} params.videoRef - Reference to the video element.
+ * @param {HTMLCanvasElement} params.canvasRef - Reference to the canvas element.
+ * @param {Function} params.onPlantInfoComplete - Callback when plant info entry is completed.
+ * @param {Function} params.onPlantInfoEdit - Callback to edit the plant information.
+ * @param {Function} params.onSelectAI - Callback to select AI option.
+ * @param {Function} params.onSelectExpert - Callback to select expert consultation option.
+ * @param {Function} params.onTakePhoto - Callback to handle photo capture.
+ * @param {Function} params.onUploadPhoto - Callback to handle photo upload.
+ * @param {Function} params.onCapture - Callback when photo capturing is done.
+ * @param {Function} params.onCancelCamera - Callback to cancel camera view.
+ * @param {Function} params.onStartNewAnalysis - Callback to start a new analysis.
+ * @param {Function} params.onChatWithExpert - Callback to initiate chat with an expert.
+ * @returns {JSX.Element|null} Returns a JSX element corresponding to the current stage 
+ * or null if stage is not recognized.
+ * @description
+ *   - Utilizes conditional rendering based on 'stage' to determine the component to display.
+ *   - Relies on plant information and captured/uploaded images to guide diagnosis steps.
+ *   - Includes enhanced handling of expert chat navigation with automatic data synchronization.
+ */
 const DiagnosisStages: React.FC<DiagnosisStagesProps> = ({
   stage,
   showCamera,
@@ -55,6 +108,18 @@ const DiagnosisStages: React.FC<DiagnosisStagesProps> = ({
   const navigate = useNavigate();
 
   // Enhanced function to navigate to chat with automatic data sync
+  /**
+   * Navigates to the chat interface, either with an expert or switches the application tab to chat.
+   * @example
+   * navigateToChat(onChatWithExpert)
+   * No explicit return value; performs actions based on the `onChatWithExpert` condition.
+   * @param {Function} onChatWithExpert - Callback function to initiate chat with an expert.
+   * @returns {void} No return value; performs navigation and dispatches events.
+   * @description
+   *   - If `onChatWithExpert` is not provided, the function navigates to the homepage and switches the tab to chat.
+   *   - Dispatches a custom event `switchTab` to change the application tab to chat.
+   *   - Refreshes the chat to ensure displaying the latest data by dispatching a `refreshChat` event.
+   */
   const handleNavigateToChat = () => {
     console.log("🔄 Navigating to chat with data sync...");
     
