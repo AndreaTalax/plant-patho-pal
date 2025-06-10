@@ -42,8 +42,11 @@ export interface AnalysisDetails {
   risultatiCompleti?: {
     plantInfo?: PlantInfo;
     accuracyGuarantee?: string;
+    plantIdResult?: any;
   };
   identifiedFeatures?: string[];
   sistemaDigitaleFoglia?: boolean;
   analysisTechnology?: string;
+  alternativeDiagnoses?: string[];
+  recommendedAdditionalTests?: string[];
 }

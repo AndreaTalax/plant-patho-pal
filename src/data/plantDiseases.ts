@@ -22,7 +22,7 @@ export const PLANT_DISEASES: DiagnosedDisease[] = [
     ],
     products: ['1', '2'],
     confidence: 0.92,
-    resources: ['fungal-diseases']
+    healthy: false
   },
   {
     id: 'leaf-spot',
@@ -43,7 +43,7 @@ export const PLANT_DISEASES: DiagnosedDisease[] = [
     ],
     products: ['3', '5'],
     confidence: 0.89,
-    resources: ['fungal-diseases']
+    healthy: false
   },
   {
     id: 'aphid-infestation',
@@ -65,7 +65,7 @@ export const PLANT_DISEASES: DiagnosedDisease[] = [
     ],
     products: ['4'],
     confidence: 0.95,
-    resources: ['pest-control']
+    healthy: false
   },
   {
     id: 'root-rot',
@@ -88,7 +88,7 @@ export const PLANT_DISEASES: DiagnosedDisease[] = [
     ],
     products: ['5'],
     confidence: 0.87,
-    resources: ['fungal-diseases']
+    healthy: false
   },
   {
     id: 'spider-mites',
@@ -111,6 +111,6 @@ export const PLANT_DISEASES: DiagnosedDisease[] = [
     ],
     products: ['4'],
     confidence: 0.91,
-    resources: ['pest-control']
+    healthy: false
   }
 ];

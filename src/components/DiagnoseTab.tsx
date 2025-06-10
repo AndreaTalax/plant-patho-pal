@@ -7,18 +7,22 @@ import { toast } from 'sonner';
 import { useAuth } from '@/context/AuthContext';
 import { usePlantInfo } from '@/context/PlantInfoContext';
 import PlantInfoForm from './diagnose/PlantInfoForm';
+import PlantInfoSummary from './diagnose/PlantInfoSummary';
+import DiagnosisOptions from './diagnose/DiagnosisOptions';
+import ScanLayout from './diagnose/scan/ScanLayout';
 import PlantAnalysisResultComponent from './diagnose/PlantAnalysisResult';
 import CameraCapture from './diagnose/CameraCapture';
 import { RealPlantAnalysisService, PlantAnalysisResult as AnalysisResult } from '@/services/realPlantAnalysisService';
 import { AutoExpertNotificationService } from './chat/AutoExpertNotificationService';
 import { uploadPlantImage } from '@/utils/imageStorage';
+import { PlantInfo } from './diagnose/types';
 
 const DiagnoseTab = () => {
   const { userProfile } = useAuth();
   const { plantInfo, setPlantInfo } = usePlantInfo();
   
   // Component states
-  const [currentStage, setCurrentStage] = useState<'info' | 'capture' | 'analyzing' | 'result'>('info');
+  const [currentStage, setCurrentStage] = useState<'info' | 'options' | 'capture' | 'analyzing' | 'result'>('info');
   const [showCamera, setShowCamera] = useState(false);
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
@@ -30,10 +34,23 @@ const DiagnoseTab = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Plant info completion handler
-  const handlePlantInfoComplete = useCallback((data: any) => {
+  const handlePlantInfoComplete = useCallback((data: PlantInfo) => {
     setPlantInfo({ ...data, infoComplete: true });
-    setCurrentStage('capture');
-    toast.success('Plant information saved successfully!');
+    
+    // If user chose expert consultation, go directly to chat
+    if (data.sendToExpert) {
+      window.dispatchEvent(new CustomEvent('switchTab', { detail: 'chat' }));
+      return;
+    }
+    
+    // If user chose AI diagnosis, proceed to capture
+    if (data.useAI) {
+      setCurrentStage('capture');
+    } else {
+      setCurrentStage('options');
+    }
+    
+    toast.success('Informazioni pianta salvate con successo!');
   }, [setPlantInfo]);
 
   // File upload handler
@@ -42,7 +59,7 @@ const DiagnoseTab = () => {
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
-      toast.error('Please upload a valid image file');
+      toast.error('Carica un file immagine valido');
       return;
     }
 
@@ -56,8 +73,8 @@ const DiagnoseTab = () => {
       };
       reader.readAsDataURL(file);
     } catch (error) {
-      console.error('File upload error:', error);
-      toast.error('Failed to upload image');
+      console.error('Errore caricamento file:', error);
+      toast.error('Errore nel caricamento immagine');
     }
   }, []);
 
@@ -75,15 +92,15 @@ const DiagnoseTab = () => {
         performAnalysis(file, imageDataUrl);
       })
       .catch(error => {
-        console.error('Camera capture processing error:', error);
-        toast.error('Failed to process camera capture');
+        console.error('Errore elaborazione foto:', error);
+        toast.error('Errore nell\'elaborazione della foto');
       });
   }, []);
 
   // Main analysis function with real APIs
   const performAnalysis = useCallback(async (file: File, imageDataUrl: string) => {
     if (!userProfile?.id) {
-      toast.error('Please log in to perform analysis');
+      toast.error('Effettua il login per eseguire l\'analisi');
       return;
     }
 
@@ -91,11 +108,11 @@ const DiagnoseTab = () => {
     setAutoSentToExpert(false);
 
     try {
-      console.log('🔍 Starting real plant analysis...');
+      console.log('🔍 Avvio analisi pianta...');
       
       // Upload image to storage
       const imageUrl = await uploadPlantImage(file, userProfile.id);
-      console.log('📸 Image uploaded:', imageUrl);
+      console.log('📸 Immagine caricata:', imageUrl);
 
       // Perform real AI analysis
       const analysis = await RealPlantAnalysisService.analyzePlantWithRealAPIs(
@@ -118,13 +135,13 @@ const DiagnoseTab = () => {
       const shouldAutoSend = !analysis.isHealthy || analysis.confidence < 0.8;
       
       if (shouldAutoSend) {
-        console.log('📨 Auto-sending diagnosis to expert...');
+        console.log('📨 Invio automatico diagnosi all\'esperto...');
         const sent = await AutoExpertNotificationService.sendDiagnosisToExpert(
           userProfile.id,
           {
             plantType: analysis.plantName,
             plantVariety: analysis.scientificName,
-            symptoms: plantInfo.symptoms || 'Visual symptoms detected in image',
+            symptoms: plantInfo.symptoms || 'Sintomi visivi rilevati nell\'immagine',
             imageUrl: imageUrl,
             analysisResult: analysis,
             confidence: analysis.confidence,
@@ -135,8 +152,8 @@ const DiagnoseTab = () => {
       }
 
     } catch (error) {
-      console.error('❌ Analysis failed:', error);
-      toast.error(`Analysis failed: ${error.message}`);
+      console.error('❌ Analisi fallita:', error);
+      toast.error(`Analisi fallita: ${error.message}`);
       setCurrentStage('capture');
     } finally {
       setIsAnalyzing(false);
@@ -172,41 +189,39 @@ const DiagnoseTab = () => {
           />
         );
 
+      case 'options':
+        return (
+          <div className="space-y-4">
+            <PlantInfoSummary 
+              plantInfo={plantInfo} 
+              onEdit={() => setCurrentStage('info')} 
+            />
+            <DiagnosisOptions
+              onSelectAI={() => setCurrentStage('capture')}
+              onSelectExpert={() => window.dispatchEvent(new CustomEvent('switchTab', { detail: 'chat' }))}
+            />
+          </div>
+        );
+
       case 'capture':
         return (
-          <Card className="p-6">
-            <h2 className="text-2xl font-bold mb-6 text-center">Upload Plant Image</h2>
-            
-            <div className="space-y-4">
-              {/* Upload Button */}
-              <Button 
-                onClick={() => fileInputRef.current?.click()}
-                className="w-full h-24 text-lg"
-                variant="outline"
-              >
-                <Upload className="mr-2 h-6 w-6" />
-                Upload Photo from Gallery
-              </Button>
-
-              {/* Camera Button */}
-              <Button 
-                onClick={() => setShowCamera(true)}
-                className="w-full h-24 text-lg"
-                variant="outline"
-              >
-                <Camera className="mr-2 h-6 w-6" />
-                Take Photo with Camera
-              </Button>
-
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handleFileUpload}
-                className="hidden"
-              />
-            </div>
-          </Card>
+          <div className="space-y-4">
+            <PlantInfoSummary 
+              plantInfo={plantInfo} 
+              onEdit={() => setCurrentStage('info')} 
+            />
+            <ScanLayout
+              onTakePhoto={() => setShowCamera(true)}
+              onUploadPhoto={() => fileInputRef.current?.click()}
+            />
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleFileUpload}
+              className="hidden"
+            />
+          </div>
         );
 
       case 'analyzing':
@@ -214,15 +229,15 @@ const DiagnoseTab = () => {
           <Card className="p-8">
             <div className="flex flex-col items-center space-y-4">
               <Loader2 className="h-12 w-12 animate-spin text-blue-600" />
-              <h2 className="text-2xl font-bold">Analyzing Your Plant</h2>
+              <h2 className="text-2xl font-bold">Analisi in corso</h2>
               <p className="text-gray-600 text-center">
-                Using real AI services (Plant.id, Hugging Face, EPPO Database) to analyze your plant...
+                Utilizzo di servizi AI reali (Plant.id, Hugging Face, Database EPPO) per analizzare la tua pianta...
               </p>
               {uploadedImage && (
                 <div className="w-64 h-64 rounded-lg overflow-hidden">
                   <img 
                     src={uploadedImage} 
-                    alt="Plant being analyzed" 
+                    alt="Pianta in analisi" 
                     className="w-full h-full object-cover"
                   />
                 </div>
@@ -239,7 +254,7 @@ const DiagnoseTab = () => {
                 <div className="flex items-center space-x-2">
                   <CheckCircle className="h-5 w-5 text-green-600" />
                   <span className="text-green-800 font-medium">
-                    Diagnosis automatically sent to phytopathologist expert!
+                    Diagnosi inviata automaticamente all'esperto fitopatologo!
                   </span>
                 </div>
               </Card>
@@ -277,10 +292,10 @@ const DiagnoseTab = () => {
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Plant Disease Diagnosis
+            Diagnosi Malattie delle Piante
           </h1>
           <p className="text-gray-600">
-            Real AI-powered plant analysis using professional databases
+            Analisi AI avanzata con database professionali
           </p>
         </div>
 
