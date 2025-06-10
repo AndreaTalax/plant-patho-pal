@@ -50,6 +50,12 @@ const PlantInfoForm = ({ onComplete, initialData }: PlantInfoFormProps) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
+  const handleDiagnosisMethodChange = (value: string) => {
+    if (value === 'ai' || value === 'expert') {
+      setDiagnosisMethod(value);
+    }
+  };
+
   const isFormValid = formData.name && formData.wateringFrequency && formData.lightExposure && diagnosisMethod;
 
   return (
@@ -136,7 +142,7 @@ const PlantInfoForm = ({ onComplete, initialData }: PlantInfoFormProps) => {
           {/* Scelta metodo diagnosi */}
           <div className="space-y-4">
             <Label className="text-base font-semibold">Scegli il metodo di diagnosi</Label>
-            <RadioGroup value={diagnosisMethod} onValueChange={setDiagnosisMethod}>
+            <RadioGroup value={diagnosisMethod} onValueChange={handleDiagnosisMethodChange}>
               {/* Opzione AI */}
               <Card className={`cursor-pointer transition-all ${
                 diagnosisMethod === 'ai' ? 'ring-2 ring-blue-500 bg-blue-50' : 'hover:bg-gray-50'
