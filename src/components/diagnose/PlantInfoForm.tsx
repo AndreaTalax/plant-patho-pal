@@ -6,9 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Brain, MessageCircle, Sparkles } from 'lucide-react';
-import { PlantInfo } from '@/context/PlantInfoContext';
+import { PlantInfo } from './types';
 
 interface PlantInfoFormProps {
   onComplete: (data: PlantInfo) => void;
@@ -27,19 +25,11 @@ const PlantInfoForm = ({ onComplete, initialData }: PlantInfoFormProps) => {
     infoComplete: false,
   });
 
-  const [diagnosisMethod, setDiagnosisMethod] = useState<'ai' | 'expert' | ''>('');
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!diagnosisMethod) {
-      return;
-    }
-
     const updatedData = {
       ...formData,
-      useAI: diagnosisMethod === 'ai',
-      sendToExpert: diagnosisMethod === 'expert',
       infoComplete: true,
     };
 
@@ -50,13 +40,7 @@ const PlantInfoForm = ({ onComplete, initialData }: PlantInfoFormProps) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleDiagnosisMethodChange = (value: string) => {
-    if (value === 'ai' || value === 'expert') {
-      setDiagnosisMethod(value);
-    }
-  };
-
-  const isFormValid = formData.name && formData.wateringFrequency && formData.lightExposure && diagnosisMethod;
+  const isFormValid = formData.name && formData.wateringFrequency && formData.lightExposure;
 
   return (
     <Card className="w-full max-w-2xl mx-auto">
@@ -139,72 +123,12 @@ const PlantInfoForm = ({ onComplete, initialData }: PlantInfoFormProps) => {
             />
           </div>
 
-          {/* Scelta metodo diagnosi */}
-          <div className="space-y-4">
-            <Label className="text-base font-semibold">Scegli il metodo di diagnosi</Label>
-            <RadioGroup value={diagnosisMethod} onValueChange={handleDiagnosisMethodChange}>
-              {/* Opzione AI */}
-              <Card className={`cursor-pointer transition-all ${
-                diagnosisMethod === 'ai' ? 'ring-2 ring-blue-500 bg-blue-50' : 'hover:bg-gray-50'
-              }`}>
-                <CardContent className="p-4">
-                  <div className="flex items-center space-x-3">
-                    <RadioGroupItem value="ai" id="ai" />
-                    <div className="flex items-center space-x-2 flex-1">
-                      <Brain className="h-5 w-5 text-blue-600" />
-                      <div>
-                        <Label htmlFor="ai" className="text-base font-medium cursor-pointer">
-                          Diagnosi con Intelligenza Artificiale
-                        </Label>
-                        <p className="text-sm text-gray-600 mt-1">
-                          Analisi immediata con AI avanzata e database di malattie delle piante
-                        </p>
-                        <div className="flex items-center gap-1 mt-1">
-                          <Sparkles className="h-3 w-3 text-blue-500" />
-                          <span className="text-xs text-blue-600 font-medium">Risultati in 30 secondi</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Opzione Esperto */}
-              <Card className={`cursor-pointer transition-all ${
-                diagnosisMethod === 'expert' ? 'ring-2 ring-green-500 bg-green-50' : 'hover:bg-gray-50'
-              }`}>
-                <CardContent className="p-4">
-                  <div className="flex items-center space-x-3">
-                    <RadioGroupItem value="expert" id="expert" />
-                    <div className="flex items-center space-x-2 flex-1">
-                      <MessageCircle className="h-5 w-5 text-green-600" />
-                      <div>
-                        <Label htmlFor="expert" className="text-base font-medium cursor-pointer">
-                          Chat con Fitopatogo Esperto
-                        </Label>
-                        <p className="text-sm text-gray-600 mt-1">
-                          Consulenza diretta con un esperto qualificato in patologie vegetali
-                        </p>
-                        <div className="flex items-center gap-1 mt-1">
-                          <MessageCircle className="h-3 w-3 text-green-500" />
-                          <span className="text-xs text-green-600 font-medium">Risposta personalizzata</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </RadioGroup>
-          </div>
-
           <Button 
             type="submit" 
             className="w-full bg-drplant-blue hover:bg-drplant-blue-dark"
             disabled={!isFormValid}
           >
-            {diagnosisMethod === 'ai' ? 'Continua con la Diagnosi AI' : 
-             diagnosisMethod === 'expert' ? 'Continua con Chat Esperto' : 
-             'Seleziona un metodo di diagnosi'}
+            Continua
           </Button>
         </form>
       </CardContent>
