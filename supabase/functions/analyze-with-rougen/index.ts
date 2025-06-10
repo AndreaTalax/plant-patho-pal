@@ -51,6 +51,25 @@ serve(async (req) => {
 });
 
 // Simulate RougeN AI response with realistic plant data
+/**
+* Simulates a RougenAI response by returning a random plant profile
+* @example
+* simulateRougenAIResponse()
+* {
+*   plantName: "Monstera Deliciosa",
+*   scientificName: "Monstera deliciosa",
+*   commonNames: ["Swiss Cheese Plant", "Split-leaf Philodendron"],
+*   confidence: 0.93,
+*   isHealthy: true,
+*   habitat: "Tropical forests of Southern Mexico and Panama",
+*   ...
+* }
+* @returns {Object} A randomly selected plant profile containing details like name, common names, care instructions, and taxonomy.
+* @description
+*   - Each plant object includes a confidence score and randomly determined health status.
+*   - The health status is simulated with a predefined probability for each plant type.
+*   - Plant care details cover aspects such as watering, light conditions, and propagation.
+*/
 function simulateRougenAIResponse() {
   const plants = [
     {

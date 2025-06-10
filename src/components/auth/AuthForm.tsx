@@ -8,6 +8,18 @@ import { AuthFormFields } from './AuthFormFields';
 
 type AuthMode = 'login' | 'signup';
 
+/**
+ * AuthForm component handles user authentication process including login and signup modes.
+ * @example
+ * AuthForm()
+ * Returns the JSX for authentication form interface
+ * @returns {JSX.Element} Returns the rendered authentication form component.
+ * @description
+ *   - Toggles between 'login' and 'signup' modes of authentication.
+ *   - Manages states for email, password, loading, confirmation, and rate limit.
+ *   - Uses async operations to interact with signUp and signIn services.
+ *   - Displays appropriate toast notifications based on the outcome of authentication attempts.
+ */
 export function AuthForm() {
   const [mode, setMode] = useState<AuthMode>('login');
   const [email, setEmail] = useState('');
@@ -22,6 +34,19 @@ export function AuthForm() {
     setIsRateLimited(false);
   };
 
+  /**
+   * Handles form submission for signing up or logging in and provides user feedback via toast notifications.
+   * @example
+   * sync(event)
+   * No return value, triggers side effects such as toast notifications.
+   * @param {React.FormEvent} e - Event object from the form submission, used to prevent default behavior.
+   * @returns {void} No return value.
+   * @description
+   *   - Adjusts loading state for asynchronous operations to provide user feedback.
+   *   - Handles different responses based on the authentication mode, either signup or login.
+   *   - Manages error handling with specific error messages upon encountering failures.
+   *   - Utilizes toast notifications for user feedback and status updates.
+   */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);

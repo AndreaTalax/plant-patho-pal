@@ -18,6 +18,36 @@ interface CameraHookReturn {
   stopCamera: () => void;
 }
 
+/**
+ * Provides hooks for camera functionality including starting, stopping, switching, and capturing photos.
+ * @example
+ * const {
+ *   isLoading,
+ *   error,
+ *   stream,
+ *   videoRef,
+ *   canvasRef,
+ *   facingMode,
+ *   hasFlash,
+ *   flashEnabled,
+ *   initializeCamera,
+ *   switchCamera,
+ *   toggleFlash,
+ *   capturePhoto,
+ *   stopCamera
+ * } = useCamera();
+ * 
+ * initializeCamera();
+ * capturePhoto();
+ * // returns a base64 image data URL or null if capture failed
+ * 
+ * @param None - No parameters required for the hook itself.
+ * @returns {CameraHookReturn} An object containing properties and methods to manage and control camera operations.
+ * @description
+ *   - This hook initializes and manages camera operations using `navigator.mediaDevices` API.
+ *   - Handles camera permission errors and provides corresponding error messages.
+ *   - Manages video stream and device orientation (user vs. environment) for optimal camera usage.
+ */
 export const useCamera = (): CameraHookReturn => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

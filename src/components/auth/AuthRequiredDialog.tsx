@@ -12,6 +12,29 @@ interface AuthRequiredDialogProps {
   redirectPath?: string;
 }
 
+/**
+ * Renders a dialog that prompts the user to log in before accessing certain features.
+ * @example
+ * AuthRequiredDialog({
+ *   isOpen: true,
+ *   onClose: () => console.log('Dialog closed'),
+ *   title: "Access Restricted",
+ *   description: "Please log in to access this section.",
+ *   redirectPath: "/login"
+ * })
+ * Dialog component prompting user login with navigation support
+ * @param {boolean} isOpen - Indicates whether the dialog is open or closed.
+ * @param {function} onClose - Callback function to handle the closing of the dialog.
+ * @param {string} title - Title of the dialog, defaults to "Login Required".
+ * @param {string} description - Detailed message displayed in the dialog, defaults to a login requirement message.
+ * @param {string} redirectPath - Path to redirect user upon login, defaults to "/auth".
+ * @returns {JSX.Element} A dialog component prompting user login.
+ * @description
+ *   - Utilizes the `useNavigate` hook for page navigation upon login.
+ *   - Dialog includes a cancel button which triggers the `onClose` function.
+ *   - Customizable dialog title and description.
+ *   - Defines styles for buttons and dialog through class names.
+ */
 export function AuthRequiredDialog({
   isOpen,
   onClose,

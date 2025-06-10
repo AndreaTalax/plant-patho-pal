@@ -636,6 +636,20 @@ const defaultTranslations = {
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
+/**
+ * Provides a theme and language context for the application.
+ * @example
+ * <ThemeContext.Provider value={...}>
+ *   {children}
+ * </ThemeContext.Provider>
+ * @param {Object} { children: ReactNode } - React node elements to be wrapped with the context provider.
+ * @returns {JSX.Element} A context provider wrapping the children elements with theme and language settings.
+ * @description
+ *   - Initializes theme mode and language from local storage if available, defaulting to "light" mode and "en" language.
+ *   - Applies dark mode class to document when the mode is set to dark.
+ *   - Persists changes in theme mode and language to local storage.
+ *   - Provides a translation function 't' that supports parameter replacement in translations.
+ */
 export const ThemeProvider = ({ children }: { children: ReactNode }) => {
   const [mode, setMode] = useState<ThemeMode>(() => {
     const savedMode = localStorage.getItem("theme-mode");
@@ -661,6 +675,19 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
   }, [language]);
 
   // Translation function with parameter support
+  /**
+   * Translates a given key using optional parameters to replace placeholders.
+   * @example
+   * translateText('greeting', {name: 'John'})
+   * 'Hello, John!'
+   * @param {string} key - The key for the text to translate.
+   * @param {Record<string, string>} [params] - Optional parameters for replacing placeholders in the translated text.
+   * @returns {string} The translated text with placeholders replaced if parameters are provided.
+   * @description
+   *   - Utilizes default translations based on a specified language setting.
+   *   - If translation key does not exist, the original key is returned.
+   *   - Parameters are expected in the format `{paramName}` within the translation string.
+   */
   const t = (key: string, params?: Record<string, string>) => {
     let translatedText = defaultTranslations[key]?.[language] || key;
     

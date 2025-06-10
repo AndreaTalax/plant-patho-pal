@@ -11,6 +11,28 @@ import {
 } from '../chatService';
 import { toast } from 'sonner';
 
+/**
+ * A custom hook to manage expert conversations in a chat application.
+ * @example
+ * const { 
+ *   conversations, 
+ *   currentConversation, 
+ *   isProductDialogOpen, 
+ *   setIsProductDialogOpen, 
+ *   isSending, 
+ *   handleChatSelection, 
+ *   handleDeleteConversation, 
+ *   handleToggleBlockUser, 
+ *   handleSendProductRecommendations, 
+ *   handleSendMessage 
+ * } = useExpertConversation(userId);
+ * @param {string} userId - The unique identifier for the user whose conversations are to be managed.
+ * @returns {Object} An object containing conversation state, UI functions, and methods to manage conversations.
+ * @description
+ *   - Initializes and manages conversations and message states for a specified expert user.
+ *   - Listens for real-time updates on conversations and messages via Supabase.
+ *   - Provides methods to manipulate conversation state including selecting chats, archiving/deleting conversations, blocking users, and sending messages.
+ */
 export const useExpertConversation = (userId: string) => {
   // State management
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -22,6 +44,18 @@ export const useExpertConversation = (userId: string) => {
   
   // Load conversations from database
   useEffect(() => {
+    /**
+     * Synchronizes and updates the conversation data for a user.
+     * @example
+     * sync()
+     * undefined
+     * @param {string} userId - The unique identifier for the user whose conversations are being loaded.
+     * @returns {void} The function does not return a value.
+     * @description
+     *   - Fetches conversation data for a specific user and formats this data for UI representation.
+     *   - Logs an error in the console if the conversation data cannot be fetched.
+     *   - Sets the formatted conversation data to be used in the user interface.
+     */
     const fetchConversations = async () => {
       try {
         const data = await loadConversations(userId);
@@ -76,6 +110,19 @@ export const useExpertConversation = (userId: string) => {
   }, [userId]);
   
   // Handle chat selection
+  /**
+   * Synchronizes the expert's view of a conversation using a given conversation ID.
+   * @example
+   * sync("12345")
+   * () => { ... } // Unsubscribe function
+   * @param {string} conversationId - The unique identifier for the conversation to be synchronized.
+   * @returns {Function} Returns a function that when called will unsubscribe from the real-time updates.
+   * @description
+   *   - Converts and updates messages from the database into the UI format for the selected conversation.
+   *   - Marks the conversation as read in the UI state by updating its unread status.
+   *   - Sets up a real-time listener for new messages associated with the conversation ID.
+   *   - Updates the current conversation view with new incoming messages.
+   */
   const handleChatSelection = async (conversationId: string) => {
     const selected = dbConversations.find(conv => conv.id === conversationId);
     if (!selected) return;
@@ -141,6 +188,19 @@ export const useExpertConversation = (userId: string) => {
   };
   
   // Delete conversation
+  /**
+   * Archives a conversation and updates UI state accordingly.
+   * @example
+   * sync('conversation-123')
+   * // Archives 'conversation-123' and updates the UI.
+   * @param {string} conversationId - The unique identifier of the conversation to be archived.
+   * @returns {void} Does not return a value.
+   * @description
+   *   - Attempts to archive the conversation by updating its status to 'archived'.
+   *   - Displays a toast message indicating success or error in archiving.
+   *   - Updates conversation list to exclude archived conversation.
+   *   - Resets current conversation if it matches the id of the archived conversation.
+   */
   const handleDeleteConversation = async (conversationId: string) => {
     try {
       // Archive conversation instead of deleting it
@@ -164,6 +224,19 @@ export const useExpertConversation = (userId: string) => {
   };
   
   // Block/Unblock user
+  /**
+   * Toggles the block status of a conversation.
+   * @example
+   * sync("conversation123")
+   * User has been blocked
+   * @param {string} conversationId - The ID of the conversation to update.
+   * @returns {void} No return value; operation is performed for its side effects.
+   * @description
+   *   - Utilizes a toast function to notify the user of success or error conditions.
+   *   - Updates both the conversations list and the current conversation state based on the new block status.
+   *   - Safely handles errors by logging them and informing the user via toast.
+   *   - Determines the new block status based on the current status of the conversation.
+   */
   const handleToggleBlockUser = async (conversationId: string) => {
     try {
       const isCurrentlyBlocked = conversations.find(c => c.id === conversationId)?.blocked || false;
@@ -200,6 +273,19 @@ export const useExpertConversation = (userId: string) => {
   };
   
   // Send product recommendations
+  /**
+   * Sends product recommendations to a user in a chat conversation
+   * @example
+   * sync([{ id: 1, name: 'Plant Food' }, { id: 2, name: 'Potting Soil' }])
+   * // Displays toast notifications based on success or failure
+   * @param {Product[]} products - A list containing recommended products.
+   * @returns {void} Does not return a value.
+   * @description
+   *   - Requires a valid database conversation to proceed.
+   *   - Uses sendMessageService to deliver the message and check for success.
+   *   - Utilizes toast notifications to inform the user of the operation outcome.
+   *   - Handles exceptions to ensure application stability upon errors.
+   */
   const handleSendProductRecommendations = async (products: Product[]) => {
     if (!currentDbConversation || products.length === 0) {
       return;
@@ -232,6 +318,18 @@ export const useExpertConversation = (userId: string) => {
   };
   
   // Send a regular text message
+  /**
+   * Sends a message in the chat conversation and updates the conversation state.
+   * @example
+   * sync("Hello, how can I help you?")
+   * // Immediate UX feedback with the message sent.
+   * @param {string} text - Message text to be sent by the expert.
+   * @returns {void} No return value; updates UI state directly.
+   * @description
+   *   - Temporarily adds the message to conversation state to improve UX before the message is confirmed sent.
+   *   - Removes the message if sending fails to maintain accurate conversation history.
+   *   - Utilizes toast notifications to alert user of errors in sending.
+   */
   const handleSendMessage = async (text: string) => {
     if (!currentDbConversation) return;
     

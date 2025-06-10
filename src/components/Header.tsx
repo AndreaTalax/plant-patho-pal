@@ -13,6 +13,18 @@ import {
   DrawerTrigger,
 } from '@/components/ui/drawer';
 
+/**
+ * This function defines the Header component which manages navigation and authentication UI.
+ * @example
+ * Header()
+ * Returns a header JSX element with navigation links and authentication buttons.
+ * @returns {JSX.Element} A header element that includes navigation items, and authentication controls for both desktop and mobile views.
+ * @description
+ *   - Implements a scroll effect to alter the header's appearance.
+ *   - Contains both desktop and mobile versions of navigation using conditional rendering.
+ *   - Manages navigation state and executes appropriate actions on user authentication state change.
+ *   - Utilizes hooks like useState, useAuth, and useNavigate for state and authentication management.
+ */
 const Header = () => {
   const [scrolled, setScrolled] = useState(false);
   const { isAuthenticated, logout } = useAuth();

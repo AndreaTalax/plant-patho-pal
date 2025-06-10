@@ -72,6 +72,18 @@ const SheetContent = React.forwardRef<
 ))
 SheetContent.displayName = SheetPrimitive.Content.displayName
 
+/**
+* Renders a styled HTML div element with flexible props and additional class names.
+* @example
+* renderDivWithProps(className, props)
+* Returns a styled div element with the provided props and class names.
+* @param {Object} {React.HTMLAttributes<HTMLDivElement>} - HTML attributes and props for a div element, including an optional `className`.
+* @returns {JSX.Element} Returns a JSX element representing a div with specific styling and properties.
+* @description
+*   - Utilizes the Spread Operator to inject additional props into the div element.
+*   - Combines default styling with user-defined className using the `cn` function.
+*   - Ensures responsive alignment with conditional text placement.
+*/
 const SheetHeader = ({
   className,
   ...props
@@ -86,6 +98,17 @@ const SheetHeader = ({
 )
 SheetHeader.displayName = "SheetHeader"
 
+/**
+ * Renders a responsive div element with customizable class names and props.
+ * @example
+ * renderDiv({ className: "custom-class", id: "unique-id" })
+ * // Returns a <div> element with the specified class and attributes.
+ * @param {Object} props - React HTML attributes to be passed to the div element, including a custom className.
+ * @returns {JSX.Element} A JSX element representing the div with applied classes and attributes.
+ * @description
+ *   - Utilizes `cn` function for dynamic class name concatenation.
+ *   - Ensures responsive behavior by toggling flex direction based on screen size.
+ */
 const SheetFooter = ({
   className,
   ...props

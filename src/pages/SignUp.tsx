@@ -6,6 +6,19 @@ import { AuthPageLayout } from "@/components/auth/AuthPageLayout";
 import { SignUpForm, SignUpFormValues } from "@/components/signup/SignUpForm";
 import { EmailConfirmationScreen } from "@/components/signup/EmailConfirmationScreen";
 
+/**
+* Handles user registration by submitting sign-up form data and displaying appropriate messages.
+* @example
+* onSubmit({ email: "test@example.com", password: "password123" })
+* // Returns a layout component that wraps a registration form or confirmation screen.
+* @param {SignUpFormValues} values - The sign-up form data including email and password.
+* @returns {JSX.Element} Returns a layout component wrapping either the registration form or confirmation screen.
+* @description
+*   - Clears previous toasts before attempting registration to avoid accumulation.
+*   - Handles multiple error scenarios with specific messages, including rate limits and weak password.
+*   - Considers user already registered as a successful registration for messaging purposes.
+*   - Sets state flags for loading, email sent status, and rate limiting status based on registration outcome.
+*/
 const SignUp = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
@@ -13,6 +26,19 @@ const SignUp = () => {
   const [registeredEmail, setRegisteredEmail] = useState("");
   const { register } = useAuth();
 
+  /**
+   * Handles user registration and provides feedback via toasts.
+   * @example
+   * sync({ email: "example@example.com", password: "securepassword123" })
+   * // Displays success or error toast based on registration outcome
+   * @param {SignUpFormValues} values - An object containing `email` and `password` for registration.
+   * @returns {void} This function does not return a value.
+   * @description
+   *   - Manages the registration process and feedback to the user via asynchronous calls and toasts.
+   *   - Differentiates error handling based on the error type (rate limit, weak password, already registered, etc.).
+   *   - Updates the state related to loading and rate limiting conditions.
+   *   - Uses Italian language for toast messages when providing user feedback.
+   */
   const onSubmit = async (values: SignUpFormValues) => {
     setIsLoading(true);
     setIsRateLimited(false);

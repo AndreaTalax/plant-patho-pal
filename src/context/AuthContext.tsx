@@ -20,6 +20,19 @@ import {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+/**
+ * Provides authentication context for user management including login, registration, and profile updates.
+ * @example
+ * AuthContext({ children: <YourComponent /> })
+ * Returns a context provider for authentication
+ * @param {Object} { children } - React child components to be wrapped by AuthContext provider.
+ * @returns {JSX.Element} AuthContext.Provider wrapping the children components.
+ * @description
+ *   - Manages user authentication state using Supabase.
+ *   - Handles session management and side effects related to authentication state changes.
+ *   - Includes helper methods for authentication tasks like login, logout, registration.
+ *   - Automatically fetches and normalizes user profile data on authentication changes.
+ */
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
@@ -65,6 +78,19 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     );
 
     // Check for existing session
+    /**
+    * Initializes user authentication session and retrieves user profile data
+    * @example
+    * sync()
+    * Undefined
+    * @param {boolean} mounted - Determines if the component using this function is still mounted.
+    * @returns {void} Does not return a value.
+    * @description
+    *   - Fetches the session data from Supabase auth and checks the initial session status.
+    *   - Updates the session and user state, and retrieves user profile if a session exists.
+    *   - Handles errors during the session initialization process.
+    *   - Ensures setLoading is called in the end to update UI loading state.
+    */
     const initializeAuth = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
@@ -106,6 +132,19 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
+  /**
+   * Updates the user profile with provided updates.
+   * @example
+   * sync({name: 'John'}) // Updates the user's name to 'John'
+   * sync('age', 30) // Sets the user's age to 30
+   * @param {Partial<UserProfile> | string} updates - Partial profile updates or a single field name.
+   * @param {any} [value] - Value for the field when updates is a string.
+   * @returns {void} Updates the user profile and refreshes it.
+   * @description
+   *   - Throws an error if the user is not authenticated.
+   *   - Converts updates into a format suitable for the database.
+   *   - Fetches and normalizes the user profile after updating to ensure it's up-to-date.
+   */
   const updateProfile = async (updates: Partial<UserProfile> | string, value?: any) => {
     if (!user) throw new Error('User not authenticated');
     

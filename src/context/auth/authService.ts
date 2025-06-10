@@ -4,6 +4,20 @@ import { toast } from 'sonner';
 import { UserProfile } from './types';
 import { getWhitelistedEmails } from './utils';
 
+/**
+ * Attempts to authenticate a user with given email and password and manages fallback authentication for whitelisted emails.
+ * @example
+ * sync('example@gmail.com', 'password123')
+ * { success: true }
+ * @param {string} email - The user's email address used for authentication.
+ * @param {string} password - The user's password used for authentication.
+ * @returns {Promise<{ success: boolean }>} Resolves with a success boolean indicating the result of the authentication attempt.
+ * @description
+ *   - Uses Supabase's password-based authentication and includes fallback authentication for whitelisted emails.
+ *   - Whitelisted emails can trigger automatic profile creation or updates if authentication is successful.
+ *   - Suppresses errors during sign-up attempts for whitelisted emails when the user already exists.
+ *   - Logs the process of the authentication attempt for debugging purposes.
+ */
 export const authenticateUser = async (email: string, password: string): Promise<{ success: boolean }> => {
   try {
     console.log('Attempting login with:', email);
@@ -72,6 +86,19 @@ export const authenticateUser = async (email: string, password: string): Promise
   }
 };
 
+/**
+ * Creates or updates a user profile in the database based on the provided userId and profileData.
+ * @example
+ * sync("user123", { email: "user@example.com", username: "newUser" })
+ * // Profile created/updated successfully
+ * @param {string} userId - The unique identifier of the user whose profile is being updated.
+ * @param {any} profileData - An object containing the user's profile details including email, username, first_name, last_name, phone, address, role, birth_date, birth_place, subscription_plan, avatar_url.
+ * @returns {Promise<void>} Throws an error if the operation fails.
+ * @description
+ *   - Utilizes the Supabase client to upsert profile data into the 'profiles' table.
+ *   - Sets default values for role and subscription_plan if not provided.
+ *   - Logs success or error messages for operation tracking.
+ */
 export const createOrUpdateProfile = async (userId: string, profileData: any) => {
   try {
     console.log('Creating/updating profile for user:', userId);
@@ -110,6 +137,19 @@ export const createOrUpdateProfile = async (userId: string, profileData: any) =>
   }
 };
 
+/**
+ * Asynchronously fetches a user profile from the database, or creates a default profile if none exists.
+ * @example
+ * sync('12345')
+ * // Returns a user profile object or a newly created default profile object
+ * @param {string} userId - The unique identifier for the user whose profile is being fetched.
+ * @returns {Promise<UserProfile | null>} Promise resolving to the fetched user profile or a default profile if none exists, or null if an error occurs.
+ * @description
+ *   - Attempts to retrieve a user's profile from the 'profiles' table using the provided userId.
+ *   - If the profile does not exist, a default profile is created with pre-defined attributes and a 'free' subscription plan.
+ *   - Utilizes Supabase client methods for querying the database.
+ *   - Handles errors gracefully by logging them and returning null.
+ */
 export const fetchUserProfile = async (userId: string): Promise<UserProfile | null> => {
   try {
     console.log('Fetching user profile for:', userId);
@@ -152,6 +192,19 @@ export const fetchUserProfile = async (userId: string): Promise<UserProfile | nu
   }
 };
 
+/**
+ * Registers a user with the provided email and password.
+ * @example
+ * sync('user@example.com', 'securePassword123')
+ * // May throw an error if registration fails
+ * @param {string} email - User's email address for registration.
+ * @param {string} password - User's password for registration.
+ * @returns {Promise<void>} A promise that resolves if registration is successful or throws an error otherwise.
+ * @description
+ *   - Utilizes Supabase authentication service for sign-up.
+ *   - Displays success or error messages using toast notifications.
+ *   - Error handling is performed to provide feedback in case of registration failure.
+ */
 export const registerUser = async (email: string, password: string) => {
   try {
     const { data, error } = await supabase.auth.signUp({
@@ -169,6 +222,20 @@ export const registerUser = async (email: string, password: string) => {
   }
 };
 
+/**
+ * Updates a user's profile with the provided updates in the database.
+ * @example
+ * sync('12345', { username: 'newUsername', age: 30 })
+ * // Success toast if updated, otherwise error handling
+ * @param {string} userId - The unique identifier of the user whose profile is to be updated.
+ * @param {any} updates - An object containing the fields to update in the user's profile.
+ * @returns {void} The function does not return anything explicitly; it handles success and errors internally.
+ * @description
+ *   - Uses Supabase's `update` method to apply changes to the `profiles` table.
+ *   - Displays a success toast message upon successful update.
+ *   - Catches and logs any errors that arise during the profile update.
+ *   - Throws the caught error for further error handling or debugging.
+ */
 export const updateUserProfile = async (userId: string, updates: any) => {
   try {
     const { error } = await supabase

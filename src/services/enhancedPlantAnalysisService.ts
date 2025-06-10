@@ -9,6 +9,19 @@ import type {
 
 // Servizio per l'elaborazione delle immagini
 export class ImageProcessingService {
+  /**
+   * Processes the input image data by resizing and compressing it.
+   * @example
+   * processImage('data:image/jpeg;base64,...')
+   * Returns { processedImage: 'data:image/jpeg;base64,...', metadata: {...} }
+   * @param {string} imageData - Base64 encoded image data to be processed.
+   * @returns {Promise<{processedImage: string, metadata: any}>} Return processed image and metadata.
+   * @description
+   *   - Resizes the image to a maximum dimension of 1024x1024 while maintaining aspect ratio.
+   *   - Compresses the image to JPEG format with a quality setting of 0.8.
+   *   - Metadata includes original and processed dimensions and compression level.
+   *   - Handles errors gracefully by returning the original image if processing fails.
+   */
   static async processImage(imageData: string): Promise<{ processedImage: string; metadata: any }> {
     try {
       // Conversione e ottimizzazione dell'immagine
@@ -132,6 +145,20 @@ export class LocalDiseaseDetectionService {
   };
 
   // NUOVO: Metodo principale che analizza l'immagine per sintomi visivi
+  /**
+  * Analyzes an image to detect plant diseases.
+  * @example
+  * analyzeImageForDiseases("base64ImageData", "rose", (stage, percentage, message) => console.log(stage, percentage, message))
+  * Returns a promise resolving to an array of detected diseases.
+  * @param {string} imageData - Base64 encoded image data representing the plant.
+  * @param {string} plantName - Name of the plant species being analyzed.
+  * @param {function} [onProgress] - Optional callback function to track the progress of the analysis.
+  * @returns {Promise<DiseaseDetectionResult[]>} A promise that resolves to an array of disease detection results.
+  * @description
+  *   - Uses visual analysis to detect symptoms on the plant.
+  *   - Integrates symptoms analysis with plant-specific disease knowledge.
+  *   - Combines multiple disease detection techniques and deduplicates results.
+  */
   static async analyzeImageForDiseases(
     imageData: string,
     plantName: string,
@@ -163,6 +190,18 @@ export class LocalDiseaseDetectionService {
   }
 
   // NUOVO: Simula l'analisi dell'immagine per rilevare sintomi visivi
+  /**
+   * Detects visual symptoms in given plant image data and returns an array of symptoms.
+   * @example
+   * detectVisualSymptoms('base64ImageData')
+   * ['ingiallimento foglie', 'bordi secchi']
+   * @param {string} imageData - Base64 encoded string representing the image data of the plant.
+   * @returns {Promise<string[]>} A promise that resolves to an array of detected symptom descriptions.
+   * @description
+   *   - Simulates the visual symptoms detection using random selection from predefined symptoms.
+   *   - Introduces a simulated delay of 1200ms to mimic processing time.
+   *   - Randomly selects 1 to 3 symptoms from a predefined list to simulate detection.
+   */
   private static async detectVisualSymptoms(imageData: string): Promise<string[]> {
     // Simula il tempo di elaborazione
     await new Promise(resolve => setTimeout(resolve, 1200));
@@ -197,6 +236,20 @@ export class LocalDiseaseDetectionService {
   }
 
   // NUOVO: Combina e classifica i risultati delle diverse analisi
+  /**
+   * Combines and ranks plant-specific and pattern-based diseases by confidence.
+   * @example
+   * combineAndRankDiseases(plantSpecificDiseases, patternBasedDiseases)
+   * // Returns an array of the top 5 ranked diseases based on confidence
+   * @param {DiseaseDetectionResult[]} plantSpecific - Array of diseases detected with plant-specific analysis.
+   * @param {DiseaseDetectionResult[]} patternBased - Array of diseases detected with pattern-based analysis.
+   * @returns {DiseaseDetectionResult[]} An array of the top 5 diseases sorted by confidence.
+   * @description
+   *   - Boosts the confidence of plant-specific diseases by a factor of 1.2.
+   *   - Increases confidence for existing diseases in the map by 30% of the pattern-based confidence, capped at 0.95.
+   *   - Merges unique symptoms from both analyses for the same disease.
+   *   - Limits the results to the top 5 diseases sorted by confidence.
+   */
   private static combineAndRankDiseases(
     plantSpecific: DiseaseDetectionResult[],
     patternBased: DiseaseDetectionResult[]
@@ -230,6 +283,19 @@ export class LocalDiseaseDetectionService {
   }
 
   // Mantieni il metodo esistente ma miglioralo
+  /**
+   * Detects plant diseases based on the plant name and optionally provided symptoms.
+   * @example
+   * detectDisease('basilico', ['Macchie gialle su foglie'])
+   * // Returns an array of guesses for diseases, their confidence levels, symptoms, treatments, severity, and provider.
+   * @param {string} plantName - The name of the plant to analyze for potential diseases.
+   * @param {string[]} [symptoms] - An array of symptoms observed on the plant, used to refine disease detection confidence.
+   * @returns {Promise<DiseaseDetectionResult[]>} A promise resolving to an array of disease detection results with adjusted confidence levels.
+   * @description
+   *   - The function queries an internal plant disease database to identify potential diseases.
+   *   - It adjusts detection confidence based on symptom matching when symptoms are provided.
+   *   - If no specific diseases are found, it provides general plant care recommendations.
+   */
   static async detectDisease(
     plantName: string, 
     symptoms?: string[]
@@ -335,6 +401,19 @@ export class LocalDiseaseDetectionService {
   }
 
   // NUOVO: Calcola corrispondenza tra sintomi osservati e sintomi noti
+  /**
+  * Calculates a match score between observed and known symptoms.
+  * @example
+  * calculateSymptomMatchScore(["headache", "nausea"], ["headache severe", "nausea mild"])
+  * 0.75
+  * @param {string[]} observedSymptoms - An array of observed symptoms from a patient.
+  * @param {string[]} knownSymptoms - An array of known symptom patterns to compare against.
+  * @returns {number} A score between 0 and 1 indicating the degree of match between the observed and known symptoms.
+  * @description
+  *   - The score accounts for partial word matches, considering words longer than 3 characters.
+  *   - The function normalizes text to lowercase to ensure case-insensitive comparison.
+  *   - The returned score is a minimum of 1, representing a perfect match, or less, denoting partial matches.
+  */
   private static calculateSymptomMatchScore(observedSymptoms: string[], knownSymptoms: string[]): number {
     let matches = 0;
     const observedText = observedSymptoms.join(' ').toLowerCase();
@@ -351,6 +430,19 @@ export class LocalDiseaseDetectionService {
   }
 
   // Migliora il metodo esistente analyzeSymptoms
+  /**
+   * Analyzes a list of symptoms to detect possible diseases with confidence ratings.
+   * @example
+   * analyzeSymptoms(['cough', 'fever'])
+   * // Returns array of DiseaseDetectionResult objects sorted by confidence
+   * @param {string[]} symptoms - List of symptoms to be analyzed.
+   * @returns {DiseaseDetectionResult[]} Array of detected diseases with calculated confidence scores.
+   * @description
+   *   - Utilizes a pattern-matching algorithm to identify diseases.
+   *   - A lower match threshold captures more potential cases of diseases.
+   *   - Adjusts confidence scores based on symptom matching and predefined weights.
+   *   - Results are sorted in descending order based on confidence scores for better prioritization.
+   */
   static analyzeSymptoms(symptoms: string[]): DiseaseDetectionResult[] {
     const results: DiseaseDetectionResult[] = [];
     
@@ -371,6 +463,19 @@ export class LocalDiseaseDetectionService {
     return results.sort((a, b) => b.confidence - a.confidence);
   }
   
+  /**
+  * Calculates the match score between provided symptoms and predefined keywords.
+  * @example
+  * calculateSymptomMatch(['fever', 'headache'], ['headache', 'cough'])
+  * 0.9
+  * @param {string[]} symptoms - An array of symptoms as strings.
+  * @param {string[]} keywords - An array of keywords to match against.
+  * @returns {number} A number representing the match score, scaled between 0 and 1.
+  * @description
+  *   - Converts symptoms to a single lowercase string for keyword matching.
+  *   - If the symptoms array is empty, returns a base match score of 0.1.
+  *   - The match score is the proportion of keywords found in the symptoms, scaled by 1.8.
+  */
   private static calculateSymptomMatch(symptoms: string[], keywords: string[]): number {
     if (!symptoms || symptoms.length === 0) return 0.1;
     
@@ -388,6 +493,20 @@ export class LocalDiseaseDetectionService {
 }
 
 export class EnhancedPlantAnalysisService {
+  /**
+   * Analyzes an image to identify plants and detect diseases, providing progress updates.
+   * @example
+   * analyzeImage('base64ImageData', (progress) => console.log(progress))
+   * Returns an object detailing plant identification and disease detection with a consensus.
+   * @param {string} imageData - Base64-encoded string representing the image data to be analyzed.
+   * @param {function} [onProgress] - Optional callback function to report progress updates. Receives an AnalysisProgress object.
+   * @returns {Promise<CombinedAnalysisResult>} Resolves to a CombinedAnalysisResult object containing plant identification, disease detection, and consensus data.
+   * @description
+   *   - Utilizes image preprocessing before attempting plant identification and disease detection.
+   *   - Caches results using a hash of the processed image to enhance performance on repeated analyses.
+   *   - Provides a fallback mechanism using local services in case of errors during the enhanced analysis process.
+   *   - The consensus calculation combines plant identification and disease detection results for a conclusive outcome.
+   */
   static async analyzeImage(
     imageData: string,
     onProgress?: (progress: AnalysisProgress) => void
@@ -465,6 +584,19 @@ export class EnhancedPlantAnalysisService {
     }
   }
   
+  /**
+  * Performs disease detection on a given plant image and updates progress.
+  * @example
+  * performDiseaseDetection(identifiedPlant, updateProgress, processedImageData)
+  * Returns an array of sorted DiseaseDetectionResult objects.
+  * @param {PlantIdentificationResult} identifiedPlant - The result containing identified plant details.
+  * @param {function} updateProgress - Callback function to update the progress of the detection process with stage, percentage, and message.
+  * @param {string} processedImageData - Base64 encoded image data to be analyzed.
+  * @returns {Promise<DiseaseDetectionResult[]>} Returns a promise that resolves to an array of DiseaseDetectionResult objects sorted by confidence.
+  * @description
+  *   - The function utilizes LocalDiseaseDetectionService to analyze the processed image data.
+  *   - Sorting of diseases is performed based on confidence level, in descending order.
+  */
   private static async performDiseaseDetection(
     identifiedPlant: PlantIdentificationResult,
     updateProgress: (stage: string, percentage: number, message: string) => void,
@@ -483,6 +615,19 @@ export class EnhancedPlantAnalysisService {
     return diseases.sort((a, b) => b.confidence - a.confidence);
   }
 
+  /**
+   * Calculates an enhanced consensus from plant identifications and disease detections.
+   * @example
+   * calculateEnhancedConsensus(plantIdentifications, diseaseDetections)
+   * {mostLikelyPlant: {...}, mostLikelyDisease: {...}, confidenceScore: 85.2}
+   * @param {PlantIdentificationResult[]} identifications - Array of plant identification results with confidence values.
+   * @param {DiseaseDetectionResult[]} diseases - Array of disease detection results with confidence values.
+   * @returns {Object} An object containing the most likely plant identification, the most probable disease, and an improved confidence score.
+   * @description
+   *   - Uses a weighted confidence score giving more importance to plant identifications (70%).
+   *   - Rounds the confidence score to two decimal places for precision.
+   *   - Provides fallback for unavailable plant identifications with default values.
+   */
   private static calculateEnhancedConsensus(
     identifications: PlantIdentificationResult[],
     diseases: DiseaseDetectionResult[]
@@ -524,6 +669,19 @@ export class EnhancedPlantAnalysisService {
   }
 
   // Metodo per analisi diretta da file
+  /**
+   * Analyzes the content of an image file to provide detailed analysis results.
+   * @example
+   * analyzeImageFile(file, progress => console.log(progress))
+   * Promise<CombinedAnalysisResult>
+   * @param {File} imageFile - The image file that contains data to be analyzed.
+   * @param {function} [onProgress] - Optional callback function that receives progress updates.
+   * @returns {Promise<CombinedAnalysisResult>} A promise that resolves to the combined analysis result.
+   * @description
+   *   - Utilizes internal `analyzeImage` method to process image data.
+   *   - Handles potential errors during file reading and image data analysis.
+   *   - Supports providing progress feedback if the `onProgress` callback is provided.
+   */
   static async analyzeImageFile(
     imageFile: File,
     onProgress?: (progress: AnalysisProgress) => void

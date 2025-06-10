@@ -29,6 +29,21 @@ const eppoApiKey = Deno.env.get("EPPO_API_KEY");
 const plantIdApiKey = Deno.env.get("PLANT_ID_API_KEY");
 
 // Utility function for detailed logging
+/**
+* Logs a message with a timestamp and a specified log level ("INFO", "WARN", "ERROR").
+* @example
+* logWithTimestamp('INFO', 'Process started', { id: 123 })
+* // [2023-03-17T12:44:11.678Z] [INFO] Process started { "id": 123 }
+* @param {'INFO' | 'WARN' | 'ERROR'} level - The severity level of the log.
+* @param {string} message - The message to log.
+* @param {any} [data] - Optional additional data to be logged.
+* @returns {void} No return value.
+* @description
+*   - Automatically appends an ISO timestamp to each log message.
+*   - Uses console.error for ERROR level messages, console.warn for WARN level, and console.log for INFO level.
+*   - Formats additional data as a JSON string if provided.
+*   - Handles optional data gracefully by omitting it if not provided.
+*/
 function logWithTimestamp(level: 'INFO' | 'WARN' | 'ERROR', message: string, data?: any) {
   const timestamp = new Date().toISOString();
   const logMessage = `[${timestamp}] [${level}] ${message}`;
@@ -43,6 +58,20 @@ function logWithTimestamp(level: 'INFO' | 'WARN' | 'ERROR', message: string, dat
 }
 
 // Function to analyze with Plant.id API
+/**
+ * Analyzes an image using Plant.id APIs to retrieve plant identification and health assessment data.
+ * @example
+ * analyzeWithPlantId("imageBase64String").then(result => {
+ *   console.log(result);
+ * });
+ * @param {string} imageBase64 - A Base64 encoded string representing the image to be analyzed.
+ * @returns {Promise<any>} An object containing identification and health assessment results, or `null` in case of missing API key or errors.
+ * @description
+ *   - Utilizes Plant.id API key to perform identification and health assessments.
+ *   - Executes API calls in parallel with a timeout of 15 seconds for each request.
+ *   - If the API key is not provided, returns an object with `null` identification and health data without making API calls.
+ *   - Logs detailed information about API call outcomes, including success and error statuses.
+ */
 async function analyzeWithPlantId(imageBase64: string): Promise<any> {
   const startTime = Date.now();
   logWithTimestamp('INFO', 'Starting Plant.id analysis');

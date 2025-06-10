@@ -9,6 +9,21 @@ interface UseImageCaptureOptions {
   onCaptureComplete: (imageDataUrl: string) => void;
 }
 
+/**
+ * Captures an image from a video feed and performs quality evaluation on the image.
+ * @example
+ * useImageCaptureOptions({ videoRef, canvasRef, onCaptureComplete })
+ * { isProcessing: boolean, captureImage: function }
+ * @param {object} videoRef - React ref pointing to a HTMLVideoElement.
+ * @param {object} canvasRef - React ref pointing to a HTMLCanvasElement.
+ * @param {function} onCaptureComplete - Callback executed when image capture is complete, receiving the image data URL.
+ * @returns {object} Returns an object containing the isProcessing state and the captureImage function.
+ * @description
+ *   - Captures an image from a video element onto a canvas.
+ *   - Converts the canvas drawing to a JPEG data URL.
+ *   - Evaluates image quality and displays a warning if it's below a certain threshold.
+ *   - Utilizes React state to indicate processing status.
+ */
 export const useImageCapture = ({
   videoRef,
   canvasRef,
@@ -16,6 +31,19 @@ export const useImageCapture = ({
 }: UseImageCaptureOptions) => {
   const [isProcessing, setIsProcessing] = useState(false);
 
+  /**
+  * Captures a frame from a video element and evaluates its quality for plant detection, warning if poor.
+  * @example
+  * sync()
+  * undefined
+  * @param {void} - This function does not accept any arguments.
+  * @returns {void} This function does not return a value.
+  * @description
+  *   - Ensures canvas dimensions match video dimensions before drawing the frame.
+  *   - Converts the canvas content into a data URL in JPEG format.
+  *   - Measures the quality of the captured image to provide user feedback.
+  *   - Properly handles errors related to image capturing and processing.
+  */
   const captureImage = async () => {
     setIsProcessing(true);
     

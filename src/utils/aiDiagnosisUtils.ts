@@ -270,6 +270,21 @@ export const diseaseSymptoms = {
 import { analyzePlantImage } from './plantAnalysisUtils';
 
 // Analyze an image and get a diagnostic result
+/**
+ * Analyzes plant images for health diagnostics and verification.
+ * @example
+ * sync('data:image/jpeg;base64,...', false, true)
+ * { analysisDetails: { plantVerification: { isPlant: true, confidence: 0.95 } } }
+ * @param {string} imageDataUrl - A data URL of the image to analyze.
+ * @param {boolean} [lowQualityFallback=false] - Determines if low quality fallback should be used.
+ * @param {boolean} [isVerificationOnly=false] - Specifies if the analysis is for verification purposes only.
+ * @returns {Object} Analysis result with diagnostic details or plant verification data.
+ * @description
+ *   - Initiates asynchronous plant image analysis using external AI services.
+ *   - Simulates potential diagnoses for plant diseases, including EPPO regulated diseases.
+ *   - Generates mock insights from multiple AI service outputs.
+ *   - Provides EPPO data for identified quarantine pests/diseases.
+ */
 export const analyzeImage = async (
   imageDataUrl: string,
   lowQualityFallback = false,
@@ -566,6 +581,21 @@ export const analyzeImage = async (
 };
 
 // Helper function to create a response for healthy plants
+/**
+* Analyzes the health of a given plant's part and returns a comprehensive analysis report.
+* @example
+* analyzePlantHealth('Ficus (Ficus lyrata)', 0.99)
+* // Returns an object containing analysis details about the health status of the plant part.
+* @param {string} plantName - The scientific name of the plant, with the common name in parentheses.
+* @param {number} confidence - The confidence level of the health analysis, ranging from 0 to 1.
+* @param {string} [plantPart='leaf'] - The specific part of the plant being analyzed.
+* @returns {Object} An object including details such as identified features of plant health, verification results, and additional recommended tests.
+* @description
+*   - Provides a detailed health analysis specifically for healthy plant parts.
+*   - Contains insights from multiple AI services to verify plant and part identification.
+*   - Suggests regular monitoring and preventive measures even if no disease is detected.
+*   - Uses AI services to ensure high confidence verification of plant identity and health.
+*/
 const analyzeHealthyPlant = (plantName, confidence, plantPart = 'leaf') => {
   return {
     diseaseId: null, // No disease for healthy plants

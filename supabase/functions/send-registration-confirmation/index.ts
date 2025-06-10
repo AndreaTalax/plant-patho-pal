@@ -39,6 +39,20 @@ console.log("Configuration:", {
 });
 
 // SendGrid API for email sending when API key is available
+/**
+ * Sends a registration confirmation email using the SendGrid API.
+ * @example
+ * sendWithSendGridAPI('user@example.com', 'JohnDoe', 'https://confirmation-link.com')
+ * Returns a SendGrid API response object.
+ * @param {string} toEmail - Recipient's email address.
+ * @param {string} username - Recipient's username to personalize the email.
+ * @param {string} [confirmationUrl] - Optional URL for email confirmation.
+ * @returns {Object} SendGrid API response object.
+ * @description
+ *   - Throws an error if SendGrid API key is not configured.
+ *   - Logs relevant steps and errors to the console for debugging purposes.
+ *   - Uses SendGrid's v3 Mail Send API to send the email.
+ */
 async function sendWithSendGridAPI(toEmail: string, username: string, confirmationUrl?: string) {
   if (!SENDGRID_API_KEY) {
     throw new Error("SendGrid API key is not configured");
@@ -173,6 +187,20 @@ async function sendWithSendGridAPI(toEmail: string, username: string, confirmati
 }
 
 // Send registration confirmation email with better error handling
+/**
+ * Sends a confirmation email to a newly registered user.
+ * @example
+ * sendConfirmationEmail('user@example.com', 'username123', 'https://confirmation.url')
+ * // Returns: { success: true }
+ * @param {string} email - The email address of the recipient.
+ * @param {string} username - The username associated with the email.
+ * @param {string} [confirmationUrl] - Optional URL for confirming the registration.
+ * @returns {Object} Contains success status of the email delivery process.
+ * @description
+ *   - Utilizes SendGrid API for email delivery if available, else falls back to SMTP.
+ *   - Ensures SMTP configuration is validated before attempting to send email via SMTP.
+ *   - Provides detailed logging throughout the email sending process for transparency and debugging.
+ */
 async function sendConfirmationEmail(email: string, username: string, confirmationUrl?: string) {
   try {
     console.log(`Attempting to send email to ${email} using username ${username}`);

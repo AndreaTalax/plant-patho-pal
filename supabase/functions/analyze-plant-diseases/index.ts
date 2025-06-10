@@ -51,6 +51,44 @@ serve(async (req) => {
 });
 
 // Simulate Plant Diseases AI response with realistic disease data
+/**
+ * Simulates AI-based plant disease analysis and returns a random plant disease report.
+ * @example
+ * simulatePlantDiseaseAIResponse()
+ * {
+ *   plantName: "Cucumber",
+ *   diseaseName: "Powdery Mildew",
+ *   confidence: 0.92,
+ *   isHealthy: false,
+ *   plantPart: "leaf",
+ *   symptoms: [
+ *     "White powdery spots on leaves and stems",
+ *     "Yellowing leaves",
+ *     "Premature leaf drop",
+ *     "Stunted growth"
+ *   ],
+ *   treatment: {
+ *     biological: [
+ *       "Apply neem oil spray",
+ *       "Use milk spray (1:10 milk to water ratio)",
+ *       "Prune affected leaves"
+ *     ],
+ *     chemical: [
+ *       "Apply sulfur-based fungicides",
+ *       "Use potassium bicarbonate-based fungicides"
+ *     ],
+ *     prevention: [
+ *       "Space plants properly for good air circulation",
+ *       "Avoid overhead watering",
+ *       "Plant resistant varieties"
+ *     ]
+ *   }
+ * }
+ * @returns {Object} An object containing plant disease analysis with treatment suggestions.
+ * @description
+ *   - Randomly selects a plant disease report from predefined diseases.
+ *   - Has a 25% chance of returning a report indicating the plant is healthy.
+ */
 function simulatePlantDiseaseAIResponse() {
   const plantDiseases = [
     {

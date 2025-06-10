@@ -121,6 +121,21 @@ function extractSymptoms(userInput: string): string[] {
 }
 
 // Funzione per generare spiegazioni basate sui risultati dell'API e l'input dell'utente
+/**
+ * Generates an explanation based on EPPO database data, user input, and endpoint type.
+ * @example
+ * generateExplanation([{ preferredname: 'Parassita1', description: 'Descrizione parassita 1' }], 'foglie gialle', 'pests')
+ * returns "In base ai sintomi descritti ("foglie gialle"), ho trovato 1 possibili cause nel database EPPO..."
+ * @param {any} data - Data retrieved from the EPPO database, can be an array or a single object.
+ * @param {string} userInput - String containing user-described symptoms or input.
+ * @param {string} endpoint - Endpoint type determining explanation context; can be 'pests', 'hosts', or other.
+ * @returns {string} Explanation string generated from the provided data and context.
+ * @description
+ *   - Handles empty data gracefully, returning a default message.
+ *   - Differentiates the explanation based on the endpoint type.
+ *   - Processes up to top 3 results for 'pests' endpoint and provides relevant pest names and descriptions.
+ *   - Provides generic information for unrecognized endpoint types.
+ */
 function generateExplanation(data: any, userInput: string, endpoint: string): string {
   if (!data || (Array.isArray(data) && data.length === 0)) {
     return "Non sono stati trovati risultati rilevanti nel database EPPO per i sintomi descritti.";

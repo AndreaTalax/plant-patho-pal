@@ -11,6 +11,19 @@ interface UserChatViewProps {
   userId: string;
 }
 
+/**
+ * Renders a chat view based on user activity.
+ * @example
+ * UserChatView({ userId: '12345' })
+ * Returns a chat interface with message input ready for user interaction.
+ * @param {Object} UserChatViewProps - Properties to set up user chat view.
+ * @param {string} UserChatViewProps.userId - User's unique identifier for whom the chat is displayed.
+ * @returns {JSX.Element} Renders either an empty state view to start a new chat or a chat interface with message input.
+ * @description
+ *   - Integrates with `useUserChat` to manage chat state and actions.
+ *   - Displays an expert selection view if no active chat exists.
+ *   - Provides functionality for sending messages with visual feedback on sending status.
+ */
 const UserChatView = ({ userId }: UserChatViewProps) => {
   const {
     activeChat,

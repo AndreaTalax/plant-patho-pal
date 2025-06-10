@@ -15,7 +15,40 @@ interface ChatMessageProps {
   isExpertView?: boolean;
 }
 
+/**
+* Renders the chat message content with different styles based on the message text and sender type.
+* @example
+* ChatMessage({ message: { text: 'Sample text', sender: 'expert', time: '2:00 PM' }, isExpertView: false })
+* // Returns a styled chat bubble with 'Sample text'.
+* @param {Object} params - The parameters for rendering the chat message.
+* @param {Object} params.message - Message object containing text, sender, time, and optional products, plantImage, plantDetails, and userDetails.
+* @param {string} params.message.text - The text content of the message.
+* @param {string} params.message.sender - The sender of the message, either 'expert' or 'user'.
+* @param {string} params.message.time - The time the message was sent.
+* @param {Array} [params.message.products] - Array of products related to the message.
+* @param {string} [params.message.plantImage] - URL of the plant image associated with the message.
+* @param {Object} [params.message.plantDetails] - Details of the plant related to the message, including environment, watering frequency, light exposure, and symptoms.
+* @param {Object} [params.message.userDetails] - Details of the user who sent the message, including first name, last name, birth date, and place of birth.
+* @param {boolean} [params.isExpertView=false] - Flag to determine the view mode, customizing the styling based on the expert view.
+* @returns {JSX.Element} Returns a JSX element rendering message content styled based on sender and message type.
+* @description
+*   - It checks for specific formats in the message to render different styles, such as diagnosis request, plant info, images, and default text.
+*   - Handles both image URLs and blob URLs to display images in messages.
+*   - Displays additional information like products related to the message and plant or user details when available.
+*/
 const ChatMessage: React.FC<ChatMessageProps> = ({ message, isExpertView = false }) => {
+  /**
+   * Renders different types of chat messages based on their content.
+   * @example
+   * renderMessage({ text: '🌱 **Nuova richiesta di consulenza**' })
+   * Returns a formatted diagnosis request component.
+   * @param {Object} message - Object containing the text property representing the message content.
+   * @returns {JSX.Element} A JSX element representing the formatted message.
+   * @description
+   *   - Categorizes messages as diagnosis requests, plant information, image URLs, blob URLs, or default text messages.
+   *   - Supports both base64 and regular URLs for image rendering.
+   *   - Ensures messages are displayed appropriately based on their format.
+   */
   const renderMessageContent = () => {
     // Check if message content contains diagnosis request format
     if (message.text.includes('🌱 **Nuova richiesta di consulenza**')) {

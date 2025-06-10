@@ -9,6 +9,22 @@ import { analyzeWithEnhancedAI } from '@/utils/plant-analysis/enhanced-analysis'
 import { handleAnalysisError, createFallbackDiagnosisResult, safeAnalysisWrapper } from '@/utils/error-handling';
 import type { AnalysisProgress } from '../services/aiProviders';
 
+/**
+ * Provides functionalities for plant disease diagnosis, analysis, and image processing.
+ * @example
+ * const { captureImage } = usePlantDiagnosis();
+ * captureImage("data:image/png;base64,...", plantInfo);
+ * 
+ * @param {File} imageFile - The image file to be analyzed.
+ * @param {PlantInfo} [plantInfo] - Optional parameter providing additional plant information for analysis.
+ * 
+ * @returns {Object} An object containing various states and functions related to plant diagnosis and image analysis.
+ * @description
+ *   - Utilizes enhanced AI analysis to determine plant health with a confidence requirement of 60% or more.
+ *   - Handles image capture from camera or file upload, and initiates analysis automatically.
+ *   - Tracks progress and provides feedback on the analysis process using toast notifications.
+ *   - Provides recommendations for plant care or disease treatment based on analysis results.
+ */
 export const usePlantDiagnosis = () => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
@@ -21,6 +37,20 @@ export const usePlantDiagnosis = () => {
   const streamRef = useRef<MediaStream | null>(null);
 
   // Enhanced analysis function with flexible accuracy requirements
+  /**
+   * Performs a flexible plant analysis using enhanced AI, updating progress and results.
+   * @example
+   * sync(imageFile, plantInfo)
+   * Returns detailed analysis results and diagnosis of the plant with accuracy percentage.
+   * @param {File} imageFile - The image of the plant to be analyzed, must be a valid File object.
+   * @param {PlantInfo} [plantInfo] - Optional information about the plant to aid in analysis.
+   * @returns {AnalysisResult} An object containing disease information, analysis details, and confidence level.
+   * @description
+   *   - Uses an enhanced AI analysis with a flexible accuracy requirement lowered to 60%.
+   *   - Progress is tracked and capped at 95% until complete for user feedback.
+   *   - Provides recommendations for products and advises expert consultation if high confidence is not reached.
+   *   - Handles errors gracefully with fallback diagnosis and professional consultation suggestion.
+   */
   const analyzeUploadedImage = async (imageFile: File, plantInfo?: PlantInfo) => {
     setIsAnalyzing(true);
     setDiagnosisResult(null);
@@ -187,6 +217,19 @@ export const usePlantDiagnosis = () => {
   };
 
   // Select relevant products based on plant identification and health
+  /**
+   * Provides a list of product codes based on plant name and health status.
+   * @example
+   * getProductCodes('Rose', true)
+   * // Returns ['2', '1']
+   * @param {string} plantName - Name of the plant.
+   * @param {boolean} isHealthy - Indicates if the plant is healthy.
+   * @returns {string[]} Array of product codes tailored to the plant's needs.
+   * @description
+   *   - Returns default products if the plant name is invalid.
+   *   - Identifies specific product codes for diseases or pests.
+   *   - Offers different product codes for indoor plants.
+   */
   const selectRelevantProducts = (plantName: string, isHealthy: boolean): string[] => {
     if (!plantName || typeof plantName !== 'string') {
       return ['1', '2']; // Default products
@@ -230,6 +273,20 @@ export const usePlantDiagnosis = () => {
     stopCameraStream();
   };
 
+  /**
+   * Processes captured image data URL and analyzes it for plant diagnosis.
+   * @example
+   * imageDataUrl('data:image/jpeg;base64,...', { plantId: 123, species: 'Rose' })
+   * undefined
+   * @param {string} imageDataUrl - Base64 encoded image data URL representing the captured image.
+   * @param {PlantInfo} [plantInfo] - Optional plant specific information for more tailored analysis.
+   * @returns {undefined} No return value.
+   * @description
+   *   - Displays an error toast if imageDataUrl is invalid.
+   *   - Converts the image data URL to a File object for further analysis.
+   *   - Stops the camera stream after capturing the image.
+   *   - Resets analysis progress before starting the image analysis.
+   */
   const captureImage = (imageDataUrl: string, plantInfo?: PlantInfo) => {
     if (!imageDataUrl) {
       toast.error("Errore nella cattura dell'immagine");
@@ -252,6 +309,19 @@ export const usePlantDiagnosis = () => {
     }
   };
 
+  /**
+   * Handles the uploading and analysis of an image file for plant diagnosis.
+   * @example
+   * functionName(file, plantInfo)
+   * undefined
+   * @param {File} file - The image file to be uploaded and analyzed.
+   * @param {PlantInfo} [plantInfo] - Optional additional information about the plant.
+   * @returns {void} This function does not return a value.
+   * @description
+   *   - Displays an error toast message if no file is selected or if there is an error reading the file.
+   *   - Utilizes a FileReader to read the file as a data URL for further processing.
+   *   - Invokes `analyzeUploadedImage` function after successful image upload.
+   */
   const handleImageUpload = (file: File, plantInfo?: PlantInfo) => {
     if (!file) {
       toast.error("Nessun file selezionato");

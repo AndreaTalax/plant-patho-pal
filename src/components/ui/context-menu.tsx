@@ -163,6 +163,18 @@ const ContextMenuSeparator = React.forwardRef<
 ))
 ContextMenuSeparator.displayName = ContextMenuPrimitive.Separator.displayName
 
+/**
+ * Combines class names and renders a span element with given props.
+ * @example
+ * renderSpanElement('my-class', { id: 'span1', title: 'Example' })
+ * // Returns: <span className="ml-auto text-xs tracking-widest text-muted-foreground my-class" id="span1" title="Example"></span>
+ * @param {string} className - Additional class name(s) to be combined with default styling classes.
+ * @param {React.HTMLAttributes<HTMLSpanElement>} props - Additional properties and attributes to be passed to the span element.
+ * @returns {JSX.Element} A span element with combined class names and provided properties.
+ * @description
+ *   - Utilizes a utility function `cn` to concatenate class names efficiently.
+ *   - Applies default styles for text appearance and positioning.
+ */
 const ContextMenuShortcut = ({
   className,
   ...props

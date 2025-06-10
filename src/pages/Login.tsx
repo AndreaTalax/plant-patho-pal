@@ -9,6 +9,20 @@ import { toast } from "sonner";
 import { Leaf, LockKeyhole, Mail } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 
+/**
+ * Handles user login by validating credentials and navigating to the main page upon success.
+ * @example
+ * handleLogin(event)
+ * - No explicit return value, handles UI actions.
+ * @param {React.FormEvent} e - Event triggered by form submission.
+ * @returns {void} Nothing is returned. Function manages authentication process and UI state internally.
+ * @description
+ *   - Provides user feedback using toast notifications based on the success or failure of the authentication.
+ *   - Implements client-side form validation ensuring both email and password fields are filled.
+ *   - Utilizes async/await for login process to handle asynchronous operations smoothly.
+ *   - Navigation to the home page is delayed for 500 milliseconds after a successful login 
+ *     to ensure the authentication state is properly updated.
+ */
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -16,6 +30,19 @@ const Login = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
 
+  /**
+  * Handles user login process by validating credentials and providing feedback.
+  * @example
+  * sync(formEvent)
+  * Initiates login and navigates home on success.
+  * @param {React.FormEvent} e - The form event that triggers the login process.
+  * @returns {void} No return value, but navigates on successful login.
+  * @description
+  *   - Trims whitespaces from the email input before sending login request.
+  *   - Uses toast notifications for both success and error feedback.
+  *   - Logs success and error information to the console for debugging purposes.
+  *   - Includes a delay before navigation to ensure authentication state is updated.
+  */
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     toast.dismiss();

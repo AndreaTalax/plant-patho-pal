@@ -136,6 +136,19 @@ serve(async (req) => {
 });
 
 // Process the raw Vision API results into a more useful format for our application
+/**
+ * Processes the results from the Vision API to determine if an image contains a plant.
+ * @example
+ * processVisionResults(visionResults)
+ * { success: true, isPlant: false, confidence: 0, plantDetails: null, labels: [...], colors: [...], webEntities: [...], objects: [...], rawData: response }
+ * @param {object} visionResults - The result object returned from the Vision API analysis.
+ * @returns {object} An object containing analysis results such as labels, colors, web entities, and object localization with plant identification.
+ * @description
+ *   - Determines the presence of a plant in the image based on label and object annotations.
+ *   - Extracts top 5 dominant colors with RGB and HEX values from the image properties.
+ *   - Retrieves the top 5 web entities and best guess labels related to the image.
+ *   - Performs an additional check for plant-related object localization annotations.
+ */
 function processVisionResults(visionResults) {
   if (!visionResults.responses || visionResults.responses.length === 0) {
     return { success: false, message: "No results from Vision API" };
@@ -254,6 +267,20 @@ function rgbToHex(r, g, b) {
 }
 
 // Store analysis results in Supabase
+/**
+* Stores the analysis results into the 'vision_analysis_results' table in the database
+* @example
+* storeAnalysisResults(supabaseClient, 12345, analysisResults, "image.jpg")
+* // Successfully stores the results in the database and logs confirmation
+* @param {Object} supabase - The Supabase client used to interact with the database.
+* @param {number} userId - The ID of the user related to the analysis results.
+* @param {Object} results - The results of the image analysis containing properties like isPlant, confidence, plantDetails, etc.
+* @param {string} imageName - The name of the image being analyzed.
+* @returns {void} No return value, but logs messages indicating success or failure.
+* @description
+*   - Utilizes the Supabase client to perform database operations.
+*   - Catches and logs errors during the database operation.
+*/
 async function storeAnalysisResults(supabase, userId, results, imageName) {
   try {
     await supabase.from('vision_analysis_results').insert({

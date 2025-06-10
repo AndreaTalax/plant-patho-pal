@@ -3,6 +3,17 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 // Convert file to base64 without data type prefix
+/**
+* Converts a file to a base64 string asynchronously, removing any data URI prefix.
+* @example
+* sync(file).then(base64String => console.log(base64String));
+* @param {File} file - The file to convert into a base64 string.
+* @returns {Promise<string>} A promise that resolves with the base64 string representation of the file.
+* @description
+*   - Uses FileReader API to handle file reading asynchronously.
+*   - Strips the data URI prefix from the result before resolving the promise.
+*   - Handles both file read success and error cases.
+*/
 export const fileToBase64WithoutPrefix = async (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -17,6 +28,18 @@ export const fileToBase64WithoutPrefix = async (file: File): Promise<string> => 
 };
 
 // Analyze plant image using Plexi AI with robust error handling
+/**
+ * Analyzes an image file using Cloud Vision and provides the result.
+ * @example
+ * sync(imageFile)
+ * Returns analysis data object or performs a fallback local analysis in case of an error.
+ * @param {File} imageFile - The image file to be analyzed.
+ * @returns {Promise<any>} A promise that resolves to the analysis data or the result from fallbackLocalAnalysis.
+ * @description
+ *   - Utilizes `supabase.functions.invoke` for remote analysis via Cloud Vision.
+ *   - Falls back to a local analysis method if the Cloud Vision service encounters an error.
+ *   - Logs each step of the process for debugging purposes.
+ */
 export const analyzeWithCloudVision = async (imageFile: File): Promise<any> => {
   try {
     console.log('🔍 Starting Cloud Vision analysis...');
@@ -44,6 +67,19 @@ export const analyzeWithCloudVision = async (imageFile: File): Promise<any> => {
 };
 
 // Robust fallback analysis with safe error handling
+/**
+* Performs a local fallback analysis on the provided image file.
+* @example
+* imageFile(sampleImageFile)
+* Returns an object containing mock analysis data.
+* @param {File} imageFile - The image file to analyze, used for local fallback analysis.
+* @returns {Object} An object with mock analysis data including label, score, confidence, and recommendations.
+* @description
+*   - This function is used when other analysis methods are unavailable.
+*   - It creates a mock analysis result to simulate a real analysis result.
+*   - Always suggests consulting an expert due to the limited accuracy of this local analysis.
+*   - The function will consistently mark the process as a fallback, indicating that it's not the primary analysis method.
+*/
 export const fallbackLocalAnalysis = (imageFile: File): any => {
   console.log('🔄 Using local fallback analysis');
   
@@ -67,6 +103,19 @@ export const fallbackLocalAnalysis = (imageFile: File): any => {
 };
 
 // Safe plant type identification with error handling
+/**
+* Extracts the most relevant plant description from vision results.
+* @example
+* extractPlantDescription(visionResults)
+* 'rose'
+* @param {Object} visionResults - An object containing vision analysis results.
+* @returns {string | null} The description of the most relevant plant label or a fallback plant type.
+* @description 
+*   - Filters labels to include specific plant-related keywords such as 'plant', 'flower', 'tree', 'leaf', or 'botanical'.
+*   - Sorts the filtered labels based on their score in descending order to find the most relevant description.
+*   - Provides a default return of "Pianta generica" if no specific plant labels are found.
+*   - Logs an error message and returns "Pianta non identificata" if any exceptions occur during processing.
+*/
 export const identifyPlantTypeWithVision = (visionResults: any): string | null => {
   try {
     if (!visionResults || !visionResults.isPlant) {
@@ -101,6 +150,18 @@ export const identifyPlantTypeWithVision = (visionResults: any): string | null =
 };
 
 // Safe disease detection with robust error handling
+/**
+ * Analyzes vision results to determine plant health status.
+ * @example
+ * analyzePlantHealth(visionResults)
+ * { isHealthy: true, disease: null, confidence: 0.8 }
+ * @param {Object} visionResults - An object containing vision analysis data with labels and colors.
+ * @returns {Object} An object containing the health status, detected disease (if any), and confidence level.
+ * @description
+ *   - Identifies potential plant diseases based on labels containing disease-related terms.
+ *   - Evaluates plant health using color analysis for symptoms of diseases like yellowing or browning.
+ *   - Handles errors gracefully by logging them and returning default health status.
+ */
 export const detectPlantDiseaseWithVision = (visionResults: any): { isHealthy: boolean, disease: string | null, confidence: number } => {
   try {
     if (!visionResults || !visionResults.isPlant) {
@@ -152,6 +213,18 @@ export const detectPlantDiseaseWithVision = (visionResults: any): { isHealthy: b
 };
 
 // Safe plant part identification
+/**
+ * Identifies the part of the plant described in the vision results.
+ * @example
+ * identifyPlantPart(visionResults)
+ * 'leaf'
+ * @param {any} visionResults - The result containing labels and objects from a vision recognition service.
+ * @returns {string} Identified plant part such as "leaf", "flower", "fruit", etc., or "whole plant" if not identified.
+ * @description
+ *   - Match labels against predefined plant part terms to identify specific plant parts.
+ *   - Falls back to checking objects if plant part is not identified in the labels.
+ *   - Returns "whole plant" if no specific part is identified or if an error occurs.
+ */
 export const identifyPlantPartWithVision = (visionResults: any): string => {
   try {
     if (!visionResults || !visionResults.isPlant) {
@@ -203,6 +276,20 @@ export const identifyPlantPartWithVision = (visionResults: any): string => {
 };
 
 // Enhanced analysis integration with comprehensive error handling
+/**
+ * Enhances base plant analysis data using vision AI results and provides a detailed plant examination.
+ * @example
+ * baseAnalysis(someBaseAnalysis, someVisionResults)
+ * Returns enhanced analysis object with detailed plant information.
+ * @param {Object} baseAnalysis - The base plant analysis data containing initial assessment, label, and confidence.
+ * @param {Object} visionResults - The vision AI results containing information about plant characteristics, health, and web references.
+ * @returns {Object} Enhanced analysis object that includes integrated data from vision AI results along with updated labels, health status, and color profile.
+ * @description
+ *   - Safely integrates vision AI data to enhance the existing analysis by updating labels and confidence levels.
+ *   - Determines plant health and disease presence, providing specific disease name and confidence if available.
+ *   - Incorporates vision AI derived web references and additional labels to enrich the analysis.
+ *   - Logs any errors and manages exceptions by returning enhancement status and error details when applicable.
+ */
 export const enhancePlantAnalysisWithVision = (baseAnalysis: any, visionResults: any): any => {
   try {
     if (!baseAnalysis) {

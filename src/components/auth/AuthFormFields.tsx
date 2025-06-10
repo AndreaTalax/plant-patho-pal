@@ -16,6 +16,33 @@ interface AuthFormFieldsProps {
   isLoading: boolean;
 }
 
+/**
+ * Renders an authentication form with fields for email and password.
+ * @example
+ * <AuthFormFields
+ *   email=""
+ *   setEmail={() => {}}
+ *   password=""
+ *   setPassword={() => {}}
+ *   mode="login"
+ *   onSubmit={() => {}}
+ *   toggleMode={() => {}}
+ *   isLoading={false}
+ * />
+ * @param {string} email - User's email address.
+ * @param {function} setEmail - Function to update the email state.
+ * @param {string} password - User's password.
+ * @param {function} setPassword - Function to update the password state.
+ * @param {string} mode - Current form mode, either 'login' or 'signup'.
+ * @param {function} onSubmit - Function to handle form submission.
+ * @param {function} toggleMode - Function to toggle between login and signup modes.
+ * @param {boolean} isLoading - Boolean indicating if the form is in a loading state.
+ * @returns {JSX.Element} The rendered authentication form component.
+ * @description
+ *   - Displays a loading indicator on the submit button when `isLoading` is true.
+ *   - Automatically updates placeholder text and button label based on `mode`.
+ *   - Provides a toggle option between login and signup modes.
+ */
 export function AuthFormFields({
   email,
   setEmail,

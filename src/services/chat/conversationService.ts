@@ -4,6 +4,19 @@ import { toast } from 'sonner';
 import { MARCO_NIGRO_ID } from '@/components/phytopathologist';
 
 export class ConversationService {
+  /**
+  * Creates a new conversation with an expert or returns an existing conversation ID.
+  * @example
+  * createConversationWithExpert('user-id', 'Consulta con esperto')
+  * Returns 'conversation-id' if successful, otherwise returns null.
+  * @param {string} userId - The ID of the user initiating the conversation.
+  * @param {string} [title] - Optional title for the conversation.
+  * @returns {Promise<string | null>} The ID of the created or existing conversation, or null on failure.
+  * @description
+  *   - Authenticates the user before creating a conversation.
+  *   - Checks for existing conversation with the expert to avoid duplicates.
+  *   - Returns the conversation ID if it already exists.
+  */
   static async createConversationWithExpert(userId: string, title?: string): Promise<string | null> {
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -52,6 +65,18 @@ export class ConversationService {
     }
   }
 
+  /**
+   * Finds or creates a conversation for a given user and expert.
+   * @example
+   * findOrCreateConversation('12345')
+   * { id: 1, user_id: '12345', expert_id: 'EXPERT_ID', title: 'Consulenza esperto', status: 'active' }
+   * @param {string} userId - The unique identifier of the user.
+   * @returns {Object|null} The conversation data if successful, otherwise null.
+   * @description
+   *   - Utilizes Supabase to query and insert data into the 'conversations' table.
+   *   - Returns an existing conversation if found, else creates a new one.
+   *   - Logs errors without halting program execution.
+   */
   static async findOrCreateConversation(userId: string) {
     try {
       // Check if conversation already exists
@@ -90,6 +115,18 @@ export class ConversationService {
     }
   }
 
+  /**
+  * Updates the status of a conversation in the database.
+  * @example
+  * updateConversationStatus('123', 'active')
+  * true
+  * @param {string} conversationId - The unique identifier for the conversation.
+  * @param {string} status - The new status to set for the conversation.
+  * @returns {boolean} Returns true if the conversation status was successfully updated, otherwise false if an error occurred.
+  * @description
+  *   - Utilizes the Supabase client to perform the update operation on the 'conversations' table.
+  *   - Logs errors to the console if the update fails or if an exception is caught.
+  */
   static async updateConversationStatus(conversationId: string, status: string): Promise<boolean> {
     try {
       const { error } = await supabase

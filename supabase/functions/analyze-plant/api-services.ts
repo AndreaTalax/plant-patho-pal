@@ -1,5 +1,18 @@
 
 // Function to simulate or call Flora Incognita API
+/**
+ * Analyzes a plant image using the Flora Incognita API and returns the species information.
+ * @example
+ * analyzeWithFloraIncognita(imageArrayBuffer, floraIncognitaKey)
+ * { species: "Rose", genus: "Rosa", family: "Rosaceae", score: 0.95, source: "Flora Incognita API" }
+ * @param {ArrayBuffer} imageArrayBuffer - The ArrayBuffer representation of the plant image to be analyzed.
+ * @param {string | null} floraIncognitaKey - The API key for accessing Flora Incognita services, or null to use simulation.
+ * @returns {Promise<any>} A promise that resolves to the analyzed results including species, genus, family, score, and source information.
+ * @description
+ *   - Returns simulated analysis results if the Flora Incognita API key is not provided or if an API error occurs.
+ *   - Converts image data from ArrayBuffer to base64 format before sending to the API.
+ *   - Uses a timeout mechanism of 10 seconds for the API request to prevent indefinite waiting.
+ */
 export async function analyzeWithFloraIncognita(imageArrayBuffer: ArrayBuffer, floraIncognitaKey: string | null): Promise<any> {
   try {
     if (!floraIncognitaKey) {
@@ -42,6 +55,17 @@ export async function analyzeWithFloraIncognita(imageArrayBuffer: ArrayBuffer, f
 }
 
 // Simulate PlantSnap results when API is not available or fails
+/**
+ * Simulates the result of identifying a plant species using Flora Incognita.
+ * @example
+ * simulateFloraIncognitaResult()
+ * { species: "Rosa canina", genus: "Rosa", family: "Rosaceae", score: 0.87, source: "Flora Incognita Simulation" }
+ * @returns {Object} Returns a simulated identification result consisting of species, genus, family, score, and source.
+ * @description
+ *   - The function randomly selects one of the predefined mock results.
+ *   - Adds a source to indicate the result is a simulation.
+ *   - Uses a randomizing method to mimic real-world identification variance.
+ */
 function simulateFloraIncognitaResult() {
   const mockResults = [
     {
@@ -78,6 +102,19 @@ function simulateFloraIncognitaResult() {
 }
 
 // Function to simulate or call PlantSnap API
+/**
+ * Analyze a plant image using the PlantSnap API, or simulate the result if an API key is not provided.
+ * @example
+ * analyzeWithPlantSnap(imageArrayBuffer, 'yourPlantSnapAPIKey')
+ * Returns an object containing species, genus, family, score, source, and details.
+ * @param {ArrayBuffer} imageArrayBuffer - ArrayBuffer representation of the plant image to be analyzed.
+ * @param {string | null} plantSnapKey - The API key for PlantSnap, or null for simulation mode.
+ * @returns {Promise<any>} A promise resolving to an analysis result object.
+ * @description
+ *   - Converts the image ArrayBuffer to a base64 string for API communication.
+ *   - Sends a POST request to the PlantSnap API endpoint with a 10-second timeout.
+ *   - The simulation mode is used when the PlantSnap API key is unavailable, providing mocked results.
+ */
 export async function analyzeWithPlantSnap(imageArrayBuffer: ArrayBuffer, plantSnapKey: string | null): Promise<any> {
   try {
     if (!plantSnapKey) {
@@ -130,6 +167,27 @@ export async function analyzeWithPlantSnap(imageArrayBuffer: ArrayBuffer, plantS
 }
 
 // Simulate PlantSnap results when API is not available or fails
+/**
+ * Simulate a plant identification result from a mock data set.
+ * @example
+ * simulatePlantSnapResult()
+ * {
+ *   species: "Helianthus annuus",
+ *   genus: "Helianthus",
+ *   family: "Asteraceae",
+ *   score: 0.91,
+ *   details: {
+ *     common_names: ["Sunflower", "Common Sunflower"],
+ *     edible: true,
+ *     toxic: false
+ *   },
+ *   source: "PlantSnap Simulation"
+ * }
+ * @returns {Object} An object containing information about the identified plant species.
+ * @description
+ *   - Randomly selects a plant's information from predefined mock data.
+ *   - Includes additional source information indicating that the result is simulated.
+ */
 function simulatePlantSnapResult() {
   const mockResults = [
     {

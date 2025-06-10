@@ -9,6 +9,19 @@ class ApiClient {
       : '/.netlify/functions';
   }
 
+  /**
+   * Makes an HTTP request to the specified endpoint with given options.
+   * @example
+   * makeRequest('/data', { method: 'GET' })
+   * returns a parsed JSON response from the endpoint.
+   * @param {string} endpoint - The endpoint path to append to the base API URL.
+   * @param {RequestInit} options - Options for configuring the HTTP request, including method, headers, and body.
+   * @returns {Promise<any>} Resolves with the parsed JSON data from the HTTP response.
+   * @description
+   *   - Automatically appends 'Content-Type' as 'application/json' to headers.
+   *   - Throws an error if the response is not OK, providing detailed status information.
+   *   - Catches and rethrows errors, logging them with endpoint context.
+   */
   private async makeRequest(endpoint: string, options: RequestInit = {}) {
     const url = `${this.baseUrl}${endpoint}`;
     

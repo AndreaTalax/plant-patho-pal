@@ -10,6 +10,28 @@ export interface ImageDisplayProps {
   detectedFeatures?: string[];
 }
 
+/**
+ * Displays an analyzed plant image with overlays showing health status, dominant colors, and detected features.
+ * @example
+ * displayImage({
+ *   imageSrc: '/path/to/image.jpg',
+ *   isHealthy: true,
+ *   dominantColors: [{ hex: '#FFFFFF' }, { hex: '#000000' }],
+ *   detectedFeatures: ['feature1', 'feature2']
+ * })
+ * - Renders a visual summary of the plant's analysis.
+ * @param {Object} {imageSrc, isHealthy, dominantColors, detectedFeatures} - Object containing properties for image display.
+ * @param {string} imageSrc - The source URL of the image to display.
+ * @param {boolean} [isHealthy] - Boolean flag indicating if the plant is healthy.
+ * @param {Object[]} [dominantColors] - Array of color objects providing dominant colors in the image.
+ * @param {string} dominantColors[].hex - Hexadecimal color code.
+ * @param {string[]} [detectedFeatures] - Array of strings indicating features detected in the image.
+ * @returns {JSX.Element} A JSX element representing the plant analysis overlay.
+ * @description
+ *   - Determines position of overlays based on available data.
+ *   - Limits displayed dominant colors and features for succinctness.
+ *   - Renders health status using conditional styling classes.
+ */
 const ImageDisplay: React.FC<ImageDisplayProps> = ({ 
   imageSrc, 
   isHealthy,

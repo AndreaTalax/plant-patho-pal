@@ -9,6 +9,19 @@ import { Textarea } from '@/components/ui/textarea';
 import { Mail, Phone, Globe } from 'lucide-react';
 import { toast } from '@/components/ui/sonner';
 
+/**
+ * Handles form submission for sending a contact message.
+ * @example
+ * handleSubmit(event)
+ * Logs the email details and clears the form after a simulated send.
+ * @param {React.FormEvent} e - Event object representing the form submission.
+ * @returns {void} No return value; performs side effects such as state updates and logging.
+ * @description
+ *   - Checks for empty fields and displays error toast if any field is missing.
+ *   - Simulates sending an email with a delay, displaying success or error toast based on the outcome.
+ *   - Logs the email contents to console for debugging purposes.
+ *   - Resets the input fields after successful message send.
+ */
 const Contact = () => {
   const { t } = useTheme();
   const [name, setName] = useState('');
@@ -17,6 +30,18 @@ const Contact = () => {
   const [message, setMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
   
+  /**
+   * Handles form submission, validates fields, and simulates sending an email.
+   * @example
+   * sync(event)
+   * // Initiates email sending process and updates UI based on success or failure
+   * @param {React.FormEvent} e - The event triggered by form submission.
+   * @returns {void} No return value. Side effects include UI updates and console logging.
+   * @description
+   *   - Uses console logs to mock email sending, ideal for development environments.
+   *   - Toggles sending state for UI feedback.
+   *   - Employs toast notifications for user feedback on form completion status.
+   */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     

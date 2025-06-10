@@ -19,6 +19,30 @@ interface ProductRecommendationDialogProps {
   username?: string;
 }
 
+/**
+ * Renders a dialog allowing users to recommend products by selecting them from a list.
+ * @example
+ * ProductRecommendationDialog({
+ *   isOpen: true,
+ *   onClose: handleDialogClose,
+ *   onSendRecommendations: sendSelectedProducts,
+ *   username: 'john_doe'
+ * })
+ * // Renders the dialog for recommending products to 'john_doe'.
+ * 
+ * @param {boolean} isOpen - Indicates whether the dialog is open or not.
+ * @param {function} onClose - Callback function that is triggered when the dialog is closed.
+ * @param {function} onSendRecommendations - Function to handle sending the selected product recommendations.
+ * @param {string} username - Username of the recipient receiving the product recommendations.
+ * 
+ * @returns {JSX.Element} A dialog element with functionality to recommend products to a specified user.
+ * 
+ * @description
+ *   - Allows toggling product selection by clicking on the product card.
+ *   - Selected products are highlighted with specific style changes.
+ *   - Includes a button to confirm and send recommendations only if at least one product is selected.
+ *   - Utilizes mock product data for demonstration purposes.
+ */
 const ProductRecommendationDialog = ({
   isOpen,
   onClose,

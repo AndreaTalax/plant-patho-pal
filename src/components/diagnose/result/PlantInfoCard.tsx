@@ -9,6 +9,25 @@ export interface PlantInfoCardProps {
   standardizedData?: DiagnosedDisease | null;
 }
 
+/**
+ * Displays detailed information about a plant within a styled card component.
+ * @example
+ * displayPlantDetails({
+ *   plantInfo: { isIndoor: true, wateringFrequency: 3 },
+ *   analysisDetails: { multiServiceInsights: { plantName: 'Rose', plantSpecies: 'Rosa', plantPart: 'Leaf' } },
+ *   standardizedData: { label: 'Standard Rose' }
+ * })
+ * // Returns a JSX element that represents a card containing plant information.
+ * @param {Object} components - The input object containing detailed plant information.
+ * @param {Object} components.plantInfo - Information about the plant's environment and watering details.
+ * @param {Object} components.analysisDetails - Detailed analysis data from multiple insights.
+ * @param {Object} components.standardizedData - Centralized data for plant details.
+ * @returns {JSX.Element} A card component containing plant information.
+ * @description
+ *   - Utilizes both plantName and plantSpecies for enhanced display purposes.
+ *   - Handles fallback scenarios for unavailability of specific data points.
+ *   - Integrates plantIdData when available to enrich displayed data with taxonomy and common names.
+ */
 const PlantInfoCard: React.FC<PlantInfoCardProps> = ({ 
   plantInfo, 
   analysisDetails,

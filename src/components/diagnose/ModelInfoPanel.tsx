@@ -6,6 +6,18 @@ interface ModelInfoPanelProps {
   onClose: () => void;
 }
 
+/**
+ * Renders a panel displaying detailed information about a plant identification model.
+ * @example
+ * ModelInfoPanel({ modelInfo: exampleModelInfo, onClose: handleClose })
+ * Returns the JSX for displaying model details.
+ * @param {ModelInfoPanelProps} { modelInfo, onClose } - Contains model information and a function to close the panel.
+ * @returns {JSX.Element} A JSX element rendering the model information panel.
+ * @description
+ *   - Displays model capabilities, dataset information, accuracy, architecture, data augmentation techniques, and last updated date.
+ *   - Incorporates multi-dataset integration by combining PlantNet techniques with the TRY Plant Trait Database for enhanced identification and disease detection.
+ *   - Utilizes an array method to render dynamic capabilities and data augmentation lists from modelInfo.
+ */
 const ModelInfoPanel = ({ modelInfo, onClose }: ModelInfoPanelProps) => {
   return (
     <div className="bg-white p-4 rounded-lg shadow-md border border-gray-200 text-sm mb-4">

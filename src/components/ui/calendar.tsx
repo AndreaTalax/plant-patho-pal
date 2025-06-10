@@ -7,6 +7,23 @@ import { buttonVariants } from "@/components/ui/button";
 
 export type CalendarProps = React.ComponentProps<typeof DayPicker>;
 
+/**
+ * Renders a customizable calendar component with navigation and styling options.
+ * @example
+ * Calendar({ className: 'my-calendar', classNames: { day_selected: 'my-custom-selected' }, showOutsideDays: false })
+ * // Returns the JSX for the DayPicker component with specified configurations.
+ * @param {object} CalendarProps - Object containing properties to customize the calendar.
+ * @param {string} CalendarProps.className - A string to apply custom styles to the calendar container.
+ * @param {object} CalendarProps.classNames - An object to override default CSS class names for specific components within the calendar.
+ * @param {boolean} CalendarProps.showOutsideDays - A flag indicating whether to display days from the previous and next month that fall outside the current view. Default is true.
+ * @param {object} CalendarProps.props - Additional props to be spread onto the DayPicker component.
+ * @returns {JSX.Element} A JSX element representing the rendered calendar component.
+ * @description
+ *   - Utilizes `DayPicker` component to handle calendar logic and rendering.
+ *   - Includes navigation buttons for switching between months, styled via `buttonVariants`.
+ *   - Provides ample customization options via `classNames` to tweak styles of calendar parts like days, navigation, captions, and rows.
+ *   - Supports external icon components for month navigation, allowing for custom icons to be displayed within the calendar's navigation.
+ */
 function Calendar({
   className,
   classNames,

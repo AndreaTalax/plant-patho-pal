@@ -9,6 +9,18 @@ interface ChatHeaderProps {
   onBackClick: () => void;
 }
 
+/**
+ * Renders a chat header component for displaying expert information and a back button.
+ * @example
+ * chatHeader({ onBackClick: handleBackClick })
+ * Returns a React component representing the chat header.
+ * @param {function} onBackClick - The callback function to be called when the back button is clicked.
+ * @returns {JSX.Element} A React component rendered as the chat header.
+ * @description
+ *   - Utilizes the `useTheme` hook for accessing translation functionality.
+ *   - Displays an expert's avatar with fallback text if the image is unavailable.
+ *   - Shows expert's name and online status with localization support.
+ */
 const ChatHeader = ({ onBackClick }: ChatHeaderProps) => {
   const { t } = useTheme();
   

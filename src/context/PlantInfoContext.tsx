@@ -35,6 +35,20 @@ const defaultPlantInfo: PlantInfo = {
 
 const PlantInfoContext = createContext<PlantInfoContextType | undefined>(undefined);
 
+/**
+* Provides a context for managing plant information state with reset functionality.
+* @example
+* <PlantInfoProvider>
+*   <YourComponent />
+* </PlantInfoProvider>
+* // Provides plant information and functions to components.
+* @param {object} { children } - React components that will access PlantInfoContext.
+* @returns {JSX.Element} Provider component with plantInfo context.
+* @description
+*   - Uses a default plant information object to initialize the context state.
+*   - Allows components within its tree to access and update plant information.
+*   - Includes a reset function to revert plant information to its default state.
+*/
 export const PlantInfoProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [plantInfo, setPlantInfo] = useState<PlantInfo>(defaultPlantInfo);
 

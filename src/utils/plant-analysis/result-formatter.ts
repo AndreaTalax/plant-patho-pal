@@ -132,6 +132,33 @@ export const formatHuggingFaceResult = (result: any) => {
 };
 
 // Helper function to create a fallback result when everything fails
+/**
+ * Creates a fallback result with random plant data.
+ * @example
+ * createFallbackResult()
+ * {
+ *   label: 'Snake Plant',
+ *   score: 0.7,
+ *   multiServiceInsights: {
+ *     isHealthy: true,
+ *     plantName: 'Snake Plant',
+ *     plantPart: 'whole plant',
+ *     confidenceLevel: 'medium',
+ *     isValidPlantImage: true,
+ *     plantSpecies: 'Snake Plant'
+ *   },
+ *   plantVerification: {
+ *     isPlant: true,
+ *     confidence: 0.7
+ *   },
+ *   analysisTechnology: 'Analisi Fallback'
+ * }
+ * @returns {Object} Fallback result object containing plant information.
+ * @description
+ *   - Generates a random plant label from a predefined list.
+ *   - Returns a constant score and confidence values.
+ *   - Provides a fixed set of multi-service insights for easy fallback analysis.
+ */
 function createFallbackResult() {
   const fallbackPlants = [
     'Monstera Deliciosa', 'Peace Lily', 'Snake Plant', 'Pothos', 'Spider Plant',

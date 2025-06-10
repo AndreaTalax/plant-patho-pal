@@ -14,6 +14,20 @@ export interface DiagnosisData {
 }
 
 export class AutoExpertNotificationService {
+  /**
+   * Sends an automatic plant diagnosis to an expert.
+   * @example
+   * sendDiagnosisToExpert('user123', diagnosisData)
+   * true
+   * @param {string} userId - The ID of the user sending the diagnosis.
+   * @param {DiagnosisData} diagnosisData - The data related to the plant diagnosis containing information like plant type, health status, and more.
+   * @returns {Promise<boolean>} A promise that resolves to true if the diagnosis was sent successfully, otherwise false.
+   * @description
+   *   - Authenticates the user and retrieves their profile for context.
+   *   - Checks if an existing conversation with the expert exists; if not, creates a new one.
+   *   - Sends a comprehensive diagnostic message and optionally an image to the expert.
+   *   - Utilizes third-party APIs for plant identification and disease detection analysis.
+   */
   static async sendDiagnosisToExpert(userId: string, diagnosisData: DiagnosisData): Promise<boolean> {
     try {
       console.log('📨 Sending diagnosis automatically to expert...');

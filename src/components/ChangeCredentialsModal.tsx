@@ -12,6 +12,19 @@ interface ChangeCredentialsModalProps {
   onOpenChange: (open: boolean) => void;
 }
 
+/**
+ * Represents a modal dialog to change user credentials such as username and password.
+ * @example
+ * changeCredentialsModalProps({ open: true, onOpenChange: handleOpenChange })
+ * <Dialog /> JSX element
+ * @param {boolean} open - Indicates whether the modal is open.
+ * @param {Function} onOpenChange - Callback function to handle changes in dialog visibility.
+ * @returns {JSX.Element} A modal dialog component allowing users to update their credentials.
+ * @description
+ *   - Ensures username is at least 3 characters long and password is at least 5 characters long.
+ *   - Validates that password and confirm password fields match.
+ *   - Resets form inputs upon successful update.
+ */
 const ChangeCredentialsModal = ({ open, onOpenChange }: ChangeCredentialsModalProps) => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -19,6 +32,21 @@ const ChangeCredentialsModal = ({ open, onOpenChange }: ChangeCredentialsModalPr
   const { toast } = useToast();
   const { updateUsername, updatePassword } = useAuth();
 
+  /**
+   * Handles the validation and updating of username and password credentials.
+   * @example
+   * updateCredentials('user123', 'password123', 'password123')
+   * // Displays success toast if no error, otherwise shows error toast
+   * @param {string} username - The new username to validate and update.
+   * @param {string} password - The new password to validate and update.
+   * @param {string} confirmPassword - The confirmation password to check against the new password.
+   * @returns {void} Does not return a value; provides feedback through UI toast.
+   * @description
+   *   - If either the username or password is invalid, an error toast is displayed.
+   *   - The onOpenChange function is used to reset the modal's open state.
+   *   - Resets the form input fields upon successful update or validation error.
+   *   - Utilizes `toast` for displaying validation and update messages.
+   */
   const handleSave = () => {
     let hasError = false;
 

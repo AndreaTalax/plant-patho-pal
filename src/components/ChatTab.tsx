@@ -8,6 +8,18 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { EXPERT } from '@/components/chat/types';
 
+/**
+ * Provides chat interface with refresh handling and user-specific views
+ * @example
+ * chatTab()
+ * Renders chat based on user profile or displays a login prompt
+ * @returns {JSX.Element} Renders expert or user view of the chat interface depending on account type.
+ * @description
+ *   - Uses two Supabase channels to listen for changes in messages and conversations.
+ *   - Forces chat refresh upon tab switches or chat issues.
+ *   - Resets synced state when plant information is incomplete.
+ *   - Renders login prompt if no user is logged in.
+ */
 const ChatTab = () => {
   const { userProfile, isMasterAccount } = useAuth();
   const { plantInfo } = usePlantInfo();

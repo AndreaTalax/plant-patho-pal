@@ -5,6 +5,23 @@ import { uploadPlantImage, uploadBase64Image } from '@/utils/imageStorage';
 import { PlantInfo } from '@/components/diagnose/types';
 import { toast } from 'sonner';
 
+/**
+* Sends a consultation request to an expert regarding plant issues.
+* @example
+* sync(file, imageUrl, plantInfo)
+* Returns a success message toast if the request is sent successfully.
+* @param {File} file - Optional image file of the plant.
+* @param {string} imageUrl - Optional URL of the plant's image.
+* @param {PlantInfo} plantInfo - Optional object with plant details like symptoms, environment, watering frequency, and light exposure.
+* @returns {void} Sends a toast notification on success or error.
+* @description
+*   - Requires user authentication.
+*   - Uploads image to storage if file or base64 image URL is provided.
+*   - Inserts consultation record into the 'expert_consultations' table in Supabase.
+*   - Manages conversation with the expert by finding or creating it.
+*   - Sends details as messages within a conversation.
+*   - Uses Supabase functions to notify the expert about the consultation request.
+*/
 export const notifyExpert = async (file?: File, imageUrl?: string, plantInfo?: PlantInfo) => {
   try {
     const { data: { user } } = await supabase.auth.getUser();

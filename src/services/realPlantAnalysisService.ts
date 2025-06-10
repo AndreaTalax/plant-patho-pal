@@ -22,6 +22,19 @@ export interface PlantAnalysisResult {
 }
 
 export class RealPlantAnalysisService {
+  /**
+   * Analyzes plant health using real APIs.
+   * @example
+   * analyzePlantWithRealAPIs('data:image/jpeg;base64,...', { name: 'Rose' })
+   * Returns a PlantAnalysisResult object with plant health details.
+   * @param {string} imageDataUrl - Base64 encoded plant image data URL.
+   * @param {any} plantInfo - Information about the plant such as name and other metadata.
+   * @returns {Promise<PlantAnalysisResult>} A promise that resolves to a PlantAnalysisResult object containing plant health analysis details.
+   * @description
+   *   - Converts the image data URL to base64 format for API processing.
+   *   - Invokes an edge function using Supabase to analyze plant health.
+   *   - Handles API errors and provides a fallback analysis result in case of failures.
+   */
   static async analyzePlantWithRealAPIs(
     imageDataUrl: string,
     plantInfo: any
@@ -76,6 +89,22 @@ export class RealPlantAnalysisService {
     }
   }
 
+  /**
+  * Saves plant analysis results to the database after validating user authentication.
+  * @example
+  * saveAnalysisToDatabase("user123", "http://example.com/image.jpg", analysisResult, plantInfo)
+  * // No return value, function updates database if successful
+  * @param {string} userId - The ID of the user saving the analysis.
+  * @param {string} imageUrl - URL of the image related to the analysis.
+  * @param {PlantAnalysisResult} analysis - The result of the plant analysis containing various data points.
+  * @param {any} plantInfo - Additional plant information, including symptoms.
+  * @returns {Promise<void>} No return value, operates asynchronously.
+  * @description
+  *   - Ensures the user is authenticated before saving the analysis.
+  *   - Handles row-level security errors related to database permissions.
+  *   - Provides feedback through console logs and toast notifications on success or failure.
+  *   - Inserts the diagnosis data into the 'diagnoses' table and selects the inserted row.
+  */
   static async saveAnalysisToDatabase(
     userId: string,
     imageUrl: string,

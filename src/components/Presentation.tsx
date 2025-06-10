@@ -2,6 +2,17 @@
 import { Camera, MessageCircle, ShoppingBag, Leaf, User, Sparkles } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
+/**
+ * Generates the main presentation section for a plant care application frontend.
+ * @example
+ * Presentation()
+ * // A JSX UI component featuring various plant care services.
+ * @returns {JSX.Element} A JSX element containing the presentation structure for the plant care application.
+ * @description
+ *   - Constructs a UI with sections for various plant care features, each including icons, titles, descriptions, details, and gradients.
+ *   - Includes a hero section with a welcome message and a call-to-action (CTA) section encouraging engagement with the application.
+ *   - Uses a grid layout to organize feature cards, each with hover effects and visual transitions.
+ */
 const Presentation = () => {
   const features = [
     {

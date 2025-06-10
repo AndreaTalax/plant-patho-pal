@@ -12,6 +12,23 @@ interface AuthEmailConfirmationProps {
   onBack: () => void;
 }
 
+/**
+* Renders an email confirmation component with options to resend confirmation emails and handle rate limits.
+* @example
+* AuthEmailConfirmation({ email: "example@example.com", isRateLimited: false, mode: "signup", onBack: handleBack })
+* Renders confirmation and resend email interface.
+* @param {Object} props - The properties object for the component.
+* @param {string} props.email - User's email address for confirming actions.
+* @param {boolean} props.isRateLimited - Flag indicating if email requests are rate-limited.
+* @param {string} props.mode - Mode of authentication, either 'signup' or 'signin'.
+* @param {function} props.onBack - Callback function to handle navigation actions like going back.
+* @returns {JSX.Element} A React component rendering the confirmation interface with appropriate user prompts.
+* @description
+*   - Handles resending confirmation emails with validation and error handling.
+*   - Displays different messages based on rate limit status to guide user actions.
+*   - Offers fallback suggestions such as checking spam folders for missing emails.
+*   - Utilizes state management to control user interface feedback during asynchronous operations.
+*/
 export function AuthEmailConfirmation({ 
   email, 
   isRateLimited, 
@@ -20,6 +37,18 @@ export function AuthEmailConfirmation({
 }: AuthEmailConfirmationProps) {
   const [isResendingEmail, setIsResendingEmail] = useState(false);
 
+  /**
+   * Attempts to resend a confirmation email and displays corresponding messages based on the result.
+   * @example
+   * sync()
+   * undefined
+   * @param {string} email - The email address to which the confirmation email should be resent.
+   * @returns {void} Does not return a value.
+   * @description
+   *   - Displays an error toast if the email is missing.
+   *   - Handles rate limit exceeded scenario with a warning toast.
+   *   - Provides success feedback on successful email resend.
+   */
   const handleResendConfirmation = async () => {
     if (!email) {
       toast.error('Email mancante', {

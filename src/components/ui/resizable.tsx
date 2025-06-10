@@ -3,6 +3,17 @@ import * as ResizablePrimitive from "react-resizable-panels"
 
 import { cn } from "@/lib/utils"
 
+/**
+ * A React component that wraps ResizablePrimitive.PanelGroup with custom styling and additional properties.
+ * @example
+ * resizableComponent({className: "custom-class"})
+ * <ResizablePrimitive.PanelGroup className="custom-class flex h-full w-full data-[panel-group-direction=vertical]:flex-col" />
+ * @param {React.ComponentProps<typeof ResizablePrimitive.PanelGroup>} {className, ...props} - The properties received from the ResizablePrimitive.PanelGroup component.
+ * @returns {JSX.Element} A JSX element representing a styled resizable panel group.
+ * @description
+ *   - Allows flexible layout orientation by manipulating the direction through CSS classes.
+ *   - Passes all additional props to the underlying ResizablePrimitive.PanelGroup component for further customization.
+ */
 const ResizablePanelGroup = ({
   className,
   ...props
@@ -18,6 +29,20 @@ const ResizablePanelGroup = ({
 
 const ResizablePanel = ResizablePrimitive.Panel
 
+/**
+ * Creates a resizable panel handle component with optional grip UI.
+ * @example
+ * createResizablePanelHandle({ withHandle: true, className: 'custom-class' })
+ * Returns a JSX element of a resizable panel handle, possibly with a grip.
+ * @param {boolean} withHandle - Determines if the panel handle includes a grip element.
+ * @param {string} className - Additional CSS classes for panel handle styling.
+ * @returns {JSX.Element} Returns a JSX element representing a panel handle used in a resizable layout.
+ * @description
+ *   - Uses `ResizablePrimitive.PanelResizeHandle` from `resizable.tsx`.
+ *   - Applies styles conditionally based on the direction of the panel group.
+ *   - The grip appears when `withHandle` is set to true, providing a visual indication for resizing.
+ *   - Ensures accessibility with focus-visible and ring styling.
+ */
 const ResizableHandle = ({
   withHandle,
   className,

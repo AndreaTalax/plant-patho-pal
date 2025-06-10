@@ -3,6 +3,20 @@ import { ComputerVisionService, type VisionAnalysisResult } from '@/services/com
 import type { AnalysisProgress } from '../../services/aiProviders';
 import { toast } from 'sonner';
 
+/**
+ * Conducts enhanced AI analysis using computer vision on the provided image file and returns the analysis result.
+ * @example
+ * sync(imageFile, plantInfo, progressCallback)
+ * Promise resolving to the enhanced analysis result.
+ * @param {File} imageFile - The image file to be analyzed using computer vision.
+ * @param {any} [plantInfo=null] - Optional additional plant information to enhance the analysis result.
+ * @param {function} [progressCallback] - Optional callback function to receive progress updates of the analysis.
+ * @returns {Promise<any>} A promise that resolves to the enhanced result of the image analysis.
+ * @description
+ *   - Provides progress updates through the callback function including stages like initialization, processing, and finalizing.
+ *   - Handles potential errors during the analysis and relays error messages via the progress callback.
+ *   - Transforms the computer vision result into a standard format possibly using additional plant information.
+ */
 export const analyzeWithEnhancedAI = async (
   imageFile: File,
   plantInfo: any = null,
@@ -56,6 +70,20 @@ export const analyzeWithEnhancedAI = async (
 };
 
 // Trasforma il risultato della computer vision nel formato standard
+/**
+ * Transforms vision analysis results into a standard format for plant information.
+ * @example
+ * transformVisionResultToStandardFormat(visionResult, plantInfo)
+ * returns an object containing standardized plant information including health and disease details.
+ * @param {VisionAnalysisResult} visionResult - The result from the computer vision analysis containing plant identification and health assessment details.
+ * @param {any} plantInfo - Additional plant information that might be used for enhanced analysis.
+ * @returns {any} An object containing standardized plant information including whether the plant is healthy, confidence levels, and details about any detected diseases.
+ * @description
+ *   - The function extracts key values from the vision result like plant identification and health assessment.
+ *   - It constructs a standard format that integrates multi-service insights, visual analysis details, and recommended products.
+ *   - Special handling is included for cases where the plant is detected as unhealthy, incorporating disease details and symptoms.
+ *   - Enhances the output by providing a broader context from multiple plant analysis services.
+ */
 function transformVisionResultToStandardFormat(
   visionResult: VisionAnalysisResult, 
   plantInfo: any
@@ -124,6 +152,20 @@ function transformVisionResultToStandardFormat(
 }
 
 // Prodotti raccomandati basati sulla diagnosi
+/**
+ * Returns a list of recommended product IDs based on health status and severity level.
+ * @example
+ * getRecommendedProducts(true)
+ * // Returns ['2', '5']
+ * getRecommendedProducts(false, 'medium')
+ * // Returns ['1', '3']
+ * @param {boolean} isHealthy - Indicates if the plant is healthy or not.
+ * @param {string} [severity] - Optional level of severity for unhealthy plants ('high', 'medium', 'low').
+ * @returns {string[]} An array of product IDs recommended for the plant condition.
+ * @description
+ *   - If a plant is healthy, specific maintenance products are returned.
+ *   - Severity levels determine the intensity of product recommendations for unhealthy plants.
+ */
 function getRecommendedProducts(isHealthy: boolean, severity?: string): string[] {
   if (isHealthy) {
     return ['2', '5']; // Prodotti per manutenzione

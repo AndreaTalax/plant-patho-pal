@@ -7,6 +7,17 @@ interface SecurityGuidelinesProps {
   showOtpGuidelines?: boolean;
 }
 
+/**
+ * Renders security guidelines, including information about OTPs and account protection.
+ * @example
+ * SecurityGuidelines({ showOtpGuidelines: true })
+ * // Returns a JSX element containing security guidelines.
+ * @param {boolean} {showOtpGuidelines} - Flag indicating whether to display OTP security guidelines.
+ * @returns {JSX.Element} A React component containing structured guidelines for enhanced security.
+ * @description
+ *   - Displays guidelines pertinent to OTP usage if `showOtpGuidelines` is true.
+ *   - Provides general account protection advice regardless of the `showOtpGuidelines` flag.
+ */
 const SecurityGuidelines: React.FC<SecurityGuidelinesProps> = ({ 
   showOtpGuidelines = true 
 }) => {

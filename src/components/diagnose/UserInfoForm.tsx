@@ -14,6 +14,18 @@ interface UserInfoFormProps {
   onComplete: (data: UserInfo) => void;
 }
 
+/**
+ * Renders a user information form and handles form submission.
+ * @example
+ * UserInfoForm({ onComplete: handleFormComplete })
+ * // The form will render with fields for 'nome', 'cognome', 'email' and call `handleFormComplete` with form data upon submission.
+ * @param {UserInfoFormProps} {onComplete} - Function to call with form data upon form completion.
+ * @returns {JSX.Element} JSX element representing the form UI.
+ * @description
+ *   - Uses internal state to manage form data for 'nome', 'cognome', and 'email'.
+ *   - Updates form data state on input changes using `handleChange`.
+ *   - Prevents default form submission behavior and triggers provided `onComplete` function.
+ */
 const UserInfoForm = ({ onComplete }: UserInfoFormProps) => {
   const [formData, setFormData] = useState<UserInfo>({
     nome: '',

@@ -8,6 +8,19 @@ interface DiagnosisOptionsProps {
   onSelectExpert: () => void;
 }
 
+/**
+* Displays diagnosis method selection options for AI and expert consultation.
+* @example
+* DiagnosisOptions({ onSelectAI: handleAI, onSelectExpert: handleExpert })
+* Returns JSX element containing selectable cards with diagnosis options.
+* @param {object} {DiagnosisOptionsProps} - Contains two functions 'onSelectAI' and 'onSelectExpert' as callbacks.
+* @returns {JSX.Element} A rendered set of selectable cards for choosing diagnosis methods.
+* @description
+*   - Includes interactive cards for AI and expert diagnosis options.
+*   - Utilizes custom styling for hover effects.
+*   - Provides brief descriptions for each diagnosis method.
+*   - Integrates icons to visually represent each option.
+*/
 const DiagnosisOptions = ({ onSelectAI, onSelectExpert }: DiagnosisOptionsProps) => {
   return (
     <Card className="w-full max-w-2xl mx-auto">

@@ -17,6 +17,20 @@ import { AutoExpertNotificationService } from './chat/AutoExpertNotificationServ
 import { uploadPlantImage } from '@/utils/imageStorage';
 import { PlantInfo } from './diagnose/types';
 
+/**
+* Provides advanced plant disease diagnostics through AI and expert consultations
+* @example
+* diagnoseComponent()
+* Renders the Diagnosis Malattie delle Piante interface in various stages of analysis
+* @param {Function} useAuth - Provides user authentication context.
+* @param {Function} usePlantInfo - Manages the state related to plant information.
+* @returns {JSX.Element} Rendered component for plant disease diagnostics.
+* @description
+*   - React hooks are employed for state management, including `useState`, `useRef`, and `useCallback`.
+*   - The component stages (‘info’, ‘options’, ‘capture’, ‘analyzing’, ‘result’) drive conditional rendering.
+*   - Incorporates mechanisms to upload images, capture photos, and verify image validity.
+*   - Automatically sends diagnosis to an expert if the plant health is questionable or analysis confidence is low.
+*/
 const DiagnoseTab = () => {
   const { userProfile } = useAuth();
   const { plantInfo, setPlantInfo } = usePlantInfo();
@@ -179,6 +193,19 @@ const DiagnoseTab = () => {
   }, [setPlantInfo]);
 
   // Render based on current stage
+  /**
+   * Renders various stages of a plant diagnosis workflow.
+   * @example
+   * renderStage('info')
+   * // Returns the PlantInfoForm component for the 'info' stage.
+   * @param {string} currentStage - Current stage in the diagnosis workflow, dictating the rendered component.
+   * @returns {JSX.Element|null} Returns the corresponding JSX element for the stage, or null if the stage is not recognized.
+   * @description
+   *   - Supports multiple stages such as 'info', 'options', 'capture', 'analyzing', and 'result'.
+   *   - Dynamically renders components based on the value of currentStage.
+   *   - Handles file uploads and interactions with AI services for plant analysis in specific stages.
+   *   - Automatically sends diagnosis to an expert pathologist in the 'result' stage if applicable.
+   */
   const renderCurrentStage = () => {
     switch (currentStage) {
       case 'info':

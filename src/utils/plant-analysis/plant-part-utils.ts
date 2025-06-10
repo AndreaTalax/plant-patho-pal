@@ -4,6 +4,20 @@
  */
 
 // Function to get a standardized plant part from a label
+/**
+* Standardizes plant part labels based on provided keywords.
+* @example
+* label('leaves') // 'leaf'
+* label('stem') // 'stem'
+* label('bark') // 'whole plant'
+* @param {string} label - The plant part description provided as a string.
+* @returns {string | null} Returns standardized plant part term or null if no label is provided.
+* @description
+*   - Converts input label to lowercase for case-insensitive matching.
+*   - Maps various synonyms of plant parts to a single standardized term.
+*   - Falls back to 'whole plant' when no specific part is identified.
+*   - Returns null for empty or undefined label inputs.
+*/
 export const getPlantPartFromLabel = (label: string): string | null => {
   if (!label) return null;
   
@@ -96,6 +110,19 @@ export const capitalize = (str: string): string => {
 };
 
 // Function to check if a label refers to a plant with expanded keyword list
+/**
+ * Determines if a given label is related to plants based on a set of predefined keywords.
+ * @example
+ * isPlantLabel("Rose bush"); // returns true
+ * isPlantLabel("Wooden table"); // returns false
+ * @param {string} label - The label or name to be evaluated.
+ * @returns {boolean} Returns true if the label contains plant-related keywords, otherwise false.
+ * @description
+ *   - Converts the label to lowercase to ensure case-insensitivity during keyword comparison.
+ *   - Uses a predefined list of plant-related keywords to perform the check.
+ *   - Keywords include names of common houseplants, garden plants, and general plant descriptors.
+ *   - The function returns false immediately if the label is empty or not provided.
+ */
 export const isPlantLabel = (label: string): boolean => {
   if (!label) return false;
   
@@ -135,6 +162,18 @@ export const isPlantLabel = (label: string): boolean => {
 };
 
 // Function to extract the most likely plant name from a label
+/**
+ * Finds and returns a capitalized common plant name from a given label if it exists.
+ * @example
+ * findPlantName("I have a Monstera plant")
+ * Monstera
+ * @param {string} label - The input text which may contain a plant name.
+ * @returns {string | null} Capitalized plant name if found; otherwise, null.
+ * @description
+ *   - Converts the input label to lowercase to ensure case-insensitive matching.
+ *   - Searches for occurrences of plant names within the provided label.
+ *   - Capitalizes the matched plant name before returning.
+ */
 export const extractPlantName = (label: string): string | null => {
   if (!label) return null;
   

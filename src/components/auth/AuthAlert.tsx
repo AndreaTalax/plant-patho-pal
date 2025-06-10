@@ -10,6 +10,21 @@ interface AuthAlertProps {
   onDismiss?: () => void;
 }
 
+/**
+ * Renders an authentication alert with options to close or navigate to login.
+ * @example
+ * AuthAlert({ title: "Access Necessary", description: "You must log in to use this feature.", onDismiss: () => console.log("Alert dismissed") })
+ * // Renders an alert with specified title and description, and handles onDismiss action.
+ * @param {Object} AuthAlertProps - Props containing title, description, and onDismiss callback.
+ * @param {string} AuthAlertProps.title - The title text of the alert.
+ * @param {string} AuthAlertProps.description - The description text of the alert.
+ * @param {Function} [AuthAlertProps.onDismiss] - Function to handle the dismiss action of the alert.
+ * @returns {JSX.Element} The rendered authentication alert component.
+ * @description
+ *   - Utilizes useNavigate for navigation to the login page upon "Accedi" button click.
+ *   - Applies specific CSS classes for styling the alert and buttons.
+ *   - Supports responsive design adjustments for the alert description layout.
+ */
 export function AuthAlert({
   title = "Devi accedere",
   description = "Per utilizzare questa funzionalità devi accedere al tuo account.",

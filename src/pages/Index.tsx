@@ -11,6 +11,18 @@ import ExpertTab from "@/components/ExpertTab";
 import BottomNavigation from "@/components/BottomNavigation";
 import { ensureStorageBuckets } from "@/utils/storageSetup";
 
+/**
+* Renders the main application page with tab navigation and dynamic content based on active tab.
+* @example
+* Index()
+* Renders the default diagnose tab, header, and bottom navigation.
+* @returns {JSX.Element} The rendered application page component.
+* @description
+*   - Initializes storage buckets using a side-effect upon application startup.
+*   - Sets up event listeners for custom tab switch events to update activeTab state.
+*   - Conditionally renders the expert tab based on the user's account type.
+*   - Ensures smooth user interaction through dynamic tab content rendering.
+*/
 const Index = () => {
   const [activeTab, setActiveTab] = useState<string>("diagnose");
   const { isMasterAccount } = useAuth();
@@ -33,6 +45,17 @@ const Index = () => {
     };
   }, []);
 
+  /**
+   * Renders a component based on the active tab selected
+   * @example
+   * functionName("chat")
+   * <ChatTab />
+   * @param {string} activeTab - The name of the currently active tab.
+   * @returns {JSX.Element} The corresponding tab component to render.
+   * @description
+   *   - If the activeTab is "expert", it checks the isMasterAccount flag to determine which tab to render.
+   *   - Defaults to rendering <DiagnoseTab /> if activeTab doesn't match any case.
+   */
   const renderTabContent = () => {
     switch (activeTab) {
       case "diagnose":
