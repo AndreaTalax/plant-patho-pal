@@ -4,7 +4,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { useTheme } from '@/context/ThemeContext';
-import { Menu, X, Leaf } from 'lucide-react';
+import { Menu, X, Leaf, LogOut } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { 
   Drawer,
@@ -15,7 +15,7 @@ import {
 
 const Header = () => {
   const [scrolled, setScrolled] = useState(false);
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const { t } = useTheme();
@@ -40,6 +40,11 @@ const Header = () => {
   const handleNavigation = (path: string) => {
     setIsDrawerOpen(false);
     navigate(path);
+  };
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/login');
   };
 
   return (
@@ -72,6 +77,27 @@ const Header = () => {
             </Link>
           ))}
         </nav>
+
+        {/* Desktop auth buttons */}
+        <div className="hidden md:flex items-center space-x-2">
+          {isAuthenticated ? (
+            <Button 
+              variant="outline"
+              onClick={handleLogout}
+              className="flex items-center gap-2"
+            >
+              <LogOut className="h-4 w-4" />
+              Logout
+            </Button>
+          ) : (
+            <Button 
+              className="bg-drplant-blue hover:bg-drplant-blue-dark"
+              onClick={() => navigate('/login')}
+            >
+              {t("login")}
+            </Button>
+          )}
+        </div>
 
         {/* Mobile navigation */}
         {isMobile && (
@@ -110,8 +136,20 @@ const Header = () => {
                 ))}
               </div>
               
-              {!isAuthenticated && (
-                <div className="mt-auto pt-4 border-t border-gray-100">
+              <div className="mt-auto pt-4 border-t border-gray-100">
+                {isAuthenticated ? (
+                  <Button 
+                    variant="outline"
+                    className="w-full flex items-center gap-2"
+                    onClick={() => {
+                      setIsDrawerOpen(false);
+                      handleLogout();
+                    }}
+                  >
+                    <LogOut className="h-4 w-4" />
+                    Logout
+                  </Button>
+                ) : (
                   <Button 
                     className="w-full bg-drplant-blue hover:bg-drplant-blue-dark"
                     onClick={() => {
@@ -121,19 +159,10 @@ const Header = () => {
                   >
                     {t("login")}
                   </Button>
-                </div>
-              )}
+                )}
+              </div>
             </DrawerContent>
           </Drawer>
-        )}
-        
-        {!isAuthenticated && !isMobile && (
-          <Button 
-            className="bg-drplant-blue hover:bg-drplant-blue-dark"
-            onClick={() => navigate('/login')}
-          >
-            {t("login")}
-          </Button>
         )}
       </div>
     </header>
