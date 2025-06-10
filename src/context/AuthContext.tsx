@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User, Session } from '@supabase/supabase-js';
@@ -30,7 +29,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // Computed properties
   const isAuthenticated = !!user;
   const isProfileComplete = !!(userProfile?.firstName && userProfile?.lastName && userProfile?.birthDate && userProfile?.birthPlace);
-  const isMasterAccount = userProfile?.email === 'premium@gmail.com' || userProfile?.email === 'test@gmail.com';
+  const isMasterAccount = userProfile?.email === 'agrotecnicomarconigro@gmail.com' || userProfile?.email === 'premium@gmail.com';
 
   useEffect(() => {
     let mounted = true;
@@ -176,3 +175,5 @@ export const useAuth = () => {
   }
   return context;
 };
+
+export default AuthProvider;
