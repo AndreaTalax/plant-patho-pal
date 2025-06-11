@@ -3,7 +3,7 @@ import { useAuth } from '@/context/AuthContext';
 
 export const PREMIUM_TEST_EMAILS = [
   'test@gmail.com',
-  'marco.nigro@drplant.it',
+  'agrotecnicomarconigro@gmail.com',
   // Aggiungi altri email di test qui
 ];
 
