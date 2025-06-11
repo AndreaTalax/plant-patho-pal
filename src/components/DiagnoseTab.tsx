@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useCallback } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -16,26 +17,12 @@ import { AutoExpertNotificationService } from './chat/AutoExpertNotificationServ
 import { uploadPlantImage } from '@/utils/imageStorage';
 import { PlantInfo } from './diagnose/types';
 
-/**
-* Provides advanced plant disease diagnostics through AI and expert consultations
-* @example
-* diagnoseComponent()
-* Renders the Diagnosis Malattie delle Piante interface in various stages of analysis
-* @param {Function} useAuth - Provides user authentication context.
-* @param {Function} usePlantInfo - Manages the state related to plant information.
-* @returns {JSX.Element} Rendered component for plant disease diagnostics.
-* @description
-*   - React hooks are employed for state management, including `useState`, `useRef`, and `useCallback`.
-*   - The component stages (‘info’, ‘options’, ‘capture’, ‘analyzing’, ‘result’) drive conditional rendering.
-*   - Incorporates mechanisms to upload images, capture photos, and verify image validity.
-*   - Automatically sends diagnosis to an expert if the plant health is questionable or analysis confidence is low.
-*/
 const DiagnoseTab = () => {
   const { userProfile } = useAuth();
   const { plantInfo, setPlantInfo } = usePlantInfo();
   
-  // Component states
-  const [currentStage, setCurrentStage] = useState<'info' | 'options' | 'capture' | 'analyzing' | 'result'>('info');
+  // Component states - Updated flow: info -> capture -> options -> analyzing -> result
+  const [currentStage, setCurrentStage] = useState<'info' | 'capture' | 'options' | 'analyzing' | 'result'>('info');
   const [showCamera, setShowCamera] = useState(false);
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
@@ -46,27 +33,14 @@ const DiagnoseTab = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Plant info completion handler
+  // Plant info completion handler - now goes to capture stage
   const handlePlantInfoComplete = useCallback((data: PlantInfo) => {
     setPlantInfo({ ...data, infoComplete: true });
-    
-    // If user chose expert consultation, go directly to chat
-    if (data.sendToExpert) {
-      window.dispatchEvent(new CustomEvent('switchTab', { detail: 'chat' }));
-      return;
-    }
-    
-    // If user chose AI diagnosis, proceed to capture
-    if (data.useAI) {
-      setCurrentStage('capture');
-    } else {
-      setCurrentStage('options');
-    }
-    
-    toast.success('Informazioni pianta salvate con successo!');
+    setCurrentStage('capture'); // Always go to capture stage after info
+    toast.success('Informazioni pianta salvate! Ora scatta o carica una foto.');
   }, [setPlantInfo]);
 
-  // File upload handler
+  // File upload handler - now goes to options stage
   const handleFileUpload = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -81,8 +55,8 @@ const DiagnoseTab = () => {
       reader.onload = (e) => {
         const result = e.target?.result as string;
         setUploadedImage(result);
-        setCurrentStage('analyzing');
-        performAnalysis(file, result);
+        setCurrentStage('options'); // Go to options after image upload
+        toast.success('Immagine caricata! Ora scegli il metodo di diagnosi.');
       };
       reader.readAsDataURL(file);
     } catch (error) {
@@ -91,24 +65,45 @@ const DiagnoseTab = () => {
     }
   }, []);
 
-  // Camera capture handler
+  // Camera capture handler - now goes to options stage
   const handleCameraCapture = useCallback((imageDataUrl: string) => {
     setUploadedImage(imageDataUrl);
     setShowCamera(false);
+    setCurrentStage('options'); // Go to options after camera capture
+    toast.success('Foto scattata! Ora scegli il metodo di diagnosi.');
+  }, []);
+
+  // AI diagnosis selection
+  const handleSelectAI = useCallback(async () => {
+    if (!uploadedImage) {
+      toast.error('Nessuna immagine disponibile per l\'analisi');
+      return;
+    }
+
     setCurrentStage('analyzing');
     
     // Convert dataURL to file for upload
-    fetch(imageDataUrl)
+    fetch(uploadedImage)
       .then(res => res.blob())
       .then(blob => {
-        const file = new File([blob], 'camera-capture.jpg', { type: 'image/jpeg' });
-        performAnalysis(file, imageDataUrl);
+        const file = new File([blob], 'uploaded-image.jpg', { type: 'image/jpeg' });
+        performAnalysis(file, uploadedImage);
       })
       .catch(error => {
-        console.error('Errore elaborazione foto:', error);
-        toast.error('Errore nell\'elaborazione della foto');
+        console.error('Errore conversione immagine:', error);
+        toast.error('Errore nell\'elaborazione dell\'immagine');
+        setCurrentStage('options');
       });
-  }, []);
+  }, [uploadedImage]);
+
+  // Expert consultation selection
+  const handleSelectExpert = useCallback(() => {
+    // Update plant info to indicate expert consultation
+    setPlantInfo(prev => ({ ...prev, sendToExpert: true }));
+    // Navigate to chat tab
+    window.dispatchEvent(new CustomEvent('switchTab', { detail: 'chat' }));
+    toast.success('Reindirizzamento alla chat con l\'esperto...');
+  }, [setPlantInfo]);
 
   // Main analysis function with real APIs
   const performAnalysis = useCallback(async (file: File, imageDataUrl: string) => {
@@ -167,7 +162,7 @@ const DiagnoseTab = () => {
     } catch (error) {
       console.error('❌ Analisi fallita:', error);
       toast.error(`Analisi fallita: ${error.message}`);
-      setCurrentStage('capture');
+      setCurrentStage('options');
     } finally {
       setIsAnalyzing(false);
     }
@@ -192,19 +187,6 @@ const DiagnoseTab = () => {
   }, [setPlantInfo]);
 
   // Render based on current stage
-  /**
-   * Renders various stages of a plant diagnosis workflow.
-   * @example
-   * renderStage('info')
-   * // Returns the PlantInfoForm component for the 'info' stage.
-   * @param {string} currentStage - Current stage in the diagnosis workflow, dictating the rendered component.
-   * @returns {JSX.Element|null} Returns the corresponding JSX element for the stage, or null if the stage is not recognized.
-   * @description
-   *   - Supports multiple stages such as 'info', 'options', 'capture', 'analyzing', and 'result'.
-   *   - Dynamically renders components based on the value of currentStage.
-   *   - Handles file uploads and interactions with AI services for plant analysis in specific stages.
-   *   - Automatically sends diagnosis to an expert pathologist in the 'result' stage if applicable.
-   */
   const renderCurrentStage = () => {
     switch (currentStage) {
       case 'info':
@@ -215,20 +197,6 @@ const DiagnoseTab = () => {
           />
         );
 
-      case 'options':
-        return (
-          <div className="space-y-6">
-            <PlantInfoSummary 
-              plantInfo={plantInfo} 
-              onEdit={() => setCurrentStage('info')} 
-            />
-            <DiagnosisOptions
-              onSelectAI={() => setCurrentStage('capture')}
-              onSelectExpert={() => window.dispatchEvent(new CustomEvent('switchTab', { detail: 'chat' }))}
-            />
-          </div>
-        );
-
       case 'capture':
         return (
           <div className="space-y-6">
@@ -236,17 +204,78 @@ const DiagnoseTab = () => {
               plantInfo={plantInfo} 
               onEdit={() => setCurrentStage('info')} 
             />
-            <ScanLayout
-              onTakePhoto={() => setShowCamera(true)}
-              onUploadPhoto={() => fileInputRef.current?.click()}
+            
+            <Card className="w-full max-w-2xl mx-auto">
+              <div className="p-6">
+                <h3 className="text-xl font-semibold text-center mb-4">
+                  📸 Carica una foto della pianta
+                </h3>
+                <p className="text-center text-gray-600 mb-6">
+                  Questo passaggio è obbligatorio per procedere con la diagnosi
+                </p>
+                
+                <ScanLayout
+                  onTakePhoto={() => setShowCamera(true)}
+                  onUploadPhoto={() => fileInputRef.current?.click()}
+                />
+                
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                />
+              </div>
+            </Card>
+          </div>
+        );
+
+      case 'options':
+        return (
+          <div className="space-y-6">
+            <PlantInfoSummary 
+              plantInfo={plantInfo} 
+              onEdit={() => setCurrentStage('info')} 
             />
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              onChange={handleFileUpload}
-              className="hidden"
-            />
+            
+            {uploadedImage && (
+              <div className="w-full max-w-md mx-auto">
+                <div className="aspect-square overflow-hidden rounded-xl border">
+                  <img 
+                    src={uploadedImage} 
+                    alt="Immagine caricata" 
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              </div>
+            )}
+
+            <Card className="w-full max-w-2xl mx-auto">
+              <div className="p-6">
+                <h3 className="text-xl font-semibold text-center mb-4">
+                  🔬 Scegli il metodo di diagnosi
+                </h3>
+                <p className="text-center text-gray-600 mb-6">
+                  Ora che hai caricato l'immagine, scegli come vuoi procedere
+                </p>
+                
+                <DiagnosisOptions
+                  onSelectAI={handleSelectAI}
+                  onSelectExpert={handleSelectExpert}
+                />
+                
+                <div className="mt-4 text-center">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setCurrentStage('capture')}
+                    className="text-sm"
+                  >
+                    ← Cambia foto
+                  </Button>
+                </div>
+              </div>
+            </Card>
           </div>
         );
 
@@ -335,6 +364,23 @@ const DiagnoseTab = () => {
             <p className="text-gray-600 text-lg">
               Analisi AI avanzata con database professionali
             </p>
+            
+            {/* Progress indicator */}
+            <div className="flex items-center justify-center space-x-2 mt-4">
+              <div className={`w-3 h-3 rounded-full ${currentStage === 'info' ? 'bg-drplant-blue' : currentStage === 'capture' || currentStage === 'options' || currentStage === 'analyzing' || currentStage === 'result' ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+              <div className={`w-8 h-1 ${currentStage === 'capture' || currentStage === 'options' || currentStage === 'analyzing' || currentStage === 'result' ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+              <div className={`w-3 h-3 rounded-full ${currentStage === 'capture' ? 'bg-drplant-blue' : currentStage === 'options' || currentStage === 'analyzing' || currentStage === 'result' ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+              <div className={`w-8 h-1 ${currentStage === 'options' || currentStage === 'analyzing' || currentStage === 'result' ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+              <div className={`w-3 h-3 rounded-full ${currentStage === 'options' ? 'bg-drplant-blue' : currentStage === 'analyzing' || currentStage === 'result' ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+              <div className={`w-8 h-1 ${currentStage === 'result' ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+              <div className={`w-3 h-3 rounded-full ${currentStage === 'result' ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+            </div>
+            <div className="flex justify-center space-x-8 mt-2 text-xs text-gray-600">
+              <span className={currentStage === 'info' ? 'font-medium text-drplant-blue' : ''}>Info</span>
+              <span className={currentStage === 'capture' ? 'font-medium text-drplant-blue' : ''}>Foto</span>
+              <span className={currentStage === 'options' ? 'font-medium text-drplant-blue' : ''}>Metodo</span>
+              <span className={currentStage === 'result' ? 'font-medium text-green-600' : ''}>Risultato</span>
+            </div>
           </div>
 
           <div className="bg-white/70 backdrop-blur-sm rounded-3xl shadow-lg border border-drplant-green/10 overflow-hidden">
