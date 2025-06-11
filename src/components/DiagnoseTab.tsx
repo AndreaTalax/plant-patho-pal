@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useCallback } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -218,7 +217,7 @@ const DiagnoseTab = () => {
 
       case 'options':
         return (
-          <div className="space-y-4">
+          <div className="space-y-6">
             <PlantInfoSummary 
               plantInfo={plantInfo} 
               onEdit={() => setCurrentStage('info')} 
@@ -232,7 +231,7 @@ const DiagnoseTab = () => {
 
       case 'capture':
         return (
-          <div className="space-y-4">
+          <div className="space-y-6">
             <PlantInfoSummary 
               plantInfo={plantInfo} 
               onEdit={() => setCurrentStage('info')} 
@@ -253,15 +252,21 @@ const DiagnoseTab = () => {
 
       case 'analyzing':
         return (
-          <Card className="p-8">
-            <div className="flex flex-col items-center space-y-4">
-              <Loader2 className="h-12 w-12 animate-spin text-blue-600" />
-              <h2 className="text-2xl font-bold">Analisi in corso</h2>
-              <p className="text-gray-600 text-center">
-                Utilizzo di servizi AI reali (Plant.id, Hugging Face, Database EPPO) per analizzare la tua pianta...
-              </p>
+          <Card className="p-8 bg-white/80 backdrop-blur-sm">
+            <div className="flex flex-col items-center space-y-6">
+              <div className="relative">
+                <div className="w-20 h-20 bg-gradient-to-r from-drplant-green to-drplant-blue rounded-full flex items-center justify-center">
+                  <Loader2 className="h-10 w-10 animate-spin text-white" />
+                </div>
+              </div>
+              <div className="text-center">
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">Analisi in corso</h2>
+                <p className="text-gray-600">
+                  Utilizzo di servizi AI avanzati per analizzare la tua pianta...
+                </p>
+              </div>
               {uploadedImage && (
-                <div className="w-64 h-64 rounded-lg overflow-hidden">
+                <div className="w-64 h-64 rounded-xl overflow-hidden border-2 border-drplant-green/20">
                   <img 
                     src={uploadedImage} 
                     alt="Pianta in analisi" 
@@ -275,10 +280,10 @@ const DiagnoseTab = () => {
 
       case 'result':
         return (
-          <div className="space-y-4">
+          <div className="space-y-6">
             {autoSentToExpert && (
-              <Card className="p-4 bg-green-50 border-green-200">
-                <div className="flex items-center space-x-2">
+              <Card className="p-4 bg-green-50/80 backdrop-blur-sm border-green-200">
+                <div className="flex items-center space-x-3">
                   <CheckCircle className="h-5 w-5 text-green-600" />
                   <span className="text-green-800 font-medium">
                     Diagnosi inviata automaticamente all'esperto fitopatologo!
@@ -315,18 +320,29 @@ const DiagnoseTab = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4">
-      <div className="max-w-4xl mx-auto">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Diagnosi Malattie delle Piante
-          </h1>
-          <p className="text-gray-600">
-            Analisi AI avanzata con database professionali
-          </p>
-        </div>
+    <div className="min-h-[calc(100vh-8rem)] bg-gradient-to-br from-gray-50/50 via-white/30 to-drplant-green/5">
+      <div className="container mx-auto px-4 py-8">
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center mb-8">
+            <div className="flex justify-center mb-4">
+              <div className="w-16 h-16 bg-gradient-to-r from-drplant-green to-drplant-blue rounded-full flex items-center justify-center">
+                <Camera className="h-8 w-8 text-white" />
+              </div>
+            </div>
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-drplant-green to-drplant-blue bg-clip-text text-transparent mb-2">
+              Diagnosi Malattie delle Piante
+            </h1>
+            <p className="text-gray-600 text-lg">
+              Analisi AI avanzata con database professionali
+            </p>
+          </div>
 
-        {renderCurrentStage()}
+          <div className="bg-white/70 backdrop-blur-sm rounded-3xl shadow-lg border border-drplant-green/10 overflow-hidden">
+            <div className="p-8">
+              {renderCurrentStage()}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
