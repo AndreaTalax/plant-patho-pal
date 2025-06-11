@@ -13,7 +13,7 @@ import { toast } from 'sonner';
 interface Article {
   id: string;
   title: string;
-  content: string;
+  text: string;
   excerpt: string;
   category: string;
   tags: string[];
