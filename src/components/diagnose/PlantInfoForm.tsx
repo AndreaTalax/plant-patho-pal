@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -25,11 +26,17 @@ const PlantInfoForm = ({ onComplete, initialData }: PlantInfoFormProps) => {
     infoComplete: false,
   });
 
+  const [showCustomPlantName, setShowCustomPlantName] = useState(false);
+  const [customPlantName, setCustomPlantName] = useState('');
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
+    const finalPlantName = showCustomPlantName ? customPlantName : formData.name;
+    
     const updatedData = {
       ...formData,
+      name: finalPlantName,
       infoComplete: true,
     };
 
@@ -40,7 +47,21 @@ const PlantInfoForm = ({ onComplete, initialData }: PlantInfoFormProps) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const isFormValid = formData.name && formData.wateringFrequency && formData.lightExposure;
+  const handlePlantNameChange = (value: string) => {
+    if (value === 'altro') {
+      setShowCustomPlantName(true);
+      handleChange('name', '');
+    } else {
+      setShowCustomPlantName(false);
+      setCustomPlantName('');
+      handleChange('name', value);
+    }
+  };
+
+  const isFormValid = () => {
+    const hasPlantName = showCustomPlantName ? customPlantName.trim() !== '' : formData.name !== '';
+    return hasPlantName && formData.wateringFrequency && formData.lightExposure;
+  };
 
   return (
     <Card className="w-full max-w-2xl mx-auto">
@@ -55,7 +76,7 @@ const PlantInfoForm = ({ onComplete, initialData }: PlantInfoFormProps) => {
           {/* Nome della pianta */}
           <div className="space-y-2">
             <Label htmlFor="name">Tipo di pianta</Label>
-            <Select value={formData.name} onValueChange={(value) => handleChange('name', value)}>
+            <Select value={showCustomPlantName ? 'altro' : formData.name} onValueChange={handlePlantNameChange}>
               <SelectTrigger>
                 <SelectValue placeholder="Seleziona il tipo di pianta" />
               </SelectTrigger>
@@ -73,6 +94,19 @@ const PlantInfoForm = ({ onComplete, initialData }: PlantInfoFormProps) => {
                 <SelectItem value="altro">Altro</SelectItem>
               </SelectContent>
             </Select>
+            
+            {/* Campo personalizzato per "altro" */}
+            {showCustomPlantName && (
+              <div className="space-y-2">
+                <Label htmlFor="customPlantName">Nome della pianta</Label>
+                <Input
+                  id="customPlantName"
+                  value={customPlantName}
+                  onChange={(e) => setCustomPlantName(e.target.value)}
+                  placeholder="Scrivi il nome della pianta se lo conosci"
+                />
+              </div>
+            )}
           </div>
 
           {/* Ambiente */}
@@ -151,7 +185,7 @@ const PlantInfoForm = ({ onComplete, initialData }: PlantInfoFormProps) => {
           <Button 
             type="submit" 
             className="w-full bg-drplant-blue hover:bg-drplant-blue-dark"
-            disabled={!isFormValid}
+            disabled={!isFormValid()}
           >
             Continua alla Foto
           </Button>

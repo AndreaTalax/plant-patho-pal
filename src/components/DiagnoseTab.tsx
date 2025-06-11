@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useCallback } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,6 +9,7 @@ import { usePlantInfo } from '@/context/PlantInfoContext';
 import PlantInfoForm from './diagnose/PlantInfoForm';
 import PlantInfoSummary from './diagnose/PlantInfoSummary';
 import DiagnosisOptions from './diagnose/DiagnosisOptions';
+import PhotoInstructions from './diagnose/PhotoInstructions';
 import ScanLayout from './diagnose/scan/ScanLayout';
 import PlantAnalysisResultComponent from './diagnose/PlantAnalysisResult';
 import CameraCapture from './diagnose/CameraCapture';
@@ -15,10 +17,12 @@ import { RealPlantAnalysisService, PlantAnalysisResult as AnalysisResult } from 
 import { AutoExpertNotificationService } from './chat/AutoExpertNotificationService';
 import { uploadPlantImage } from '@/utils/imageStorage';
 import { PlantInfo } from './diagnose/types';
+import { usePremiumStatus } from '@/services/premiumService';
 
 const DiagnoseTab = () => {
   const { userProfile } = useAuth();
   const { plantInfo, setPlantInfo } = usePlantInfo();
+  const { hasAIAccess } = usePremiumStatus();
   
   // Component states - Updated flow: info -> capture -> options -> analyzing -> result
   const [currentStage, setCurrentStage] = useState<'info' | 'capture' | 'options' | 'analyzing' | 'result'>('info');
@@ -34,8 +38,8 @@ const DiagnoseTab = () => {
 
   // Plant info completion handler - now goes to capture stage
   const handlePlantInfoComplete = useCallback((data: PlantInfo) => {
-    setPlantInfo({ ...data, infoComplete: true });
-    setCurrentStage('capture'); // Always go to capture stage after info
+    setPlantInfo(data);
+    setCurrentStage('capture');
     toast.success('Informazioni pianta salvate! Ora scatta o carica una foto.');
   }, [setPlantInfo]);
 
@@ -54,7 +58,7 @@ const DiagnoseTab = () => {
       reader.onload = (e) => {
         const result = e.target?.result as string;
         setUploadedImage(result);
-        setCurrentStage('options'); // Go to options after image upload
+        setCurrentStage('options');
         toast.success('Immagine caricata! Ora scegli il metodo di diagnosi.');
       };
       reader.readAsDataURL(file);
@@ -68,12 +72,65 @@ const DiagnoseTab = () => {
   const handleCameraCapture = useCallback((imageDataUrl: string) => {
     setUploadedImage(imageDataUrl);
     setShowCamera(false);
-    setCurrentStage('options'); // Go to options after camera capture
+    setCurrentStage('options');
     toast.success('Foto scattata! Ora scegli il metodo di diagnosi.');
   }, []);
 
+  // Send data to expert - funzione migliorata per invio automatico
+  const sendDataToExpert = useCallback(async (includeAnalysis: boolean = false) => {
+    if (!userProfile?.id || !uploadedImage) {
+      console.error('Dati mancanti per invio all\'esperto');
+      return false;
+    }
+
+    try {
+      console.log('📨 Invio automatico dati all\'esperto...');
+      
+      // Prepara i dati per l'esperto
+      const expertData = {
+        plantType: plantInfo.name || 'Pianta non specificata',
+        plantVariety: plantInfo.name,
+        symptoms: plantInfo.symptoms || 'Nessun sintomo specificato',
+        imageUrl: uploadedImage,
+        analysisResult: includeAnalysis ? analysisResult : null,
+        confidence: includeAnalysis && analysisResult ? analysisResult.confidence : 0,
+        isHealthy: includeAnalysis && analysisResult ? analysisResult.isHealthy : false,
+        plantInfo: {
+          environment: plantInfo.isIndoor ? 'Interno' : 'Esterno',
+          watering: plantInfo.wateringFrequency,
+          lightExposure: plantInfo.lightExposure,
+          symptoms: plantInfo.symptoms
+        }
+      };
+
+      const sent = await AutoExpertNotificationService.sendDiagnosisToExpert(
+        userProfile.id,
+        expertData
+      );
+
+      if (sent) {
+        setAutoSentToExpert(true);
+        toast.success('Dati inviati automaticamente all\'esperto!', {
+          description: 'Marco Nigro riceverà tutte le informazioni e risponderà al più presto.'
+        });
+        return true;
+      }
+
+      return false;
+    } catch (error) {
+      console.error('❌ Errore invio dati all\'esperto:', error);
+      toast.error('Errore nell\'invio automatico all\'esperto');
+      return false;
+    }
+  }, [userProfile, uploadedImage, plantInfo, analysisResult]);
+
   // AI diagnosis selection
   const handleSelectAI = useCallback(async () => {
+    if (!hasAIAccess) {
+      toast.error('La diagnosi AI richiede un account Premium');
+      return;
+    }
+
     if (!uploadedImage) {
       toast.error('Nessuna immagine disponibile per l\'analisi');
       return;
@@ -93,17 +150,30 @@ const DiagnoseTab = () => {
         toast.error('Errore nell\'elaborazione dell\'immagine');
         setCurrentStage('options');
       });
-  }, [uploadedImage]);
+  }, [uploadedImage, hasAIAccess]);
 
-  // Expert consultation selection
-  const handleSelectExpert = useCallback(() => {
-    // Update plant info to indicate expert consultation
-    const updatedPlantInfo = { ...plantInfo, sendToExpert: true };
-    setPlantInfo(updatedPlantInfo);
-    // Navigate to chat tab
-    window.dispatchEvent(new CustomEvent('switchTab', { detail: 'chat' }));
-    toast.success('Reindirizzamento alla chat con l\'esperto...');
-  }, [setPlantInfo, plantInfo]);
+  // Expert consultation selection - migliorato con invio automatico
+  const handleSelectExpert = useCallback(async () => {
+    console.log('🩺 Selezione consulenza esperto...');
+    
+    // Invia automaticamente tutti i dati all'esperto
+    const sent = await sendDataToExpert(false);
+    
+    if (sent) {
+      // Update plant info to indicate expert consultation
+      const updatedPlantInfo = { ...plantInfo, sendToExpert: true };
+      setPlantInfo(updatedPlantInfo);
+      
+      // Navigate to chat tab
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('switchTab', { detail: 'chat' }));
+      }, 1500);
+      
+      toast.success('Reindirizzamento alla chat con l\'esperto...', {
+        description: 'Tutte le informazioni sono state inviate automaticamente'
+      });
+    }
+  }, [sendDataToExpert, setPlantInfo, plantInfo]);
 
   // Main analysis function with real APIs
   const performAnalysis = useCallback(async (file: File, imageDataUrl: string) => {
@@ -139,25 +209,9 @@ const DiagnoseTab = () => {
       setAnalysisResult(analysis);
       setCurrentStage('result');
 
-      // Automatically send to expert if enabled or confidence is low
-      const shouldAutoSend = !analysis.isHealthy || analysis.confidence < 0.8;
-      
-      if (shouldAutoSend) {
-        console.log('📨 Invio automatico diagnosi all\'esperto...');
-        const sent = await AutoExpertNotificationService.sendDiagnosisToExpert(
-          userProfile.id,
-          {
-            plantType: analysis.plantName,
-            plantVariety: analysis.scientificName,
-            symptoms: plantInfo.symptoms || 'Sintomi visivi rilevati nell\'immagine',
-            imageUrl: imageUrl,
-            analysisResult: analysis,
-            confidence: analysis.confidence,
-            isHealthy: analysis.isHealthy
-          }
-        );
-        setAutoSentToExpert(sent);
-      }
+      // Invia automaticamente all'esperto con risultati AI
+      console.log('📨 Invio automatico diagnosi AI all\'esperto...');
+      await sendDataToExpert(true);
 
     } catch (error) {
       console.error('❌ Analisi fallita:', error);
@@ -166,7 +220,7 @@ const DiagnoseTab = () => {
     } finally {
       setIsAnalyzing(false);
     }
-  }, [userProfile, plantInfo]);
+  }, [userProfile, plantInfo, sendDataToExpert]);
 
   // Reset to start new analysis
   const handleNewAnalysis = useCallback(() => {
@@ -204,6 +258,8 @@ const DiagnoseTab = () => {
               plantInfo={plantInfo} 
               onEdit={() => setCurrentStage('info')} 
             />
+            
+            <PhotoInstructions />
             
             <Card className="w-full max-w-2xl mx-auto">
               <div className="p-6">
@@ -251,7 +307,7 @@ const DiagnoseTab = () => {
               </div>
             )}
 
-            <Card className="w-full max-w-2xl mx-auto">
+            <Card className="w-full max-w-4xl mx-auto">
               <div className="p-6">
                 <h3 className="text-xl font-semibold text-center mb-4">
                   🔬 Scegli il metodo di diagnosi
@@ -265,7 +321,7 @@ const DiagnoseTab = () => {
                   onSelectExpert={handleSelectExpert}
                 />
                 
-                <div className="mt-4 text-center">
+                <div className="mt-6 text-center">
                   <Button 
                     variant="outline" 
                     onClick={() => setCurrentStage('capture')}
@@ -293,6 +349,9 @@ const DiagnoseTab = () => {
                 <p className="text-gray-600">
                   Utilizzo di servizi AI avanzati per analizzare la tua pianta...
                 </p>
+                <p className="text-sm text-gray-500 mt-2">
+                  I tuoi dati verranno inviati automaticamente all'esperto per conferma
+                </p>
               </div>
               {uploadedImage && (
                 <div className="w-64 h-64 rounded-xl overflow-hidden border-2 border-drplant-green/20">
@@ -315,9 +374,12 @@ const DiagnoseTab = () => {
                 <div className="flex items-center space-x-3">
                   <CheckCircle className="h-5 w-5 text-green-600" />
                   <span className="text-green-800 font-medium">
-                    Diagnosi inviata automaticamente all'esperto fitopatologo!
+                    Diagnosi inviata automaticamente all'esperto Marco Nigro!
                   </span>
                 </div>
+                <p className="text-sm text-green-700 mt-1 ml-8">
+                  Riceverai una conferma professionale nella chat
+                </p>
               </Card>
             )}
 
