@@ -97,7 +97,7 @@ Per favore, rivedi l'analisi e fornisci la tua valutazione professionale. L'uten
 
 *Questo messaggio è stato inviato automaticamente dopo l'analisi AI della pianta.*`;
 
-      console.log('📝 Message content:', messageContent);
+      console.log('📝 Message text:', messageContent);
 
       // Insert the message using the correct field name 'text'
       const { error: messageError } = await supabase
