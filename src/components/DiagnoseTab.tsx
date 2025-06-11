@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useCallback } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -99,11 +98,12 @@ const DiagnoseTab = () => {
   // Expert consultation selection
   const handleSelectExpert = useCallback(() => {
     // Update plant info to indicate expert consultation
-    setPlantInfo(prev => ({ ...prev, sendToExpert: true }));
+    const updatedPlantInfo = { ...plantInfo, sendToExpert: true };
+    setPlantInfo(updatedPlantInfo);
     // Navigate to chat tab
     window.dispatchEvent(new CustomEvent('switchTab', { detail: 'chat' }));
     toast.success('Reindirizzamento alla chat con l\'esperto...');
-  }, [setPlantInfo]);
+  }, [setPlantInfo, plantInfo]);
 
   // Main analysis function with real APIs
   const performAnalysis = useCallback(async (file: File, imageDataUrl: string) => {
