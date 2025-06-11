@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { usePlantInfo } from '@/context/PlantInfoContext';
 import PlantInfoForm from '../PlantInfoForm';
@@ -161,12 +160,7 @@ const DiagnosisStages: React.FC<DiagnosisStagesProps> = ({
     return (
       <>
         <PlantInfoSummary 
-          plantInfo={{
-            isIndoor: plantInfo.isIndoor,
-            wateringFrequency: plantInfo.wateringFrequency,
-            lightExposure: plantInfo.lightExposure,
-            symptoms: plantInfo.symptoms
-          }}
+          plantInfo={plantInfo}
           onEdit={onPlantInfoEdit}
         />
 
@@ -182,12 +176,7 @@ const DiagnosisStages: React.FC<DiagnosisStagesProps> = ({
     return (
       <>
         <PlantInfoSummary 
-          plantInfo={{
-            isIndoor: plantInfo.isIndoor,
-            wateringFrequency: plantInfo.wateringFrequency,
-            lightExposure: plantInfo.lightExposure,
-            symptoms: plantInfo.symptoms
-          }}
+          plantInfo={plantInfo}
           onEdit={onPlantInfoEdit}
         />
 
@@ -217,12 +206,7 @@ const DiagnosisStages: React.FC<DiagnosisStagesProps> = ({
       return (
         <div className="space-y-4">
           <PlantInfoSummary 
-            plantInfo={{
-              isIndoor: plantInfo.isIndoor,
-              wateringFrequency: plantInfo.wateringFrequency,
-              lightExposure: plantInfo.lightExposure,
-              symptoms: plantInfo.symptoms
-            }}
+            plantInfo={plantInfo}
             onEdit={onPlantInfoEdit}
           />
           
@@ -302,24 +286,13 @@ const DiagnosisStages: React.FC<DiagnosisStagesProps> = ({
     return (
       <>
         <PlantInfoSummary 
-          plantInfo={{
-            isIndoor: plantInfo.isIndoor,
-            wateringFrequency: plantInfo.wateringFrequency,
-            lightExposure: plantInfo.lightExposure,
-            symptoms: plantInfo.symptoms
-          }}
+          plantInfo={plantInfo}
           onEdit={onPlantInfoEdit}
         />
         
         <DiagnosisResult
           imageSrc={uploadedImage || ''}
-          plantInfo={{
-            isIndoor: plantInfo.isIndoor,
-            wateringFrequency: plantInfo.wateringFrequency,
-            lightExposure: plantInfo.lightExposure,
-            symptoms: plantInfo.symptoms,
-            useAI: plantInfo.useAI
-          }}
+          plantInfo={plantInfo}
           analysisData={diagnosedDisease}
           isAnalyzing={isAnalyzing}
           onStartNewAnalysis={onStartNewAnalysis}

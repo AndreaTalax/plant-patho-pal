@@ -22,6 +22,11 @@ export interface DiagnosedDisease {
   products?: string[];
   disclaimer?: string;
   recommendExpertConsultation?: boolean;
+  resources?: string[];
+  label?: string;
+  disease?: {
+    name: string;
+  };
 }
 
 export interface AnalysisDetails {

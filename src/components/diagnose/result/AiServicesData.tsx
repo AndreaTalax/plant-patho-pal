@@ -1,4 +1,3 @@
-
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { formatPercentage } from '@/utils/plant-analysis';
@@ -51,7 +50,7 @@ const AiServicesData = ({ analysisDetails, isAnalyzing, plantSymptoms, standardi
     if (!analysisDetails || !plantSymptoms) return '';
     
     // Get plant name and potential disease
-    const plantName = standardizedData?.label || 
+    const plantName = standardizedData?.name || 
                      analysisDetails?.multiServiceInsights?.plantName || 
                      'pianta';
     const isHealthy = standardizedData?.healthy !== undefined ? 
@@ -105,7 +104,7 @@ const AiServicesData = ({ analysisDetails, isAnalyzing, plantSymptoms, standardi
       }
       
       if (hasLeafProblems) {
-        explanation += '- Possibile infezione fungina o attacco di parassiti\n';
+        explanation += '- Possibile infezione fungina o attacco di parassiti\n\n';
       }
       
       explanation += '- Carenza di nutrienti nel terreno\n\n';

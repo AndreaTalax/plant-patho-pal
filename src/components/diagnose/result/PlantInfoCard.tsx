@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { AnalysisDetails, DiagnosedDisease } from '../types';
@@ -35,7 +34,7 @@ const PlantInfoCard: React.FC<PlantInfoCardProps> = ({
 }) => {
   // Utilizziamo sia plantName che plantSpecies per una migliore visualizzazione
   const plantName = analysisDetails?.multiServiceInsights?.plantName || 
-                    standardizedData?.label ||
+                    standardizedData?.name ||
                     'Pianta sconosciuta';
   const plantSpecies = analysisDetails?.multiServiceInsights?.plantSpecies || plantName;
   
