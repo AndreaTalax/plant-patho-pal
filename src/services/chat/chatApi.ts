@@ -6,15 +6,6 @@ import { DatabaseConversation, DatabaseMessage } from './types';
 export class ChatApi {
   /**
    * Loads conversations for a specific user, sorted by the latest message timestamp.
-   * @example
-   * loadConversations('12345')
-   * [ { id: 1, user_id: '12345', last_message_at: ... }, ... ]
-   * @param {string} userId - ID of the user for whom conversations are to be fetched.
-   * @returns {Promise<DatabaseConversation[]>} A promise that resolves to an array of conversations belonging to the user.
-   * @description
-   *   - Utilizes Supabase's query to fetch conversations where the user is either the user or the expert.
-   *   - Sorts the conversations by the timestamp of the last message in descending order.
-   *   - Returns an empty array if any error occurs during the fetch operation.
    */
   static async loadConversations(userId: string): Promise<DatabaseConversation[]> {
     try {
@@ -22,9 +13,7 @@ export class ChatApi {
       
       const { data, error } = await supabase
         .from('conversations')
-        .select(`
-          *
-        `)
+        .select(`*`)
         .or(`user_id.eq.${userId},expert_id.eq.${userId}`)
         .order('last_message_at', { ascending: false });
 
@@ -45,15 +34,6 @@ export class ChatApi {
 
   /**
    * Asynchronously loads messages for a given conversation by ID.
-   * @example
-   * loadMessages('12345')
-   * Returns an array of message objects sorted by sent_at in ascending order.
-   * @param {string} conversationId - The ID of the conversation whose messages are to be loaded.
-   * @returns {Promise<DatabaseMessage[]>} An array of messages from the database associated with the given conversation ID.
-   * @description
-   *   - Utilizes the Supabase client to query the 'messages' table.
-   *   - Ensures messages are returned in chronological order by sent date.
-   *   - Returns an empty array in the event of an error fetching the data.
    */
   static async loadMessages(conversationId: string): Promise<DatabaseMessage[]> {
     try {
@@ -82,20 +62,6 @@ export class ChatApi {
 
   /**
    * Sends a message to the specified conversation.
-   * @example
-   * sendMessage('conversation123', 'sender456', 'recipient789', 'Hello world')
-   * Promise<DatabaseMessage | null>
-   * @param {string} conversationId - The unique identifier of the conversation.
-   * @param {string} senderId - The unique identifier of the sender.
-   * @param {string} recipientId - The unique identifier of the recipient.
-   * @param {string} text - The text content of the message.
-   * @param {any} [products] - Optional products associated with the message.
-   * @returns {Promise<DatabaseMessage | null>} Returns the DatabaseMessage object if successfully sent, null otherwise.
-   * @description
-   *   - Inserts the message into the 'messages' table of the database.
-   *   - Updates the 'conversations' table with the latest message timestamp and text.
-   *   - Logs the message data and errors to the console.
-   *   - Displays error toast notification if sending fails.
    */
   static async sendMessage(
     conversationId: string,
@@ -147,32 +113,21 @@ export class ChatApi {
 
   /**
    * Finds an existing conversation or creates a new one between a user and an expert.
-   * @example
-   * findOrCreateConversation('user_123', 'expert_456')
-   * 'conversation_789'
-   * @param {string} userId - The ID of the user.
-   * @param {string} expertId - The ID of the expert.
-   * @returns {Promise<string | null>} The ID of the existing or newly created conversation, or null if an error occurs.
-   * @description
-   *   - Logs the process of finding or creating a conversation to the console.
-   *   - Uses Supabase to query or insert data into the 'conversations' table.
-   *   - Provides user feedback through toasts in case of errors during the creation of a conversation.
    */
   static async findOrCreateConversation(userId: string, expertId: string): Promise<string | null> {
     try {
       console.log('Finding or creating conversation:', { userId, expertId });
       
-      // Check if conversation already exists
-      const { data: existingConversation } = await supabase
+      // Check if conversation already exists - using array query
+      const { data: existingConversations } = await supabase
         .from('conversations')
         .select('id')
         .eq('user_id', userId)
-        .eq('expert_id', expertId)
-        .single();
+        .eq('expert_id', expertId);
 
-      if (existingConversation) {
-        console.log('Found existing conversation:', existingConversation.id);
-        return existingConversation.id;
+      if (existingConversations && existingConversations.length > 0) {
+        console.log('Found existing conversation:', existingConversations[0].id);
+        return existingConversations[0].id;
       }
 
       // Create new conversation
@@ -204,16 +159,6 @@ export class ChatApi {
 
   /**
   * Updates the status of a conversation in the database.
-  * @example
-  * updateConversationStatus('12345', 'closed')
-  * true
-  * @param {string} conversationId - The unique identifier of the conversation to be updated.
-  * @param {string} status - The new status value to set for the conversation.
-  * @returns {Promise<boolean>} Returns true if the update is successful, otherwise returns false.
-  * @description
-  *   - Uses Supabase client to update the status of a conversation.
-  *   - Logs the process details including errors for debugging purposes.
-  *   - Handles exceptions and operational errors separately to ensure consistent return values.
   */
   static async updateConversationStatus(conversationId: string, status: string): Promise<boolean> {
     try {

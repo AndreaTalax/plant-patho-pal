@@ -16,17 +16,6 @@ export interface DiagnosisData {
 export class AutoExpertNotificationService {
   /**
    * Sends an automatic plant diagnosis to an expert.
-   * @example
-   * sendDiagnosisToExpert('user123', diagnosisData)
-   * true
-   * @param {string} userId - The ID of the user sending the diagnosis.
-   * @param {DiagnosisData} diagnosisData - The data related to the plant diagnosis containing information like plant type, health status, and more.
-   * @returns {Promise<boolean>} A promise that resolves to true if the diagnosis was sent successfully, otherwise false.
-   * @description
-   *   - Authenticates the user and retrieves their profile for context.
-   *   - Checks if an existing conversation with the expert exists; if not, creates a new one.
-   *   - Sends a comprehensive diagnostic message and optionally an image to the expert.
-   *   - Utilizes third-party APIs for plant identification and disease detection analysis.
    */
   static async sendDiagnosisToExpert(userId: string, diagnosisData: DiagnosisData): Promise<boolean> {
     try {
@@ -53,15 +42,15 @@ export class AutoExpertNotificationService {
 
       // Check if conversation exists with the expert
       let conversationId: string;
-      const { data: existingConversation } = await supabase
+      const { data: existingConversations } = await supabase
         .from('conversations')
         .select('id')
         .eq('user_id', userId)
-        .eq('expert_id', MARCO_NIGRO_ID)
-        .single();
+        .eq('expert_id', MARCO_NIGRO_ID);
 
-      if (existingConversation) {
-        conversationId = existingConversation.id;
+      if (existingConversations && existingConversations.length > 0) {
+        conversationId = existingConversations[0].id;
+        console.log('💬 Using existing conversation:', conversationId);
       } else {
         console.log('🆕 Creating new conversation with expert');
         const { data: newConversation, error: conversationError } = await supabase
@@ -84,31 +73,29 @@ export class AutoExpertNotificationService {
         conversationId = newConversation.id;
       }
 
-      console.log('💬 Using conversation:', conversationId);
-
       // Create comprehensive message content
-      const messageContent = `🌿 **Automatic Plant Diagnosis Request**
+      const messageContent = `🌿 **Richiesta di Diagnosi Automatica**
 
-**User:** ${userProfile?.first_name || 'User'} ${userProfile?.last_name || ''}
-**Plant Type:** ${diagnosisData.plantType}
-**Scientific Name:** ${diagnosisData.plantVariety || 'Not identified'}
+**Utente:** ${userProfile?.first_name || 'User'} ${userProfile?.last_name || ''}
+**Tipo di Pianta:** ${diagnosisData.plantType}
+**Nome Scientifico:** ${diagnosisData.plantVariety || 'Non identificato'}
 
-**Analysis Results:**
-- **Health Status:** ${diagnosisData.isHealthy ? 'Healthy' : 'Potential Issues Detected'}
-- **AI Confidence:** ${Math.round(diagnosisData.confidence * 100)}%
-- **Symptoms:** ${diagnosisData.symptoms}
+**Risultati Analisi:**
+- **Stato di Salute:** ${diagnosisData.isHealthy ? 'Sana' : 'Possibili Problemi Rilevati'}
+- **Confidenza AI:** ${Math.round(diagnosisData.confidence * 100)}%
+- **Sintomi:** ${diagnosisData.symptoms}
 
-**AI Analysis Summary:**
-${JSON.stringify(diagnosisData.analysisResult, null, 2)}
+**Riassunto Analisi AI:**
+${diagnosisData.analysisResult ? JSON.stringify(diagnosisData.analysisResult, null, 2) : 'Analisi non disponibile'}
 
-**API Sources Used:**
-- Plant.id API for species identification
-- Hugging Face AI for disease detection
-- EPPO Database for regulatory information
+**Fonti API Utilizzate:**
+- Plant.id API per identificazione specie
+- Hugging Face AI per rilevamento malattie
+- Database EPPO per informazioni normative
 
-Please review the analysis and provide your professional assessment. The user is awaiting your expert opinion.
+Per favore, rivedi l'analisi e fornisci la tua valutazione professionale. L'utente attende il tuo parere esperto.
 
-*This message was sent automatically following AI plant analysis.*`;
+*Questo messaggio è stato inviato automaticamente dopo l'analisi AI della pianta.*`;
 
       console.log('📝 Message content:', messageContent);
 
@@ -119,7 +106,7 @@ Please review the analysis and provide your professional assessment. The user is
           conversation_id: conversationId,
           sender_id: userId,
           recipient_id: MARCO_NIGRO_ID,
-          text: messageContent, // Changed from 'content' to 'text'
+          text: messageContent, // Using 'text' instead of 'content'
           metadata: {
             type: 'automatic_diagnosis',
             confidence: diagnosisData.confidence,
@@ -129,7 +116,7 @@ Please review the analysis and provide your professional assessment. The user is
         });
 
       if (messageError) {
-        console.error('Detailed message insert error:', messageError);
+        console.error('❌ Error sending message:', messageError);
         throw new Error(`Failed to send message to expert: ${messageError.message}`);
       }
 
@@ -141,10 +128,11 @@ Please review the analysis and provide your professional assessment. The user is
             conversation_id: conversationId,
             sender_id: userId,
             recipient_id: MARCO_NIGRO_ID,
-            text: diagnosisData.imageUrl, // Changed from 'content' to 'text'
+            text: `📸 Immagine della pianta: ${diagnosisData.imageUrl}`,
             metadata: {
               type: 'image',
-              isPlantImage: true
+              isPlantImage: true,
+              imageUrl: diagnosisData.imageUrl
             }
           });
 

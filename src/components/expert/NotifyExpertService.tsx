@@ -7,20 +7,6 @@ import { toast } from 'sonner';
 
 /**
 * Sends a consultation request to an expert regarding plant issues.
-* @example
-* sync(file, imageUrl, plantInfo)
-* Returns a success message toast if the request is sent successfully.
-* @param {File} file - Optional image file of the plant.
-* @param {string} imageUrl - Optional URL of the plant's image.
-* @param {PlantInfo} plantInfo - Optional object with plant details like symptoms, environment, watering frequency, and light exposure.
-* @returns {void} Sends a toast notification on success or error.
-* @description
-*   - Requires user authentication.
-*   - Uploads image to storage if file or base64 image URL is provided.
-*   - Inserts consultation record into the 'expert_consultations' table in Supabase.
-*   - Manages conversation with the expert by finding or creating it.
-*   - Sends details as messages within a conversation.
-*   - Uses Supabase functions to notify the expert about the consultation request.
 */
 export const notifyExpert = async (file?: File, imageUrl?: string, plantInfo?: PlantInfo) => {
   try {
@@ -62,15 +48,14 @@ export const notifyExpert = async (file?: File, imageUrl?: string, plantInfo?: P
     }
 
     // Find or create conversation with expert
-    const { data: existingConversation } = await supabase
+    const { data: existingConversations } = await supabase
       .from('conversations')
       .select('id')
       .eq('user_id', user.id)
-      .eq('expert_id', MARCO_NIGRO_ID)
-      .single();
+      .eq('expert_id', MARCO_NIGRO_ID);
 
     let conversationId;
-    if (!existingConversation) {
+    if (!existingConversations || existingConversations.length === 0) {
       const { data: newConversation, error: convError } = await supabase
         .from('conversations')
         .insert({
@@ -87,7 +72,7 @@ export const notifyExpert = async (file?: File, imageUrl?: string, plantInfo?: P
       }
       conversationId = newConversation.id;
     } else {
-      conversationId = existingConversation.id;
+      conversationId = existingConversations[0].id;
     }
 
     // Send automatic message with consultation details
@@ -100,7 +85,7 @@ export const notifyExpert = async (file?: File, imageUrl?: string, plantInfo?: P
     
     if (plantInfo) {
       messageText += `🏠 **Ambiente:** ${plantInfo.isIndoor ? 'Interno' : 'Esterno'}\n`;
-      messageText += `💧 **Irrigazione:** ${plantInfo.wateringFrequency || 'Non specificata'} volte/settimana\n`;
+      messageText += `💧 **Irrigazione:** ${plantInfo.wateringFrequency || 'Non specificata'}\n`;
       messageText += `☀️ **Esposizione luce:** ${plantInfo.lightExposure || 'Non specificata'}\n`;
     }
     
@@ -131,7 +116,7 @@ export const notifyExpert = async (file?: File, imageUrl?: string, plantInfo?: P
           conversation_id: conversationId,
           sender_id: user.id,
           recipient_id: MARCO_NIGRO_ID,
-          text: finalImageUrl
+          text: `📸 Immagine della pianta: ${finalImageUrl}`
         });
 
       if (imageMessageError) {
