@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import Header from "@/components/Header";
@@ -23,18 +24,35 @@ import { ensureStorageBuckets } from "@/utils/storageSetup";
 *   - Ensures smooth user interaction through dynamic tab content rendering.
 */
 const Index = () => {
-  const [activeTab, setActiveTab] = useState<string>("diagnose");
   const { isMasterAccount } = useAuth();
+  
+  // Set default tab based on account type - master accounts start with expert tab
+  const [activeTab, setActiveTab] = useState<string>(isMasterAccount ? "expert" : "diagnose");
 
   // Initialize storage buckets on app start
   useEffect(() => {
     ensureStorageBuckets();
   }, []);
 
+  // Update default tab when master account status changes
+  useEffect(() => {
+    if (isMasterAccount && activeTab === "diagnose") {
+      setActiveTab("expert");
+    }
+  }, [isMasterAccount, activeTab]);
+
   // Listen for custom tab switch events
   useEffect(() => {
     const handleSwitchTab = (event: CustomEvent) => {
-      setActiveTab(event.detail);
+      const newTab = event.detail;
+      
+      // Prevent master accounts from accessing diagnose tab
+      if (isMasterAccount && newTab === "diagnose") {
+        setActiveTab("expert");
+        return;
+      }
+      
+      setActiveTab(newTab);
     };
 
     window.addEventListener('switchTab', handleSwitchTab as EventListener);
@@ -42,7 +60,16 @@ const Index = () => {
     return () => {
       window.removeEventListener('switchTab', handleSwitchTab as EventListener);
     };
-  }, []);
+  }, [isMasterAccount]);
+
+  // Enhanced setActiveTab function to prevent master accounts from accessing diagnose
+  const handleSetActiveTab = (tab: string) => {
+    if (isMasterAccount && tab === "diagnose") {
+      setActiveTab("expert");
+      return;
+    }
+    setActiveTab(tab);
+  };
 
   /**
    * Renders a component based on the active tab selected
@@ -54,11 +81,13 @@ const Index = () => {
    * @description
    *   - If the activeTab is "expert", it checks the isMasterAccount flag to determine which tab to render.
    *   - Defaults to rendering <DiagnoseTab /> if activeTab doesn't match any case.
+   *   - Master accounts are prevented from accessing the diagnose tab.
    */
   const renderTabContent = () => {
     switch (activeTab) {
       case "diagnose":
-        return <DiagnoseTab />;
+        // Redirect master accounts to expert tab instead of diagnose
+        return isMasterAccount ? <ExpertTab /> : <DiagnoseTab />;
       case "chat":
         return <ChatTab />;
       case "library":
@@ -70,7 +99,7 @@ const Index = () => {
       case "expert":
         return isMasterAccount ? <ExpertTab /> : <DiagnoseTab />;
       default:
-        return <DiagnoseTab />;
+        return isMasterAccount ? <ExpertTab /> : <DiagnoseTab />;
     }
   };
 
@@ -82,7 +111,7 @@ const Index = () => {
       </main>
       <BottomNavigation 
         activeTab={activeTab} 
-        setActiveTab={setActiveTab}
+        setActiveTab={handleSetActiveTab}
         showExpertTab={isMasterAccount}
       />
     </div>
