@@ -149,34 +149,37 @@ export class PlantDataSyncService {
    */
   static async isPlantDataSynced(userId: string): Promise<boolean> {
     try {
-      const { data: conversations, error } = await supabase
+      // Prima trova la conversazione
+      const { data: conversations, error: convError } = await supabase
         .from('conversations')
-        .select(`
-          id,
-          messages!inner(metadata)
-        `)
+        .select('id')
         .eq('user_id', userId)
         .eq('expert_id', MARCO_NIGRO_ID);
 
-      if (error || !conversations) {
+      if (convError || !conversations || conversations.length === 0) {
+        return false;
+      }
+
+      const conversationId = conversations[0].id;
+
+      // Poi cerca i messaggi con metadata di sincronizzazione
+      const { data: messages, error: msgError } = await supabase
+        .from('messages')
+        .select('metadata')
+        .eq('conversation_id', conversationId)
+        .not('metadata', 'is', null);
+
+      if (msgError || !messages) {
         return false;
       }
 
       // Controlla se esiste già un messaggio con dati della pianta sincronizzati
-      for (const conversation of conversations) {
-        const messages = (conversation as any).messages;
-        if (messages && Array.isArray(messages)) {
-          const hasSyncedData = messages.some((msg: any) => 
-            msg.metadata && 
-            (msg.metadata.type === 'plant_data_sync' || msg.metadata.autoSynced === true)
-          );
-          if (hasSyncedData) {
-            return true;
-          }
-        }
-      }
+      const hasSyncedData = messages.some((msg: any) => 
+        msg.metadata && 
+        (msg.metadata.type === 'plant_data_sync' || msg.metadata.autoSynced === true)
+      );
 
-      return false;
+      return hasSyncedData;
     } catch (error) {
       console.error('Error checking plant data sync status:', error);
       return false;
