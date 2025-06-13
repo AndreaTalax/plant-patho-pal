@@ -7,13 +7,18 @@ interface PlantData {
   symptoms?: string;
   wateringFrequency?: string;
   sunExposure?: string;
+  environment?: string;
+  plantName?: string;
   imageUrl?: string;
   aiDiagnosis?: any;
+  useAI?: boolean;
+  sendToExpert?: boolean;
 }
 
 interface UserProfile {
   firstName?: string;
   lastName?: string;
+  email?: string;
   birthDate?: string;
   birthPlace?: string;
 }
@@ -29,41 +34,56 @@ export class ConsultationDataService {
     fromAIDiagnosis: boolean = false
   ): Promise<boolean> {
     try {
-      console.log('Sending initial consultation data...');
+      console.log('📤 Sending comprehensive initial consultation data...');
+      console.log('🌱 Plant data:', plantData);
+      console.log('👤 User data:', userProfile);
 
-      // Prepara il messaggio con i dati dell'utente
-      let userDataContent = `Ecco i miei dati per la consulenza:
+      // Prepara il messaggio completo con tutti i dati dell'utente e della pianta
+      let userDataContent = `🌿 **Nuova Richiesta di Consulenza Automatica**
 
-👤 **Profilo:**
+👤 **Dati Utente:**
 - Nome: ${userProfile.firstName || ''} ${userProfile.lastName || ''}
+- Email: ${userProfile.email || 'Non specificata'}
 - Data di nascita: ${userProfile.birthDate || 'Non specificata'}
 - Luogo di nascita: ${userProfile.birthPlace || 'Non specificato'}
 
-🌱 **Dati della pianta:**
-- Sintomi: ${plantData.symptoms || 'Non specificati'}
+🌱 **Informazioni della Pianta:**
+- Nome/Tipo: ${plantData.plantName || 'Pianta non identificata'}
+- Ambiente: ${plantData.environment || 'Non specificato'}
+- Sintomi: ${plantData.symptoms || 'Nessun sintomo specificato'}
 - Frequenza irrigazione: ${this.getWateringText(plantData.wateringFrequency)}
 - Esposizione solare: ${this.getSunExposureText(plantData.sunExposure)}`;
 
-      // Aggiungi i risultati della diagnosi AI se disponibili
+      // Aggiungi informazioni sul metodo di diagnosi
       if (fromAIDiagnosis && plantData.aiDiagnosis) {
         userDataContent += `
 
-🤖 **Diagnosi AI precedente:**
+🤖 **Diagnosi AI Precedente:**
 - Pianta identificata: ${plantData.aiDiagnosis.consensus?.mostLikelyPlant?.plantName || 'Non identificata'}
 - Confidenza: ${plantData.aiDiagnosis.consensus?.overallConfidence || 0}%
+- Stato di salute: ${plantData.aiDiagnosis.diseaseDetection?.length > 0 ? 'Problemi rilevati' : 'Apparentemente sana'}
 - Malattie rilevate: ${plantData.aiDiagnosis.diseaseDetection?.map((d: any) => d.disease).join(', ') || 'Nessuna'}
 
-Vorrei un secondo parere da un esperto per confermare o correggere questa diagnosi.`;
+**Richiesta:** Vorrei un secondo parere professionale per confermare o correggere questa diagnosi AI.`;
+      } else if (plantData.sendToExpert && !plantData.useAI) {
+        userDataContent += `
+
+🩺 **Richiesta Diretta di Consulenza Esperta:**
+L'utente ha scelto di consultare direttamente il fitopatologo senza utilizzare la diagnosi AI.`;
       }
+
+      userDataContent += `
+
+*Questo messaggio è stato inviato automaticamente dal sistema di diagnosi Dr.Plant.*`;
 
       // Ottieni l'ID utente corrente
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        console.error('User not authenticated');
+        console.error('❌ User not authenticated');
         return false;
       }
 
-      // Invia il messaggio con i dati
+      // Invia il messaggio con tutti i dati
       const { error: messageError } = await supabase
         .from('messages')
         .insert({
@@ -73,14 +93,16 @@ Vorrei un secondo parere da un esperto per confermare o correggere questa diagno
           content: userDataContent,
           text: userDataContent,
           metadata: {
-            type: 'consultation_data',
+            type: 'comprehensive_consultation_data',
             autoSent: true,
-            fromAIDiagnosis
+            fromAIDiagnosis,
+            hasPlantImage: !!plantData.imageUrl,
+            consultationType: fromAIDiagnosis ? 'ai_diagnosis_review' : 'direct_consultation'
           }
         });
 
       if (messageError) {
-        console.error('Error sending consultation data message:', messageError);
+        console.error('❌ Error sending consultation data message:', messageError);
         return false;
       }
 
@@ -88,11 +110,11 @@ Vorrei un secondo parere da un esperto per confermare o correggere questa diagno
       if (plantData.imageUrl) {
         console.log('📸 Sending plant image:', plantData.imageUrl);
         
-        const imageMessage = `📸 **Immagine della pianta**
+        const imageMessage = `📸 **Immagine della Pianta**
 
 ![Immagine della pianta](${plantData.imageUrl})
 
-*Immagine inviata automaticamente dal sistema di diagnosi.*`;
+*Immagine inviata automaticamente insieme ai dati della consultazione.*`;
         
         const { error: imageError } = await supabase
           .from('messages')
@@ -106,23 +128,56 @@ Vorrei un secondo parere da un esperto per confermare o correggere questa diagno
             metadata: {
               type: 'consultation_image',
               imageUrl: plantData.imageUrl,
-              autoSent: true
+              autoSent: true,
+              isPlantImage: true
             }
           });
 
         if (imageError) {
-          console.error('Error sending plant image:', imageError);
+          console.error('❌ Error sending plant image:', imageError);
           // Non bloccare il processo se l'immagine non viene inviata
         } else {
           console.log('✅ Plant image sent successfully');
         }
       }
 
-      console.log('Initial consultation data sent successfully');
+      // Se c'è una diagnosi AI, invia anche i dettagli tecnici
+      if (fromAIDiagnosis && plantData.aiDiagnosis) {
+        const technicalData = `🔬 **Dettagli Tecnici dell'Analisi AI**
+
+**Risultati completi:**
+\`\`\`json
+${JSON.stringify(plantData.aiDiagnosis, null, 2)}
+\`\`\`
+
+*Questi dati tecnici possono essere utili per la tua valutazione professionale.*`;
+
+        const { error: techError } = await supabase
+          .from('messages')
+          .insert({
+            conversation_id: conversationId,
+            sender_id: user.id,
+            recipient_id: MARCO_NIGRO_ID,
+            content: technicalData,
+            text: technicalData,
+            metadata: {
+              type: 'technical_ai_data',
+              autoSent: true,
+              aiDiagnosis: plantData.aiDiagnosis
+            }
+          });
+
+        if (techError) {
+          console.error('❌ Error sending technical data:', techError);
+          // Non bloccare per i dati tecnici
+        }
+      }
+
+      console.log('✅ Comprehensive consultation data sent successfully');
       return true;
 
     } catch (error) {
-      console.error('Error sending initial consultation data:', error);
+      console.error('❌ Error sending comprehensive consultation data:', error);
       return false;
     }
   }
@@ -145,12 +200,14 @@ Vorrei un secondo parere da un esperto per confermare o correggere questa diagno
       // Controlla se esiste già un messaggio con dati di consultazione
       const hasConsultationData = messages.some((msg: any) => 
         msg.metadata && 
-        (msg.metadata.type === 'consultation_data' || msg.metadata.autoSent === true)
+        (msg.metadata.type === 'consultation_data' || 
+         msg.metadata.type === 'comprehensive_consultation_data' ||
+         msg.metadata.autoSent === true)
       );
 
       return hasConsultationData;
     } catch (error) {
-      console.error('Error checking consultation data status:', error);
+      console.error('❌ Error checking consultation data status:', error);
       return false;
     }
   }
@@ -165,7 +222,7 @@ Vorrei un secondo parere da un esperto per confermare o correggere questa diagno
       'mensile': 'Mensile',
       'quando-necessario': 'Quando il terreno è secco'
     };
-    return wateringMap[frequency || ''] || 'Non specificata';
+    return wateringMap[frequency || ''] || frequency || 'Non specificata';
   }
 
   private static getSunExposureText(exposure?: string): string {
@@ -177,6 +234,6 @@ Vorrei un secondo parere da un esperto per confermare o correggere questa diagno
       'luce-indiretta': 'Luce indiretta',
       'luce-artificiale': 'Luce artificiale'
     };
-    return exposureMap[exposure || ''] || 'Non specificata';
+    return exposureMap[exposure || ''] || exposure || 'Non specificata';
   }
 }

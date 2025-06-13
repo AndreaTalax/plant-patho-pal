@@ -78,7 +78,7 @@ export const useUserChat = (userId: string) => {
     initializeExpertChat();
   }, [userId]);
 
-  // Send initial consultation data only when all conditions are met and not already sent
+  // Send initial consultation data automatically when all conditions are met
   useEffect(() => {
     if (!currentDbConversation?.id || 
         !plantInfo?.infoComplete || 
@@ -88,10 +88,11 @@ export const useUserChat = (userId: string) => {
       return;
     }
 
-    console.log('📋 All data ready, checking if we should send initial consultation data...');
+    console.log('📋 All data ready, sending initial consultation data automatically...');
     sendInitialConsultationData();
   }, [currentDbConversation?.id, plantInfo?.infoComplete, userProfile, dataSyncChecked, initialDataSent]);
 
+  // Enhanced function to send initial consultation data automatically
   const sendInitialConsultationData = async () => {
     if (!currentDbConversation?.id || !plantInfo || !userProfile || initialDataSent) {
       console.log('❌ Cannot send initial data:', { 
@@ -104,29 +105,36 @@ export const useUserChat = (userId: string) => {
     }
 
     try {
-      console.log('📤 Sending initial consultation data...');
+      console.log('📤 Sending initial consultation data automatically...');
       
       // Set this immediately to prevent multiple calls
       setInitialDataSent(true);
 
-      // Prepare plant data from context
+      // Prepare comprehensive plant data from context
       const plantData = {
-        symptoms: plantInfo.symptoms,
-        wateringFrequency: plantInfo.wateringFrequency,
-        sunExposure: plantInfo.lightExposure,
+        symptoms: plantInfo.symptoms || 'Nessun sintomo specificato',
+        wateringFrequency: plantInfo.wateringFrequency || 'Non specificata',
+        sunExposure: plantInfo.lightExposure || 'Non specificata',
+        environment: plantInfo.isIndoor ? 'Interno' : 'Esterno',
+        plantName: plantInfo.name || 'Pianta non identificata',
         imageUrl: plantInfo.uploadedImageUrl,
-        aiDiagnosis: (plantInfo as any).aiDiagnosis
+        aiDiagnosis: (plantInfo as any).aiDiagnosis,
+        useAI: plantInfo.useAI,
+        sendToExpert: plantInfo.sendToExpert
       };
 
-      // Prepare user data from profile
+      // Prepare comprehensive user data from profile
       const userData = {
-        firstName: userProfile.first_name,
-        lastName: userProfile.last_name,
-        birthDate: userProfile.birth_date,
-        birthPlace: userProfile.birth_place
+        firstName: userProfile.first_name || '',
+        lastName: userProfile.last_name || '',
+        email: userProfile.email || '',
+        birthDate: userProfile.birth_date || 'Non specificata',
+        birthPlace: userProfile.birth_place || 'Non specificato'
       };
 
-      // Send data using the service
+      console.log('📊 Sending data:', { plantData, userData });
+
+      // Send comprehensive data using the service
       const success = await ConsultationDataService.sendInitialConsultationData(
         currentDbConversation.id,
         plantData,
@@ -137,14 +145,19 @@ export const useUserChat = (userId: string) => {
       if (!success) {
         console.error('❌ Failed to send initial consultation data');
         setInitialDataSent(false);
+        toast.error('Errore nell\'invio automatico dei dati');
         return;
       }
 
       console.log('✅ Initial consultation data sent successfully');
+      toast.success('Dati inviati automaticamente all\'esperto!', {
+        description: 'Marco Nigro ha ricevuto tutte le informazioni sulla tua pianta'
+      });
 
     } catch (error) {
       console.error('❌ Error in sendInitialConsultationData:', error);
       setInitialDataSent(false);
+      toast.error('Errore nell\'invio automatico all\'esperto');
     }
   };
   
@@ -273,5 +286,6 @@ export const useUserChat = (userId: string) => {
     messages,
     isSending,
     handleSendMessage,
+    sendInitialConsultationData, // Expose this function for manual calls if needed
   };
 };
