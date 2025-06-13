@@ -41,7 +41,8 @@ export interface DatabaseMessage {
   conversation_id: string;
   sender_id: string;
   recipient_id: string;
-  text: string;
+  content: string; // Required field in database
+  text: string; // Legacy field for compatibility
   sent_at: string;
   read: boolean;
   products?: any;
