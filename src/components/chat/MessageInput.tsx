@@ -260,13 +260,6 @@ const MessageInput = ({
           onChange={handleImageSelect}
           className="hidden"
         />
-        
-        <div className="mt-3 text-center">
-          <p className="text-sm text-gray-500">
-            Premi <kbd className="px-2 py-1 bg-gray-100 rounded text-xs">Enter</kbd> per inviare, 
-            <kbd className="px-2 py-1 bg-gray-100 rounded text-xs ml-1">Shift+Enter</kbd> per andare a capo
-          </p>
-        </div>
       </div>
     </div>
   );
