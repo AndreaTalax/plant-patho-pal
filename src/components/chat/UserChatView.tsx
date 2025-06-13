@@ -5,7 +5,6 @@ import ChatHeader from './user/ChatHeader';
 import MessageList from './MessageList';
 import MessageInput from './MessageInput';
 import EmptyStateView from './user/EmptyStateView';
-import { ChatDataManager } from './user/ChatDataManager';
 
 interface UserChatViewProps {
   userId: string;
@@ -23,15 +22,6 @@ const UserChatView = ({ userId }: UserChatViewProps) => {
     handleSendMessage,
   } = useUserChat(userId);
 
-  const handleDataSynced = () => {
-    console.log('📊 Plant data has been synced to chat');
-    // Trigger refresh se necessario
-    setTimeout(() => {
-      const refreshEvent = new CustomEvent('refreshChat');
-      window.dispatchEvent(refreshEvent);
-    }, 500);
-  };
-
   const handleStartChat = () => {
     setActiveChat('expert');
   };
@@ -46,9 +36,6 @@ const UserChatView = ({ userId }: UserChatViewProps) => {
 
   return (
     <div className="flex flex-col h-full">
-      {/* Gestione automatica della sincronizzazione dati */}
-      <ChatDataManager onDataSynced={handleDataSynced} />
-      
       <ChatHeader onBackClick={handleBackClick} />
       <MessageList messages={messages} />
       <MessageInput 

@@ -24,6 +24,7 @@ export const useUserChat = (userId: string) => {
   const [currentDbConversation, setCurrentDbConversation] = useState<DatabaseConversation | null>(null);
   const [isSending, setIsSending] = useState(false);
   const [initialDataSent, setInitialDataSent] = useState(false);
+  const [dataSyncChecked, setDataSyncChecked] = useState(false);
   
   // Initialize chat when component mounts or userId changes
   useEffect(() => {
@@ -61,11 +62,13 @@ export const useUserChat = (userId: string) => {
           }]);
         } else {
           setMessages(messagesForConversation);
-          
-          // Verifica se i dati di consultazione sono già stati inviati
-          const dataSent = await ConsultationDataService.isConsultationDataSent(conversation.id);
-          setInitialDataSent(dataSent);
         }
+
+        // Check if consultation data was already sent AFTER loading messages
+        const dataSent = await ConsultationDataService.isConsultationDataSent(conversation.id);
+        console.log("📊 Consultation data already sent:", dataSent);
+        setInitialDataSent(dataSent);
+        setDataSyncChecked(true);
         
       } catch (error) {
         console.error("❌ Error initializing expert chat:", error);
@@ -75,17 +78,23 @@ export const useUserChat = (userId: string) => {
     initializeExpertChat();
   }, [userId]);
 
-  // Nuovo useEffect per gestire l'invio automatico dei dati in chat quando tutti i dati sono pronti
+  // Send initial consultation data only when all conditions are met and not already sent
   useEffect(() => {
-    if (currentDbConversation?.id && plantInfo?.infoComplete && userProfile && !initialDataSent && messages.length > 0) {
-      console.log('All data ready, sending initial consultation data...');
-      sendInitialConsultationData();
+    if (!currentDbConversation?.id || 
+        !plantInfo?.infoComplete || 
+        !userProfile || 
+        !dataSyncChecked ||
+        initialDataSent) {
+      return;
     }
-  }, [currentDbConversation?.id, plantInfo?.infoComplete, userProfile, initialDataSent, messages.length]);
+
+    console.log('📋 All data ready, checking if we should send initial consultation data...');
+    sendInitialConsultationData();
+  }, [currentDbConversation?.id, plantInfo?.infoComplete, userProfile, dataSyncChecked, initialDataSent]);
 
   const sendInitialConsultationData = async () => {
     if (!currentDbConversation?.id || !plantInfo || !userProfile || initialDataSent) {
-      console.log('Cannot send initial data:', { 
+      console.log('❌ Cannot send initial data:', { 
         conversationId: !!currentDbConversation?.id, 
         plantInfo: !!plantInfo, 
         userProfile: !!userProfile, 
@@ -95,10 +104,12 @@ export const useUserChat = (userId: string) => {
     }
 
     try {
-      console.log('Sending initial consultation data...');
+      console.log('📤 Sending initial consultation data...');
+      
+      // Set this immediately to prevent multiple calls
       setInitialDataSent(true);
 
-      // Prepara i dati della pianta dal contesto
+      // Prepare plant data from context
       const plantData = {
         symptoms: plantInfo.symptoms,
         wateringFrequency: plantInfo.wateringFrequency,
@@ -107,7 +118,7 @@ export const useUserChat = (userId: string) => {
         aiDiagnosis: (plantInfo as any).aiDiagnosis
       };
 
-      // Prepara i dati dell'utente dal profilo
+      // Prepare user data from profile
       const userData = {
         firstName: userProfile.first_name,
         lastName: userProfile.last_name,
@@ -115,7 +126,7 @@ export const useUserChat = (userId: string) => {
         birthPlace: userProfile.birth_place
       };
 
-      // Invia i dati usando il servizio
+      // Send data using the service
       const success = await ConsultationDataService.sendInitialConsultationData(
         currentDbConversation.id,
         plantData,
@@ -124,19 +135,16 @@ export const useUserChat = (userId: string) => {
       );
 
       if (!success) {
-        console.error('Failed to send initial consultation data');
-        toast.error('Errore nell\'invio dei dati iniziali');
+        console.error('❌ Failed to send initial consultation data');
         setInitialDataSent(false);
         return;
       }
 
-      console.log('Initial consultation data sent successfully');
-      toast.success('Dati della consultazione inviati automaticamente!');
+      console.log('✅ Initial consultation data sent successfully');
 
     } catch (error) {
-      console.error('Error in sendInitialConsultationData:', error);
+      console.error('❌ Error in sendInitialConsultationData:', error);
       setInitialDataSent(false);
-      toast.error('Errore nell\'invio dei dati di consultazione');
     }
   };
   
@@ -173,8 +181,9 @@ export const useUserChat = (userId: string) => {
             return [...prev, formattedMessage];
           });
           
-          // Show toast notification for new expert messages
-          if (formattedMessage.sender === 'expert') {
+          // Show toast notification for new expert messages only if not auto-sent
+          if (formattedMessage.sender === 'expert' && 
+              !(newMsg as any).metadata?.autoSent) {
             toast.info("Nuova risposta dal fitopatologo!", {
               description: "Controlla la chat per leggere la risposta",
               duration: 4000
