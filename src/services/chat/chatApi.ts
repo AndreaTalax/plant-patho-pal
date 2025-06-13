@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { DatabaseConversation, DatabaseMessage } from './types';
@@ -73,11 +72,18 @@ export class ChatApi {
     try {
       console.log('Sending message:', { conversationId, senderId, recipientId, text });
       
+      // Ensure the text is not empty
+      if (!text || text.trim() === '') {
+        console.error('❌ Cannot send empty message');
+        toast.error('Il messaggio non può essere vuoto');
+        return null;
+      }
+
       const messageData = {
         conversation_id: conversationId,
         sender_id: senderId,
         recipient_id: recipientId,
-        text,
+        text: text.trim(), // Make sure text is trimmed and not empty
         products: products || null
       };
 
@@ -98,7 +104,7 @@ export class ChatApi {
         .from('conversations')
         .update({
           last_message_at: new Date().toISOString(),
-          last_message_text: text
+          last_message_text: text.trim()
         })
         .eq('id', conversationId);
 

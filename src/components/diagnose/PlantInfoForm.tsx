@@ -51,6 +51,10 @@ const PlantInfoForm = ({ onComplete, initialData }: PlantInfoFormProps) => {
     if (value === 'altro') {
       setShowCustomPlantName(true);
       handleChange('name', '');
+    } else if (value === 'non-so') {
+      setShowCustomPlantName(false);
+      setCustomPlantName('');
+      handleChange('name', 'Pianta non identificata');
     } else {
       setShowCustomPlantName(false);
       setCustomPlantName('');
@@ -59,8 +63,8 @@ const PlantInfoForm = ({ onComplete, initialData }: PlantInfoFormProps) => {
   };
 
   const isFormValid = () => {
-    const hasPlantName = showCustomPlantName ? customPlantName.trim() !== '' : formData.name !== '';
-    return hasPlantName && formData.wateringFrequency && formData.lightExposure;
+    // Il nome della pianta non è più obbligatorio
+    return formData.wateringFrequency && formData.lightExposure;
   };
 
   return (
@@ -73,14 +77,15 @@ const PlantInfoForm = ({ onComplete, initialData }: PlantInfoFormProps) => {
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Nome della pianta */}
+          {/* Nome della pianta - ora opzionale */}
           <div className="space-y-2">
-            <Label htmlFor="name">Tipo di pianta</Label>
-            <Select value={showCustomPlantName ? 'altro' : formData.name} onValueChange={handlePlantNameChange}>
+            <Label htmlFor="name">Tipo di pianta (opzionale)</Label>
+            <Select value={showCustomPlantName ? 'altro' : (formData.name === 'Pianta non identificata' ? 'non-so' : formData.name)} onValueChange={handlePlantNameChange}>
               <SelectTrigger>
-                <SelectValue placeholder="Seleziona il tipo di pianta" />
+                <SelectValue placeholder="Seleziona il tipo di pianta se lo conosci" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="non-so">Non so che pianta è</SelectItem>
                 <SelectItem value="rose">Rosa</SelectItem>
                 <SelectItem value="basilico">Basilico</SelectItem>
                 <SelectItem value="monstera">Monstera</SelectItem>

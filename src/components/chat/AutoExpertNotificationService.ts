@@ -97,16 +97,16 @@ Per favore, rivedi l'analisi e fornisci la tua valutazione professionale. L'uten
 
 *Questo messaggio è stato inviato automaticamente dopo l'analisi AI della pianta.*`;
 
-      console.log('📝 Message text:', messageContent);
+      console.log('📝 Message content:', messageContent);
 
-      // Insert the message using the correct field name 'text'
+      // Insert the message using the correct field name based on the database schema
       const { error: messageError } = await supabase
         .from('messages')
         .insert({
           conversation_id: conversationId,
           sender_id: userId,
           recipient_id: MARCO_NIGRO_ID,
-          text: messageContent, // Using 'text' instead of 'content'
+          text: messageContent, // Using 'text' field which should match the database schema
           metadata: {
             type: 'automatic_diagnosis',
             confidence: diagnosisData.confidence,
@@ -117,7 +117,8 @@ Per favore, rivedi l'analisi e fornisci la tua valutazione professionale. L'uten
 
       if (messageError) {
         console.error('❌ Error sending message:', messageError);
-        throw new Error(`Failed to send message to expert: ${messageError.message}`);
+        toast.error(`Errore nell'invio del messaggio: ${messageError.message}`);
+        return false;
       }
 
       // Send image as separate message if available

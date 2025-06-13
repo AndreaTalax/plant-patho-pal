@@ -223,7 +223,7 @@ export type Database = {
         Row: {
           author_id: string | null
           category: string | null
-          text: string
+          content: string
           created_at: string
           excerpt: string | null
           id: string
@@ -236,7 +236,7 @@ export type Database = {
         Insert: {
           author_id?: string | null
           category?: string | null
-          text: string
+          content: string
           created_at?: string
           excerpt?: string | null
           id?: string
@@ -263,8 +263,10 @@ export type Database = {
       }
       messages: {
         Row: {
+          content: string
           conversation_id: string
           id: string
+          image_url: string | null
           metadata: Json | null
           products: Json | null
           read: boolean
@@ -274,19 +276,23 @@ export type Database = {
           text: string
         }
         Insert: {
+          content: string
           conversation_id: string
           id?: string
+          image_url?: string | null
           metadata?: Json | null
           products?: Json | null
           read?: boolean
           recipient_id: string
           sender_id: string
           sent_at?: string
-          text: string
+          text?: string
         }
         Update: {
+          content?: string
           conversation_id?: string
           id?: string
+          image_url?: string | null
           metadata?: Json | null
           products?: Json | null
           read?: boolean
@@ -497,6 +503,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      send_message: {
+        Args: { p_conversation_id: number; p_sender_id: string; p_text: string }
+        Returns: undefined
+      }
       update_conversation_last_message: {
         Args: { conversation_id: number; last_message: string }
         Returns: undefined
