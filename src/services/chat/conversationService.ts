@@ -16,12 +16,18 @@ export class ConversationService {
         return null;
       }
 
-      // Check if conversation already exists - using array query instead of single
-      const { data: existingConversations } = await supabase
+      // Check if conversation already exists
+      const { data: existingConversations, error: searchError } = await supabase
         .from('conversations')
         .select('id')
         .eq('user_id', userId)
         .eq('expert_id', MARCO_NIGRO_ID);
+
+      if (searchError) {
+        console.error('Error searching conversations:', searchError);
+        toast.error('Errore nella ricerca delle conversazioni');
+        return null;
+      }
 
       if (existingConversations && existingConversations.length > 0) {
         return existingConversations[0].id;
@@ -59,12 +65,17 @@ export class ConversationService {
    */
   static async findOrCreateConversation(userId: string) {
     try {
-      // Check if conversation already exists - using array query
-      const { data: existingConversations } = await supabase
+      // Check if conversation already exists
+      const { data: existingConversations, error: searchError } = await supabase
         .from('conversations')
         .select('*')
         .eq('user_id', userId)
         .eq('expert_id', MARCO_NIGRO_ID);
+
+      if (searchError) {
+        console.error('Error searching conversations:', searchError);
+        return null;
+      }
 
       if (existingConversations && existingConversations.length > 0) {
         return existingConversations[0];
@@ -101,7 +112,10 @@ export class ConversationService {
     try {
       const { error } = await supabase
         .from('conversations')
-        .update({ status })
+        .update({ 
+          status,
+          updated_at: new Date().toISOString()
+        })
         .eq('id', conversationId);
 
       if (error) {

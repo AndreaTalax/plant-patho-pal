@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { DatabaseConversation, DatabaseMessage } from './types';
@@ -88,6 +89,8 @@ export class ChatApi {
         products: products || null
       };
 
+      console.log('Inserting message data:', messageData);
+
       const { data, error } = await supabase
         .from('messages')
         .insert(messageData)
@@ -96,20 +99,26 @@ export class ChatApi {
 
       if (error) {
         console.error('Error sending message:', error);
-        toast.error('Errore nell\'invio del messaggio');
+        toast.error(`Errore nell'invio del messaggio: ${error.message}`);
         return null;
       }
 
-      // Update conversation last message
-      await supabase
-        .from('conversations')
-        .update({
-          last_message_at: new Date().toISOString(),
-          last_message_text: text.trim()
-        })
-        .eq('id', conversationId);
+      console.log('Message sent successfully:', data);
+      
+      // The trigger will automatically update the conversation, but let's also manually ensure it's updated
+      try {
+        await supabase
+          .from('conversations')
+          .update({
+            last_message_at: new Date().toISOString(),
+            last_message_text: text.trim(),
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', conversationId);
+      } catch (updateError) {
+        console.warn('Manual conversation update failed, but trigger should handle it:', updateError);
+      }
 
-      console.log('Message sent successfully');
       return data;
     } catch (error) {
       console.error('Error in sendMessage:', error);
@@ -125,12 +134,18 @@ export class ChatApi {
     try {
       console.log('Finding or creating conversation:', { userId, expertId });
       
-      // Check if conversation already exists - using array query
-      const { data: existingConversations } = await supabase
+      // Check if conversation already exists
+      const { data: existingConversations, error: searchError } = await supabase
         .from('conversations')
         .select('id')
         .eq('user_id', userId)
         .eq('expert_id', expertId);
+
+      if (searchError) {
+        console.error('Error searching for existing conversation:', searchError);
+        toast.error('Errore nella ricerca della conversazione');
+        return null;
+      }
 
       if (existingConversations && existingConversations.length > 0) {
         console.log('Found existing conversation:', existingConversations[0].id);
@@ -173,7 +188,10 @@ export class ChatApi {
       
       const { error } = await supabase
         .from('conversations')
-        .update({ status })
+        .update({ 
+          status,
+          updated_at: new Date().toISOString()
+        })
         .eq('id', conversationId);
 
       if (error) {

@@ -48,11 +48,17 @@ export const notifyExpert = async (file?: File, imageUrl?: string, plantInfo?: P
     }
 
     // Find or create conversation with expert
-    const { data: existingConversations } = await supabase
+    const { data: existingConversations, error: searchError } = await supabase
       .from('conversations')
       .select('id')
       .eq('user_id', user.id)
       .eq('expert_id', MARCO_NIGRO_ID);
+
+    if (searchError) {
+      console.error('Error searching conversations:', searchError);
+      toast.error('Errore nella ricerca della conversazione');
+      return;
+    }
 
     let conversationId;
     if (!existingConversations || existingConversations.length === 0) {
