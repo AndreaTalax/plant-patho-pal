@@ -47,4 +47,5 @@ export interface DatabaseMessage {
   read: boolean;
   products?: any;
   metadata?: any;
+  image_url?: string; // Added missing image_url property
 }
