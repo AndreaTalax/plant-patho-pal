@@ -36,7 +36,10 @@ const UserChatView = ({ userId }: UserChatViewProps) => {
 
   return (
     <div className="flex flex-col h-full">
-      <ChatHeader onBackClick={handleBackClick} />
+      <ChatHeader 
+        onBackClick={handleBackClick} 
+        isConnected={false}
+      />
       <MessageList messages={messages} />
       <MessageInput 
         onSendMessage={handleSendMessage}
