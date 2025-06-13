@@ -103,7 +103,6 @@ export const useUserChat = (userId: string) => {
         symptoms: plantInfo.symptoms,
         wateringFrequency: plantInfo.wateringFrequency,
         sunExposure: plantInfo.lightExposure,
-        additionalNotes: plantInfo.additionalNotes,
         imageUrl: plantInfo.uploadedImageUrl,
         aiDiagnosis: (plantInfo as any).aiDiagnosis
       };

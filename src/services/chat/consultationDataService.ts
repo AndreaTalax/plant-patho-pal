@@ -7,7 +7,6 @@ interface PlantData {
   symptoms?: string;
   wateringFrequency?: string;
   sunExposure?: string;
-  additionalNotes?: string;
   imageUrl?: string;
   aiDiagnosis?: any;
 }
@@ -43,8 +42,7 @@ export class ConsultationDataService {
 🌱 **Dati della pianta:**
 - Sintomi: ${plantData.symptoms || 'Non specificati'}
 - Frequenza irrigazione: ${this.getWateringText(plantData.wateringFrequency)}
-- Esposizione solare: ${this.getSunExposureText(plantData.sunExposure)}
-${plantData.additionalNotes ? `- Note aggiuntive: ${plantData.additionalNotes}` : ''}`;
+- Esposizione solare: ${this.getSunExposureText(plantData.sunExposure)}`;
 
       // Aggiungi i risultati della diagnosi AI se disponibili
       if (fromAIDiagnosis && plantData.aiDiagnosis) {
@@ -145,21 +143,25 @@ Vorrei un secondo parere da un esperto per confermare o correggere questa diagno
 
   private static getWateringText(frequency?: string): string {
     const wateringMap: { [key: string]: string } = {
-      'daily': 'Giornaliera',
-      'weekly': 'Settimanale',
-      'biweekly': 'Bi-settimanale',
-      'monthly': 'Mensile',
-      'rarely': 'Raramente'
+      'quotidiana': 'Quotidiana',
+      'ogni-2-giorni': 'Ogni 2 giorni',
+      '2-volte-settimana': '2 volte a settimana',
+      'settimanale': 'Settimanale',
+      'ogni-2-settimane': 'Ogni 2 settimane',
+      'mensile': 'Mensile',
+      'quando-necessario': 'Quando il terreno è secco'
     };
     return wateringMap[frequency || ''] || 'Non specificata';
   }
 
   private static getSunExposureText(exposure?: string): string {
     const exposureMap: { [key: string]: string } = {
-      'full_sun': 'Sole pieno',
-      'partial_sun': 'Sole parziale',
-      'shade': 'Ombra',
-      'indirect': 'Luce indiretta'
+      'sole-diretto': 'Sole diretto',
+      'sole-parziale': 'Sole parziale',
+      'ombra-parziale': 'Ombra parziale',
+      'ombra-completa': 'Ombra completa',
+      'luce-indiretta': 'Luce indiretta',
+      'luce-artificiale': 'Luce artificiale'
     };
     return exposureMap[exposure || ''] || 'Non specificata';
   }
