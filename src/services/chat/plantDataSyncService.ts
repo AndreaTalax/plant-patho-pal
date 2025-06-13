@@ -1,0 +1,180 @@
+
+import { supabase } from '@/integrations/supabase/client';
+import { MARCO_NIGRO_ID } from '@/components/phytopathologist';
+import { PlantInfo } from '@/context/PlantInfoContext';
+import { toast } from 'sonner';
+
+export class PlantDataSyncService {
+  /**
+   * Sincronizza automaticamente i dati della pianta con la chat esistente
+   */
+  static async syncPlantDataToChat(userId: string, plantInfo: PlantInfo, imageUrl?: string): Promise<boolean> {
+    try {
+      console.log('🔄 Syncing plant data to existing chat...', { userId, plantInfo, imageUrl });
+
+      // Trova la conversazione esistente
+      const { data: conversations, error: findError } = await supabase
+        .from('conversations')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('expert_id', MARCO_NIGRO_ID)
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (findError) {
+        console.error('❌ Error finding conversation:', findError);
+        return false;
+      }
+
+      let conversationId: string;
+
+      if (!conversations || conversations.length === 0) {
+        // Crea nuova conversazione se non esiste
+        const { data: newConversation, error: createError } = await supabase
+          .from('conversations')
+          .insert({
+            user_id: userId,
+            expert_id: MARCO_NIGRO_ID,
+            title: `Consulenza per ${plantInfo.name || 'pianta'}`,
+            status: 'active'
+          })
+          .select()
+          .single();
+
+        if (createError) {
+          console.error('❌ Error creating conversation:', createError);
+          return false;
+        }
+
+        conversationId = newConversation.id;
+      } else {
+        conversationId = conversations[0].id;
+      }
+
+      // Costruisce il messaggio con tutti i dati della pianta
+      const plantDataMessage = this.buildPlantDataMessage(plantInfo, imageUrl);
+
+      // Invia il messaggio con i dati della pianta
+      const { error: messageError } = await supabase
+        .from('messages')
+        .insert({
+          conversation_id: conversationId,
+          sender_id: userId,
+          recipient_id: MARCO_NIGRO_ID,
+          content: plantDataMessage,
+          text: plantDataMessage,
+          metadata: {
+            type: 'plant_data_sync',
+            plantInfo: plantInfo,
+            imageUrl: imageUrl,
+            autoSynced: true
+          }
+        });
+
+      if (messageError) {
+        console.error('❌ Error sending plant data message:', messageError);
+        return false;
+      }
+
+      // Se c'è un'immagine, inviala come messaggio separato
+      if (imageUrl) {
+        const imageMessage = `📸 Immagine della pianta: ${imageUrl}`;
+        await supabase
+          .from('messages')
+          .insert({
+            conversation_id: conversationId,
+            sender_id: userId,
+            recipient_id: MARCO_NIGRO_ID,
+            content: imageMessage,
+            text: imageMessage,
+            metadata: {
+              type: 'plant_image',
+              imageUrl: imageUrl,
+              autoSynced: true
+            }
+          });
+      }
+
+      console.log('✅ Plant data synced successfully to chat');
+      return true;
+
+    } catch (error) {
+      console.error('❌ Error syncing plant data to chat:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Costruisce un messaggio formattato con i dati della pianta
+   */
+  private static buildPlantDataMessage(plantInfo: PlantInfo, imageUrl?: string): string {
+    let message = `🌿 **Dati della pianta inseriti automaticamente**\n\n`;
+    
+    if (plantInfo.name && plantInfo.name !== 'Pianta non identificata') {
+      message += `🏷️ **Nome pianta:** ${plantInfo.name}\n`;
+    } else {
+      message += `🏷️ **Nome pianta:** Non identificata\n`;
+    }
+    
+    message += `🏠 **Ambiente:** ${plantInfo.isIndoor ? 'Interno' : 'Esterno'}\n`;
+    
+    if (plantInfo.wateringFrequency) {
+      message += `💧 **Irrigazione:** ${plantInfo.wateringFrequency}\n`;
+    }
+    
+    if (plantInfo.lightExposure) {
+      message += `☀️ **Esposizione luce:** ${plantInfo.lightExposure}\n`;
+    }
+    
+    if (plantInfo.symptoms) {
+      message += `🔍 **Sintomi osservati:** ${plantInfo.symptoms}\n`;
+    }
+    
+    if (imageUrl) {
+      message += `📸 **Immagine:** Allegata\n`;
+    }
+    
+    message += `\n*Questi dati sono stati inseriti automaticamente dal sistema di diagnosi.*`;
+    
+    return message;
+  }
+
+  /**
+   * Verifica se i dati della pianta sono già stati sincronizzati
+   */
+  static async isPlantDataSynced(userId: string): Promise<boolean> {
+    try {
+      const { data: conversations, error } = await supabase
+        .from('conversations')
+        .select(`
+          id,
+          messages!inner(metadata)
+        `)
+        .eq('user_id', userId)
+        .eq('expert_id', MARCO_NIGRO_ID);
+
+      if (error || !conversations) {
+        return false;
+      }
+
+      // Controlla se esiste già un messaggio con dati della pianta sincronizzati
+      for (const conversation of conversations) {
+        const messages = (conversation as any).messages;
+        if (messages && Array.isArray(messages)) {
+          const hasSyncedData = messages.some((msg: any) => 
+            msg.metadata && 
+            (msg.metadata.type === 'plant_data_sync' || msg.metadata.autoSynced === true)
+          );
+          if (hasSyncedData) {
+            return true;
+          }
+        }
+      }
+
+      return false;
+    } catch (error) {
+      console.error('Error checking plant data sync status:', error);
+      return false;
+    }
+  }
+}
