@@ -99,7 +99,8 @@ export const notifyExpert = async (file?: File, imageUrl?: string, plantInfo?: P
         conversation_id: conversationId,
         sender_id: user.id,
         recipient_id: MARCO_NIGRO_ID,
-        text: messageText
+        content: messageText, // Required field
+        text: messageText // Also populate text field
       });
 
     if (messageError) {
@@ -110,13 +111,15 @@ export const notifyExpert = async (file?: File, imageUrl?: string, plantInfo?: P
 
     // Send image as separate message if available
     if (finalImageUrl) {
+      const imageMessage = `📸 Immagine della pianta: ${finalImageUrl}`;
       const { error: imageMessageError } = await supabase
         .from('messages')
         .insert({
           conversation_id: conversationId,
           sender_id: user.id,
           recipient_id: MARCO_NIGRO_ID,
-          text: `📸 Immagine della pianta: ${finalImageUrl}`
+          content: imageMessage, // Required field
+          text: imageMessage // Also populate text field
         });
 
       if (imageMessageError) {

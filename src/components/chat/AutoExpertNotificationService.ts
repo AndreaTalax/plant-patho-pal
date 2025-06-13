@@ -99,14 +99,15 @@ Per favore, rivedi l'analisi e fornisci la tua valutazione professionale. L'uten
 
       console.log('📝 Message content:', messageContent);
 
-      // Insert the message using the correct field name based on the database schema
+      // Insert the message using both 'content' and 'text' fields
       const { error: messageError } = await supabase
         .from('messages')
         .insert({
           conversation_id: conversationId,
           sender_id: userId,
           recipient_id: MARCO_NIGRO_ID,
-          text: messageContent, // Using 'text' field which should match the database schema
+          content: messageContent, // Required field
+          text: messageContent, // Also populate text field for consistency
           metadata: {
             type: 'automatic_diagnosis',
             confidence: diagnosisData.confidence,
@@ -123,13 +124,15 @@ Per favore, rivedi l'analisi e fornisci la tua valutazione professionale. L'uten
 
       // Send image as separate message if available
       if (diagnosisData.imageUrl) {
+        const imageMessage = `📸 Immagine della pianta: ${diagnosisData.imageUrl}`;
         const { error: imageMessageError } = await supabase
           .from('messages')
           .insert({
             conversation_id: conversationId,
             sender_id: userId,
             recipient_id: MARCO_NIGRO_ID,
-            text: `📸 Immagine della pianta: ${diagnosisData.imageUrl}`,
+            content: imageMessage, // Required field
+            text: imageMessage, // Also populate text field
             metadata: {
               type: 'image',
               isPlantImage: true,

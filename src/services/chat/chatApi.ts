@@ -83,7 +83,8 @@ export class ChatApi {
         conversation_id: conversationId,
         sender_id: senderId,
         recipient_id: recipientId,
-        text: text.trim(), // Make sure text is trimmed and not empty
+        content: text.trim(), // Required field
+        text: text.trim(), // Also populate text field for consistency
         products: products || null
       };
 

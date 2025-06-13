@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Search, ChevronRight } from 'lucide-react';
 import { Card } from '@/components/ui/card';
@@ -19,6 +18,7 @@ interface Article {
   tags: string[];
   image_url: string;
   created_at: string;
+  content: string; // Added content field
 }
 
 /**
@@ -239,7 +239,7 @@ const LibraryTab = () => {
                 <div>
                   <h3 className="text-lg font-semibold text-drplant-green mb-2">Article Content</h3>
                   <div className="prose prose-sm max-w-none text-gray-700">
-                    {selectedArticle.content.split('\n').map((paragraph, i) => (
+                    {(selectedArticle.content || selectedArticle.text || '').split('\n').map((paragraph, i) => (
                       <p key={i} className="mb-3">{paragraph}</p>
                     ))}
                   </div>
