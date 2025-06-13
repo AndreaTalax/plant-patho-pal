@@ -12,6 +12,7 @@ export const convertToUIMessage = (dbMessage: DatabaseMessage): Message => {
     text: messageText,
     sender: dbMessage.sender_id === MARCO_NIGRO_ID ? 'expert' : 'user',
     time: new Date(dbMessage.sent_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    products: Array.isArray(dbMessage.products) ? dbMessage.products : undefined
+    products: Array.isArray(dbMessage.products) ? dbMessage.products : undefined,
+    image_url: dbMessage.image_url // Include image_url in conversion
   };
 };

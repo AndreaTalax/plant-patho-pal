@@ -1,10 +1,11 @@
-
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Send, Loader2 } from 'lucide-react';
+import { Send, Loader2, Paperclip, Image, X } from 'lucide-react';
 import { sendMessage } from './chatService';
 import { toast } from 'sonner';
+import { uploadPlantImage } from '@/utils/imageStorage';
+import { supabase } from '@/integrations/supabase/client';
 
 interface MessageInputProps {
   conversationId?: string;
@@ -17,30 +18,7 @@ interface MessageInputProps {
 }
 
 /**
- * Handles message input and sending logic within a chat interface.
- * @example
- * MessageInput({
- *   conversationId: '123',
- *   senderId: '456',
- *   recipientId: '789',
- *   onMessageSent: () => console.log('Message sent callback'),
- *   onSendMessage: async (message) => { console.log('Message:', message) },
- *   isSending: false,
- *   isMasterAccount: false
- * });
- * @param {string} conversationId - Unique identifier for the conversation.
- * @param {string} senderId - ID of the user sending the message.
- * @param {string} recipientId - ID of the user receiving the message.
- * @param {function} onMessageSent - Callback function triggered after a successful message send.
- * @param {function} onSendMessage - Optional function for custom message handling logic.
- * @param {boolean} [isSending=false] - External sending state indicator.
- * @param {boolean} [isMasterAccount=false] - Indicates if the current user is a master account.
- * @returns {JSX.Element} Returns the rendered message input component.
- * @description
- *   - Uses a controlled component approach to handle message input state.
- *   - Integrates both custom and legacy message sending approaches to support various use cases.
- *   - Employs a mechanism to prevent message sends when inputs are invalid or during ongoing sends.
- *   - Provides key-press handling to allow interaction using keyboard for improved UX.
+ * Handles message input and sending logic within a chat interface with image upload support.
  */
 const MessageInput = ({ 
   conversationId, 
@@ -53,65 +31,159 @@ const MessageInput = ({
 }: MessageInputProps) => {
   const [message, setMessage] = useState('');
   const [internalIsSending, setInternalIsSending] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
-  const isSending = externalIsSending || internalIsSending;
+  const isSending = externalIsSending || internalIsSending || uploadingImage;
 
   /**
-   * Sends a message using either a provided hook or a legacy service.
-   * @example
-   * sync()
-   * undefined
-   * @param {string} message - The message content to be sent.
-   * @param {boolean} isSending - Flag indicating if a message is currently being sent.
-   * @param {Function} onSendMessage - Optional function to send a message for hooks-based components.
-   * @param {Function} setMessage - Function to reset the message input field after sending.
-   * @returns {void} No return value.
-   * @description
-   *   - Requires `conversationId`, `senderId`, and `recipientId` for the legacy ChatService approach.
-   *   - Utilizes `setInternalIsSending` to manage UI state during the message sending process.
-   *   - Uses toast notifications for error handling.
-   *   - Executes `onMessageSent` callback after a message is successfully sent.
+   * Handles image file selection and creates preview
+   */
+  const handleImageSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error('Il file deve essere un\'immagine');
+      return;
+    }
+
+    // Validate file size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('L\'immagine deve essere inferiore a 10MB');
+      return;
+    }
+
+    setSelectedImage(file);
+    
+    // Create preview
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setImagePreview(e.target?.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  /**
+   * Removes the selected image
+   */
+  const removeSelectedImage = () => {
+    setSelectedImage(null);
+    setImagePreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  /**
+   * Sends a message with optional image attachment
    */
   const handleSend = async () => {
-    if (!message.trim() || isSending) return;
+    if ((!message.trim() && !selectedImage) || isSending) return;
 
-    // If onSendMessage is provided, use it (for hooks-based components)
-    if (onSendMessage) {
-      await onSendMessage(message.trim());
-      setMessage('');
-      return;
-    }
+    let imageUrl: string | null = null;
 
-    // Otherwise use the legacy ChatService approach
-    if (!conversationId || !senderId || !recipientId) {
-      toast.error('Errore: parametri mancanti');
-      return;
-    }
-
-    console.log('🔄 Sending message...', { conversationId, senderId, recipientId, text: message });
-    
-    setInternalIsSending(true);
-    
     try {
-      const result = await sendMessage(
-        conversationId,
-        senderId,
-        recipientId,
-        message.trim()
-      );
+      // Upload image if selected
+      if (selectedImage) {
+        setUploadingImage(true);
+        
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          throw new Error('User not authenticated');
+        }
 
-      if (result) {
-        setMessage('');
-        onMessageSent?.();
-        console.log('✅ Message sent successfully');
-      } else {
-        console.error('❌ Failed to send message');
+        imageUrl = await uploadPlantImage(selectedImage, user.id);
+        console.log('✅ Image uploaded successfully:', imageUrl);
       }
+
+      // If onSendMessage is provided, use it (for hooks-based components)
+      if (onSendMessage) {
+        if (imageUrl && message.trim()) {
+          // Send text message first
+          await onSendMessage(message.trim());
+          // Then send image as separate message
+          await sendImageMessage(imageUrl, conversationId!, senderId!, recipientId!);
+        } else if (imageUrl) {
+          // Send only image
+          await sendImageMessage(imageUrl, conversationId!, senderId!, recipientId!);
+        } else {
+          // Send only text
+          await onSendMessage(message.trim());
+        }
+        
+        setMessage('');
+        removeSelectedImage();
+        return;
+      }
+
+      // Otherwise use the legacy ChatService approach
+      if (!conversationId || !senderId || !recipientId) {
+        toast.error('Errore: parametri mancanti');
+        return;
+      }
+
+      setInternalIsSending(true);
+      
+      // Send text message if present
+      if (message.trim()) {
+        const result = await sendMessage(
+          conversationId,
+          senderId,
+          recipientId,
+          message.trim()
+        );
+
+        if (!result) {
+          throw new Error('Failed to send text message');
+        }
+      }
+
+      // Send image message if uploaded
+      if (imageUrl) {
+        await sendImageMessage(imageUrl, conversationId, senderId, recipientId);
+      }
+
+      setMessage('');
+      removeSelectedImage();
+      onMessageSent?.();
+      console.log('✅ Message sent successfully');
+      
     } catch (error) {
       console.error('❌ Error sending message:', error);
       toast.error('Errore nell\'invio del messaggio');
     } finally {
       setInternalIsSending(false);
+      setUploadingImage(false);
+    }
+  };
+
+  /**
+   * Sends an image as a separate message
+   */
+  const sendImageMessage = async (imageUrl: string, conversationId: string, senderId: string, recipientId: string) => {
+    const imageMessage = `📸 Immagine allegata`;
+    
+    const { error } = await supabase
+      .from('messages')
+      .insert({
+        conversation_id: conversationId,
+        sender_id: senderId,
+        recipient_id: recipientId,
+        content: imageMessage,
+        text: imageMessage,
+        image_url: imageUrl,
+        metadata: {
+          type: 'user_image',
+          imageUrl: imageUrl
+        }
+      });
+
+    if (error) {
+      throw new Error(`Failed to send image: ${error.message}`);
     }
   };
 
@@ -125,6 +197,23 @@ const MessageInput = ({
   return (
     <div className="border-t border-drplant-green/20 bg-white/80 backdrop-blur-sm p-6">
       <div className="max-w-4xl mx-auto">
+        {/* Image preview */}
+        {imagePreview && (
+          <div className="mb-4 relative inline-block">
+            <img 
+              src={imagePreview} 
+              alt="Anteprima" 
+              className="max-h-32 rounded-lg shadow-md"
+            />
+            <button
+              onClick={removeSelectedImage}
+              className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600 transition-colors"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          </div>
+        )}
+
         <div className="flex gap-4 items-end">
           <div className="flex-1">
             <Textarea
@@ -136,9 +225,23 @@ const MessageInput = ({
               disabled={isSending}
             />
           </div>
+          
+          {/* Image upload button */}
+          <Button
+            type="button"
+            variant="outline"
+            size="lg"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isSending}
+            className="h-[80px] px-4 border-drplant-green/30 hover:bg-drplant-green/10 rounded-2xl"
+          >
+            <Image className="h-5 w-5" />
+          </Button>
+
+          {/* Send button */}
           <Button
             onClick={handleSend}
-            disabled={!message.trim() || isSending}
+            disabled={(!message.trim() && !selectedImage) || isSending}
             className="h-[80px] px-6 bg-gradient-to-r from-drplant-green to-drplant-green-dark hover:from-drplant-green-dark hover:to-drplant-green text-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 disabled:opacity-50"
           >
             {isSending ? (
@@ -148,6 +251,15 @@ const MessageInput = ({
             )}
           </Button>
         </div>
+
+        {/* Hidden file input */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          onChange={handleImageSelect}
+          className="hidden"
+        />
         
         <div className="mt-3 text-center">
           <p className="text-sm text-gray-500">

@@ -1,4 +1,3 @@
-
 import { MARCO_NIGRO_PROFILE } from '@/components/phytopathologist';
 
 export interface Message {
@@ -10,6 +9,7 @@ export interface Message {
   plantImage?: string;
   plantDetails?: any;
   userDetails?: any;
+  image_url?: string; // Added image_url field for proper image handling
 }
 
 export interface Conversation {

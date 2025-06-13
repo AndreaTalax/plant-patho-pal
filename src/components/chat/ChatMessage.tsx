@@ -11,45 +11,44 @@ interface ChatMessageProps {
     plantImage?: string;
     plantDetails?: any;
     userDetails?: any;
+    image_url?: string;
   };
   isExpertView?: boolean;
 }
 
 /**
 * Renders the chat message content with different styles based on the message text and sender type.
-* @example
-* ChatMessage({ message: { text: 'Sample text', sender: 'expert', time: '2:00 PM' }, isExpertView: false })
-* // Returns a styled chat bubble with 'Sample text'.
-* @param {Object} params - The parameters for rendering the chat message.
-* @param {Object} params.message - Message object containing text, sender, time, and optional products, plantImage, plantDetails, and userDetails.
-* @param {string} params.message.text - The text content of the message.
-* @param {string} params.message.sender - The sender of the message, either 'expert' or 'user'.
-* @param {string} params.message.time - The time the message was sent.
-* @param {Array} [params.message.products] - Array of products related to the message.
-* @param {string} [params.message.plantImage] - URL of the plant image associated with the message.
-* @param {Object} [params.message.plantDetails] - Details of the plant related to the message, including environment, watering frequency, light exposure, and symptoms.
-* @param {Object} [params.message.userDetails] - Details of the user who sent the message, including first name, last name, birth date, and place of birth.
-* @param {boolean} [params.isExpertView=false] - Flag to determine the view mode, customizing the styling based on the expert view.
-* @returns {JSX.Element} Returns a JSX element rendering message content styled based on sender and message type.
-* @description
-*   - It checks for specific formats in the message to render different styles, such as diagnosis request, plant info, images, and default text.
-*   - Handles both image URLs and blob URLs to display images in messages.
-*   - Displays additional information like products related to the message and plant or user details when available.
 */
 const ChatMessage: React.FC<ChatMessageProps> = ({ message, isExpertView = false }) => {
   /**
    * Renders different types of chat messages based on their content.
-   * @example
-   * renderMessage({ text: '🌱 **Nuova richiesta di consulenza**' })
-   * Returns a formatted diagnosis request component.
-   * @param {Object} message - Object containing the text property representing the message content.
-   * @returns {JSX.Element} A JSX element representing the formatted message.
-   * @description
-   *   - Categorizes messages as diagnosis requests, plant information, image URLs, blob URLs, or default text messages.
-   *   - Supports both base64 and regular URLs for image rendering.
-   *   - Ensures messages are displayed appropriately based on their format.
    */
   const renderMessageContent = () => {
+    // Check if message has an image URL (either in image_url field or as text)
+    const hasImageUrl = message.image_url || 
+      message.text.match(/^(data:image\/[a-zA-Z]*;base64,|https?:\/\/.*\.(jpg|jpeg|png|gif|webp)(\?.*)?)$/i) ||
+      message.text.startsWith('blob:');
+
+    // If there's an image, render it
+    if (hasImageUrl) {
+      const imageUrl = message.image_url || message.text;
+      
+      return (
+        <div className="message-image">
+          <img 
+            src={imageUrl} 
+            alt="Immagine della pianta" 
+            className="max-w-xs rounded-lg shadow-md cursor-pointer hover:shadow-lg transition-shadow"
+            onClick={() => window.open(imageUrl, '_blank')}
+          />
+          {/* Show additional text if the message contains both image and text */}
+          {message.image_url && message.text && !message.text.includes('![Immagine') && (
+            <div className="mt-2 whitespace-pre-line text-sm">{message.text}</div>
+          )}
+        </div>
+      );
+    }
+    
     // Check if message content contains diagnosis request format
     if (message.text.includes('🌱 **Nuova richiesta di consulenza**')) {
       return (
@@ -68,30 +67,39 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, isExpertView = false
       );
     }
     
-    // Check if message is an image URL (base64 data URL or regular URL)
-    if (message.text.match(/^(data:image\/[a-zA-Z]*;base64,|https?:\/\/.*\.(jpg|jpeg|png|gif|webp)(\?.*)?)$/i)) {
+    // Check if message contains consultation data
+    if (message.text.includes('👤 **Profilo:**') || message.text.includes('🌱 **Dati della pianta:**')) {
       return (
-        <div className="message-image">
-          <img 
-            src={message.text} 
-            alt="Immagine della pianta" 
-            className="max-w-xs rounded-lg shadow-md"
-          />
+        <div className="consultation-data bg-amber-50 p-4 rounded-lg border-l-4 border-amber-500">
+          <div className="whitespace-pre-line text-sm">{message.text}</div>
         </div>
       );
     }
     
-    // Check if message is a blob URL
-    if (message.text.startsWith('blob:')) {
-      return (
-        <div className="message-image">
-          <img 
-            src={message.text} 
-            alt="Immagine della pianta" 
-            className="max-w-xs rounded-lg shadow-md"
-          />
-        </div>
-      );
+    // Check if message contains image markdown
+    if (message.text.includes('![Immagine della pianta]')) {
+      // Extract image URL from markdown
+      const imageMatch = message.text.match(/!\[.*?\]\((.*?)\)/);
+      const imageUrl = imageMatch ? imageMatch[1] : null;
+      
+      if (imageUrl) {
+        return (
+          <div className="message-image">
+            <img 
+              src={imageUrl} 
+              alt="Immagine della pianta" 
+              className="max-w-xs rounded-lg shadow-md cursor-pointer hover:shadow-lg transition-shadow"
+              onClick={() => window.open(imageUrl, '_blank')}
+            />
+            {/* Show rest of the message text without the image markdown */}
+            {message.text.replace(/!\[.*?\]\(.*?\)/, '').trim() && (
+              <div className="mt-2 whitespace-pre-line text-sm">
+                {message.text.replace(/!\[.*?\]\(.*?\)/, '').trim()}
+              </div>
+            )}
+          </div>
+        );
+      }
     }
     
     // Default text message
@@ -107,7 +115,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, isExpertView = false
       }`}
     >
       <div 
-        className={`max-w-[80%] rounded-lg p-2 ${
+        className={`max-w-[80%] rounded-lg p-3 ${
           isExpertView 
             ? message.sender === 'expert' 
               ? 'bg-drplant-green text-white rounded-tr-none' 
@@ -144,7 +152,8 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, isExpertView = false
             <img 
               src={message.plantImage} 
               alt="Immagine pianta" 
-              className="w-full h-auto rounded max-h-48 object-cover" 
+              className="w-full h-auto rounded max-h-48 object-cover cursor-pointer" 
+              onClick={() => window.open(message.plantImage, '_blank')}
             />
           </div>
         )}
