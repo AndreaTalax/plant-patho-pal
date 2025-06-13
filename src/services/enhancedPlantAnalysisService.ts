@@ -1,5 +1,4 @@
-
-import { RougenAIService, PlantDiseasesAIService, PlexiAIService, PlantIDService, type PlantIdentificationResult, type DiseaseDetectionResult } from './aiProviders';
+import { PlantIdService, EPPOService, MockPlantService, type PlantIdentificationResult, type DiseaseDetectionResult } from './aiProviders';
 import { ImageProcessingService, type ProcessedImage } from './imageProcessingService';
 import { CacheService } from './cacheService';
 import { EppoService, type EppoSearchResult } from './eppoService';
@@ -208,56 +207,32 @@ export class EnhancedPlantAnalysisService {
     
     const promises = [
       this.safeAPICall(
-        () => RougenAIService.identifyPlant(imageData),
-        'Rougen AI'
-      ),
-      this.safeAPICall(
-        () => PlantDiseasesAIService.detectDisease(imageData),
-        'Plant Diseases AI'
-      ),
-      this.safeAPICall(
-        () => PlexiAIService.analyzePlant(imageData),
-        'Plexi AI'
-      ),
-      this.safeAPICall(
-        () => PlantIDService.identifyPlant(imageData),
+        () => PlantIdService.identifyPlant(imageData),
         'Plant.ID'
       ),
       this.safeAPICall(
-        () => PlantIDService.detectDisease(imageData),
-        'Plant.ID Disease'
+        () => EPPOService.identifyPlant(imageData),
+        'EPPO'
+      ),
+      this.safeAPICall(
+        () => MockPlantService.identifyPlant(imageData),
+        'Mock Service'
       )
     ];
     
-    updateProgress('analysis', 30, 'Rougen AI in elaborazione...');
+    updateProgress('analysis', 30, 'Plant.ID in elaborazione...');
     await new Promise(resolve => setTimeout(resolve, 300));
     
-    updateProgress('analysis', 40, 'Plant Diseases AI in elaborazione...');
+    updateProgress('analysis', 50, 'EPPO in elaborazione...');
     await new Promise(resolve => setTimeout(resolve, 300));
     
-    updateProgress('analysis', 50, 'Plexi AI in elaborazione...');
-    await new Promise(resolve => setTimeout(resolve, 300));
-    
-    updateProgress('analysis', 60, 'Plant.ID in elaborazione...');
-    await new Promise(resolve => setTimeout(resolve, 300));
-    
-    updateProgress('analysis', 70, 'Plant.ID Disease Detection in elaborazione...');
+    updateProgress('analysis', 70, 'Mock Service in elaborazione...');
     
     const results = await Promise.allSettled(promises);
     
     results.forEach((result, index) => {
       if (result.status === 'fulfilled' && result.value) {
-        if (index === 0 || index === 3) { // Rougen AI o Plant.ID identification
-          identifications.push(result.value as PlantIdentificationResult);
-        } else if (index === 1 || index === 4) { // Plant Diseases AI o Plant.ID disease
-          diseases.push(result.value as DiseaseDetectionResult);
-        } else if (index === 2) { // Plexi AI
-          const plexiResult = result.value as any;
-          identifications.push(plexiResult);
-          if (plexiResult.diseaseInfo) {
-            diseases.push(plexiResult.diseaseInfo);
-          }
-        }
+        identifications.push(result.value as PlantIdentificationResult);
       }
     });
     
@@ -305,7 +280,7 @@ export class EnhancedPlantAnalysisService {
         'Fornire luce adeguata secondo le esigenze della specie',
         'Controllare regolarmente per segni di malattie o parassiti'
       ],
-      provider: 'plexi'
+      provider: 'plantnet'
     };
     
     return {
