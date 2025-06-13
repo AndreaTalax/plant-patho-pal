@@ -130,7 +130,7 @@ const ProfileTab = () => {
   * @returns {void} No return value.
   * @description
   *   - Validates that the selected file is an image, and its size is less than 5MB.
-  *   - Uses Supabase function to upload the image and update the user's profile.
+  *   - Uses the uploadAvatarImage utility function instead of Supabase function.
   *   - Provides user feedback through toast notifications for success and error states.
   *   - Resets file input value and uploading state after the operation.
   */
@@ -156,17 +156,28 @@ const ProfileTab = () => {
       
       setUploading(true);
       
-      const formData = new FormData();
-      formData.append('file', file);
+      // Use the utility function instead of Supabase function
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
       
-      const { data, error } = await supabase.functions.invoke('upload-avatar', {
-        body: formData
-      });
+      // Import and use the utility function
+      const { uploadAvatarImage } = await import('@/utils/imageStorage');
+      const avatarUrl = await uploadAvatarImage(file, user.id);
       
-      if (error) throw error;
+      // Update the user's profile in the database
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ avatar_url: avatarUrl })
+        .eq('id', user.id);
       
-      // Update the user's profile
-      await updateProfile("avatarUrl", data.avatarUrl);
+      if (updateError) {
+        throw updateError;
+      }
+      
+      // Update the user's profile in context
+      await updateProfile("avatarUrl", avatarUrl);
       
       toast("Profile picture updated successfully!");
     } catch (error) {

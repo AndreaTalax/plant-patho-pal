@@ -86,9 +86,15 @@ Vorrei un secondo parere da un esperto per confermare o correggere questa diagno
 
       // Invia l'immagine come messaggio separato se disponibile
       if (plantData.imageUrl) {
-        const imageMessage = `📸 Immagine della pianta: ${plantData.imageUrl}`;
+        console.log('📸 Sending plant image:', plantData.imageUrl);
         
-        await supabase
+        const imageMessage = `📸 **Immagine della pianta**
+
+![Immagine della pianta](${plantData.imageUrl})
+
+*Immagine inviata automaticamente dal sistema di diagnosi.*`;
+        
+        const { error: imageError } = await supabase
           .from('messages')
           .insert({
             conversation_id: conversationId,
@@ -96,12 +102,20 @@ Vorrei un secondo parere da un esperto per confermare o correggere questa diagno
             recipient_id: MARCO_NIGRO_ID,
             content: imageMessage,
             text: imageMessage,
+            image_url: plantData.imageUrl,
             metadata: {
               type: 'consultation_image',
               imageUrl: plantData.imageUrl,
               autoSent: true
             }
           });
+
+        if (imageError) {
+          console.error('Error sending plant image:', imageError);
+          // Non bloccare il processo se l'immagine non viene inviata
+        } else {
+          console.log('✅ Plant image sent successfully');
+        }
       }
 
       console.log('Initial consultation data sent successfully');

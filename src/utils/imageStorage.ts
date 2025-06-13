@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 /**
@@ -79,6 +78,11 @@ export const uploadAvatarImage = async (file: File, userId: string): Promise<str
     
     if (!file.type.startsWith('image/')) {
       throw new Error('File must be an image');
+    }
+    
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      throw new Error('File size must be less than 5MB');
     }
     
     const fileExt = file.name.split('.').pop() || 'jpg';
