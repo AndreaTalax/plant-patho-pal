@@ -54,6 +54,14 @@ export class PlantDataSyncService {
       // Costruisce il messaggio con tutti i dati della pianta
       const plantDataMessage = this.buildPlantDataMessage(plantInfo, imageUrl);
 
+      // Serializza i dati per Supabase (compatibile con Json type)
+      const metadataObject = {
+        type: 'plant_data_sync',
+        plantInfo: JSON.parse(JSON.stringify(plantInfo)), // Ensures proper serialization
+        imageUrl: imageUrl || null,
+        autoSynced: true
+      };
+
       // Invia il messaggio con i dati della pianta
       const { error: messageError } = await supabase
         .from('messages')
@@ -63,12 +71,7 @@ export class PlantDataSyncService {
           recipient_id: MARCO_NIGRO_ID,
           content: plantDataMessage,
           text: plantDataMessage,
-          metadata: {
-            type: 'plant_data_sync',
-            plantInfo: plantInfo,
-            imageUrl: imageUrl,
-            autoSynced: true
-          }
+          metadata: metadataObject
         });
 
       if (messageError) {
@@ -79,6 +82,12 @@ export class PlantDataSyncService {
       // Se c'è un'immagine, inviala come messaggio separato
       if (imageUrl) {
         const imageMessage = `📸 Immagine della pianta: ${imageUrl}`;
+        const imageMetadata = {
+          type: 'plant_image',
+          imageUrl: imageUrl,
+          autoSynced: true
+        };
+
         await supabase
           .from('messages')
           .insert({
@@ -87,11 +96,7 @@ export class PlantDataSyncService {
             recipient_id: MARCO_NIGRO_ID,
             content: imageMessage,
             text: imageMessage,
-            metadata: {
-              type: 'plant_image',
-              imageUrl: imageUrl,
-              autoSynced: true
-            }
+            metadata: imageMetadata
           });
       }
 

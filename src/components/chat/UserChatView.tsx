@@ -17,6 +17,7 @@ interface UserChatViewProps {
 const UserChatView = ({ userId }: UserChatViewProps) => {
   const {
     activeChat,
+    setActiveChat,
     messages,
     isSending,
     handleSendMessage,
@@ -31,8 +32,16 @@ const UserChatView = ({ userId }: UserChatViewProps) => {
     }, 500);
   };
 
+  const handleStartChat = () => {
+    setActiveChat('expert');
+  };
+
+  const handleBackClick = () => {
+    setActiveChat(null);
+  };
+
   if (!activeChat || activeChat !== 'expert') {
-    return <EmptyStateView />;
+    return <EmptyStateView onStartChat={handleStartChat} />;
   }
 
   return (
@@ -40,7 +49,7 @@ const UserChatView = ({ userId }: UserChatViewProps) => {
       {/* Gestione automatica della sincronizzazione dati */}
       <ChatDataManager onDataSynced={handleDataSynced} />
       
-      <ChatHeader />
+      <ChatHeader onBackClick={handleBackClick} />
       <MessageList messages={messages} />
       <MessageInput 
         onSendMessage={handleSendMessage}
