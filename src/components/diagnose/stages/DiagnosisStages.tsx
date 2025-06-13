@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { usePlantInfo } from '@/context/PlantInfoContext';
 import PlantInfoForm from '../PlantInfoForm';
@@ -8,6 +9,10 @@ import DiagnosisResult from '../result/DiagnosisResult';
 import CameraCapture from '../CameraCapture';
 import { DiagnosedDisease } from '../types';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/context/AuthContext';
+import { PlantDataSyncService } from '@/services/chat/plantDataSyncService';
+import { AutoExpertNotificationService } from '@/components/chat/AutoExpertNotificationService';
+import { toast } from 'sonner';
 
 interface DiagnosisStagesProps {
   stage: 'info' | 'capture' | 'options' | 'result';
@@ -30,59 +35,6 @@ interface DiagnosisStagesProps {
   onChatWithExpert?: () => void;
 }
 
-/**
- * Renders the current diagnostic stage including camera views, plant information forms, 
- * capture options, and result displays, with tailored actions based on the provided stage and inputs.
- * @example
- * DiagnosisStages({
- *   stage: 'info',
- *   showCamera: false,
- *   uploadedImage: 'image_url',
- *   isAnalyzing: false,
- *   diagnosedDisease: { disease: 'example' },
- *   analysisDetails: { additionalInfo: 'details' },
- *   videoRef: videoElementReference,
- *   canvasRef: canvasElementReference,
- *   onPlantInfoComplete: () => {},
- *   onPlantInfoEdit: () => {},
- *   onSelectAI: () => {},
- *   onSelectExpert: () => {},
- *   onTakePhoto: () => {},
- *   onUploadPhoto: () => {},
- *   onCapture: () => {},
- *   onCancelCamera: () => {},
- *   onStartNewAnalysis: () => {},
- *   onChatWithExpert: () => {}
- * })
- * // Return value will vary depending on current stage, may render components 
- * // like <CameraCapture />, <PlantInfoForm />, <PlantInfoSummary />, etc.
- * 
- * @param {Object} params - Input parameters for rendering the diagnosis stage.
- * @param {string} params.stage - Current stage of the diagnosis process.
- * @param {boolean} params.showCamera - Flag to show the camera view.
- * @param {string} params.uploadedImage - URL of the uploaded image.
- * @param {boolean} params.isAnalyzing - Whether the analysis is currently in progress.
- * @param {Object} params.diagnosedDisease - Details about the diagnosed disease.
- * @param {Object} params.analysisDetails - Additional analysis information.
- * @param {HTMLVideoElement} params.videoRef - Reference to the video element.
- * @param {HTMLCanvasElement} params.canvasRef - Reference to the canvas element.
- * @param {Function} params.onPlantInfoComplete - Callback when plant info entry is completed.
- * @param {Function} params.onPlantInfoEdit - Callback to edit the plant information.
- * @param {Function} params.onSelectAI - Callback to select AI option.
- * @param {Function} params.onSelectExpert - Callback to select expert consultation option.
- * @param {Function} params.onTakePhoto - Callback to handle photo capture.
- * @param {Function} params.onUploadPhoto - Callback to handle photo upload.
- * @param {Function} params.onCapture - Callback when photo capturing is done.
- * @param {Function} params.onCancelCamera - Callback to cancel camera view.
- * @param {Function} params.onStartNewAnalysis - Callback to start a new analysis.
- * @param {Function} params.onChatWithExpert - Callback to initiate chat with an expert.
- * @returns {JSX.Element|null} Returns a JSX element corresponding to the current stage 
- * or null if stage is not recognized.
- * @description
- *   - Utilizes conditional rendering based on 'stage' to determine the component to display.
- *   - Relies on plant information and captured/uploaded images to guide diagnosis steps.
- *   - Includes enhanced handling of expert chat navigation with automatic data synchronization.
- */
 const DiagnosisStages: React.FC<DiagnosisStagesProps> = ({
   stage,
   showCamera,
@@ -105,20 +57,67 @@ const DiagnosisStages: React.FC<DiagnosisStagesProps> = ({
 }) => {
   const { plantInfo } = usePlantInfo();
   const navigate = useNavigate();
+  const { userProfile } = useAuth();
 
-  // Enhanced function to navigate to chat with automatic data sync
-  /**
-   * Navigates to the chat interface, either with an expert or switches the application tab to chat.
-   * @example
-   * navigateToChat(onChatWithExpert)
-   * No explicit return value; performs actions based on the `onChatWithExpert` condition.
-   * @param {Function} onChatWithExpert - Callback function to initiate chat with an expert.
-   * @returns {void} No return value; performs navigation and dispatches events.
-   * @description
-   *   - If `onChatWithExpert` is not provided, the function navigates to the homepage and switches the tab to chat.
-   *   - Dispatches a custom event `switchTab` to change the application tab to chat.
-   *   - Refreshes the chat to ensure displaying the latest data by dispatching a `refreshChat` event.
-   */
+  // Enhanced function to handle expert consultation with automatic data sending
+  const handleExpertConsultation = async () => {
+    if (!userProfile?.id) {
+      toast.error('Devi essere autenticato per contattare l\'esperto');
+      return;
+    }
+
+    console.log("🩺 Avvio consulenza esperto con invio automatico dati...");
+    
+    try {
+      // First sync plant data using PlantDataSyncService
+      const synced = await PlantDataSyncService.syncPlantDataToChat(
+        userProfile.id,
+        plantInfo,
+        uploadedImage || undefined
+      );
+
+      if (synced) {
+        console.log('✅ Dati sincronizzati automaticamente alla chat');
+        
+        // If there's AI analysis results, send those too
+        if (diagnosedDisease && analysisDetails) {
+          const diagnosisData = {
+            plantType: plantInfo.name || 'Pianta non identificata',
+            plantVariety: plantInfo.name,
+            symptoms: plantInfo.symptoms || 'Nessun sintomo specificato',
+            imageUrl: uploadedImage || '',
+            analysisResult: diagnosedDisease,
+            confidence: analysisDetails?.confidence || 0,
+            isHealthy: diagnosedDisease?.isHealthy || false,
+            plantInfo: {
+              environment: plantInfo.isIndoor ? 'Interno' : 'Esterno',
+              watering: plantInfo.wateringFrequency,
+              lightExposure: plantInfo.lightExposure,
+              symptoms: plantInfo.symptoms
+            }
+          };
+
+          await AutoExpertNotificationService.sendDiagnosisToExpert(
+            userProfile.id,
+            diagnosisData
+          );
+        }
+
+        toast.success('Dati inviati automaticamente all\'esperto!', {
+          description: 'Marco Nigro riceverà tutte le informazioni'
+        });
+
+        // Navigate to chat
+        handleNavigateToChat();
+      } else {
+        toast.error('Errore nell\'invio automatico dei dati');
+      }
+    } catch (error) {
+      console.error('❌ Errore nella consulenza esperto:', error);
+      toast.error('Errore nell\'invio dei dati all\'esperto');
+    }
+  };
+
   const handleNavigateToChat = () => {
     console.log("🔄 Navigating to chat with data sync...");
     
@@ -201,7 +200,7 @@ const DiagnosisStages: React.FC<DiagnosisStagesProps> = ({
   }
 
   if (stage === 'result') {
-    // Enhanced expert consultation result display
+    // Enhanced expert consultation result display with automatic data sending confirmation
     if (plantInfo.sendToExpert && !plantInfo.useAI) {
       return (
         <div className="space-y-4">
@@ -213,7 +212,7 @@ const DiagnosisStages: React.FC<DiagnosisStagesProps> = ({
           <div className="border rounded-lg p-4 bg-white shadow">
             <h3 className="font-medium text-lg mb-3 flex items-center gap-2">
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-green-600">
-                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                <path d="M20 6 9 17l-5-5"></path>
               </svg>
               Dati inviati automaticamente al fitopatologo
             </h3>
@@ -282,7 +281,7 @@ const DiagnosisStages: React.FC<DiagnosisStagesProps> = ({
       );
     }
     
-    // Regular AI diagnosis result
+    // Regular AI diagnosis result with enhanced expert chat integration
     return (
       <>
         <PlantInfoSummary 
@@ -296,7 +295,7 @@ const DiagnosisStages: React.FC<DiagnosisStagesProps> = ({
           analysisData={diagnosedDisease}
           isAnalyzing={isAnalyzing}
           onStartNewAnalysis={onStartNewAnalysis}
-          onChatWithExpert={handleNavigateToChat}
+          onChatWithExpert={handleExpertConsultation}
           analysisDetails={analysisDetails}
         />
       </>

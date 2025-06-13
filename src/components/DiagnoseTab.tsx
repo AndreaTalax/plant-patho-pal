@@ -15,6 +15,8 @@ import PlantAnalysisResultComponent from './diagnose/PlantAnalysisResult';
 import CameraCapture from './diagnose/CameraCapture';
 import { RealPlantAnalysisService, PlantAnalysisResult as AnalysisResult } from '@/services/realPlantAnalysisService';
 import { AutoExpertNotificationService } from './chat/AutoExpertNotificationService';
+import { PlantDataSyncService } from '@/services/chat/plantDataSyncService';
+import { ChatDataManager } from './chat/user/ChatDataManager';
 import { uploadPlantImage } from '@/utils/imageStorage';
 import { PlantInfo } from './diagnose/types';
 import { usePremiumStatus } from '@/services/premiumService';
@@ -24,7 +26,7 @@ const DiagnoseTab = () => {
   const { plantInfo, setPlantInfo } = usePlantInfo();
   const { hasAIAccess } = usePremiumStatus();
   
-  // Component states - Updated flow: info -> capture -> options -> analyzing -> result
+  // Component states
   const [currentStage, setCurrentStage] = useState<'info' | 'capture' | 'options' | 'analyzing' | 'result'>('info');
   const [showCamera, setShowCamera] = useState(false);
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
@@ -36,14 +38,14 @@ const DiagnoseTab = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Plant info completion handler - now goes to capture stage
+  // Plant info completion handler
   const handlePlantInfoComplete = useCallback((data: PlantInfo) => {
     setPlantInfo(data);
     setCurrentStage('capture');
     toast.success('Informazioni pianta salvate! Ora scatta o carica una foto.');
   }, [setPlantInfo]);
 
-  // File upload handler - now goes to options stage
+  // File upload handler
   const handleFileUpload = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -58,6 +60,14 @@ const DiagnoseTab = () => {
       reader.onload = (e) => {
         const result = e.target?.result as string;
         setUploadedImage(result);
+        
+        // Update plant info with uploaded image
+        setPlantInfo(prev => ({
+          ...prev,
+          uploadedFile: file,
+          uploadedImageUrl: result
+        }));
+        
         setCurrentStage('options');
         toast.success('Immagine caricata! Ora scegli il metodo di diagnosi.');
       };
@@ -66,17 +76,24 @@ const DiagnoseTab = () => {
       console.error('Errore caricamento file:', error);
       toast.error('Errore nel caricamento immagine');
     }
-  }, []);
+  }, [setPlantInfo]);
 
-  // Camera capture handler - now goes to options stage
+  // Camera capture handler
   const handleCameraCapture = useCallback((imageDataUrl: string) => {
     setUploadedImage(imageDataUrl);
+    
+    // Update plant info with captured image
+    setPlantInfo(prev => ({
+      ...prev,
+      uploadedImageUrl: imageDataUrl
+    }));
+    
     setShowCamera(false);
     setCurrentStage('options');
     toast.success('Foto scattata! Ora scegli il metodo di diagnosi.');
-  }, []);
+  }, [setPlantInfo]);
 
-  // Send data to expert - funzione migliorata per invio automatico
+  // Send data to expert with automatic sync
   const sendDataToExpert = useCallback(async (includeAnalysis: boolean = false) => {
     if (!userProfile?.id || !uploadedImage) {
       console.error('Dati mancanti per invio all\'esperto');
@@ -86,30 +103,41 @@ const DiagnoseTab = () => {
     try {
       console.log('📨 Invio automatico dati all\'esperto...');
       
-      // Prepara i dati per l'esperto
-      const expertData = {
-        plantType: plantInfo.name || 'Pianta non specificata',
-        plantVariety: plantInfo.name,
-        symptoms: plantInfo.symptoms || 'Nessun sintomo specificato',
-        imageUrl: uploadedImage,
-        analysisResult: includeAnalysis ? analysisResult : null,
-        confidence: includeAnalysis && analysisResult ? analysisResult.confidence : 0,
-        isHealthy: includeAnalysis && analysisResult ? analysisResult.isHealthy : false,
-        plantInfo: {
-          environment: plantInfo.isIndoor ? 'Interno' : 'Esterno',
-          watering: plantInfo.wateringFrequency,
-          lightExposure: plantInfo.lightExposure,
-          symptoms: plantInfo.symptoms
-        }
-      };
-
-      const sent = await AutoExpertNotificationService.sendDiagnosisToExpert(
+      // Prima sincronizza i dati usando PlantDataSyncService
+      const synced = await PlantDataSyncService.syncPlantDataToChat(
         userProfile.id,
-        expertData
+        plantInfo,
+        uploadedImage
       );
 
-      if (sent) {
+      if (synced) {
+        console.log('✅ Dati sincronizzati con successo alla chat');
         setAutoSentToExpert(true);
+        
+        // Se c'è un'analisi AI, invia anche quella
+        if (includeAnalysis && analysisResult) {
+          const diagnosisData = {
+            plantType: plantInfo.name || 'Pianta non specificata',
+            plantVariety: plantInfo.name,
+            symptoms: plantInfo.symptoms || 'Nessun sintomo specificato',
+            imageUrl: uploadedImage,
+            analysisResult: analysisResult,
+            confidence: analysisResult.confidence || 0,
+            isHealthy: analysisResult.isHealthy || false,
+            plantInfo: {
+              environment: plantInfo.isIndoor ? 'Interno' : 'Esterno',
+              watering: plantInfo.wateringFrequency,
+              lightExposure: plantInfo.lightExposure,
+              symptoms: plantInfo.symptoms
+            }
+          };
+
+          await AutoExpertNotificationService.sendDiagnosisToExpert(
+            userProfile.id,
+            diagnosisData
+          );
+        }
+
         toast.success('Dati inviati automaticamente all\'esperto!', {
           description: 'Marco Nigro riceverà tutte le informazioni e risponderà al più presto.'
         });
@@ -152,22 +180,28 @@ const DiagnoseTab = () => {
       });
   }, [uploadedImage, hasAIAccess]);
 
-  // Expert consultation selection - migliorato con invio automatico
+  // Expert consultation selection - with automatic data sending
   const handleSelectExpert = useCallback(async () => {
     console.log('🩺 Selezione consulenza esperto...');
     
-    // Invia automaticamente tutti i dati all'esperto
+    // Update plant info to indicate expert consultation
+    const updatedPlantInfo = { 
+      ...plantInfo, 
+      sendToExpert: true, 
+      useAI: false 
+    };
+    setPlantInfo(updatedPlantInfo);
+    
+    // Send data automatically to expert
     const sent = await sendDataToExpert(false);
     
     if (sent) {
-      // Update plant info to indicate expert consultation
-      const updatedPlantInfo = { ...plantInfo, sendToExpert: true };
-      setPlantInfo(updatedPlantInfo);
+      setCurrentStage('result');
       
-      // Navigate to chat tab
+      // Navigate to chat tab after a short delay
       setTimeout(() => {
         window.dispatchEvent(new CustomEvent('switchTab', { detail: 'chat' }));
-      }, 1500);
+      }, 2000);
       
       toast.success('Reindirizzamento alla chat con l\'esperto...', {
         description: 'Tutte le informazioni sono state inviate automaticamente'
@@ -207,9 +241,17 @@ const DiagnoseTab = () => {
       );
 
       setAnalysisResult(analysis);
+      
+      // Update plant info to indicate AI analysis
+      setPlantInfo(prev => ({
+        ...prev,
+        useAI: true,
+        sendToExpert: false
+      }));
+      
       setCurrentStage('result');
 
-      // Invia automaticamente all'esperto con risultati AI
+      // Send automatically to expert with AI results
       console.log('📨 Invio automatico diagnosi AI all\'esperto...');
       await sendDataToExpert(true);
 
@@ -220,7 +262,7 @@ const DiagnoseTab = () => {
     } finally {
       setIsAnalyzing(false);
     }
-  }, [userProfile, plantInfo, sendDataToExpert]);
+  }, [userProfile, plantInfo, sendDataToExpert, setPlantInfo]);
 
   // Reset to start new analysis
   const handleNewAnalysis = useCallback(() => {
@@ -236,19 +278,33 @@ const DiagnoseTab = () => {
       useAI: false,
       sendToExpert: false,
       name: '',
-      infoComplete: false
+      infoComplete: false,
+      uploadedFile: null,
+      uploadedImageUrl: null
     });
   }, [setPlantInfo]);
+
+  // Navigate to chat
+  const handleNavigateToChat = useCallback(() => {
+    console.log("🔄 Navigating to chat...");
+    setTimeout(() => {
+      window.dispatchEvent(new CustomEvent('switchTab', { detail: 'chat' }));
+    }, 100);
+  }, []);
 
   // Render based on current stage
   const renderCurrentStage = () => {
     switch (currentStage) {
       case 'info':
         return (
-          <PlantInfoForm 
-            onComplete={handlePlantInfoComplete}
-            initialData={plantInfo}
-          />
+          <>
+            <PlantInfoForm 
+              onComplete={handlePlantInfoComplete}
+              initialData={plantInfo}
+            />
+            {/* Add ChatDataManager for automatic sync */}
+            <ChatDataManager />
+          </>
         );
 
       case 'capture':
@@ -367,6 +423,68 @@ const DiagnoseTab = () => {
         );
 
       case 'result':
+        // Show expert consultation result with automatic data sending confirmation
+        if (plantInfo.sendToExpert && !plantInfo.useAI) {
+          return (
+            <div className="space-y-6">
+              <PlantInfoSummary 
+                plantInfo={plantInfo} 
+                onEdit={() => setCurrentStage('info')} 
+              />
+              
+              <Card className="p-6 bg-white/80 backdrop-blur-sm">
+                <div className="text-center space-y-4">
+                  <div className="flex justify-center">
+                    <CheckCircle className="h-16 w-16 text-green-600" />
+                  </div>
+                  
+                  <h3 className="text-2xl font-bold text-gray-900">
+                    Dati inviati con successo!
+                  </h3>
+                  
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                    <h4 className="font-medium text-green-800 mb-2">📋 Dati inviati automaticamente:</h4>
+                    <ul className="text-sm text-green-700 space-y-1 text-left">
+                      <li>✅ Informazioni della pianta (ambiente, irrigazione, luce)</li>
+                      <li>✅ Descrizione dettagliata dei sintomi</li>
+                      <li>✅ Fotografia della pianta</li>
+                      <li>✅ Richiesta di consulenza professionale</li>
+                    </ul>
+                  </div>
+                  
+                  {uploadedImage && (
+                    <div className="w-64 h-64 mx-auto rounded-xl overflow-hidden border-2 border-green-200">
+                      <img 
+                        src={uploadedImage} 
+                        alt="Immagine inviata" 
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  )}
+                  
+                  <div className="space-y-3">
+                    <Button 
+                      onClick={handleNavigateToChat}
+                      className="w-full bg-drplant-blue hover:bg-drplant-blue-dark text-white"
+                    >
+                      Vai alla chat con Marco Nigro
+                    </Button>
+                    
+                    <Button 
+                      variant="outline"
+                      onClick={handleNewAnalysis}
+                      className="w-full"
+                    >
+                      Inizia nuova analisi
+                    </Button>
+                  </div>
+                </div>
+              </Card>
+            </div>
+          );
+        }
+        
+        // Regular AI diagnosis result
         return (
           <div className="space-y-6">
             {autoSentToExpert && (
@@ -424,7 +542,7 @@ const DiagnoseTab = () => {
               Diagnosi Malattie delle Piante
             </h1>
             <p className="text-gray-600 text-lg">
-              Analisi AI avanzata con database professionali
+              Analisi AI avanzata con invio automatico all'esperto
             </p>
             
             {/* Progress indicator */}
