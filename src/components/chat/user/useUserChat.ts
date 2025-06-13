@@ -3,6 +3,9 @@ import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { supabase, EXPERT_ID } from '@/integrations/supabase/client';
 import { Message, DatabaseConversation } from '../types';
+import { usePlantInfo } from '@/context/PlantInfoContext';
+import { useAuth } from '@/context/AuthContext';
+import { ConsultationDataService } from '@/services/chat/consultationDataService';
 import {
   findOrCreateConversation,
   loadMessages,
@@ -14,10 +17,13 @@ import {
  * Initializes and manages the user chat with an expert, handling message interaction and real-time updates.
  */
 export const useUserChat = (userId: string) => {
+  const { plantInfo } = usePlantInfo();
+  const { userProfile } = useAuth();
   const [activeChat, setActiveChat] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [currentDbConversation, setCurrentDbConversation] = useState<DatabaseConversation | null>(null);
   const [isSending, setIsSending] = useState(false);
+  const [initialDataSent, setInitialDataSent] = useState(false);
   
   // Initialize chat when component mounts or userId changes
   useEffect(() => {
@@ -55,6 +61,10 @@ export const useUserChat = (userId: string) => {
           }]);
         } else {
           setMessages(messagesForConversation);
+          
+          // Verifica se i dati di consultazione sono già stati inviati
+          const dataSent = await ConsultationDataService.isConsultationDataSent(conversation.id);
+          setInitialDataSent(dataSent);
         }
         
       } catch (error) {
@@ -64,6 +74,72 @@ export const useUserChat = (userId: string) => {
     
     initializeExpertChat();
   }, [userId]);
+
+  // Nuovo useEffect per gestire l'invio automatico dei dati in chat quando tutti i dati sono pronti
+  useEffect(() => {
+    if (currentDbConversation?.id && plantInfo?.infoComplete && userProfile && !initialDataSent && messages.length > 0) {
+      console.log('All data ready, sending initial consultation data...');
+      sendInitialConsultationData();
+    }
+  }, [currentDbConversation?.id, plantInfo?.infoComplete, userProfile, initialDataSent, messages.length]);
+
+  const sendInitialConsultationData = async () => {
+    if (!currentDbConversation?.id || !plantInfo || !userProfile || initialDataSent) {
+      console.log('Cannot send initial data:', { 
+        conversationId: !!currentDbConversation?.id, 
+        plantInfo: !!plantInfo, 
+        userProfile: !!userProfile, 
+        initialDataSent 
+      });
+      return;
+    }
+
+    try {
+      console.log('Sending initial consultation data...');
+      setInitialDataSent(true);
+
+      // Prepara i dati della pianta dal contesto
+      const plantData = {
+        symptoms: plantInfo.symptoms,
+        wateringFrequency: plantInfo.wateringFrequency,
+        sunExposure: plantInfo.lightExposure,
+        additionalNotes: plantInfo.additionalNotes,
+        imageUrl: plantInfo.uploadedImageUrl,
+        aiDiagnosis: (plantInfo as any).aiDiagnosis
+      };
+
+      // Prepara i dati dell'utente dal profilo
+      const userData = {
+        firstName: userProfile.first_name,
+        lastName: userProfile.last_name,
+        birthDate: userProfile.birth_date,
+        birthPlace: userProfile.birth_place
+      };
+
+      // Invia i dati usando il servizio
+      const success = await ConsultationDataService.sendInitialConsultationData(
+        currentDbConversation.id,
+        plantData,
+        userData,
+        plantInfo.useAI || false
+      );
+
+      if (!success) {
+        console.error('Failed to send initial consultation data');
+        toast.error('Errore nell\'invio dei dati iniziali');
+        setInitialDataSent(false);
+        return;
+      }
+
+      console.log('Initial consultation data sent successfully');
+      toast.success('Dati della consultazione inviati automaticamente!');
+
+    } catch (error) {
+      console.error('Error in sendInitialConsultationData:', error);
+      setInitialDataSent(false);
+      toast.error('Errore nell\'invio dei dati di consultazione');
+    }
+  };
   
   // Enhanced realtime subscription for messages
   useEffect(() => {
