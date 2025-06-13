@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import { RealTimeChatWrapper } from '../RealTimeChatWrapper';
 import ChatMessage from '../ChatMessage';
 import MessageInput from '../MessageInput';
@@ -16,6 +17,7 @@ interface ConversationListItem {
   last_message_at: string;
   unread_count: number;
   user_profile: {
+    id: string;
     first_name: string;
     last_name: string;
     avatar_url?: string;
@@ -32,9 +34,12 @@ export const ExpertRealTimeChat: React.FC = () => {
   const loadConversations = async () => {
     try {
       setLoading(true);
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
       const response = await fetch('/api/get-conversations', {
         headers: {
-          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
+          'Authorization': `Bearer ${session.access_token}`
         }
       });
 

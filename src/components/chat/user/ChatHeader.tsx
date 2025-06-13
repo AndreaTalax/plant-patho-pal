@@ -7,21 +7,23 @@ import { useTheme } from '@/context/ThemeContext';
 
 interface ChatHeaderProps {
   onBackClick: () => void;
+  isConnected: boolean;
 }
 
 /**
  * Renders a chat header component for displaying expert information and a back button.
  * @example
- * chatHeader({ onBackClick: handleBackClick })
+ * chatHeader({ onBackClick: handleBackClick, isConnected: true })
  * Returns a React component representing the chat header.
  * @param {function} onBackClick - The callback function to be called when the back button is clicked.
+ * @param {boolean} isConnected - Whether the real-time connection is active.
  * @returns {JSX.Element} A React component rendered as the chat header.
  * @description
  *   - Utilizes the `useTheme` hook for accessing translation functionality.
  *   - Displays an expert's avatar with fallback text if the image is unavailable.
- *   - Shows expert's name and online status with localization support.
+ *   - Shows expert's name and connection status with localization support.
  */
-const ChatHeader = ({ onBackClick }: ChatHeaderProps) => {
+const ChatHeader = ({ onBackClick, isConnected }: ChatHeaderProps) => {
   const { t } = useTheme();
   
   return (
@@ -40,7 +42,12 @@ const ChatHeader = ({ onBackClick }: ChatHeaderProps) => {
       </Avatar>
       <div>
         <h3 className="font-medium text-sm">{EXPERT.name}</h3>
-        <p className="text-xs text-green-600">{t("online") || "Online"}</p>
+        <div className="flex items-center gap-1">
+          <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`} />
+          <p className="text-xs text-gray-600">
+            {isConnected ? (t("online") || "Online") : (t("offline") || "Offline")}
+          </p>
+        </div>
       </div>
     </div>
   );

@@ -29,69 +29,42 @@ serve(async (req) => {
       throw new Error("User not authenticated");
     }
 
-    // Check if user is Marco Nigro (expert)
-    const { data: userProfile } = await supabaseClient
-      .from('profiles')
-      .select('role, first_name, last_name')
-      .eq('id', user.id)
-      .single();
+    // Get all conversations where the user is an expert
+    const { data: conversations, error } = await supabaseClient
+      .from('conversations')
+      .select(`
+        id,
+        title,
+        last_message_text,
+        last_message_at,
+        created_at,
+        profiles!conversations_user_id_fkey(id, first_name, last_name, avatar_url)
+      `)
+      .eq('expert_id', user.id)
+      .order('last_message_at', { ascending: false });
 
-    const isExpert = userProfile?.role === 'admin' || user.id === '6ee6b888-8064-40a1-8b26-0658343f4360';
-
-    let conversationsQuery;
-
-    if (isExpert) {
-      // Expert sees all conversations
-      conversationsQuery = supabaseClient
-        .from('conversations')
-        .select(`
-          *,
-          profiles!conversations_user_id_fkey(id, first_name, last_name, avatar_url),
-          unread_count:messages!messages_conversation_id_fkey(count)
-        `)
-        .not('expert_id', 'is', null)
-        .order('last_message_at', { ascending: false });
-    } else {
-      // Regular users see only their conversations
-      conversationsQuery = supabaseClient
-        .from('conversations')
-        .select(`
-          *,
-          profiles!conversations_expert_id_fkey(id, first_name, last_name, avatar_url),
-          unread_count:messages!messages_conversation_id_fkey(count)
-        `)
-        .eq('user_id', user.id)
-        .order('last_message_at', { ascending: false });
+    if (error) {
+      throw error;
     }
 
-    const { data: conversations, error: conversationsError } = await conversationsQuery;
-
-    if (conversationsError) {
-      throw conversationsError;
-    }
-
-    // Get unread message counts for each conversation
-    const conversationsWithUnread = await Promise.all(
-      (conversations || []).map(async (conv) => {
-        const { count } = await supabaseClient
-          .from('messages')
-          .select('*', { count: 'exact', head: true })
-          .eq('conversation_id', conv.id)
-          .eq('recipient_id', user.id)
-          .eq('read', false);
-
-        return {
-          ...conv,
-          unread_count: count || 0
-        };
-      })
-    );
+    // Transform the data to match the expected format
+    const transformedConversations = (conversations || []).map(conv => ({
+      id: conv.id,
+      title: conv.title || 'Conversazione',
+      last_message_text: conv.last_message_text || '',
+      last_message_at: conv.last_message_at || conv.created_at,
+      unread_count: 0, // TODO: Calculate actual unread count
+      user_profile: {
+        id: conv.profiles?.id || '',
+        first_name: conv.profiles?.first_name || '',
+        last_name: conv.profiles?.last_name || '',
+        avatar_url: conv.profiles?.avatar_url
+      }
+    }));
 
     return new Response(JSON.stringify({ 
       success: true,
-      conversations: conversationsWithUnread,
-      isExpert: isExpert,
-      totalConversations: conversationsWithUnread.length
+      conversations: transformedConversations
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,
