@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { usePlantInfo } from '@/context/PlantInfoContext';
 import PlantInfoForm from '../PlantInfoForm';
@@ -88,7 +87,7 @@ const DiagnosisStages: React.FC<DiagnosisStagesProps> = ({
             imageUrl: uploadedImage || '',
             analysisResult: diagnosedDisease,
             confidence: analysisDetails?.confidence || 0,
-            isHealthy: diagnosedDisease?.isHealthy || false,
+            isHealthy: diagnosedDisease?.healthy || false,
             plantInfo: {
               environment: plantInfo.isIndoor ? 'Interno' : 'Esterno',
               watering: plantInfo.wateringFrequency,

@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useCallback } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -62,11 +61,11 @@ const DiagnoseTab = () => {
         setUploadedImage(result);
         
         // Update plant info with uploaded image
-        setPlantInfo(prev => ({
-          ...prev,
+        setPlantInfo({
+          ...plantInfo,
           uploadedFile: file,
           uploadedImageUrl: result
-        }));
+        });
         
         setCurrentStage('options');
         toast.success('Immagine caricata! Ora scegli il metodo di diagnosi.');
@@ -76,22 +75,22 @@ const DiagnoseTab = () => {
       console.error('Errore caricamento file:', error);
       toast.error('Errore nel caricamento immagine');
     }
-  }, [setPlantInfo]);
+  }, [setPlantInfo, plantInfo]);
 
   // Camera capture handler
   const handleCameraCapture = useCallback((imageDataUrl: string) => {
     setUploadedImage(imageDataUrl);
     
     // Update plant info with captured image
-    setPlantInfo(prev => ({
-      ...prev,
+    setPlantInfo({
+      ...plantInfo,
       uploadedImageUrl: imageDataUrl
-    }));
+    });
     
     setShowCamera(false);
     setCurrentStage('options');
     toast.success('Foto scattata! Ora scegli il metodo di diagnosi.');
-  }, [setPlantInfo]);
+  }, [setPlantInfo, plantInfo]);
 
   // Send data to expert with automatic sync
   const sendDataToExpert = useCallback(async (includeAnalysis: boolean = false) => {
@@ -243,11 +242,11 @@ const DiagnoseTab = () => {
       setAnalysisResult(analysis);
       
       // Update plant info to indicate AI analysis
-      setPlantInfo(prev => ({
-        ...prev,
+      setPlantInfo({
+        ...plantInfo,
         useAI: true,
         sendToExpert: false
-      }));
+      });
       
       setCurrentStage('result');
 
