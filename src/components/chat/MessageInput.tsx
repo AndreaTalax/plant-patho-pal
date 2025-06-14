@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Send, Loader2, Paperclip, Image, X } from 'lucide-react';
+import { Send, Loader2, Image, X } from 'lucide-react';
 import { sendMessage } from './chatService';
 import { toast } from 'sonner';
 import { uploadPlantImage } from '@/utils/imageStorage';
@@ -51,15 +51,14 @@ const MessageInput = ({
       return;
     }
 
-    // Validate file size (max 10MB)
-    if (file.size > 10 * 1024 * 1024) {
-      toast.error('L\'immagine deve essere inferiore a 10MB');
+    // Validate file size (max 5MB for better compatibility)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('L\'immagine deve essere inferiore a 5MB');
       return;
     }
 
     setSelectedImage(file);
     
-    // Create preview
     const reader = new FileReader();
     reader.onload = (e) => {
       setImagePreview(e.target?.result as string);
@@ -165,6 +164,8 @@ const MessageInput = ({
    * Sends an image as a separate message
    */
   const sendImageMessage = async (imageUrl: string, conversationId: string, senderId: string, recipientId: string) => {
+    console.log('📸 Sending image message with URL:', imageUrl);
+    
     const imageMessage = `📸 Immagine allegata`;
     
     const { error } = await supabase
@@ -183,8 +184,11 @@ const MessageInput = ({
       });
 
     if (error) {
+      console.error('❌ Error sending image message:', error);
       throw new Error(`Failed to send image: ${error.message}`);
     }
+    
+    console.log('✅ Image message sent successfully');
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {

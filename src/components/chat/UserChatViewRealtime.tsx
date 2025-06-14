@@ -52,14 +52,14 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
 
         console.log('📤 Sending initial consultation data automatically...');
 
-        // Prepare plant data
+        // Prepare plant data with image URL
         const plantData = {
           symptoms: plantInfo.symptoms || 'Nessun sintomo specificato',
           wateringFrequency: plantInfo.wateringFrequency || 'Non specificata',
           sunExposure: plantInfo.lightExposure || 'Non specificata',
           environment: plantInfo.isIndoor ? 'Interno' : 'Esterno',
           plantName: plantInfo.name || 'Pianta non identificata',
-          imageUrl: plantInfo.uploadedImageUrl,
+          imageUrl: plantInfo.uploadedImageUrl, // Assicuriamoci che l'immagine sia inclusa
           aiDiagnosis: (plantInfo as any).aiDiagnosis,
           useAI: plantInfo.useAI,
           sendToExpert: plantInfo.sendToExpert
@@ -74,6 +74,11 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
           birthPlace: userProfile.birth_place || 'Non specificato'
         };
 
+        console.log('📊 Sending data including image:', { 
+          ...plantData, 
+          hasImage: !!plantData.imageUrl 
+        });
+
         // Send data
         const success = await ConsultationDataService.sendInitialConsultationData(
           currentConversationId,
@@ -83,20 +88,21 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
         );
 
         if (success) {
-          toast.success('Dati inviati automaticamente all\'esperto!', {
-            description: 'Marco Nigro ha ricevuto tutte le informazioni sulla tua pianta'
+          toast.success('Dati e immagine inviati automaticamente all\'esperto!', {
+            description: 'Marco Nigro ha ricevuto tutte le informazioni e la foto della tua pianta'
           });
         }
 
       } catch (error) {
         console.error('❌ Error sending automatic consultation data:', error);
+        toast.error('Errore nell\'invio automatico dei dati');
       }
     };
 
     // Delay to ensure conversation is fully loaded
     const timer = setTimeout(sendInitialData, 2000);
     return () => clearTimeout(timer);
-  }, [activeChat, currentConversationId, plantInfo?.infoComplete, userProfile, messages.length]);
+  }, [activeChat, currentConversationId, plantInfo?.infoComplete, plantInfo?.uploadedImageUrl, userProfile, messages.length]);
 
   const handleStartChat = () => {
     startChatWithExpert();
@@ -120,6 +126,9 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
       <MessageInput 
         onSendMessage={handleSendMessage}
         isSending={isSending}
+        conversationId={currentConversationId || undefined}
+        senderId={userId}
+        recipientId="07c7fe19-33c3-4782-b9a0-4e87c8aa7044" // Marco Nigro ID
       />
     </div>
   );

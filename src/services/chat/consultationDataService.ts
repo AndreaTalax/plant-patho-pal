@@ -34,47 +34,7 @@ export class ConsultationDataService {
     fromAIDiagnosis: boolean = false
   ): Promise<boolean> {
     try {
-      console.log('📤 Sending comprehensive initial consultation data...');
-      console.log('🌱 Plant data:', plantData);
-      console.log('👤 User data:', userProfile);
-
-      // Prepara il messaggio completo con tutti i dati dell'utente e della pianta
-      let userDataContent = `🌿 **Nuova Richiesta di Consulenza Automatica**
-
-👤 **Dati Utente:**
-- Nome: ${userProfile.firstName || ''} ${userProfile.lastName || ''}
-- Email: ${userProfile.email || 'Non specificata'}
-- Data di nascita: ${userProfile.birthDate || 'Non specificata'}
-- Luogo di nascita: ${userProfile.birthPlace || 'Non specificato'}
-
-🌱 **Informazioni della Pianta:**
-- Nome/Tipo: ${plantData.plantName || 'Pianta non identificata'}
-- Ambiente: ${plantData.environment || 'Non specificato'}
-- Sintomi: ${plantData.symptoms || 'Nessun sintomo specificato'}
-- Frequenza irrigazione: ${this.getWateringText(plantData.wateringFrequency)}
-- Esposizione solare: ${this.getSunExposureText(plantData.sunExposure)}`;
-
-      // Aggiungi informazioni sul metodo di diagnosi
-      if (fromAIDiagnosis && plantData.aiDiagnosis) {
-        userDataContent += `
-
-🤖 **Diagnosi AI Precedente:**
-- Pianta identificata: ${plantData.aiDiagnosis.consensus?.mostLikelyPlant?.plantName || 'Non identificata'}
-- Confidenza: ${plantData.aiDiagnosis.consensus?.overallConfidence || 0}%
-- Stato di salute: ${plantData.aiDiagnosis.diseaseDetection?.length > 0 ? 'Problemi rilevati' : 'Apparentemente sana'}
-- Malattie rilevate: ${plantData.aiDiagnosis.diseaseDetection?.map((d: any) => d.disease).join(', ') || 'Nessuna'}
-
-**Richiesta:** Vorrei un secondo parere professionale per confermare o correggere questa diagnosi AI.`;
-      } else if (plantData.sendToExpert && !plantData.useAI) {
-        userDataContent += `
-
-🩺 **Richiesta Diretta di Consulenza Esperta:**
-L'utente ha scelto di consultare direttamente il fitopatologo senza utilizzare la diagnosi AI.`;
-      }
-
-      userDataContent += `
-
-*Questo messaggio è stato inviato automaticamente dal sistema di diagnosi Dr.Plant.*`;
+      console.log('📤 Sending consultation data...');
 
       // Ottieni l'ID utente corrente
       const { data: { user } } = await supabase.auth.getUser();
@@ -83,102 +43,107 @@ L'utente ha scelto di consultare direttamente il fitopatologo senza utilizzare l
         return false;
       }
 
-      // Invia il messaggio con tutti i dati
+      // Messaggio principale con i dati (senza immagine per evitare payload troppo grande)
+      let mainMessage = `🌿 **Nuova Richiesta di Consulenza**
+
+👤 **Dati Utente:**
+- Nome: ${userProfile.firstName || ''} ${userProfile.lastName || ''}
+- Email: ${userProfile.email || 'Non specificata'}
+
+🌱 **Informazioni della Pianta:**
+- Nome/Tipo: ${plantData.plantName || 'Pianta non identificata'}
+- Ambiente: ${plantData.environment || 'Non specificato'}
+- Sintomi: ${plantData.symptoms || 'Nessun sintomo specificato'}
+- Frequenza irrigazione: ${this.getWateringText(plantData.wateringFrequency)}
+- Esposizione solare: ${this.getSunExposureText(plantData.sunExposure)}`;
+
+      if (fromAIDiagnosis && plantData.aiDiagnosis) {
+        mainMessage += `
+
+🤖 **Diagnosi AI Precedente:**
+- Pianta identificata: ${plantData.aiDiagnosis.consensus?.mostLikelyPlant?.plantName || 'Non identificata'}
+- Confidenza: ${plantData.aiDiagnosis.consensus?.overallConfidence || 0}%
+- Stato: ${plantData.aiDiagnosis.diseaseDetection?.length > 0 ? 'Problemi rilevati' : 'Apparentemente sana'}`;
+      }
+
+      mainMessage += `
+
+*Dati inviati automaticamente dal sistema Dr.Plant*`;
+
+      // Invia il messaggio principale
       const { error: messageError } = await supabase
         .from('messages')
         .insert({
           conversation_id: conversationId,
           sender_id: user.id,
           recipient_id: MARCO_NIGRO_ID,
-          content: userDataContent,
-          text: userDataContent,
+          content: mainMessage,
+          text: mainMessage,
           metadata: {
-            type: 'comprehensive_consultation_data',
+            type: 'consultation_data',
             autoSent: true,
             fromAIDiagnosis,
-            hasPlantImage: !!plantData.imageUrl,
             consultationType: fromAIDiagnosis ? 'ai_diagnosis_review' : 'direct_consultation'
           }
         });
 
       if (messageError) {
-        console.error('❌ Error sending consultation data message:', messageError);
+        console.error('❌ Error sending main message:', messageError);
         return false;
       }
 
       // Invia l'immagine come messaggio separato se disponibile
       if (plantData.imageUrl) {
-        console.log('📸 Sending plant image:', plantData.imageUrl);
-        
-        const imageMessage = `📸 **Immagine della Pianta**
-
-![Immagine della pianta](${plantData.imageUrl})
-
-*Immagine inviata automaticamente insieme ai dati della consultazione.*`;
-        
-        const { error: imageError } = await supabase
-          .from('messages')
-          .insert({
-            conversation_id: conversationId,
-            sender_id: user.id,
-            recipient_id: MARCO_NIGRO_ID,
-            content: imageMessage,
-            text: imageMessage,
-            image_url: plantData.imageUrl,
-            metadata: {
-              type: 'consultation_image',
-              imageUrl: plantData.imageUrl,
-              autoSent: true,
-              isPlantImage: true
-            }
-          });
-
-        if (imageError) {
-          console.error('❌ Error sending plant image:', imageError);
-          // Non bloccare il processo se l'immagine non viene inviata
-        } else {
-          console.log('✅ Plant image sent successfully');
-        }
+        await this.sendImageMessage(conversationId, user.id, plantData.imageUrl);
       }
 
-      // Se c'è una diagnosi AI, invia anche i dettagli tecnici
-      if (fromAIDiagnosis && plantData.aiDiagnosis) {
-        const technicalData = `🔬 **Dettagli Tecnici dell'Analisi AI**
-
-**Risultati completi:**
-\`\`\`json
-${JSON.stringify(plantData.aiDiagnosis, null, 2)}
-\`\`\`
-
-*Questi dati tecnici possono essere utili per la tua valutazione professionale.*`;
-
-        const { error: techError } = await supabase
-          .from('messages')
-          .insert({
-            conversation_id: conversationId,
-            sender_id: user.id,
-            recipient_id: MARCO_NIGRO_ID,
-            content: technicalData,
-            text: technicalData,
-            metadata: {
-              type: 'technical_ai_data',
-              autoSent: true,
-              aiDiagnosis: plantData.aiDiagnosis
-            }
-          });
-
-        if (techError) {
-          console.error('❌ Error sending technical data:', techError);
-          // Non bloccare per i dati tecnici
-        }
-      }
-
-      console.log('✅ Comprehensive consultation data sent successfully');
+      console.log('✅ Consultation data sent successfully');
       return true;
 
     } catch (error) {
-      console.error('❌ Error sending comprehensive consultation data:', error);
+      console.error('❌ Error sending consultation data:', error);
       return false;
+    }
+  }
+
+  /**
+   * Invia l'immagine come messaggio separato
+   */
+  private static async sendImageMessage(
+    conversationId: string,
+    senderId: string,
+    imageUrl: string
+  ): Promise<void> {
+    try {
+      console.log('📸 Sending plant image as separate message...');
+
+      const imageMessage = `📸 **Immagine della Pianta**`;
+      
+      const { error } = await supabase
+        .from('messages')
+        .insert({
+          conversation_id: conversationId,
+          sender_id: senderId,
+          recipient_id: MARCO_NIGRO_ID,
+          content: imageMessage,
+          text: imageMessage,
+          image_url: imageUrl,
+          metadata: {
+            type: 'plant_image',
+            autoSent: true,
+            isPlantImage: true
+          }
+        });
+
+      if (error) {
+        console.error('❌ Error sending image message:', error);
+        throw error;
+      }
+
+      console.log('✅ Plant image sent successfully');
+    } catch (error) {
+      console.error('❌ Failed to send image:', error);
+      // Non bloccare il processo principale se l'immagine non viene inviata
     }
   }
 
@@ -201,7 +166,6 @@ ${JSON.stringify(plantData.aiDiagnosis, null, 2)}
       const hasConsultationData = messages.some((msg: any) => 
         msg.metadata && 
         (msg.metadata.type === 'consultation_data' || 
-         msg.metadata.type === 'comprehensive_consultation_data' ||
          msg.metadata.autoSent === true)
       );
 
