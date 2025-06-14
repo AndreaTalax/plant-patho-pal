@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
 
@@ -55,6 +54,7 @@ export const useCamera = (): CameraHookReturn => {
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('environment');
   const [hasFlash, setHasFlash] = useState(false);
   const [flashEnabled, setFlashEnabled] = useState(false);
+  const [cameraInitializedOnce, setCameraInitializedOnce] = useState(false);
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -112,6 +112,12 @@ export const useCamera = (): CameraHookReturn => {
               videoRef.current.play()
                 .then(() => {
                   console.log('Camera initialized successfully');
+                  setIsLoading(false);
+                  // MODIFICA: Toast mostrato solo al primo avvio
+                  if (!cameraInitializedOnce) {
+                    toast.success('Camera initialized successfully');
+                    setCameraInitializedOnce(true);
+                  }
                   resolve();
                 })
                 .catch(reject);
@@ -128,8 +134,6 @@ export const useCamera = (): CameraHookReturn => {
       }
 
       setIsLoading(false);
-      toast.success('Camera initialized successfully');
-
     } catch (err) {
       console.error('Camera initialization error:', err);
       let errorMessage = 'Unknown camera error';
@@ -152,7 +156,7 @@ export const useCamera = (): CameraHookReturn => {
       setIsLoading(false);
       toast.error(`Camera error: ${errorMessage}`);
     }
-  }, [facingMode, stopCamera]);
+  }, [facingMode, stopCamera, cameraInitializedOnce]);
 
   const switchCamera = useCallback(() => {
     setFacingMode(prevMode => prevMode === 'user' ? 'environment' : 'user');

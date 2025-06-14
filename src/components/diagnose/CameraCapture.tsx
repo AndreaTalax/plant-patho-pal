@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -44,6 +43,7 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('environment');
   const [hasFlash, setHasFlash] = useState(false);
   const [flashEnabled, setFlashEnabled] = useState(false);
+  const [cameraInitializedOnce, setCameraInitializedOnce] = useState(false);
 
   // Initialize camera
   const initializeCamera = useCallback(async () => {
@@ -85,7 +85,11 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
             videoRef.current.play().then(() => {
               console.log('Camera initialized successfully');
               setIsLoading(false);
-              toast.success('Camera initialized successfully');
+              // **MODIFICA: Mostra il toast solo se è la prima inizializzazione**
+              if (!cameraInitializedOnce) {
+                toast.success('Camera initialized successfully');
+                setCameraInitializedOnce(true);
+              }
             }).catch((playError) => {
               console.error('Error playing video:', playError);
               setError('Error starting video playback');
@@ -124,7 +128,7 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
       setIsLoading(false);
       toast.error(`Camera error: ${errorMessage}`);
     }
-  }, [facingMode, stream, videoRef]);
+  }, [facingMode, stream, videoRef, cameraInitializedOnce]);
 
   // Initialize camera on component mount
   useEffect(() => {
