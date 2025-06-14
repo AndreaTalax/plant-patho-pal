@@ -1,3 +1,4 @@
+
 import { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -17,9 +18,6 @@ interface MessageInputProps {
   isMasterAccount?: boolean;
 }
 
-/**
- * Handles message input and sending logic within a chat interface with image upload support.
- */
 const MessageInput = ({ 
   conversationId, 
   senderId, 
@@ -35,23 +33,18 @@ const MessageInput = ({
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
+
   const isSending = externalIsSending || internalIsSending || uploadingImage;
 
-  /**
-   * Handles image file selection and creates preview
-   */
   const handleImageSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    // Validate file type
     if (!file.type.startsWith('image/')) {
       toast.error('Il file deve essere un\'immagine');
       return;
     }
 
-    // Validate file size (max 5MB for better compatibility)
     if (file.size > 5 * 1024 * 1024) {
       toast.error('L\'immagine deve essere inferiore a 5MB');
       return;
@@ -66,9 +59,6 @@ const MessageInput = ({
     reader.readAsDataURL(file);
   };
 
-  /**
-   * Removes the selected image
-   */
   const removeSelectedImage = () => {
     setSelectedImage(null);
     setImagePreview(null);
@@ -89,28 +79,26 @@ const MessageInput = ({
       // Upload image if selected
       if (selectedImage) {
         setUploadingImage(true);
-        
+
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) {
-          throw new Error('User not authenticated');
+          toast.error('User non autenticato');
+          setUploadingImage(false);
+          return;
         }
 
         imageUrl = await uploadPlantImage(selectedImage, user.id);
         console.log('✅ Image uploaded successfully:', imageUrl);
       }
 
-      // If onSendMessage is provided, use it (for hooks-based components)
+      // Se fornita una funzione di invio esterna, usala (per hook realtime)
       if (onSendMessage) {
         if (imageUrl && message.trim()) {
-          // Send text message first
           await onSendMessage(message.trim());
-          // Then send image as separate message
           await sendImageMessage(imageUrl, conversationId!, senderId!, recipientId!);
         } else if (imageUrl) {
-          // Send only image
           await sendImageMessage(imageUrl, conversationId!, senderId!, recipientId!);
         } else {
-          // Send only text
           await onSendMessage(message.trim());
         }
         
@@ -119,15 +107,13 @@ const MessageInput = ({
         return;
       }
 
-      // Otherwise use the legacy ChatService approach
       if (!conversationId || !senderId || !recipientId) {
         toast.error('Errore: parametri mancanti');
         return;
       }
 
       setInternalIsSending(true);
-      
-      // Send text message if present
+
       if (message.trim()) {
         const result = await sendMessage(
           conversationId,
@@ -141,7 +127,6 @@ const MessageInput = ({
         }
       }
 
-      // Send image message if uploaded
       if (imageUrl) {
         await sendImageMessage(imageUrl, conversationId, senderId, recipientId);
       }
@@ -151,44 +136,47 @@ const MessageInput = ({
       onMessageSent?.();
       console.log('✅ Message sent successfully');
       
-    } catch (error) {
+    } catch (error: any) {
+      // Miglior gestione errori (incluso 502)
+      if (error && error.message && (error.message.includes("502") || error.message.includes("Bad Gateway"))) {
+        toast.error('Errore server temporaneo (502). Riprova tra poco.');
+      } else {
+        toast.error(error?.message || 'Errore nell\'invio del messaggio');
+      }
       console.error('❌ Error sending message:', error);
-      toast.error('Errore nell\'invio del messaggio');
     } finally {
       setInternalIsSending(false);
       setUploadingImage(false);
     }
   };
 
-  /**
-   * Sends an image as a separate message
-   */
   const sendImageMessage = async (imageUrl: string, conversationId: string, senderId: string, recipientId: string) => {
-    console.log('📸 Sending image message with URL:', imageUrl);
-    
-    const imageMessage = `📸 Immagine allegata`;
-    
-    const { error } = await supabase
-      .from('messages')
-      .insert({
-        conversation_id: conversationId,
-        sender_id: senderId,
-        recipient_id: recipientId,
-        content: imageMessage,
-        text: imageMessage,
-        image_url: imageUrl,
-        metadata: {
-          type: 'user_image',
-          imageUrl: imageUrl
-        }
-      });
+    try {
+      console.log('📸 Sending image message with URL:', imageUrl);
+      const imageMessage = `📸 Immagine allegata`;
+      const { error } = await supabase
+        .from('messages')
+        .insert({
+          conversation_id: conversationId,
+          sender_id: senderId,
+          recipient_id: recipientId,
+          content: imageMessage,
+          text: imageMessage,
+          image_url: imageUrl,
+          metadata: {
+            type: 'user_image',
+            imageUrl: imageUrl
+          }
+        });
 
-    if (error) {
-      console.error('❌ Error sending image message:', error);
-      throw new Error(`Failed to send image: ${error.message}`);
+      if (error) {
+        console.error('❌ Error sending image message:', error);
+        throw new Error(`Failed to send image: ${error.message}`);
+      }
+      console.log('✅ Image message sent successfully');
+    } catch (err: any) {
+      throw err;
     }
-    
-    console.log('✅ Image message sent successfully');
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -201,7 +189,6 @@ const MessageInput = ({
   return (
     <div className="border-t border-drplant-green/20 bg-white/80 backdrop-blur-sm p-6">
       <div className="max-w-4xl mx-auto">
-        {/* Image preview */}
         {imagePreview && (
           <div className="mb-4 relative inline-block">
             <img 
@@ -230,7 +217,6 @@ const MessageInput = ({
             />
           </div>
           
-          {/* Image upload button */}
           <Button
             type="button"
             variant="outline"
@@ -241,8 +227,6 @@ const MessageInput = ({
           >
             <Image className="h-5 w-5" />
           </Button>
-
-          {/* Send button */}
           <Button
             onClick={handleSend}
             disabled={(!message.trim() && !selectedImage) || isSending}
@@ -256,7 +240,6 @@ const MessageInput = ({
           </Button>
         </div>
 
-        {/* Hidden file input */}
         <input
           ref={fileInputRef}
           type="file"
