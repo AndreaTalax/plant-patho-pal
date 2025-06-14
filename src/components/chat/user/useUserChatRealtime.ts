@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { supabase, EXPERT_ID } from '@/integrations/supabase/client';
@@ -17,7 +16,6 @@ export const useUserChatRealtime = (userId: string) => {
   const [isSending, setIsSending] = useState(false);
   const [isConnected, setIsConnected] = useState(true);
   
-  // Initialize chat when component mounts or userId changes
   useEffect(() => {
     if (!userId) return;
     
@@ -63,11 +61,9 @@ export const useUserChatRealtime = (userId: string) => {
     initializeExpertChat();
   }, [userId]);
 
-  // Enhanced realtime subscription for messages
+  // Enhanced realtime subscription for messages with deduplication
   useEffect(() => {
     if (!currentDbConversation?.id) return;
-    
-    console.log("🔔 Setting up realtime subscription for conversation:", currentDbConversation.id);
     
     const messagesSubscription = supabase
       .channel(`messages-channel-${currentDbConversation.id}`)
@@ -79,24 +75,28 @@ export const useUserChatRealtime = (userId: string) => {
           filter: `conversation_id=eq.${currentDbConversation.id}`
         }, 
         (payload) => {
-          console.log('📨 New message received via subscription:', payload);
           const newMsg = payload.new;
-          
           const formattedMessage = convertToUIMessage(newMsg as any);
-          
+
           setMessages(prev => {
-            // Check if message already exists to avoid duplicates
-            const exists = prev.find(msg => msg.id === formattedMessage.id);
-            if (exists) {
-              console.log("⚠️ Message already exists, skipping:", formattedMessage.id);
-              return prev;
+            // Controlla se il messaggio reale corrisponde a uno temporaneo: rimuovi il temporaneo
+            const tempIdx = prev.findIndex(
+              msg => msg.id.startsWith('temp-') &&
+                msg.text.trim() === formattedMessage.text.trim() &&
+                msg.sender === formattedMessage.sender
+            );
+            let filtered = [...prev];
+            if (tempIdx !== -1) {
+              filtered.splice(tempIdx, 1);
             }
-            
-            console.log("✅ Adding new message to chat:", formattedMessage.id);
-            return [...prev, formattedMessage];
+            // Aggiungi il messaggio reale SOLO se non esiste già (confronta id reale)
+            const exists = filtered.find(msg => msg.id === formattedMessage.id);
+            if (exists) {
+              return filtered;
+            }
+            return [...filtered, formattedMessage];
           });
           
-          // Show toast notification for new expert messages only if not auto-sent
           if (formattedMessage.sender === 'expert' && 
               !(newMsg as any).metadata?.autoSent) {
             toast.info("Nuova risposta dal fitopatologo!", {
@@ -107,13 +107,11 @@ export const useUserChatRealtime = (userId: string) => {
         }
       )
       .subscribe();
-      
-    console.log("✅ Subscribed to messages channel:", `messages-channel-${currentDbConversation.id}`);
-    
+    setIsConnected(true);
+
     return () => {
       if (messagesSubscription) {
         supabase.removeChannel(messagesSubscription);
-        console.log("🔌 Unsubscribed from messages channel");
       }
     };
   }, [currentDbConversation?.id]);
@@ -126,17 +124,14 @@ export const useUserChatRealtime = (userId: string) => {
     }
 
     if (isSending) {
-      console.log("⚠️ Already sending a message, ignoring new send request");
       return;
     }
 
     try {
       setIsSending(true);
-      console.log("📤 Sending message:", text);
 
       let conversation = currentDbConversation;
       if (!conversation) {
-        console.log("🔄 No conversation found, creating new one...");
         conversation = await findOrCreateConversation(userId);
         if (!conversation) {
           toast.error("Impossibile creare la conversazione");
@@ -145,7 +140,7 @@ export const useUserChatRealtime = (userId: string) => {
         setCurrentDbConversation(conversation);
       }
 
-      // Add message to UI immediately to improve UX
+      // Messaggio TEMPORANEO
       const tempMessage: Message = {
         id: `temp-${Date.now()}`,
         sender: 'user',
@@ -163,20 +158,17 @@ export const useUserChatRealtime = (userId: string) => {
       );
 
       if (!success) {
-        // Remove temp message if sending failed
+        // Rimuovi messaggio temp se invio fallito
         setMessages(prev => prev.filter(msg => msg.id !== tempMessage.id));
         toast.error("Errore nell'invio del messaggio");
         return;
       }
 
-      console.log("✅ Message sent successfully");
+      // Quando il messaggio arriverà via realtime, il temp verrà eliminato (vedi sopra)
       
     } catch (error) {
-      console.error("❌ Error in handleSendMessage:", error);
+      setMessages(prev => prev.filter(msg => !msg.id.startsWith('temp-')));
       toast.error("Errore nell'invio del messaggio");
-      
-      // Remove temp message on error
-      setMessages(prev => prev.filter(msg => msg.id.startsWith('temp-')));
     } finally {
       setIsSending(false);
     }
