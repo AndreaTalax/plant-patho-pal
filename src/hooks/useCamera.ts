@@ -49,7 +49,10 @@ export const useCamera = (): CameraHookReturn => {
 
       // Check if getUserMedia is supported
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        throw new Error('Camera not supported on this device');
+        toast.error('Camera API non supportata su questo dispositivo');
+        setError('Camera API non supportata su questo dispositivo');
+        setIsLoading(false);
+        return;
       }
 
       console.log('🎥 Requesting camera access...');
@@ -72,7 +75,7 @@ export const useCamera = (): CameraHookReturn => {
 
       if (videoRef.current) {
         videoRef.current.srcObject = mediaStream;
-        
+
         // Wait for video to be ready
         await new Promise<void>((resolve, reject) => {
           if (!videoRef.current) {
@@ -89,7 +92,12 @@ export const useCamera = (): CameraHookReturn => {
                 setIsLoading(false);
                 resolve();
               })
-              .catch(reject);
+              .catch((err) => {
+                console.error('Errore durante video.play():', err);
+                setError('Impossibile avviare il video della fotocamera');
+                setIsLoading(false);
+                reject(err);
+              });
           };
 
           video.addEventListener('loadedmetadata', handleLoadedMetadata, { once: true });
@@ -139,7 +147,7 @@ export const useCamera = (): CameraHookReturn => {
 
   const toggleFlash = useCallback(async () => {
     if (!stream || !hasFlash) {
-      toast.error('Flash not supported on this device');
+      toast.error('Flash non supportato su questo dispositivo');
       return;
     }
 
@@ -150,17 +158,18 @@ export const useCamera = (): CameraHookReturn => {
           advanced: [{ torch: !flashEnabled } as any]
         });
         setFlashEnabled(!flashEnabled);
-        toast.success(`Flash ${!flashEnabled ? 'enabled' : 'disabled'}`);
+        toast.success(`Flash ${!flashEnabled ? 'abilitato' : 'disabilitato'}`);
       }
     } catch (error) {
       console.error('Flash toggle error:', error);
-      toast.error('Failed to toggle flash');
+      toast.error('Errore durante attivazione/disattivazione flash');
     }
   }, [stream, hasFlash, flashEnabled]);
 
   const capturePhoto = useCallback((): string | null => {
     if (!videoRef.current || !canvasRef.current) {
-      toast.error('Camera not ready');
+      toast.error('Fotocamera non pronta all\'acquisizione');
+      console.error('❌ videoRef o canvasRef null alla cattura!');
       return null;
     }
 
@@ -170,13 +179,19 @@ export const useCamera = (): CameraHookReturn => {
       const context = canvas.getContext('2d');
 
       if (!context) {
-        toast.error('Canvas context not available');
+        toast.error('Canvas context non disponibile');
+        console.error('❌ Canvas context non disponibile durante scatto!');
         return null;
       }
 
       // Set canvas dimensions to match video
       canvas.width = video.videoWidth || 1920;
       canvas.height = video.videoHeight || 1080;
+      if (canvas.width === 0 || canvas.height === 0) {
+        toast.error('La fotocamera non ha fornito frame validi. Riprova o verifica i permessi.');
+        console.error('❌ Video dimensioni non valide alla cattura!');
+        return null;
+      }
 
       // Draw current video frame to canvas
       context.drawImage(video, 0, 0, canvas.width, canvas.height);
@@ -184,13 +199,19 @@ export const useCamera = (): CameraHookReturn => {
       // Convert to data URL
       const imageDataUrl = canvas.toDataURL('image/jpeg', 0.9);
       
+      if (!imageDataUrl || !imageDataUrl.startsWith("data:image/")) {
+        toast.error('Errore nella generazione della foto!');
+        console.error('❌ Impossibile generare imageDataUrl');
+        return null;
+      }
+
       console.log('📸 Photo captured successfully');
-      toast.success('Photo captured successfully!');
+      toast.success('Foto acquisita!');
       return imageDataUrl;
 
     } catch (error) {
-      console.error('Capture error:', error);
-      toast.error('Failed to capture photo');
+      console.error('Errore durante acquisizione foto:', error);
+      toast.error('Errore durante la cattura della foto');
       return null;
     }
   }, []);
