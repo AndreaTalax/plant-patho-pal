@@ -1,165 +1,58 @@
-
-import { useState, useEffect } from 'react';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Loader2 } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import React from 'react';
 
 interface EppoDataPanelProps {
   analysisDetails: any;
-  userInput?: string;
-  eppoData?: any;
+  userInput: string;
+  eppoData: any[];
 }
 
-/**
- * Renders the EPPO data panel displaying diagnosis based on plant data analysis.
- * @example
- * EppoDataPanel({ analysisDetails, userInput, eppoData })
- * Returns a React component displaying the diagnosis information.
- * @param {object} { analysisDetails, userInput, eppoData: initialEppoData } - Props providing analysis details, user input, and initial EPPO data.
- * @returns {JSX.Element | null} React component displaying diagnosis details or null if inputs are invalid.
- * @description
- *   - Fetches EPPO data when analysis details or user inputs change.
- *   - Handles state changes for loading, error, and fetched data.
- *   - Integrates with Supabase edge function to query the EPPO API.
- *   - Gracefully handles API errors with retry options.
- */
-const EppoDataPanel = ({ analysisDetails, userInput, eppoData: initialEppoData }: EppoDataPanelProps) => {
-  const [eppoData, setEppoData] = useState<any>(initialEppoData || null);
-  const [explanation, setExplanation] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  // Fetch EPPO data when analysis details or user input changes
-  useEffect(() => {
-    if (initialEppoData) {
-      // If eppoData was provided through props, use it
-      setEppoData(initialEppoData);
-      setIsLoading(false);
-    } else if (analysisDetails && userInput) {
-      fetchEppoData();
+const EppoDataPanel = ({ analysisDetails, userInput, eppoData }: EppoDataPanelProps) => {
+  // Funzione helper per ottenere la probabilità in %
+  const getProbabilityDisplay = (issue: any) => {
+    let probRaw = issue.probability ?? issue.confidence;
+    // Supporta numeri tra 0 e 1 e tra 0 e 100
+    if (typeof probRaw === "number") {
+      probRaw = probRaw <= 1 ? (probRaw * 100) : probRaw; // es: 0.85 → 85, 85 → 85
+      return `${Math.round(probRaw)}% probability`;
     }
-  }, [analysisDetails, userInput, initialEppoData]);
-
-  /**
-   * Asynchronously fetches data from the EPPO API related to pests based on the analysis details.
-   * @example
-   * sync()
-   * // Expected outcome: Updates component state with fetched EPPO data or sets error message
-   * @returns {void} Updates component state with EPPO data or error message.
-   * @description
-   *   - Initializes loading state and resets error before making a request.
-   *   - Constructs a query string based on plant name from analysis details.
-   *   - Invokes 'eppo-api' edge function via Supabase to perform the API request.
-   *   - Handles API response or error by updating state accordingly or logging to console.
-   */
-  const fetchEppoData = async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
-
-      // Get disease or pest name from analysis details
-      let pestsQuery = "";
-      if (analysisDetails?.multiServiceInsights?.plantName) {
-        pestsQuery = `name=${encodeURIComponent(analysisDetails.multiServiceInsights.plantName)}`;
-      }
-
-      // Call our edge function to query the EPPO API
-      const { data, error } = await supabase.functions.invoke('eppo-api', {
-        body: {
-          endpoint: 'pests',
-          query: pestsQuery,
-          userInput: userInput
-        }
-      });
-
-      if (error) {
-        setError("Errore nella richiesta all'API EPPO");
-        console.error("EPPO API error:", error);
-      } else {
-        setEppoData(data.data);
-        setExplanation(data.explanation);
-      }
-    } catch (err) {
-      console.error("Error fetching EPPO data:", err);
-      setError("Si è verificato un errore durante il recupero dei dati");
-    } finally {
-      setIsLoading(false);
-    }
+    return "–% probability";
   };
 
-  if (!analysisDetails || !userInput) {
-    return null;
-  }
-
   return (
-    <Card className="p-4 bg-white">
-      <div className="mb-3">
-        <h3 className="text-lg font-medium">Diagnosi basata sul Database EPPO</h3>
-        <p className="text-sm text-gray-600">
-          Analisi basata sui sintomi descritti e il database europeo di protezione delle piante
+    <div className="space-y-6">
+      <div className="rounded-xl border border-red-300 bg-red-50 px-4 py-3">
+        <span className="font-bold text-red-800 text-base tracking-tight">
+          Corrispondenze dal database EPPO
+        </span>
+        <p className="text-sm text-gray-600 mt-1">
+          Abbiamo trovato corrispondenze nel database EPPO (European and Mediterranean Plant Protection Organization) basate sui sintomi che hai descritto.
         </p>
+        {userInput && (
+          <p className="text-sm text-gray-500 mt-2 italic">
+            Input utente: "{userInput}"
+          </p>
+        )}
       </div>
 
-      {isLoading ? (
-        <div className="flex flex-col items-center justify-center py-8">
-          <Loader2 className="h-8 w-8 text-green-500 animate-spin mb-2" />
-          <p className="text-sm text-gray-500">Consultando il database EPPO...</p>
-        </div>
-      ) : error ? (
-        <div className="bg-red-50 border border-red-200 rounded-md p-3">
-          <p className="text-red-700 text-sm">{error}</p>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="mt-2" 
-            onClick={fetchEppoData}
-          >
-            Riprova
-          </Button>
-        </div>
-      ) : (
-        <>
-          {explanation && (
-            <div className="mb-4 bg-green-50 rounded-md p-4 border border-green-100">
-              <h4 className="font-medium text-green-800 mb-2">Spiegazione diagnostica:</h4>
-              <p className="text-sm text-green-700 whitespace-pre-line">{explanation}</p>
+      <div className="space-y-4">
+        {eppoData.map((issue, idx) => (
+          <div key={idx} className="rounded-lg border border-red-200 bg-red-50 p-4">
+            <div className="flex items-center justify-between mb-1">
+              <span className="font-semibold text-red-900">{issue.name ?? "Issue sconosciuto"}</span>
+              <span className="text-xs text-red-600 font-medium px-2 py-1 rounded bg-white border" style={{ minWidth: "70px", textAlign: "right" }}>
+                {getProbabilityDisplay(issue)}
+              </span>
             </div>
-          )}
-          
-          {eppoData && Array.isArray(eppoData) && eppoData.length > 0 && (
-            <div className="mt-4 space-y-3">
-              <h4 className="font-medium text-gray-800">Possibili problemi rilevati:</h4>
-              {eppoData.slice(0, 3).map((pest: any, index: number) => (
-                <div key={index} className="border rounded-md p-3 bg-gray-50">
-                  <p className="font-medium">{pest.preferredname || pest.name}</p>
-                  {pest.taxonomy && (
-                    <p className="text-xs text-gray-500">{pest.taxonomy}</p>
-                  )}
-                  {pest.description && (
-                    <p className="text-sm mt-1">{pest.description}</p>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-          
-          {(!eppoData || (Array.isArray(eppoData) && eppoData.length === 0)) && !explanation && (
-            <p className="text-sm text-gray-500 italic">
-              Non sono stati trovati risultati specifici nel database EPPO per i sintomi descritti.
-            </p>
-          )}
-        </>
-      )}
-      
-      <div className="mt-4 pt-4 border-t border-gray-100">
-        <p className="text-xs text-gray-500">
-          I dati provengono dal database EPPO (European and Mediterranean Plant Protection Organization), 
-          la principale organizzazione per la protezione delle piante in Europa.
-        </p>
+            <div className="text-gray-700 text-sm mb-1">{issue.description}</div>
+            {issue.treatment && (
+              <div className="text-green-700 text-sm font-medium">
+                Treatment: {issue.treatment}
+              </div>
+            )}
+          </div>
+        ))}
       </div>
-    </Card>
+    </div>
   );
 };
-
 export default EppoDataPanel;
