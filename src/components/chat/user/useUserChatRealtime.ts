@@ -87,6 +87,7 @@ export const useUserChatRealtime = (userId: string) => {
             );
             let filtered = [...prev];
             if (tempIdx !== -1) {
+              console.log('🧹 Rimuovo messaggio temporaneo duplicato:', prev[tempIdx]);
               filtered.splice(tempIdx, 1);
             }
             // Aggiungi il messaggio reale SOLO se non esiste già (confronta id reale)
@@ -116,9 +117,9 @@ export const useUserChatRealtime = (userId: string) => {
     };
   }, [currentDbConversation?.id]);
   
-  // Send message function - properly async
+  // Send message function - robust version
   const handleSendMessage = async (text: string, imageUrl?: string) => {
-    if ((!text.trim() && !imageUrl) ) {
+    if ((!text.trim() && !imageUrl)) {
       toast.error("Il messaggio non può essere vuoto");
       return;
     }
@@ -149,11 +150,13 @@ export const useUserChatRealtime = (userId: string) => {
         ...(imageUrl ? { image_url: imageUrl } : {})
       };
       setMessages(prev => [...prev, tempMessage]);
+      console.log('⌛ Messaggio temporaneo aggiunto:', tempMessage);
 
-      // Send message to backend: text (and image as optional 5th arg)
-      let message: any; // DatabaseMessage | null
+      let msgSent: any = null;
+
       if (imageUrl) {
-        message = await sendMessageService(
+        // sendMessageService expects (conversationId, senderId, recipientId, text, [imageUrl])
+        msgSent = await sendMessageService(
           conversation.id,
           userId,
           EXPERT_ID,
@@ -161,15 +164,16 @@ export const useUserChatRealtime = (userId: string) => {
           imageUrl
         );
       } else {
-        message = await sendMessageService(
+        msgSent = await sendMessageService(
           conversation.id,
           userId,
           EXPERT_ID,
           text
         );
       }
+      console.log('🚚 sendMessageService risultato:', msgSent);
 
-      if (!message) {
+      if (!msgSent) {
         // Rimuovi messaggio temp se invio fallito
         setMessages(prev => prev.filter(msg => msg.id !== tempMessage.id));
         toast.error("Errore nell'invio del messaggio");
@@ -180,6 +184,7 @@ export const useUserChatRealtime = (userId: string) => {
     } catch (error) {
       setMessages(prev => prev.filter(msg => !msg.id.startsWith('temp-')));
       toast.error("Errore nell'invio del messaggio");
+      console.error('❌ Errore nell\'invio:', error);
     } finally {
       setIsSending(false);
     }
