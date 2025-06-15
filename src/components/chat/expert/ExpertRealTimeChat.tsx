@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -37,6 +36,7 @@ export const ExpertRealTimeChat: React.FC = () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
 
+      // Recupera tutte le conversazioni dell’esperto
       const response = await fetch('/api/get-conversations', {
         headers: {
           'Authorization': `Bearer ${session.access_token}`
@@ -44,9 +44,49 @@ export const ExpertRealTimeChat: React.FC = () => {
       });
 
       const result = await response.json();
-      
-      if (response.ok) {
-        setConversations(result.conversations);
+
+      if (response.ok && Array.isArray(result.conversations)) {
+        // Miglioramento: carica per ogni conversazione l’ultimo messaggio vero, cat non quello filtrato solo per l’utente
+        const conversationsWithLastMessage = await Promise.all(result.conversations.map(async (conv: any) => {
+          // Find last relevant message (inclusi autoSent)
+          let lastMessageText = conv.last_message_text;
+          let lastMessageAt = conv.last_message_at;
+          let unread_count = conv.unread_count || 0;
+
+          // Fallback: se non c’è un message brevity, prendi l’ultimo dalla tabella messages, anche se autoSent
+          if (!lastMessageText) {
+            const { data: messages } = await supabase
+              .from('messages')
+              .select('content, sent_at, metadata')
+              .eq('conversation_id', conv.id)
+              .order('sent_at', { ascending: false })
+              .limit(1);
+            if (messages && messages.length > 0) {
+              lastMessageText = messages[0].content || '';
+              lastMessageAt = messages[0].sent_at;
+              // Se è un messaggio autoSent, aggiungi badge
+              if (messages[0].metadata && (messages[0].metadata.type === 'consultation_data' || messages[0].metadata.autoSent === true)) {
+                lastMessageText = "🟢 Dati inviati automaticamente dal paziente";
+              }
+            }
+          }
+
+          // Retrieve user profile
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('first_name, last_name, avatar_url')
+            .eq('id', conv.user_profile?.id || conv.user_id)
+            .maybeSingle();
+
+          return {
+            ...conv,
+            last_message_text: lastMessageText,
+            last_message_at: lastMessageAt,
+            unread_count,
+            user_profile: profile || conv.user_profile
+          }
+        }));
+        setConversations(conversationsWithLastMessage);
       }
     } catch (error) {
       console.error('Error loading conversations:', error);
@@ -112,13 +152,17 @@ export const ExpertRealTimeChat: React.FC = () => {
                           {conv.unread_count}
                         </Badge>
                       )}
+                      {/* Badge se è messaggio autosent */}
+                      {conv.last_message_text?.startsWith("🟢") && (
+                        <Badge variant="outline" className="text-xs text-green-700 border-green-400">Dati auto</Badge>
+                      )}
                     </div>
                     <p className="text-sm text-gray-600 truncate mt-1">
                       {conv.last_message_text || 'Nessun messaggio'}
                     </p>
                     <div className="flex items-center gap-1 mt-2 text-xs text-gray-500">
                       <Clock className="h-3 w-3" />
-                      {new Date(conv.last_message_at).toLocaleString('it-IT')}
+                      {conv.last_message_at ? new Date(conv.last_message_at).toLocaleString('it-IT') : ''}
                     </div>
                   </div>
                 </div>
