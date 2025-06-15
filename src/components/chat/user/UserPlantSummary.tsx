@@ -1,211 +1,119 @@
+
 import React from "react";
 import { usePlantInfo } from "@/context/PlantInfoContext";
 import { useAuth } from "@/context/AuthContext";
+import { Info } from "lucide-react";
 
-/**
- * Mostra sempre sia i dati personali sia quelli della pianta tra quelli inviati in automatico.
- * Ora i dati personali vengono visualizzati PRIMA rispetto a quelli della pianta.
- */
 const UserPlantSummary: React.FC = () => {
   const { plantInfo } = usePlantInfo();
   const { userProfile } = useAuth();
 
-  console.log('🌿 UserPlantSummary render:', { 
-    hasPlantInfo: !!plantInfo, 
-    hasUserProfile: !!userProfile,
-    plantName: plantInfo?.name,
-    userName: userProfile?.first_name,
-    hasImage: !!plantInfo?.uploadedImageUrl,
-    plantInfoComplete: plantInfo?.infoComplete,
-    symptoms: plantInfo?.symptoms,
-    wateringFrequency: plantInfo?.wateringFrequency,
-    lightExposure: plantInfo?.lightExposure,
-    fullPlantInfo: plantInfo,
-    uploadedImageUrl: plantInfo?.uploadedImageUrl
-  });
-
-  // Mostra sempre il summary se c'è almeno una info della pianta o profilo utente
-  if (!plantInfo && !userProfile) {
-    console.log('⚠️ No plant info or user profile available');
-    return null;
-  }
-
-  // Forza la visualizzazione se abbiamo qualsiasi dato
-  const hasAnyPlantData = plantInfo && (
-    plantInfo.symptoms || 
-    plantInfo.wateringFrequency || 
-    plantInfo.lightExposure || 
-    plantInfo.name || 
-    plantInfo.uploadedImageUrl ||
-    plantInfo.isIndoor !== undefined
-  );
-
-  const hasUserData = userProfile && (
-    userProfile.first_name || 
-    userProfile.firstName || 
-    userProfile.email
-  );
-
-  if (!hasAnyPlantData && !hasUserData) {
-    console.log('⚠️ No relevant data to display');
-    return null;
-  }
-
-  // User data fields
-  const firstName = userProfile?.first_name || userProfile?.firstName || "Non specificato";
+  // Estrai dati utente
+  const firstName = userProfile?.first_name || userProfile?.firstName || "";
   const lastName = userProfile?.last_name || userProfile?.lastName || "";
-  const email = userProfile?.email || "Non specificato";
-  const birthDate = userProfile?.birth_date || userProfile?.birthDate || "Non specificata";
-  const birthPlace = userProfile?.birth_place || userProfile?.birthPlace || "Non specificato";
+  const email = userProfile?.email || "";
+  const birthDate = userProfile?.birth_date || userProfile?.birthDate || "";
+  const birthPlace = userProfile?.birth_place || userProfile?.birthPlace || "";
 
-  // Pianta fields
-  const plantName = plantInfo?.name || "Specie da identificare durante la consulenza";
-  const environment = plantInfo?.isIndoor !== undefined ? (plantInfo.isIndoor ? "Interno" : "Esterno") : "Da specificare durante la consulenza";
-  const lightExposure = plantInfo?.lightExposure || "Da specificare durante la consulenza";
-  const wateringFrequency = plantInfo?.wateringFrequency || "Da specificare durante la consulenza";
-  const symptoms = plantInfo?.symptoms || "Da descrivere dettagliatamente durante la consulenza";
+  // Estrai dati pianta
+  const symptoms = plantInfo?.symptoms || "";
+  const watering = plantInfo?.wateringFrequency || "";
+  const exposure = plantInfo?.lightExposure || "";
+  const environment = plantInfo?.isIndoor === undefined ? "" : plantInfo.isIndoor ? "Interno" : "Esterno";
+  const imgUploaded = !!plantInfo?.uploadedImageUrl;
 
-  // Mappe per rendere più leggibili i valori
+  // Traduzioni migliorate per watering ed exposure
   const wateringMap: { [key: string]: string } = {
-    'quotidiana': 'Quotidiana (ogni giorno)',
+    'quotidiana': 'Ogni giorno',
     'ogni-2-giorni': 'Ogni 2 giorni',
     '2-volte-settimana': '2 volte a settimana',
-    'settimanale': 'Settimanale',
+    'settimanale': '1 volta a settimana',
     'ogni-2-settimane': 'Ogni 2 settimane',
     'mensile': 'Mensile',
-    'quando-necessario': 'Quando il terreno è secco'
+    'quando-necessario': "Quando necessario"
   };
-
   const exposureMap: { [key: string]: string } = {
-    'sole-diretto': 'Sole diretto (pieno sole per molte ore al giorno)',
-    'sole-parziale': 'Sole parziale (alcune ore di sole diretto)',
-    'ombra-parziale': 'Ombra parziale (luce filtrata)',
-    'ombra-completa': 'Ombra completa (nessun sole diretto)',
-    'luce-indiretta': 'Luce indiretta (luminoso ma senza sole diretto)',
-    'luce-artificiale': 'Luce artificiale (illuminazione LED/neon)'
+    'sole-diretto': 'Sole diretto',
+    'sole-parziale': 'Sole parziale',
+    'ombra-parziale': 'Ombra parziale',
+    'ombra-completa': 'Ombra completa',
+    'luce-indiretta': 'Luce indiretta',
+    'luce-artificiale': 'Luce artificiale'
   };
 
-  const wateringText = wateringMap[wateringFrequency] || wateringFrequency;
-  const exposureText = exposureMap[lightExposure] || lightExposure;
+  const wateringText = wateringMap[watering] || watering;
+  const exposureText = exposureMap[exposure] || exposure;
+
+  // Mostra solo se ci sono dati principali
+  if (!firstName && !symptoms) return null;
 
   return (
-    <div className="bg-green-50 rounded-lg p-4 my-3 text-sm border border-green-200">
-      <div className="mb-3 font-bold text-green-900 text-center flex items-center justify-center gap-2">
-        <span>✅</span>
-        <span>Dati inviati automaticamente all'esperto</span>
+    <div className="my-4">
+
+      {/* Titolo + info */}
+      <div className="rounded-t-xl border border-blue-200 bg-blue-50 px-5 py-3 flex items-center gap-2 shadow-sm">
+        <Info className="text-blue-700 w-5 h-5" />
+        <span className="font-bold text-blue-700 text-base tracking-tight">
+          Dati Diagnosi Inseriti
+        </span>
+        <span className="ml-auto text-xs text-blue-500">Visibili solo a te e all'esperto</span>
       </div>
 
-      {/* Foto della pianta */}
-      {plantInfo?.uploadedImageUrl && (
-        <div className="mb-4 p-3 bg-white rounded-lg border border-green-100">
-          <div className="font-semibold text-green-800 mb-3 flex items-center gap-2">
-            <span>📸</span>
-            <span>Foto della tua pianta:</span>
-          </div>
-          <div className="flex justify-center">
-            <img 
-              src={plantInfo.uploadedImageUrl} 
-              alt="Immagine pianta" 
-              className="rounded border max-w-full max-h-64 object-cover shadow-md cursor-pointer hover:shadow-lg transition-shadow" 
-              onClick={() => window.open(plantInfo.uploadedImageUrl, '_blank')}
-            />
-          </div>
-          <p className="text-center text-xs text-gray-600 mt-2">Clicca per ingrandire</p>
-        </div>
-      )}
+      {/* Dettaglio box */}
+      <div className="border-x border-b border-blue-200 bg-blue-50 rounded-b-xl p-4">
+        <div className="space-y-4">
 
-      {/* Dati personali PRIMA dei dati pianta */}
-      {hasUserData && (
-        <div className="mb-4 p-3 bg-white rounded-lg border border-green-100">
-          <div className="font-semibold text-green-800 mb-3 flex items-center gap-2">
-            <span>👤</span>
-            <span>I tuoi dati personali:</span>
+          {/* Dati User */}
+          <div>
+            <span className="block font-semibold text-blue-900 mb-1">{"\u{1F464}"} Profilo Utente:</span>
+            <ul className="space-y-1 text-sm ml-2">
+              <li>
+                <span className="font-medium">• Nome:</span> <span className="uppercase">{firstName + (lastName ? " " + lastName : "")}</span>
+              </li>
+              <li>
+                <span className="font-medium">• Data di nascita:</span>{" "}
+                {birthDate || <span className="italic text-gray-400">-</span>}
+              </li>
+              <li>
+                <span className="font-medium">• Luogo di nascita:</span>{" "}
+                {birthPlace || <span className="italic text-gray-400">-</span>}
+              </li>
+              <li>
+                <span className="font-medium">• Email:</span>{" "}
+                {email || <span className="italic text-gray-400">-</span>}
+              </li>
+            </ul>
           </div>
-          <div className="space-y-2">
-            <div className="flex items-start gap-2">
-              <span className="text-blue-600 mt-0.5">👤</span> 
-              <div>
-                <span className="font-medium">Nome completo:</span>
-                <div className="text-gray-700">{firstName} {lastName}</div>
-              </div>
-            </div>
-            <div className="flex items-start gap-2">
-              <span className="text-blue-600 mt-0.5">✉️</span> 
-              <div>
-                <span className="font-medium">Email:</span>
-                <div className="text-gray-700">{email}</div>
-              </div>
-            </div>
-            <div className="flex items-start gap-2">
-              <span className="text-blue-600 mt-0.5">🎂</span> 
-              <div>
-                <span className="font-medium">Data di nascita:</span>
-                <div className="text-gray-700">{birthDate}</div>
-              </div>
-            </div>
-            <div className="flex items-start gap-2">
-              <span className="text-blue-600 mt-0.5">📍</span> 
-              <div>
-                <span className="font-medium">Luogo di nascita:</span>
-                <div className="text-gray-700">{birthPlace}</div>
-              </div>
-            </div>
+
+          {/* Dati Pianta */}
+          <div>
+            <span className="block font-semibold text-green-900 mb-1">{"\u{1F331}"} Dati della Pianta:</span>
+            <ul className="space-y-1 text-sm ml-2">
+              <li>
+                <span className="font-medium">• Sintomi:</span>{" "}
+                {symptoms || <span className="italic text-gray-400">-</span>}
+              </li>
+              <li>
+                <span className="font-medium">• Irrigazione:</span>{" "}
+                {wateringText || <span className="italic text-gray-400">-</span>}
+              </li>
+              <li>
+                <span className="font-medium">• Esposizione:</span>{" "}
+                {environment
+                  ? (environment + (exposureText ? ` ${exposureText}` : ""))
+                  : (exposureText || <span className="italic text-gray-400">-</span>)}
+              </li>
+              <li>
+                <span className="font-medium">• Immagine:</span>{" "}
+                {imgUploaded ? (
+                  <span className="text-green-700 font-semibold">Caricata {"\u2714"}</span>
+                ) : (
+                  <span className="text-gray-400 font-medium">Non caricata {"\u2716"}</span>
+                )}
+              </li>
+            </ul>
           </div>
         </div>
-      )}
-
-      {/* Dati della pianta DOPO i dati personali */}
-      {hasAnyPlantData && (
-        <div className="mb-4 p-3 bg-white rounded-lg border border-green-100">
-          <div className="font-semibold text-green-800 mb-3 flex items-center gap-2">
-            <span>🌱</span>
-            <span>Informazioni della pianta:</span>
-          </div>
-          <div className="space-y-2">
-            <div className="flex items-start gap-2">
-              <span className="text-green-600 mt-0.5">🏷️</span> 
-              <div>
-                <span className="font-medium">Nome/Tipo pianta:</span>
-                <div className="text-gray-700">{plantName}</div>
-              </div>
-            </div>
-            <div className="flex items-start gap-2">
-              <span className="text-green-600 mt-0.5">🏠</span> 
-              <div>
-                <span className="font-medium">Ambiente:</span>
-                <div className="text-gray-700">{environment}</div>
-              </div>
-            </div>
-            <div className="flex items-start gap-2">
-              <span className="text-green-600 mt-0.5">☀️</span> 
-              <div>
-                <span className="font-medium">Esposizione alla luce:</span>
-                <div className="text-gray-700">{exposureText}</div>
-              </div>
-            </div>
-            <div className="flex items-start gap-2">
-              <span className="text-green-600 mt-0.5">💧</span> 
-              <div>
-                <span className="font-medium">Frequenza irrigazione:</span>
-                <div className="text-gray-700">{wateringText}</div>
-              </div>
-            </div>
-            <div className="flex items-start gap-2">
-              <span className="text-red-600 mt-0.5">🦠</span> 
-              <div>
-                <span className="font-medium">Sintomi osservati:</span>
-                <div className="text-gray-700">{symptoms}</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <div className="mt-3 p-2 bg-blue-50 rounded border border-blue-200 text-xs text-blue-800 flex items-center gap-2">
-        <span>ℹ️</span>
-        <span>
-          Tutti questi dati sono stati inviati automaticamente a Marco Nigro per una consulenza completa
-        </span>
       </div>
     </div>
   );
