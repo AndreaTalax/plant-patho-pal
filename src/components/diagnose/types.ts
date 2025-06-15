@@ -54,4 +54,14 @@ export interface AnalysisDetails {
   analysisTechnology?: string;
   alternativeDiagnoses?: string[];
   recommendedAdditionalTests?: string[];
+  // AGGIUNGIAMO eppoData per evitare TypeScript error
+  eppoData?: {
+    plantMatch?: any;
+    diseaseMatches?: any[];
+    recommendations?: {
+      diseases: any[];
+      pests: any[];
+      careAdvice: string[];
+    };
+  };
 }
