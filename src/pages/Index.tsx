@@ -32,6 +32,9 @@ const Index = () => {
   // Set default tab based on account type - master accounts start with expert tab
   const [activeTab, setActiveTab] = useState<string>(isMasterAccount ? "expert" : "diagnose");
 
+  // Calcola se i tab sono sbloccati solo dopo scelta AI o Esperto
+  const canAccessTabs = plantInfo.infoComplete && (plantInfo.useAI || plantInfo.sendToExpert);
+
   // Initialize storage buckets on app start
   useEffect(() => {
     ensureStorageBuckets();
@@ -44,31 +47,28 @@ const Index = () => {
     }
   }, [isMasterAccount, activeTab]);
 
-  // Prevent tab switch if infoComplete is false and tab != "diagnose"
+  // Aggiorna: blocca accesso tab se canAccessTabs è false e tab ≠ 'diagnose'
   useEffect(() => {
-    // All tabs except diagnose/expert are forbidden if data incomplete
-    if (!plantInfo.infoComplete && activeTab !== "diagnose" && !isMasterAccount) {
+    if (!canAccessTabs && activeTab !== "diagnose" && !isMasterAccount) {
       setActiveTab("diagnose");
     }
-  }, [plantInfo.infoComplete, activeTab, isMasterAccount]);
+  }, [canAccessTabs, activeTab, isMasterAccount]);
 
   // Listen for custom tab switch events
   useEffect(() => {
     const handleSwitchTab = (event: CustomEvent) => {
       const newTab = event.detail;
 
-      // Prevent master accounts from accessing diagnose tab
       if (isMasterAccount && newTab === "diagnose") {
         setActiveTab("expert");
         return;
       }
-      // Prevent navigation if not infoComplete and not diagnose
-      if (!isMasterAccount && !plantInfo.infoComplete && newTab !== "diagnose") {
+      if (!isMasterAccount && !canAccessTabs && newTab !== "diagnose") {
         toast({
           title: "Completa prima la diagnosi della pianta!",
-          description: "Per accedere alle altre sezioni devi inserire le informazioni richieste nella diagnosi.",
+          description: "Dopo il caricamento della foto, scegli tra Analisi AI o invio all'esperto.",
           duration: 3500,
-          variant: "destructive", // Fix: use allowed variant
+          variant: "destructive",
         });
         setActiveTab("diagnose");
         return;
@@ -81,20 +81,20 @@ const Index = () => {
     return () => {
       window.removeEventListener('switchTab', handleSwitchTab as EventListener);
     };
-  }, [isMasterAccount, plantInfo.infoComplete, toast]);
+  }, [isMasterAccount, canAccessTabs, toast]);
 
-  // Enhanced setActiveTab: blocca accesso se not infoComplete
+  // Gestione tap utente
   const handleSetActiveTab = (tab: string) => {
     if (isMasterAccount && tab === "diagnose") {
       setActiveTab("expert");
       return;
     }
-    if (!isMasterAccount && !plantInfo.infoComplete && tab !== "diagnose") {
+    if (!isMasterAccount && !canAccessTabs && tab !== "diagnose") {
       toast({
         title: "Completa prima la diagnosi della pianta!",
-        description: "Per accedere alle altre sezioni devi inserire le informazioni richieste nella diagnosi.",
+        description: "Dopo il caricamento della foto, scegli tra Analisi AI o invio all'esperto.",
         duration: 3500,
-        variant: "destructive", // Fix: use allowed variant
+        variant: "destructive",
       });
       setActiveTab("diagnose");
       return;
@@ -145,6 +145,7 @@ const Index = () => {
         setActiveTab={handleSetActiveTab}
         showExpertTab={isMasterAccount}
         plantInfoComplete={plantInfo.infoComplete}
+        canAccessTabs={canAccessTabs}
       />
     </div>
   );

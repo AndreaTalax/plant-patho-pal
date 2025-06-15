@@ -14,23 +14,26 @@ interface BottomNavigationProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
   showExpertTab?: boolean;
-  plantInfoComplete?: boolean; // Nuovo prop per controllo navigazione tab
+  plantInfoComplete?: boolean;
+  canAccessTabs?: boolean;
 }
 
 const BottomNavigation = ({
   activeTab,
   setActiveTab,
   showExpertTab = false,
-  plantInfoComplete = false
+  plantInfoComplete = false,
+  canAccessTabs = false
 }: BottomNavigationProps) => {
   const [unreadCount] = useState(0);
 
   const navItems = [
     { id: "diagnose", label: "Diagnosi", icon: Home, locked: false },
-    { id: "chat", label: "Chat", icon: MessageSquare, hasNotification: unreadCount > 0, locked: !plantInfoComplete },
-    { id: "library", label: "Libreria", icon: BookOpen, locked: !plantInfoComplete },
-    { id: "shop", label: "Shop", icon: ShoppingCart, locked: !plantInfoComplete },
-    { id: "profile", label: "Profilo", icon: User, locked: !plantInfoComplete }
+    { id: "chat", label: "Chat", icon: MessageSquare, hasNotification: unreadCount > 0,
+      locked: !canAccessTabs },
+    { id: "library", label: "Libreria", icon: BookOpen, locked: !canAccessTabs },
+    { id: "shop", label: "Shop", icon: ShoppingCart, locked: !canAccessTabs },
+    { id: "profile", label: "Profilo", icon: User, locked: !canAccessTabs }
   ];
 
   if (showExpertTab) {
@@ -43,10 +46,7 @@ const BottomNavigation = ({
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = activeTab === item.id;
-          const isLocked = !plantInfoComplete && item.id !== "diagnose" && !showExpertTab;
-          // Ma per la dashboard master non deve essere locked
-
-          // Aggiorna isLocked per tutte tranne diagnose per utenti normali
+          // Non più legato direttamente a plantInfoComplete ma alla nuova logica canAccessTabs
           const buttonDisabled = item.locked && !showExpertTab;
 
           return (
@@ -75,7 +75,9 @@ const BottomNavigation = ({
                 </Badge>
               )}
               {buttonDisabled && (
-                <span className="absolute -bottom-2 w-16 text-[10px] text-red-500 opacity-90 text-center pointer-events-none select-none">Completa prima la diagnosi</span>
+                <span className="absolute -bottom-2 w-16 text-[10px] text-red-500 opacity-90 text-center pointer-events-none select-none">
+                  Completa prima la diagnosi
+                </span>
               )}
             </button>
           );
@@ -86,4 +88,3 @@ const BottomNavigation = ({
 };
 
 export default BottomNavigation;
-
