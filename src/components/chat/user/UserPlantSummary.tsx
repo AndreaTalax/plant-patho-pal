@@ -19,12 +19,35 @@ const UserPlantSummary: React.FC = () => {
     plantInfoComplete: plantInfo?.infoComplete,
     symptoms: plantInfo?.symptoms,
     wateringFrequency: plantInfo?.wateringFrequency,
-    lightExposure: plantInfo?.lightExposure
+    lightExposure: plantInfo?.lightExposure,
+    fullPlantInfo: plantInfo,
+    uploadedImageUrl: plantInfo?.uploadedImageUrl
   });
 
   // Mostra sempre il summary se c'è almeno una info della pianta o profilo utente
   if (!plantInfo && !userProfile) {
     console.log('⚠️ No plant info or user profile available');
+    return null;
+  }
+
+  // Forza la visualizzazione se abbiamo qualsiasi dato
+  const hasAnyPlantData = plantInfo && (
+    plantInfo.symptoms || 
+    plantInfo.wateringFrequency || 
+    plantInfo.lightExposure || 
+    plantInfo.name || 
+    plantInfo.uploadedImageUrl ||
+    plantInfo.isIndoor !== undefined
+  );
+
+  const hasUserData = userProfile && (
+    userProfile.first_name || 
+    userProfile.firstName || 
+    userProfile.email
+  );
+
+  if (!hasAnyPlantData && !hasUserData) {
+    console.log('⚠️ No relevant data to display');
     return null;
   }
 
@@ -35,11 +58,11 @@ const UserPlantSummary: React.FC = () => {
   const birthPlace = userProfile?.birth_place || userProfile?.birthPlace || "Non specificato";
 
   // Dati della pianta con fallback migliori
-  const plantName = plantInfo?.name || "Specie da identificare";
-  const environment = plantInfo?.isIndoor !== undefined ? (plantInfo.isIndoor ? "Interno" : "Esterno") : "Non specificato";
-  const lightExposure = plantInfo?.lightExposure || "Non specificata";
-  const wateringFrequency = plantInfo?.wateringFrequency || "Non specificata";
-  const symptoms = plantInfo?.symptoms || "Non specificati";
+  const plantName = plantInfo?.name || "Specie da identificare durante la consulenza";
+  const environment = plantInfo?.isIndoor !== undefined ? (plantInfo.isIndoor ? "Interno" : "Esterno") : "Da specificare durante la consulenza";
+  const lightExposure = plantInfo?.lightExposure || "Da specificare durante la consulenza";
+  const wateringFrequency = plantInfo?.wateringFrequency || "Da specificare durante la consulenza";
+  const symptoms = plantInfo?.symptoms || "Da descrivere dettagliatamente durante la consulenza";
 
   // Mappe per rendere più leggibili i valori
   const wateringMap: { [key: string]: string } = {
@@ -53,12 +76,12 @@ const UserPlantSummary: React.FC = () => {
   };
 
   const exposureMap: { [key: string]: string } = {
-    'sole-diretto': 'Sole diretto',
-    'sole-parziale': 'Sole parziale',
-    'ombra-parziale': 'Ombra parziale',
-    'ombra-completa': 'Ombra completa',
-    'luce-indiretta': 'Luce indiretta',
-    'luce-artificiale': 'Luce artificiale'
+    'sole-diretto': 'Sole diretto (pieno sole per molte ore al giorno)',
+    'sole-parziale': 'Sole parziale (alcune ore di sole diretto)',
+    'ombra-parziale': 'Ombra parziale (luce filtrata)',
+    'ombra-completa': 'Ombra completa (nessun sole diretto)',
+    'luce-indiretta': 'Luce indiretta (luminoso ma senza sole diretto)',
+    'luce-artificiale': 'Luce artificiale (illuminazione LED/neon)'
   };
 
   const wateringText = wateringMap[wateringFrequency] || wateringFrequency;
@@ -71,68 +94,74 @@ const UserPlantSummary: React.FC = () => {
         <span>Dati inviati automaticamente all'esperto</span>
       </div>
       
+      {/* Foto della pianta - SEMPRE IN EVIDENZA SE PRESENTE */}
+      {plantInfo?.uploadedImageUrl && (
+        <div className="mb-4 p-3 bg-white rounded-lg border border-green-100">
+          <div className="font-semibold text-green-800 mb-3 flex items-center gap-2">
+            <span>📸</span>
+            <span>Foto della tua pianta:</span>
+          </div>
+          <div className="flex justify-center">
+            <img 
+              src={plantInfo.uploadedImageUrl} 
+              alt="Immagine pianta" 
+              className="rounded border max-w-full max-h-64 object-cover shadow-md cursor-pointer hover:shadow-lg transition-shadow" 
+              onClick={() => window.open(plantInfo.uploadedImageUrl, '_blank')}
+            />
+          </div>
+          <p className="text-center text-xs text-gray-600 mt-2">Clicca per ingrandire</p>
+        </div>
+      )}
+      
       {/* Dati della pianta */}
-      <div className="mb-4 p-3 bg-white rounded-lg border border-green-100">
-        <div className="font-semibold text-green-800 mb-3 flex items-center gap-2">
-          <span>🌱</span>
-          <span>Informazioni della pianta:</span>
-        </div>
-        <div className="space-y-2">
-          <div className="flex items-start gap-2">
-            <span className="text-green-600 mt-0.5">🏷️</span> 
-            <div>
-              <span className="font-medium">Nome/Tipo pianta:</span>
-              <div className="text-gray-700">{plantName}</div>
-            </div>
+      {hasAnyPlantData && (
+        <div className="mb-4 p-3 bg-white rounded-lg border border-green-100">
+          <div className="font-semibold text-green-800 mb-3 flex items-center gap-2">
+            <span>🌱</span>
+            <span>Informazioni della pianta:</span>
           </div>
-          <div className="flex items-start gap-2">
-            <span className="text-green-600 mt-0.5">🏠</span> 
-            <div>
-              <span className="font-medium">Ambiente:</span>
-              <div className="text-gray-700">{environment}</div>
-            </div>
-          </div>
-          <div className="flex items-start gap-2">
-            <span className="text-green-600 mt-0.5">☀️</span> 
-            <div>
-              <span className="font-medium">Esposizione alla luce:</span>
-              <div className="text-gray-700">{exposureText}</div>
-            </div>
-          </div>
-          <div className="flex items-start gap-2">
-            <span className="text-green-600 mt-0.5">💧</span> 
-            <div>
-              <span className="font-medium">Frequenza irrigazione:</span>
-              <div className="text-gray-700">{wateringText}</div>
-            </div>
-          </div>
-          <div className="flex items-start gap-2">
-            <span className="text-red-600 mt-0.5">🦠</span> 
-            <div>
-              <span className="font-medium">Sintomi osservati:</span>
-              <div className="text-gray-700">{symptoms}</div>
-            </div>
-          </div>
-          
-          {plantInfo?.uploadedImageUrl && (
-            <div className="mt-3 pt-2 border-t border-green-100">
-              <div className="flex items-center gap-2 mb-2">
-                <span className="text-green-600">📸</span>
-                <span className="font-medium">Foto della pianta allegata:</span>
+          <div className="space-y-2">
+            <div className="flex items-start gap-2">
+              <span className="text-green-600 mt-0.5">🏷️</span> 
+              <div>
+                <span className="font-medium">Nome/Tipo pianta:</span>
+                <div className="text-gray-700">{plantName}</div>
               </div>
-              <img 
-                src={plantInfo.uploadedImageUrl} 
-                alt="Immagine pianta" 
-                className="rounded border max-w-full h-40 object-cover shadow-sm cursor-pointer hover:shadow-md transition-shadow" 
-                onClick={() => window.open(plantInfo.uploadedImageUrl, '_blank')}
-              />
             </div>
-          )}
+            <div className="flex items-start gap-2">
+              <span className="text-green-600 mt-0.5">🏠</span> 
+              <div>
+                <span className="font-medium">Ambiente:</span>
+                <div className="text-gray-700">{environment}</div>
+              </div>
+            </div>
+            <div className="flex items-start gap-2">
+              <span className="text-green-600 mt-0.5">☀️</span> 
+              <div>
+                <span className="font-medium">Esposizione alla luce:</span>
+                <div className="text-gray-700">{exposureText}</div>
+              </div>
+            </div>
+            <div className="flex items-start gap-2">
+              <span className="text-green-600 mt-0.5">💧</span> 
+              <div>
+                <span className="font-medium">Frequenza irrigazione:</span>
+                <div className="text-gray-700">{wateringText}</div>
+              </div>
+            </div>
+            <div className="flex items-start gap-2">
+              <span className="text-red-600 mt-0.5">🦠</span> 
+              <div>
+                <span className="font-medium">Sintomi osservati:</span>
+                <div className="text-gray-700">{symptoms}</div>
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Dati personali */}
-      {userProfile && (
+      {hasUserData && (
         <div className="p-3 bg-white rounded-lg border border-green-100">
           <div className="font-semibold text-green-800 mb-3 flex items-center gap-2">
             <span>👤</span>

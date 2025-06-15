@@ -51,6 +51,27 @@ export const ChatInitializer: React.FC<ChatInitializerProps> = ({
           return;
         }
 
+        // Verifica se abbiamo QUALSIASI dato da inviare
+        const hasPlantData = plantInfo && (
+          plantInfo.symptoms || 
+          plantInfo.wateringFrequency || 
+          plantInfo.lightExposure || 
+          plantInfo.name || 
+          plantInfo.uploadedImageUrl ||
+          plantInfo.isIndoor !== undefined
+        );
+
+        const hasUserData = userProfile && (
+          userProfile.first_name || 
+          userProfile.firstName || 
+          userProfile.email
+        );
+
+        if (!hasPlantData && !hasUserData) {
+          console.log('[AUTO-DATA ⚠️] Nessun dato significativo da inviare');
+          return;
+        }
+
         // Costruisci i dati della pianta sempre, anche se incompleti
         const plantData = {
           symptoms: plantInfo?.symptoms || 'Da descrivere durante la consulenza',
@@ -74,7 +95,9 @@ export const ChatInitializer: React.FC<ChatInitializerProps> = ({
 
         console.log('[AUTO-DATA 📤] Invio Dati:', { 
           plantData: { ...plantData, hasImage: !!plantData.imageUrl },
-          userData
+          userData,
+          hasPlantData,
+          hasUserData
         });
 
         const success = await ConsultationDataService.sendInitialConsultationData(
