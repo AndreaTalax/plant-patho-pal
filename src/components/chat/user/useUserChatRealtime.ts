@@ -151,9 +151,9 @@ export const useUserChatRealtime = (userId: string) => {
       setMessages(prev => [...prev, tempMessage]);
 
       // Send message to backend: text (and image as optional 5th arg)
-      let success: boolean;
+      let message: any; // DatabaseMessage | null
       if (imageUrl) {
-        success = await sendMessageService(
+        message = await sendMessageService(
           conversation.id,
           userId,
           EXPERT_ID,
@@ -161,7 +161,7 @@ export const useUserChatRealtime = (userId: string) => {
           imageUrl
         );
       } else {
-        success = await sendMessageService(
+        message = await sendMessageService(
           conversation.id,
           userId,
           EXPERT_ID,
@@ -169,7 +169,7 @@ export const useUserChatRealtime = (userId: string) => {
         );
       }
 
-      if (!success) {
+      if (!message) {
         // Rimuovi messaggio temp se invio fallito
         setMessages(prev => prev.filter(msg => msg.id !== tempMessage.id));
         toast.error("Errore nell'invio del messaggio");
