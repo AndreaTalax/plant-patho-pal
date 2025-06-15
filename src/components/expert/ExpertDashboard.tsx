@@ -4,12 +4,23 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { MessageSquare, Clock, CheckCircle, AlertCircle, User, Calendar } from 'lucide-react';
+import { MessageSquare, Clock, CheckCircle, AlertCircle, User, Calendar, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { MARCO_NIGRO_ID } from '@/components/phytopathologist';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 
 interface Consultation {
   id: string;
@@ -55,6 +66,7 @@ const ExpertDashboard = () => {
   const [consultations, setConsultations] = useState<Consultation[]>([]);
   const [conversations, setConversations] = useState<ConversationSummary[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deletingConsultation, setDeletingConsultation] = useState<string | null>(null);
 
   useEffect(() => {
     loadExpertData();
@@ -204,6 +216,38 @@ const ExpertDashboard = () => {
     }
   };
 
+  // Funzione per eliminare consultazione
+  const handleDeleteConsultation = async (consultationId: string) => {
+    try {
+      setDeletingConsultation(consultationId);
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error('Sessione scaduta');
+        return;
+      }
+
+      const response = await supabase.functions.invoke('delete-consultation', {
+        body: { consultationId },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+
+      if (response.error) {
+        throw new Error(response.error.message || 'Errore durante l\'eliminazione');
+      }
+
+      // Ricarica i dati
+      await loadExpertData();
+      toast.success('Consultazione eliminata con successo');
+    } catch (error: any) {
+      console.error('Error deleting consultation:', error);
+      toast.error(error.message || 'Errore durante l\'eliminazione della consultazione');
+    } finally {
+      setDeletingConsultation(null);
+    }
+  };
+
   /**
   * Returns a styled badge component based on the provided status.
   * @example
@@ -302,7 +346,40 @@ const ExpertDashboard = () => {
                         <div className="text-sm text-gray-500">{consultation.user_profile?.email || 'Email non disponibile'}</div>
                       </div>
                     </CardTitle>
-                    {getStatusBadge(consultation.status)}
+                    <div className="flex items-center gap-2">
+                      {getStatusBadge(consultation.status)}
+                      {/* Pulsante Elimina - Solo per admin */}
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                            disabled={deletingConsultation === consultation.id}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Elimina Consultazione</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Sei sicuro di voler eliminare questa consultazione di {getUserDisplayName(consultation.user_profile)}? 
+                              Questa azione non può essere annullata.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Annulla</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => handleDeleteConsultation(consultation.id)}
+                              className="bg-red-600 hover:bg-red-700"
+                            >
+                              Elimina
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -393,19 +470,21 @@ const ExpertDashboard = () => {
                         </div>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <div className="text-sm text-gray-500">
-                        {conversation.last_message_timestamp && 
-                          formatDistanceToNow(new Date(conversation.last_message_timestamp), {
-                            addSuffix: true,
-                            locale: it
-                          })
-                        }
+                    <div className="flex items-center gap-2">
+                      <div className="text-right">
+                        <div className="text-sm text-gray-500">
+                          {conversation.last_message_timestamp && 
+                            formatDistanceToNow(new Date(conversation.last_message_timestamp), {
+                              addSuffix: true,
+                              locale: it
+                            })
+                          }
+                        </div>
+                        <Button size="sm" variant="outline" className="mt-2">
+                          <MessageSquare className="h-4 w-4 mr-1" />
+                          Apri Chat
+                        </Button>
                       </div>
-                      <Button size="sm" variant="outline" className="mt-2">
-                        <MessageSquare className="h-4 w-4 mr-1" />
-                        Apri Chat
-                      </Button>
                     </div>
                   </div>
                 </CardContent>

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client'; 
@@ -6,8 +7,21 @@ import ChatMessage from '../ChatMessage';
 import MessageInput from '../MessageInput';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { MessageCircle, Users, Clock } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { MessageCircle, Users, Clock, Trash2 } from 'lucide-react';
 import { MARCO_NIGRO_ID } from '@/components/phytopathologist';
+import { toast } from 'sonner';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 
 interface ConversationListItem {
   id: string;
@@ -28,6 +42,7 @@ export const ExpertRealTimeChat: React.FC = () => {
   const [conversations, setConversations] = useState<ConversationListItem[]>([]);
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [deletingConversation, setDeletingConversation] = useState<string | null>(null);
 
   // Load conversations list
   const loadConversations = async () => {
@@ -36,7 +51,7 @@ export const ExpertRealTimeChat: React.FC = () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
 
-      // Recupera tutte le conversazioni dell’esperto
+      // Recupera tutte le conversazioni dell'esperto
       const response = await fetch('/api/get-conversations', {
         headers: {
           'Authorization': `Bearer ${session.access_token}`
@@ -53,7 +68,7 @@ export const ExpertRealTimeChat: React.FC = () => {
           let lastMessageAt = conv.last_message_at;
           let unread_count = conv.unread_count || 0;
 
-          // Fallback: se non c’è un message brevity, prendi l’ultimo dalla tabella messages, anche se autoSent
+          // Fallback: se non c'è un message brevity, prendi l'ultimo dalla tabella messages, anche se autoSent
           if (!lastMessageText) {
             const { data: messages } = await supabase
               .from('messages')
@@ -101,6 +116,43 @@ export const ExpertRealTimeChat: React.FC = () => {
       console.error('Error loading conversations:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Funzione per eliminare conversazione
+  const handleDeleteConversation = async (conversationId: string) => {
+    try {
+      setDeletingConversation(conversationId);
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error('Sessione scaduta');
+        return;
+      }
+
+      const response = await supabase.functions.invoke('delete-conversation', {
+        body: { conversationId },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+
+      if (response.error) {
+        throw new Error(response.error.message || 'Errore durante l\'eliminazione');
+      }
+
+      // Se la conversazione eliminata era quella selezionata, deseleziona
+      if (selectedConversationId === conversationId) {
+        setSelectedConversationId(null);
+      }
+
+      // Ricarica la lista delle conversazioni
+      await loadConversations();
+      toast.success('Conversazione eliminata con successo');
+    } catch (error: any) {
+      console.error('Error deleting conversation:', error);
+      toast.error(error.message || 'Errore durante l\'eliminazione della conversazione');
+    } finally {
+      setDeletingConversation(null);
     }
   };
 
@@ -161,13 +213,15 @@ export const ExpertRealTimeChat: React.FC = () => {
             conversations.map((conv) => (
               <div
                 key={conv.id}
-                onClick={() => setSelectedConversationId(conv.id)}
-                className={`p-4 border-b border-gray-100 cursor-pointer hover:bg-white transition-colors ${
+                className={`p-4 border-b border-gray-100 hover:bg-white transition-colors ${
                   selectedConversationId === conv.id ? 'bg-white border-l-4 border-l-drplant-green' : ''
                 }`}
               >
                 <div className="flex items-start justify-between">
-                  <div className="flex-1">
+                  <div 
+                    className="flex-1 cursor-pointer"
+                    onClick={() => setSelectedConversationId(conv.id)}
+                  >
                     <div className="flex items-center gap-2">
                       <h3 className="font-medium text-gray-900">
                         {conv.user_profile?.first_name} {conv.user_profile?.last_name}
@@ -189,6 +243,40 @@ export const ExpertRealTimeChat: React.FC = () => {
                       <Clock className="h-3 w-3" />
                       {conv.last_message_at ? new Date(conv.last_message_at).toLocaleString('it-IT') : ''}
                     </div>
+                  </div>
+                  
+                  {/* Pulsante Elimina - Solo per admin */}
+                  <div className="ml-2">
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                          disabled={deletingConversation === conv.id}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Elimina Conversazione</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Sei sicuro di voler eliminare questa conversazione con {conv.user_profile?.first_name} {conv.user_profile?.last_name}? 
+                            Questa azione eliminerà anche tutti i messaggi associati e non può essere annullata.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Annulla</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => handleDeleteConversation(conv.id)}
+                            className="bg-red-600 hover:bg-red-700"
+                          >
+                            Elimina
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </div>
                 </div>
               </div>
