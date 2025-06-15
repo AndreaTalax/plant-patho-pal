@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { useUserChatRealtime } from './user/useUserChatRealtime';
 import { usePlantInfo } from '@/context/PlantInfoContext';
@@ -198,6 +197,7 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
           senderId={userId}
           recipientId="07c7fe19-33c3-4782-b9a0-4e87c8aa7044"
           disabledInput={!userId}
+          variant="persistent"
         />
       </div>
       {!!connectionError && (
