@@ -139,11 +139,11 @@ const ExpertDashboard = () => {
         setConsultations(consultationsWithProfiles);
       }
 
-      // Load conversations
+      // Load conversations - Fix: Use the actual UUID instead of string
       const { data: conversationsData, error: conversationsError } = await supabase
         .from('conversations')
         .select('*')
-        .eq('expert_id', 'MARCO_NIGRO_ID')
+        .eq('expert_id', MARCO_NIGRO_ID)
         .order('updated_at', { ascending: false });
 
       if (conversationsError) {
