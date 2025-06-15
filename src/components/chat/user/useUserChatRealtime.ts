@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { supabase, EXPERT_ID } from '@/integrations/supabase/client';
@@ -61,7 +62,7 @@ export const useUserChatRealtime = (userId: string) => {
     initializeExpertChat();
   }, [userId]);
 
-  // Enhanced realtime subscription for messages with deduplication
+  // Enhanced realtime subscription for messages with improved deduplication
   useEffect(() => {
     if (!currentDbConversation?.id) return;
     
@@ -75,27 +76,40 @@ export const useUserChatRealtime = (userId: string) => {
           filter: `conversation_id=eq.${currentDbConversation.id}`
         }, 
         (payload) => {
+          console.log('📨 New realtime message received:', payload.new);
           const newMsg = payload.new;
           const formattedMessage = convertToUIMessage(newMsg as any);
 
           setMessages(prev => {
-            // Controlla se il messaggio reale corrisponde a uno temporaneo: rimuovi il temporaneo
-            const tempIdx = prev.findIndex(
-              msg => msg.id.startsWith('temp-') &&
-                msg.text.trim() === formattedMessage.text.trim() &&
-                msg.sender === formattedMessage.sender
-            );
-            let filtered = [...prev];
-            if (tempIdx !== -1) {
-              console.log('🧹 Rimuovo messaggio temporaneo duplicato:', prev[tempIdx]);
-              filtered.splice(tempIdx, 1);
+            console.log('📋 Current messages before update:', prev.length);
+            
+            // Remove any temporary message that matches this real message
+            const withoutTemporary = prev.filter(msg => {
+              if (!msg.id.startsWith('temp-')) return true;
+              
+              // Check if this temp message matches the incoming real message
+              const textMatches = msg.text.trim() === formattedMessage.text.trim();
+              const senderMatches = msg.sender === formattedMessage.sender;
+              const imageMatches = msg.image_url === formattedMessage.image_url;
+              
+              if (textMatches && senderMatches && imageMatches) {
+                console.log('🧹 Removing temporary message:', msg.id);
+                return false;
+              }
+              return true;
+            });
+            
+            // Check if real message already exists
+            const messageExists = withoutTemporary.some(msg => msg.id === formattedMessage.id);
+            if (messageExists) {
+              console.log('⚠️ Real message already exists, skipping:', formattedMessage.id);
+              return withoutTemporary;
             }
-            // Aggiungi il messaggio reale SOLO se non esiste già (confronta id reale)
-            const exists = filtered.find(msg => msg.id === formattedMessage.id);
-            if (exists) {
-              return filtered;
-            }
-            return [...filtered, formattedMessage];
+            
+            console.log('✅ Adding new real message:', formattedMessage.id);
+            const updated = [...withoutTemporary, formattedMessage];
+            console.log('📋 Updated messages count:', updated.length);
+            return updated;
           });
           
           if (formattedMessage.sender === 'expert' && 
@@ -117,7 +131,7 @@ export const useUserChatRealtime = (userId: string) => {
     };
   }, [currentDbConversation?.id]);
   
-  // Send message function - robust version
+  // Improved send message function
   const handleSendMessage = async (text: string, imageUrl?: string) => {
     if ((!text.trim() && !imageUrl)) {
       toast.error("Il messaggio non può essere vuoto");
@@ -125,14 +139,17 @@ export const useUserChatRealtime = (userId: string) => {
     }
 
     if (isSending) {
+      console.log('⚠️ Already sending a message, skipping');
       return;
     }
 
-    try {
-      setIsSending(true);
+    console.log('📤 Starting to send message:', { text, imageUrl });
+    setIsSending(true);
 
+    try {
       let conversation = currentDbConversation;
       if (!conversation) {
+        console.log('🔄 Creating new conversation...');
         conversation = await findOrCreateConversation(userId);
         if (!conversation) {
           toast.error("Impossibile creare la conversazione");
@@ -141,7 +158,7 @@ export const useUserChatRealtime = (userId: string) => {
         setCurrentDbConversation(conversation);
       }
 
-      // Messaggio TEMPORANEO: text o/and image
+      // Create temporary message for immediate UI feedback
       const tempMessage: Message = {
         id: `temp-${Date.now()}-${Math.random()}`,
         sender: 'user',
@@ -149,42 +166,42 @@ export const useUserChatRealtime = (userId: string) => {
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         ...(imageUrl ? { image_url: imageUrl } : {})
       };
-      setMessages(prev => [...prev, tempMessage]);
-      console.log('⌛ Messaggio temporaneo aggiunto:', tempMessage);
+      
+      console.log('⌛ Adding temporary message:', tempMessage.id);
+      setMessages(prev => {
+        const updated = [...prev, tempMessage];
+        console.log('📋 Messages after temp add:', updated.length);
+        return updated;
+      });
 
-      let msgSent: any = null;
+      // Send message to backend
+      console.log('🚀 Sending to backend...');
+      const result = await sendMessageService(
+        conversation.id,
+        userId,
+        EXPERT_ID,
+        text || "📸 Immagine allegata",
+        imageUrl
+      );
 
-      if (imageUrl) {
-        // sendMessageService expects (conversationId, senderId, recipientId, text, [imageUrl])
-        msgSent = await sendMessageService(
-          conversation.id,
-          userId,
-          EXPERT_ID,
-          text,
-          imageUrl
-        );
-      } else {
-        msgSent = await sendMessageService(
-          conversation.id,
-          userId,
-          EXPERT_ID,
-          text
-        );
-      }
-      console.log('🚚 sendMessageService risultato:', msgSent);
+      console.log('🚚 Backend response:', result);
 
-      if (!msgSent) {
-        // Rimuovi messaggio temp se invio fallito
+      if (!result) {
+        console.error('❌ Backend returned null/false');
+        // Remove temporary message on failure
         setMessages(prev => prev.filter(msg => msg.id !== tempMessage.id));
         toast.error("Errore nell'invio del messaggio");
         return;
       }
-      // Messaggio reale arriverà via realtime e il temp verrà eliminato
+
+      console.log('✅ Message sent successfully');
+      // Real message will arrive via realtime and temporary will be removed
 
     } catch (error) {
+      console.error('❌ Error sending message:', error);
+      // Remove all temporary messages on error
       setMessages(prev => prev.filter(msg => !msg.id.startsWith('temp-')));
       toast.error("Errore nell'invio del messaggio");
-      console.error('❌ Errore nell\'invio:', error);
     } finally {
       setIsSending(false);
     }

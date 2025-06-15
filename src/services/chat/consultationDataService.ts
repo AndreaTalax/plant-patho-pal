@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { MARCO_NIGRO_ID } from '@/components/phytopathologist';
 import { toast } from 'sonner';
@@ -33,7 +34,12 @@ export class ConsultationDataService {
     fromAIDiagnosis: boolean = false
   ): Promise<boolean> {
     try {
-      console.log('📤 Sending consultation data...');
+      console.log('📤 Starting consultation data send...', {
+        conversationId,
+        hasImage: !!plantData.imageUrl,
+        plantName: plantData.plantName,
+        userProfile: userProfile
+      });
 
       // Ottieni l'ID utente corrente
       const { data: { user } } = await supabase.auth.getUser();
@@ -42,11 +48,11 @@ export class ConsultationDataService {
         return false;
       }
 
-      // Messaggio principale con i dati (ora include sempre i dati personali)
+      // Messaggio principale con i dati (sempre include dati personali)
       let mainMessage = `🌿 **Nuova Richiesta di Consulenza**
 
 👤 **Dati Utente:**
-- Nome: ${userProfile.firstName || (userProfile as any).first_name || ''} ${userProfile.lastName || (userProfile as any).last_name || ''}
+- Nome: ${userProfile.firstName || (userProfile as any).first_name || 'Non specificato'} ${userProfile.lastName || (userProfile as any).last_name || ''}
 - Email: ${userProfile.email || 'Non specificata'}
 - Data di nascita: ${userProfile.birthDate || (userProfile as any).birth_date || 'Non specificata'}
 - Luogo di nascita: ${userProfile.birthPlace || (userProfile as any).birth_place || 'Non specificato'}
@@ -67,10 +73,14 @@ export class ConsultationDataService {
 - Stato: ${plantData.aiDiagnosis.diseaseDetection?.length > 0 ? 'Problemi rilevati' : 'Apparentemente sana'}`;
       }
 
-      mainMessage += `
+      if (plantData.imageUrl) {
+        mainMessage += `\n\n📸 **Immagine della pianta allegata**`;
+      }
 
-*Dati (compresi dati personali) inviati automaticamente dal sistema Dr.Plant*`;
+      mainMessage += `\n\n*Dati (compresi dati personali) inviati automaticamente dal sistema Dr.Plant*`;
 
+      console.log('📝 Sending main consultation message...');
+      
       // Invia il messaggio principale
       const { error: messageError } = await supabase
         .from('messages')
@@ -93,8 +103,11 @@ export class ConsultationDataService {
         return false;
       }
 
+      console.log('✅ Main consultation message sent');
+
       // Invia l'immagine come messaggio separato se disponibile
       if (plantData.imageUrl) {
+        console.log('📸 Sending plant image as separate message...');
         await this.sendImageMessage(conversationId, user.id, plantData.imageUrl);
       }
 
@@ -116,7 +129,7 @@ export class ConsultationDataService {
     imageUrl: string
   ): Promise<void> {
     try {
-      console.log('📸 Sending plant image as separate message...');
+      console.log('📸 Preparing to send image message with URL:', imageUrl);
 
       const imageMessage = `📸 **Immagine della Pianta**`;
       
@@ -141,9 +154,9 @@ export class ConsultationDataService {
         throw error;
       }
 
-      console.log('✅ Plant image sent successfully');
+      console.log('✅ Plant image message sent successfully');
     } catch (error) {
-      console.error('❌ Failed to send image:', error);
+      console.error('❌ Failed to send image message:', error);
       // Non bloccare il processo principale se l'immagine non viene inviata
     }
   }
@@ -153,13 +166,21 @@ export class ConsultationDataService {
    */
   static async isConsultationDataSent(conversationId: string): Promise<boolean> {
     try {
+      console.log('🔍 Checking if consultation data already sent for conversation:', conversationId);
+      
       const { data: messages, error } = await supabase
         .from('messages')
-        .select('metadata')
+        .select('metadata, content')
         .eq('conversation_id', conversationId)
         .not('metadata', 'is', null);
 
-      if (error || !messages) {
+      if (error) {
+        console.error('❌ Error checking consultation data:', error);
+        return false;
+      }
+
+      if (!messages || messages.length === 0) {
+        console.log('📭 No messages with metadata found');
         return false;
       }
 
@@ -170,6 +191,7 @@ export class ConsultationDataService {
          msg.metadata.autoSent === true)
       );
 
+      console.log('🔍 Consultation data already sent:', hasConsultationData);
       return hasConsultationData;
     } catch (error) {
       console.error('❌ Error checking consultation data status:', error);

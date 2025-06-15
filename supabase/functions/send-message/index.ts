@@ -26,12 +26,23 @@ serve(async (req) => {
     const { data: { user } } = await supabaseClient.auth.getUser(token);
     
     if (!user) {
+      console.error("❌ User not authenticated");
       throw new Error("User not authenticated");
     }
 
     const { conversationId, recipientId, text, imageUrl, products } = await req.json();
 
+    console.log("📤 Received message data:", {
+      conversationId,
+      recipientId,
+      textLength: text?.length || 0,
+      hasImage: !!imageUrl,
+      hasProducts: !!products,
+      senderId: user.id
+    });
+
     if (!conversationId || !recipientId || !text) {
+      console.error("❌ Missing required fields:", { conversationId, recipientId, text });
       throw new Error("Missing required fields: conversationId, recipientId, text");
     }
 
@@ -44,34 +55,44 @@ serve(async (req) => {
       .single();
 
     if (conversationError || !conversation) {
+      console.error("❌ Conversation access error:", conversationError);
       throw new Error("Conversation not found or access denied");
     }
 
+    console.log("✅ Conversation access verified");
+
     // Insert the message
+    const messageData = {
+      conversation_id: conversationId,
+      sender_id: user.id,
+      recipient_id: recipientId,
+      content: text,
+      text: text,
+      image_url: imageUrl || null,
+      products: products || null,
+      metadata: {
+        timestamp: new Date().toISOString(),
+        messageType: imageUrl ? 'image' : 'text'
+      }
+    };
+
+    console.log("💾 Inserting message:", messageData);
+
     const { data: message, error: messageError } = await supabaseClient
       .from('messages')
-      .insert({
-        conversation_id: conversationId,
-        sender_id: user.id,
-        recipient_id: recipientId,
-        content: text,
-        text: text,
-        image_url: imageUrl || null,
-        products: products || null,
-        metadata: {
-          timestamp: new Date().toISOString(),
-          messageType: imageUrl ? 'image' : 'text'
-        }
-      })
+      .insert(messageData)
       .select()
       .single();
 
     if (messageError) {
+      console.error("❌ Message insert error:", messageError);
       throw messageError;
     }
 
+    console.log("✅ Message inserted successfully:", message.id);
+
     // Update conversation last message
-    await supabaseClient
+    const { error: updateError } = await supabaseClient
       .from('conversations')
       .update({
         last_message_text: text,
@@ -79,6 +100,13 @@ serve(async (req) => {
         updated_at: new Date().toISOString()
       })
       .eq('id', conversationId);
+
+    if (updateError) {
+      console.error("⚠️ Warning: Could not update conversation:", updateError);
+      // Non bloccare il processo se l'update della conversazione fallisce
+    }
+
+    console.log("✅ Send message operation completed successfully");
 
     return new Response(JSON.stringify({ 
       success: true, 
@@ -90,7 +118,7 @@ serve(async (req) => {
     });
 
   } catch (error) {
-    console.error("Error sending message:", error);
+    console.error("❌ Error in send-message function:", error);
     return new Response(JSON.stringify({ 
       error: error.message || "Failed to send message" 
     }), {
