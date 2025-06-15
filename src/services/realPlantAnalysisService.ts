@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { showErrorToast, showSuccessToast } from '@/components/ui/error-toast';
 
@@ -23,6 +22,7 @@ export interface PlantAnalysisResult {
     reason?: string;
     timestamp?: string;
     imageSize?: number;
+    suggestions?: string[];
   };
 }
 
