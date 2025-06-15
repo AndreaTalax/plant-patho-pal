@@ -1,5 +1,80 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { corsHeaders } from "../_shared/cors.ts";
+
+// EPPO symptoms database - moved directly into the function
+const eppoSymptoms = [
+  {
+    keyword: 'citrus greening',
+    name: 'Citrus Greening',
+    description: 'A serious bacterial disease affecting citrus trees',
+    category: 'bacterial disease',
+    symptoms: ['yellow mottling', 'leaf asymmetry', 'vein yellowing', 'stunted growth', 'blotchy mottle']
+  },
+  {
+    keyword: 'citrus canker',
+    name: 'Citrus Canker',
+    description: 'A bacterial disease causing lesions on citrus fruit, leaves, and stems',
+    category: 'bacterial disease',
+    symptoms: ['water-soaked lesions', 'circular lesions', 'raised corky tissue', 'chlorotic halo', 'ruptured epidermis']
+  },
+  {
+    keyword: 'xylella',
+    name: 'Xylella Fastidiosa',
+    description: 'A bacterial pathogen affecting multiple host plants',
+    category: 'bacterial disease',
+    symptoms: ['leaf scorch', 'marginal leaf burn', 'wilting', 'dieback', 'stunted growth']
+  },
+  {
+    keyword: 'fire blight',
+    name: 'Fire Blight',
+    description: 'A destructive bacterial disease affecting apple, pear and related species',
+    category: 'bacterial disease',
+    symptoms: ['blackened leaves', 'shepherd\'s crook', 'bacterial ooze', 'cankers', 'fruit mummification']
+  },
+  {
+    keyword: 'sudden oak death',
+    name: 'Sudden Oak Death',
+    description: 'A disease caused by Phytophthora ramorum affecting oak trees',
+    category: 'fungal disease',
+    symptoms: ['trunk cankers', 'bleeding trunk', 'wilting foliage', 'black leaf lesions', 'shoot dieback']
+  },
+  {
+    keyword: 'ash dieback',
+    name: 'Ash Dieback',
+    description: 'A serious disease of ash trees caused by a fungus',
+    category: 'fungal disease',
+    symptoms: ['diamond-shaped lesions', 'wilting leaves', 'crown dieback', 'bark lesions', 'wood discoloration']
+  },
+  {
+    keyword: 'dutch elm disease',
+    name: 'Dutch Elm Disease',
+    description: 'A fungal disease affecting elm trees, spread by bark beetles',
+    category: 'fungal disease',
+    symptoms: ['yellowing foliage', 'wilting leaves', 'vascular discoloration', 'crown dieback', 'bark beetles']
+  },
+  {
+    keyword: 'grape flavescence',
+    name: 'Flavescence Dorée',
+    description: 'A phytoplasma disease affecting grapevines',
+    category: 'phytoplasma disease',
+    symptoms: ['downward leaf rolling', 'leaf discoloration', 'lack of lignification', 'flower abortion', 'berry shrivel']
+  },
+  {
+    keyword: 'bacterial wilt',
+    name: 'Bacterial Wilt',
+    description: 'A bacterial disease affecting a wide range of plants',
+    category: 'bacterial disease',
+    symptoms: ['rapid wilting', 'vascular discoloration', 'bacterial streaming', 'epinasty', 'adventitious roots']
+  },
+  {
+    keyword: 'plum pox',
+    name: 'Plum Pox Virus',
+    description: 'A viral disease affecting stone fruit trees',
+    category: 'viral disease',
+    symptoms: ['chlorotic rings', 'vein yellowing', 'leaf deformation', 'fruit rings', 'fruit deformation']
+  }
+];
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -171,65 +246,83 @@ serve(async (req) => {
       };
     }
 
-    // ---- AGGIUNTA: arricchimento con database EPPO in base al risultato label/pianta/disease e symptoms ---
-
-    import { eppoSymptoms } from '../../src/utils/plant-analysis/eppo-symptoms.ts';
-
+    // Function to enrich analysis with EPPO database
     function enrichWithEppo(analysis) {
       if (!analysis || !analysis.plantName) return analysis;
+      
       const label = analysis.plantName.toLowerCase();
-      // Cerca corrispondenze in eppoSymptoms (per keyword o per sintomi)
-      if (Array.isArray(eppoSymptoms)) {
-        let found = null;
-        for (const db of eppoSymptoms) {
-          if (db.keyword && label.includes(db.keyword)) {
-            found = db;
-            break;
-          }
+      console.log("🔍 Checking EPPO database for:", label);
+      
+      // Search for matches in eppoSymptoms (by keyword or symptoms)
+      let found = null;
+      
+      // First, check by keyword
+      for (const eppoItem of eppoSymptoms) {
+        if (eppoItem.keyword && label.includes(eppoItem.keyword.toLowerCase())) {
+          found = eppoItem;
+          console.log("✅ Found EPPO match by keyword:", eppoItem.keyword);
+          break;
         }
-        if (!found) {
-          // Cerca per sintomi nelle descrizioni delle malattie AI
-          if (analysis.diseases && Array.isArray(analysis.diseases)) {
-            for (const diseaseObj of analysis.diseases) {
-              if (db.symptoms?.some(sym => (diseaseObj.description && diseaseObj.description.toLowerCase().includes(sym.toLowerCase())))) {
-                found = db;
-                break;
+      }
+      
+      // If not found by keyword, check by symptoms in disease descriptions
+      if (!found && analysis.diseases && Array.isArray(analysis.diseases)) {
+        for (const diseaseObj of analysis.diseases) {
+          if (diseaseObj.description) {
+            for (const eppoItem of eppoSymptoms) {
+              if (eppoItem.symptoms && Array.isArray(eppoItem.symptoms)) {
+                const matchingSymptom = eppoItem.symptoms.some(symptom => 
+                  diseaseObj.description.toLowerCase().includes(symptom.toLowerCase())
+                );
+                if (matchingSymptom) {
+                  found = eppoItem;
+                  console.log("✅ Found EPPO match by symptom:", eppoItem.name);
+                  break;
+                }
               }
             }
-          }
-        }
-        if (found) {
-          // Aggiunge al campo diseases, se non già presente
-          const already = analysis.diseases?.some(d => d.name === found.name);
-          if (!already) {
-            analysis.diseases = [
-              ...(analysis.diseases || []),
-              {
-                name: found.name,
-                probability: analysis.confidence || 0.6,
-                description: found.description,
-                treatment: "Consulta normativa EPPO e fitopatologo"
-              }
-            ];
-            // Arricchisce anche le raccomandazioni
-            analysis.recommendations = [
-              ...(analysis.recommendations || []),
-              "Attenzione: Possibile patologia di importanza regolamentata (EPPO)"
-            ];
-            analysis.analysisDetails = {
-              ...analysis.analysisDetails,
-              eppo: {
-                keyword: found.keyword,
-                name: found.name,
-              },
-              source: analysis.analysisDetails?.source || "Plant.id/EPPO AI"
-            }
+            if (found) break;
           }
         }
       }
+      
+      if (found) {
+        // Check if this disease is already in the list
+        const alreadyExists = analysis.diseases?.some(d => d.name === found.name);
+        if (!alreadyExists) {
+          console.log("🆕 Adding EPPO disease to analysis:", found.name);
+          analysis.diseases = [
+            ...(analysis.diseases || []),
+            {
+              name: found.name,
+              probability: analysis.confidence || 0.6,
+              description: found.description,
+              treatment: "Consulta normativa EPPO e fitopatologo per trattamento specifico"
+            }
+          ];
+          
+          // Enrich recommendations
+          analysis.recommendations = [
+            ...(analysis.recommendations || []),
+            "⚠️ Attenzione: Possibile patologia di importanza regolamentata (EPPO)"
+          ];
+          
+          analysis.analysisDetails = {
+            ...analysis.analysisDetails,
+            eppo: {
+              keyword: found.keyword,
+              name: found.name,
+              category: found.category
+            },
+            source: analysis.analysisDetails?.source || "Plant.id/EPPO AI"
+          };
+        }
+      }
+      
       return analysis;
     }
 
+    // Apply EPPO enrichment
     analysis = enrichWithEppo(analysis);
 
     console.log("✅ Analysis completed successfully");
