@@ -140,32 +140,37 @@ export const useUserChatRealtime = (userId: string) => {
     console.log('📤 Starting to send message:', { text, imageUrl });
     setIsSending(true);
 
+    // Create temporary message immediately for instant UI feedback
+    const tempMessage: Message = {
+      id: `temp-${Date.now()}-${Math.random()}`,
+      sender: 'user',
+      text: text || (imageUrl ? "📸 Immagine allegata" : ""),
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      ...(imageUrl ? { image_url: imageUrl } : {})
+    };
+    
+    console.log('⌛ Adding temporary message immediately:', tempMessage.id);
+    
+    // Add message to UI immediately
+    setMessages(prev => {
+      const updated = [...prev, tempMessage];
+      console.log('📋 Messages after immediate temp add:', updated.length);
+      return updated;
+    });
+
     try {
       let conversation = currentDbConversation;
       if (!conversation) {
         console.log('🔄 Creating new conversation...');
         conversation = await findOrCreateConversation(userId);
         if (!conversation) {
+          // Remove temp message on error
+          setMessages(prev => prev.filter(msg => msg.id !== tempMessage.id));
           toast.error("Impossibile creare la conversazione");
           return;
         }
         setCurrentDbConversation(conversation);
       }
-
-      const tempMessage: Message = {
-        id: `temp-${Date.now()}-${Math.random()}`,
-        sender: 'user',
-        text: text || (imageUrl ? "📸 Immagine allegata" : ""),
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        ...(imageUrl ? { image_url: imageUrl } : {})
-      };
-      
-      console.log('⌛ Adding temporary message:', tempMessage.id);
-      setMessages(prev => {
-        const updated = [...prev, tempMessage];
-        console.log('📋 Messages after temp add:', updated.length);
-        return updated;
-      });
 
       console.log('🚀 Sending to backend...');
       const result = await sendMessageService(
@@ -185,11 +190,12 @@ export const useUserChatRealtime = (userId: string) => {
         return;
       }
 
-      console.log('✅ Message sent successfully');
+      console.log('✅ Message sent successfully, waiting for realtime update to replace temp message');
 
     } catch (error) {
       console.error('❌ Error sending message:', error);
-      setMessages(prev => prev.filter(msg => !msg.id.startsWith('temp-')));
+      // Remove temp message on error
+      setMessages(prev => prev.filter(msg => msg.id !== tempMessage.id));
       toast.error("Errore nell'invio del messaggio");
     } finally {
       setIsSending(false);
