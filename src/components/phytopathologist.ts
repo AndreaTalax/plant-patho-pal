@@ -7,7 +7,7 @@ export const MARCO_NIGRO_PROFILE = {
   id: MARCO_NIGRO_ID,
   name: 'Marco Nigro',
   email: 'agrotecnicomarconigro@gmail.com',
-  avatar: 'https://images.unsplash.com/photo-1618160702438-9b02ab6515c9?q=80&w=150&h=150&auto=format&fit=crop&ixlib=rb-4.0.3',
+  avatar: '/lovable-uploads/b86029fe-3c06-4c0e-a5f5-713e820047bf.png',
   isOnline: true,
   specialty: 'Agrotecnico Fitopatologico'
 };
