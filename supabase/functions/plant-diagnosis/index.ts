@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { corsHeaders } from "../_shared/cors.ts";
 
@@ -171,6 +170,67 @@ serve(async (req) => {
         }
       };
     }
+
+    // ---- AGGIUNTA: arricchimento con database EPPO in base al risultato label/pianta/disease e symptoms ---
+
+    import { eppoSymptoms } from '../../src/utils/plant-analysis/eppo-symptoms.ts';
+
+    function enrichWithEppo(analysis) {
+      if (!analysis || !analysis.plantName) return analysis;
+      const label = analysis.plantName.toLowerCase();
+      // Cerca corrispondenze in eppoSymptoms (per keyword o per sintomi)
+      if (Array.isArray(eppoSymptoms)) {
+        let found = null;
+        for (const db of eppoSymptoms) {
+          if (db.keyword && label.includes(db.keyword)) {
+            found = db;
+            break;
+          }
+        }
+        if (!found) {
+          // Cerca per sintomi nelle descrizioni delle malattie AI
+          if (analysis.diseases && Array.isArray(analysis.diseases)) {
+            for (const diseaseObj of analysis.diseases) {
+              if (db.symptoms?.some(sym => (diseaseObj.description && diseaseObj.description.toLowerCase().includes(sym.toLowerCase())))) {
+                found = db;
+                break;
+              }
+            }
+          }
+        }
+        if (found) {
+          // Aggiunge al campo diseases, se non già presente
+          const already = analysis.diseases?.some(d => d.name === found.name);
+          if (!already) {
+            analysis.diseases = [
+              ...(analysis.diseases || []),
+              {
+                name: found.name,
+                probability: analysis.confidence || 0.6,
+                description: found.description,
+                treatment: "Consulta normativa EPPO e fitopatologo"
+              }
+            ];
+            // Arricchisce anche le raccomandazioni
+            analysis.recommendations = [
+              ...(analysis.recommendations || []),
+              "Attenzione: Possibile patologia di importanza regolamentata (EPPO)"
+            ];
+            analysis.analysisDetails = {
+              ...analysis.analysisDetails,
+              eppo: {
+                keyword: found.keyword,
+                name: found.name,
+              },
+              source: analysis.analysisDetails?.source || "Plant.id/EPPO AI"
+            }
+          }
+        }
+      }
+      return analysis;
+    }
+
+    analysis = enrichWithEppo(analysis);
 
     console.log("✅ Analysis completed successfully");
     console.log("📊 Analysis result:", JSON.stringify(analysis, null, 2));

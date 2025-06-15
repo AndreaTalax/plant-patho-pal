@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -69,34 +68,6 @@ const PlantAnalysisResultComponent: React.FC<PlantAnalysisResultProps> = ({
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Analysis Results</h1>
           <p className="text-gray-600">AI-powered plant health assessment</p>
         </div>
-
-        {/* Expert Consultation Status */}
-        {autoSentToExpert && (
-          <Card className="p-6 bg-gradient-to-r from-blue-50 to-drplant-blue/10 border-drplant-blue/20">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="flex-shrink-0">
-                  <div className="w-12 h-12 bg-drplant-blue/20 rounded-full flex items-center justify-center">
-                    <MessageSquare className="h-6 w-6 text-drplant-blue" />
-                  </div>
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-drplant-blue mb-1">Expert Consultation Initiated</h3>
-                  <p className="text-drplant-blue/80">
-                    Your diagnosis has been automatically sent to our phytopathologist expert
-                  </p>
-                </div>
-              </div>
-              <Button 
-                onClick={handleGoToChat} 
-                className="bg-drplant-blue hover:bg-drplant-blue/90 text-white"
-              >
-                Go to Chat
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </div>
-          </Card>
-        )}
 
         {/* Main Result Card */}
         <Card className="overflow-hidden shadow-lg">
