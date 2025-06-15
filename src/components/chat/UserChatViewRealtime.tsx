@@ -3,7 +3,7 @@ import { useUserChatRealtime } from './user/useUserChatRealtime';
 import { usePlantInfo } from '@/context/PlantInfoContext';
 import { useAuth } from '@/context/AuthContext';
 import { ConsultationDataService } from '@/services/chat/consultationDataService';
-import { toast } from 'sonner';
+import { useToast } from '@/hooks/use-toast';
 import ChatHeader from './user/ChatHeader';
 import MessageList from './MessageList';
 import MessageInput from './MessageInput';
@@ -26,9 +26,17 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
     startChatWithExpert,
     currentConversationId
   } = useUserChatRealtime(userId);
+  const { toast, dismiss } = useToast();
+  const [popupDismissed, setPopupDismissed] = React.useState(false);
 
   // Stato per evitare invii multipli durante lo stesso primo caricamento
   const [autoDataSent, setAutoDataSent] = React.useState(false);
+
+  // Dismiss tutti i toast quando si monta la chat per evitare freeze
+  useEffect(() => {
+    dismiss();
+    setPopupDismissed(true);
+  }, []); // Solo al mount
 
   // Nuova logica: invio dati e immagine appena pronto e non già inviato (immediatamente dopo ogni caricamento chat/messaggi)
   useEffect(() => {
@@ -89,17 +97,29 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
         setAutoDataSent(true);
 
         if (success) {
-          toast.success('Dati e foto inviati automaticamente all\'esperto!', {
-            description: 'Marco Nigro ha ricevuto tutte le informazioni e la foto della tua pianta'
+          toast({
+            title: 'Dati e foto inviati automaticamente all\'esperto!',
+            description: 'Marco Nigro ha ricevuto tutte le informazioni e la foto della tua pianta',
+            duration: 4000
           });
         } else {
-          toast.warning('Attenzione: dati automatici non inviati, riprova tra poco.');
+          toast({
+            title: 'Attenzione: dati automatici non inviati, riprova tra poco.',
+            description: '',
+            duration: 4000,
+            variant: 'destructive'
+          });
         }
 
       } catch (error) {
         setAutoDataSent(false);
         console.error('[AUTO-DATA ❌]', error);
-        toast.error('Errore nell\'invio automatico dei dati');
+        toast({
+          title: 'Errore nell\'invio automatico dei dati',
+          description: '',
+          duration: 4000,
+          variant: 'destructive'
+        });
       }
     };
 
@@ -168,6 +188,27 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
     );
   }
 
+  // ERRORE DI CONVERSAZIONE (502)
+  const [connectionError, setConnectionError] = React.useState<string | null>(null);
+  useEffect(() => {
+    // Se non arriva mai un currentConversationId dopo timeout, mostra errore toast
+    if (!currentConversationId && activeChat === 'expert') {
+      const timer = setTimeout(() => {
+        setConnectionError("Impossibile connettersi alla chat. Errore di connessione con il server.");
+        toast({
+          title: "Errore di connessione alla chat",
+          description: "Problemi di connessione o server (502). Riprova tra poco.",
+          duration: 10000,
+          variant: "destructive"
+        });
+      }, 4000);
+      return () => clearTimeout(timer);
+    } else {
+      setConnectionError(null);
+    }
+    // ... non mostra errore se id valido
+  }, [currentConversationId, activeChat, toast]);
+
   if (!activeChat || activeChat !== 'expert') {
     return <EmptyStateView onStartChat={handleStartChat} />;
   }
@@ -181,20 +222,18 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
       {/* Mostra sempre la sintesi dati pianta + persona all'inizio se info completata */}
       {renderSummaryMessage()}
       <MessageList messages={messages} />
-      {/* Verifica che tutti gli id passati siano presenti per MessageInput */}
-      {(currentConversationId && userId) && (
-        <MessageInput 
-          onSendMessage={handleSendMessage}
-          isSending={isSending}
-          conversationId={currentConversationId}
-          senderId={userId}
-          recipientId="07c7fe19-33c3-4782-b9a0-4e87c8aa7044"
-        />
-      )}
-      {/* Se manca currentConversationId, mostra un messaggio di errore/scaricamento */}
-      {(!currentConversationId || !userId) && (
+      {/* Mostra SEMPRE MessageInput, ma se manca conversazione la input è disabled */}
+      <MessageInput 
+        onSendMessage={handleSendMessage}
+        isSending={isSending || !!connectionError}
+        conversationId={currentConversationId || ""}
+        senderId={userId}
+        recipientId="07c7fe19-33c3-4782-b9a0-4e87c8aa7044"
+        disabledInput={!currentConversationId || !!connectionError}
+      />
+      {(!!connectionError) && (
         <div className="p-4 text-center text-red-500 font-medium">
-          Errore nella connessione alla chat. Ricarica la pagina o riprova tra poco.
+          {connectionError}
         </div>
       )}
     </div>

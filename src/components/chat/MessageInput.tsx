@@ -1,4 +1,3 @@
-
 import { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -16,16 +15,18 @@ interface MessageInputProps {
   onSendMessage?: (text: string) => void | Promise<void>;
   isSending?: boolean;
   isMasterAccount?: boolean;
+  disabledInput?: boolean;
 }
 
-const MessageInput = ({ 
-  conversationId, 
-  senderId, 
-  recipientId, 
-  onMessageSent, 
+const MessageInput = ({
+  conversationId,
+  senderId,
+  recipientId,
+  onMessageSent,
   onSendMessage,
   isSending: externalIsSending = false,
-  isMasterAccount = false
+  isMasterAccount = false,
+  disabledInput = false
 }: MessageInputProps) => {
   const [message, setMessage] = useState('');
   const [internalIsSending, setInternalIsSending] = useState(false);
@@ -199,6 +200,8 @@ const MessageInput = ({
             <button
               onClick={removeSelectedImage}
               className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600 transition-colors"
+              tabIndex={-1}
+              disabled={disabledInput}
             >
               <X className="h-3 w-3" />
             </button>
@@ -211,9 +214,11 @@ const MessageInput = ({
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               onKeyPress={handleKeyPress}
-              placeholder="Scrivi il tuo messaggio all'esperto..."
+              placeholder={disabledInput
+                ? "Chat non disponibile. Controlla la connessione e riprova tra poco."
+                : "Scrivi il tuo messaggio all'esperto..."}
               className="min-h-[80px] resize-none border-drplant-green/30 focus:border-drplant-blue focus:ring-drplant-blue/20 rounded-2xl bg-white/90 backdrop-blur-sm"
-              disabled={isSending}
+              disabled={isSending || disabledInput}
             />
           </div>
           
@@ -222,14 +227,14 @@ const MessageInput = ({
             variant="outline"
             size="lg"
             onClick={() => fileInputRef.current?.click()}
-            disabled={isSending}
+            disabled={isSending || disabledInput}
             className="h-[80px] px-4 border-drplant-green/30 hover:bg-drplant-green/10 rounded-2xl"
           >
             <Image className="h-5 w-5" />
           </Button>
           <Button
             onClick={handleSend}
-            disabled={(!message.trim() && !selectedImage) || isSending}
+            disabled={(!message.trim() && !selectedImage) || isSending || disabledInput}
             className="h-[80px] px-6 bg-gradient-to-r from-drplant-green to-drplant-green-dark hover:from-drplant-green-dark hover:to-drplant-green text-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 disabled:opacity-50"
           >
             {isSending ? (
@@ -246,6 +251,7 @@ const MessageInput = ({
           accept="image/*"
           onChange={handleImageSelect}
           className="hidden"
+          disabled={disabledInput}
         />
       </div>
     </div>

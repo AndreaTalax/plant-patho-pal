@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/toast"
 
 const TOAST_LIMIT = 5
-const TOAST_REMOVE_DELAY = 5000 // Ridotto a 5 secondi per chiusura automatica toast
+const TOAST_REMOVE_DELAY = 5000 // 5 secondi
 
 type ToasterToast = ToastProps & {
   id: string
@@ -244,5 +244,12 @@ function useToast() {
     dismiss: (toastId?: string) => dispatch({ type: actionTypes.DISMISS_TOAST, toastId }),
   }
 }
+
+/**
++ * Helper per dismissare tutti i toast subito su richiesta
++ */
++export function dismissAllToasts() {
++  dispatch({ type: actionTypes.DISMISS_TOAST });
++}
 
 export { useToast, toast }
