@@ -246,10 +246,10 @@ function useToast() {
 }
 
 /**
-+ * Helper per dismissare tutti i toast subito su richiesta
-+ */
-+export function dismissAllToasts() {
-+  dispatch({ type: actionTypes.DISMISS_TOAST });
-+}
+ * Helper per dismissare tutti i toast subito su richiesta
+ */
+export function dismissAllToasts() {
+  dispatch({ type: actionTypes.DISMISS_TOAST });
+}
 
 export { useToast, toast }
