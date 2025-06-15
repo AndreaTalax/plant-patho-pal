@@ -25,18 +25,24 @@ export class ConsultationDataBuilder {
     userProfile: UserProfile,
     fromAIDiagnosis: boolean = false
   ): string {
+    const firstName = userProfile.firstName || (userProfile as any).first_name || 'Non specificato';
+    const lastName = userProfile.lastName || (userProfile as any).last_name || '';
+    const email = userProfile.email || 'Non specificata';
+    const birthDate = userProfile.birthDate || (userProfile as any).birth_date || 'Non specificata';
+    const birthPlace = userProfile.birthPlace || (userProfile as any).birth_place || 'Non specificato';
+
     let mainMessage = `🌿 **Nuova Richiesta di Consulenza**
 
 👤 **Dati Utente:**
-- Nome: ${userProfile.firstName || (userProfile as any).first_name || 'Non specificato'} ${userProfile.lastName || (userProfile as any).last_name || ''}
-- Email: ${userProfile.email || 'Non specificata'}
-- Data di nascita: ${userProfile.birthDate || (userProfile as any).birth_date || 'Non specificata'}
-- Luogo di nascita: ${userProfile.birthPlace || (userProfile as any).birth_place || 'Non specificato'}
+- Nome: ${firstName} ${lastName}
+- Email: ${email}
+- Data di nascita: ${birthDate}
+- Luogo di nascita: ${birthPlace}
 
 🌱 **Informazioni della Pianta:**
-- Nome/Tipo: ${plantData.plantName || 'Pianta non identificata'}
+- Nome/Tipo: ${plantData.plantName || 'Da identificare'}
 - Ambiente: ${plantData.environment || 'Non specificato'}
-- Sintomi: ${plantData.symptoms || 'Nessun sintomo specificato'}
+- Sintomi: ${plantData.symptoms || 'Da descrivere durante la consulenza'}
 - Frequenza irrigazione: ${this.getWateringText(plantData.wateringFrequency)}
 - Esposizione solare: ${this.getSunExposureText(plantData.sunExposure)}`;
 
@@ -59,6 +65,8 @@ export class ConsultationDataBuilder {
   }
 
   private static getWateringText(frequency?: string): string {
+    if (!frequency) return 'Da specificare durante la consulenza';
+    
     const wateringMap: { [key: string]: string } = {
       'quotidiana': 'Quotidiana',
       'ogni-2-giorni': 'Ogni 2 giorni',
@@ -68,10 +76,12 @@ export class ConsultationDataBuilder {
       'mensile': 'Mensile',
       'quando-necessario': 'Quando il terreno è secco'
     };
-    return wateringMap[frequency || ''] || frequency || 'Non specificata';
+    return wateringMap[frequency] || frequency;
   }
 
   private static getSunExposureText(exposure?: string): string {
+    if (!exposure) return 'Da specificare durante la consulenza';
+    
     const exposureMap: { [key: string]: string } = {
       'sole-diretto': 'Sole diretto',
       'sole-parziale': 'Sole parziale',
@@ -80,6 +90,6 @@ export class ConsultationDataBuilder {
       'luce-indiretta': 'Luce indiretta',
       'luce-artificiale': 'Luce artificiale'
     };
-    return exposureMap[exposure || ''] || exposure || 'Non specificata';
+    return exposureMap[exposure] || exposure;
   }
 }
