@@ -17,10 +17,10 @@ const UserPlantSummary: React.FC = () => {
   const birthDate = userProfile?.birth_date || userProfile?.birthDate || "";
   const birthPlace = userProfile?.birth_place || userProfile?.birthPlace || "";
 
-  // Plant data
-  const symptoms = plantInfo?.symptoms || "";
-  const watering = plantInfo?.wateringFrequency || "";
-  const exposure = plantInfo?.lightExposure || "";
+  // Plant data - sempre mostrare box anche se non ci sono sintomi!
+  const symptoms = plantInfo?.symptoms ?? "";
+  const watering = plantInfo?.wateringFrequency ?? "";
+  const exposure = plantInfo?.lightExposure ?? "";
   const environment =
     plantInfo?.isIndoor === undefined
       ? ""
@@ -49,8 +49,7 @@ const UserPlantSummary: React.FC = () => {
   const wateringText = wateringMap[watering] || watering;
   const exposureText = exposureMap[exposure] || exposure;
 
-  if (!firstName && !symptoms) return null;
-
+  // Rimuovo if (!firstName && !symptoms) return null; => Mostra sempre il box con dati parziali
   return (
     <div className="my-4">
       <div className="rounded-t-xl border border-blue-200 bg-blue-50 px-5 py-3 flex items-center gap-2 shadow-sm">
@@ -59,10 +58,10 @@ const UserPlantSummary: React.FC = () => {
           Dati Diagnosi Inseriti
         </span>
         <span className="ml-auto text-xs text-blue-500">
-          Visibili solo a te e all'esperto
+          Visibili solo a te e all&apos;esperto
         </span>
       </div>
-      <div className="border-x border-b border-blue-200 bg-blue-50 rounded-b-xl p-4">
+      <div className="border-x border-b border-blue-200 bg-blue-50 rounded-b-xl p-4 min-h-40">
         <div className="space-y-4">
           <UserProfileDetails
             firstName={firstName}
