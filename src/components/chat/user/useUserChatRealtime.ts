@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { supabase, EXPERT_ID } from '@/integrations/supabase/client';
@@ -140,9 +141,9 @@ export const useUserChatRealtime = (userId: string) => {
         setCurrentDbConversation(conversation);
       }
 
-      // Messaggio TEMPORANEO
+      // Messaggio TEMPORANEO: Aggiunto SEMPRE (anche dalla barra persistente)
       const tempMessage: Message = {
-        id: `temp-${Date.now()}`,
+        id: `temp-${Date.now()}-${Math.random()}`,
         sender: 'user',
         text: text,
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
@@ -191,3 +192,4 @@ export const useUserChatRealtime = (userId: string) => {
     currentConversationId: currentDbConversation?.id || null
   };
 };
+
