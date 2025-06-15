@@ -14,38 +14,27 @@ interface BottomNavigationProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
   showExpertTab?: boolean;
+  plantInfoComplete?: boolean; // Nuovo prop per controllo navigazione tab
 }
 
-/**
- * Renders the bottom navigation bar with different tabs and icons.
- * @example
- * BottomNavigation({ activeTab: 'diagnose', setActiveTab: () => {}, showExpertTab: true })
- * // Returns JSX containing navigation bar with specified tabs
- * @param {object} BottomNavigationProps - Contains props for bottom navigation.
- * @param {string} BottomNavigationProps.activeTab - The ID of the currently active tab.
- * @param {function} BottomNavigationProps.setActiveTab - Function to set the active tab.
- * @param {boolean} BottomNavigationProps.showExpertTab - Conditional flag to show expert tab.
- * @returns {JSX.Element} JSX element of the bottom navigation.
- * @description
- *   - The navigation bar is fixed at the bottom of the page.
- *   - It supports five essential tabs: Diagnose, Chat, Library, Shop, and Profile.
- *   - Notifications are highlighted on the chat tab if there are unread messages.
- *   - An additional expert tab can be included based on the `showExpertTab` flag.
- */
-const BottomNavigation = ({ activeTab, setActiveTab, showExpertTab = false }: BottomNavigationProps) => {
+const BottomNavigation = ({
+  activeTab,
+  setActiveTab,
+  showExpertTab = false,
+  plantInfoComplete = false
+}: BottomNavigationProps) => {
   const [unreadCount] = useState(0);
 
   const navItems = [
-    { id: "diagnose", label: "Diagnosi", icon: Home },
-    { id: "chat", label: "Chat", icon: MessageSquare, hasNotification: unreadCount > 0 },
-    { id: "library", label: "Libreria", icon: BookOpen },
-    { id: "shop", label: "Shop", icon: ShoppingCart },
-    { id: "profile", label: "Profilo", icon: User },
+    { id: "diagnose", label: "Diagnosi", icon: Home, locked: false },
+    { id: "chat", label: "Chat", icon: MessageSquare, hasNotification: unreadCount > 0, locked: !plantInfoComplete },
+    { id: "library", label: "Libreria", icon: BookOpen, locked: !plantInfoComplete },
+    { id: "shop", label: "Shop", icon: ShoppingCart, locked: !plantInfoComplete },
+    { id: "profile", label: "Profilo", icon: User, locked: !plantInfoComplete }
   ];
 
-  // Add expert tab if user is master account
   if (showExpertTab) {
-    navItems.splice(4, 0, { id: "expert", label: "Dashboard", icon: Stethoscope });
+    navItems.splice(4, 0, { id: "expert", label: "Dashboard", icon: Stethoscope, locked: false });
   }
 
   return (
@@ -54,26 +43,39 @@ const BottomNavigation = ({ activeTab, setActiveTab, showExpertTab = false }: Bo
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = activeTab === item.id;
-          
+          const isLocked = !plantInfoComplete && item.id !== "diagnose" && !showExpertTab;
+          // Ma per la dashboard master non deve essere locked
+
+          // Aggiorna isLocked per tutte tranne diagnose per utenti normali
+          const buttonDisabled = item.locked && !showExpertTab;
+
           return (
             <button
               key={item.id}
-              onClick={() => setActiveTab(item.id)}
+              onClick={() => !buttonDisabled && setActiveTab(item.id)}
               className={`flex flex-col items-center gap-1 p-2 rounded-lg transition-colors relative ${
-                isActive 
-                  ? "text-drplant-green bg-drplant-green/10" 
-                  : "text-gray-600 hover:text-drplant-green"
+                isActive
+                  ? "text-drplant-green bg-drplant-green/10"
+                  : buttonDisabled
+                    ? "text-gray-400 cursor-not-allowed"
+                    : "text-gray-600 hover:text-drplant-green"
               }`}
+              disabled={buttonDisabled}
+              tabIndex={buttonDisabled ? -1 : 0}
+              aria-disabled={buttonDisabled}
             >
               <Icon className="h-5 w-5" />
               <span className="text-xs font-medium">{item.label}</span>
               {item.hasNotification && (
-                <Badge 
-                  variant="destructive" 
+                <Badge
+                  variant="destructive"
                   className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center text-xs p-0"
                 >
                   {unreadCount}
                 </Badge>
+              )}
+              {buttonDisabled && (
+                <span className="absolute -bottom-2 w-16 text-[10px] text-red-500 opacity-90 text-center pointer-events-none select-none">Completa prima la diagnosi</span>
               )}
             </button>
           );
@@ -84,3 +86,4 @@ const BottomNavigation = ({ activeTab, setActiveTab, showExpertTab = false }: Bo
 };
 
 export default BottomNavigation;
+

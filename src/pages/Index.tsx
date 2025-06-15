@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import Header from "@/components/Header";
@@ -10,6 +9,8 @@ import ProfileTab from "@/components/ProfileTab";
 import ExpertTab from "@/components/ExpertTab";
 import BottomNavigation from "@/components/BottomNavigation";
 import { ensureStorageBuckets } from "@/utils/storageSetup";
+import { usePlantInfo } from "@/context/PlantInfoContext";
+import { useToast } from "@/hooks/use-toast";
 
 /**
 * Renders the main application page with tab navigation and dynamic content based on active tab.
@@ -25,7 +26,9 @@ import { ensureStorageBuckets } from "@/utils/storageSetup";
 */
 const Index = () => {
   const { isMasterAccount } = useAuth();
-  
+  const { plantInfo } = usePlantInfo();
+  const { toast } = useToast();
+
   // Set default tab based on account type - master accounts start with expert tab
   const [activeTab, setActiveTab] = useState<string>(isMasterAccount ? "expert" : "diagnose");
 
@@ -41,31 +44,59 @@ const Index = () => {
     }
   }, [isMasterAccount, activeTab]);
 
+  // Prevent tab switch if infoComplete is false and tab != "diagnose"
+  useEffect(() => {
+    // All tabs except diagnose/expert are forbidden if data incomplete
+    if (!plantInfo.infoComplete && activeTab !== "diagnose" && !isMasterAccount) {
+      setActiveTab("diagnose");
+    }
+  }, [plantInfo.infoComplete, activeTab, isMasterAccount]);
+
   // Listen for custom tab switch events
   useEffect(() => {
     const handleSwitchTab = (event: CustomEvent) => {
       const newTab = event.detail;
-      
+
       // Prevent master accounts from accessing diagnose tab
       if (isMasterAccount && newTab === "diagnose") {
         setActiveTab("expert");
         return;
       }
-      
+      // Prevent navigation if not infoComplete and not diagnose
+      if (!isMasterAccount && !plantInfo.infoComplete && newTab !== "diagnose") {
+        toast({
+          title: "Completa prima la diagnosi della pianta!",
+          description: "Per accedere alle altre sezioni devi inserire le informazioni richieste nella diagnosi.",
+          duration: 3500,
+          variant: "warning"
+        });
+        setActiveTab("diagnose");
+        return;
+      }
       setActiveTab(newTab);
     };
 
     window.addEventListener('switchTab', handleSwitchTab as EventListener);
-    
+
     return () => {
       window.removeEventListener('switchTab', handleSwitchTab as EventListener);
     };
-  }, [isMasterAccount]);
+  }, [isMasterAccount, plantInfo.infoComplete, toast]);
 
-  // Enhanced setActiveTab function to prevent master accounts from accessing diagnose
+  // Enhanced setActiveTab: blocca accesso se not infoComplete
   const handleSetActiveTab = (tab: string) => {
     if (isMasterAccount && tab === "diagnose") {
       setActiveTab("expert");
+      return;
+    }
+    if (!isMasterAccount && !plantInfo.infoComplete && tab !== "diagnose") {
+      toast({
+        title: "Completa prima la diagnosi della pianta!",
+        description: "Per accedere alle altre sezioni devi inserire le informazioni richieste nella diagnosi.",
+        duration: 3500,
+        variant: "warning"
+      });
+      setActiveTab("diagnose");
       return;
     }
     setActiveTab(tab);
@@ -113,6 +144,7 @@ const Index = () => {
         activeTab={activeTab} 
         setActiveTab={handleSetActiveTab}
         showExpertTab={isMasterAccount}
+        plantInfoComplete={plantInfo.infoComplete}
       />
     </div>
   );
