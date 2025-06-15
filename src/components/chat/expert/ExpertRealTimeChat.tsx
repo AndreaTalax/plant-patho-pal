@@ -71,10 +71,8 @@ export const ExpertRealTimeChat: React.FC = () => {
                 typeof metadata === "object" &&
                 !Array.isArray(metadata) &&
                 (
-                  // @ts-expect-error: Types are loose here for supabase json
-                  (metadata.type === "consultation_data") ||
-                  // @ts-expect-error
-                  (metadata.autoSent === true)
+                  (metadata as any).type === "consultation_data" ||
+                  (metadata as any).autoSent === true
                 )
               ) {
                 lastMessageText = "🟢 Dati inviati automaticamente dal paziente";
