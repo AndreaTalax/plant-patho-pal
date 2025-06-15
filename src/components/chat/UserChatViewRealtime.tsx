@@ -191,7 +191,6 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
   // ERRORE DI CONVERSAZIONE (502)
   const [connectionError, setConnectionError] = React.useState<string | null>(null);
   useEffect(() => {
-    // Se non arriva mai un currentConversationId dopo timeout, mostra errore toast
     if (!currentConversationId && activeChat === 'expert') {
       const timer = setTimeout(() => {
         setConnectionError("Impossibile connettersi alla chat. Errore di connessione con il server.");
@@ -206,7 +205,6 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
     } else {
       setConnectionError(null);
     }
-    // ... non mostra errore se id valido
   }, [currentConversationId, activeChat, toast]);
 
   if (!activeChat || activeChat !== 'expert') {
@@ -222,15 +220,27 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
       {/* Mostra sempre la sintesi dati pianta + persona all'inizio se info completata */}
       {renderSummaryMessage()}
       <MessageList messages={messages} />
-      {/* Mostra SEMPRE MessageInput, ma se manca conversazione la input è disabled */}
-      <MessageInput 
-        onSendMessage={handleSendMessage}
-        isSending={isSending || !!connectionError}
-        conversationId={currentConversationId || ""}
-        senderId={userId}
-        recipientId="07c7fe19-33c3-4782-b9a0-4e87c8aa7044"
-        disabledInput={!currentConversationId || !!connectionError}
-      />
+
+      {/* Chat input SEMPRE visibile! */}
+      <div className="relative">
+        {/* Se errore connessione, mostra overlay sopra la board */}
+        {(!!connectionError || !currentConversationId) && (
+          <div className="absolute inset-0 flex items-center justify-center bg-white/90 z-10 rounded-b-2xl pointer-events-none">
+            <span className="text-red-700 text-base font-semibold text-center px-4">
+              {connectionError || "Chat non disponibile. Problema di connessione o server."}
+            </span>
+          </div>
+        )}
+        <MessageInput 
+          onSendMessage={handleSendMessage}
+          isSending={isSending || !!connectionError}
+          conversationId={currentConversationId || ""}
+          senderId={userId}
+          recipientId="07c7fe19-33c3-4782-b9a0-4e87c8aa7044"
+          disabledInput={!currentConversationId || !!connectionError}
+        />
+      </div>
+
       {(!!connectionError) && (
         <div className="p-4 text-center text-red-500 font-medium">
           {connectionError}
