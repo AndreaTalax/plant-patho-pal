@@ -22,6 +22,33 @@ interface Article {
 }
 
 /**
+ * Get a fallback image URL based on category or title.
+ */
+const getArticleFallbackImage = (article: Article) => {
+  const category = article.category?.toLowerCase() || '';
+  const title = article.title?.toLowerCase() || '';
+
+  if (category.includes('fungicidi') || title.includes('neem')) {
+    // Fungicide, Neem oil, Powdery Mildew
+    return 'https://images.unsplash.com/photo-1585687433492-9c648106f131?q=80&w=400&h=400&auto=format&fit=crop';
+  }
+  if (category.includes('insetti') || title.includes('insetti') || title.includes('afidi')) {
+    // Insect control
+    return 'https://images.unsplash.com/photo-1588196749597-9ff075ee6b5b?q=80&w=400&h=400&auto=format&fit=crop';
+  }
+  if (category.includes('nutrienti') || category.includes('vitality') || title.includes('vitality')) {
+    // Plant vitality
+    return 'https://images.unsplash.com/photo-1625246333195-78d73c0c15b1?q=80&w=400&h=400&auto=format&fit=crop';
+  }
+  if (category.includes('ph') || title.includes('ph')) {
+    // Soil pH Kit
+    return 'https://images.unsplash.com/photo-1603912699214-92627f304eb6?q=80&w=400&h=400&auto=format&fit=crop';
+  }
+  // Default: generic plant book or hand with plant
+  return 'https://images.unsplash.com/photo-1464983953574-0892a716854b?q=80&w=400&h=400&auto=format&fit=crop';
+};
+
+/**
  * Renders a knowledge library with searchable and filterable article lists and detailed view for individual articles.
  * @example
  * LibraryTab()
@@ -165,9 +192,12 @@ const LibraryTab = () => {
                   >
                     <div className="w-24 h-24">
                       <img 
-                        src={article.image_url} 
+                        src={article.image_url || getArticleFallbackImage(article)} 
                         alt={article.title} 
                         className="h-full w-full object-cover"
+                        onError={e => {
+                          (e.currentTarget as HTMLImageElement).src = getArticleFallbackImage(article);
+                        }}
                       />
                     </div>
                     <div className="flex-1 p-3 flex flex-col justify-between">
@@ -215,9 +245,12 @@ const LibraryTab = () => {
             <>
               <div className="relative h-48">
                 <img 
-                  src={selectedArticle.image_url} 
+                  src={selectedArticle.image_url || getArticleFallbackImage(selectedArticle)} 
                   alt={selectedArticle.title} 
                   className="w-full h-full object-cover brightness-90"
+                  onError={e => {
+                    (e.currentTarget as HTMLImageElement).src = getArticleFallbackImage(selectedArticle);
+                  }}
                 />
                 <Button 
                   variant="ghost" 

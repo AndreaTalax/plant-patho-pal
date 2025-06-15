@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Search, ShoppingBag, Filter, CreditCard, X } from 'lucide-react';
 import { Card } from '@/components/ui/card';
@@ -218,6 +217,37 @@ const ShopTab = () => {
     }
   };
 
+  /** 
+   * Get a fallback image URL based on category or product name.
+   */
+  const getProductFallbackImage = (product: Product) => {
+    const category = product.category?.toLowerCase() || '';
+    const name = product.name?.toLowerCase() || '';
+
+    if (name.includes('neem') || category.includes('fungicida') || name.includes('powdery mildew')) {
+      // Neem Oil / Fungicides
+      return 'https://images.unsplash.com/photo-1585687433492-9c648106f131?q=80&w=400&h=400&auto=format&fit=crop';
+    }
+    if (name.includes('vitality') || category.includes('vitality') || name.includes('immun') || category.includes('nutrient')) {
+      // Vitality/Immunity booster
+      return 'https://images.unsplash.com/photo-1625246333195-78d73c0c15b1?q=80&w=400&h=400&auto=format&fit=crop';
+    }
+    if (name.includes('copper') || category.includes('rame')) {
+      // Copper fungicide
+      return 'https://images.unsplash.com/photo-1635348424978-142afa11e458?q=80&w=400&h=400&auto=format&fit=crop';
+    }
+    if (name.includes('insect') || name.includes('afid') || category.includes('insetticida')) {
+      // Insecticidi
+      return 'https://images.unsplash.com/photo-1588196749597-9ff075ee6b5b?q=80&w=400&h=400&auto=format&fit=crop';
+    }
+    if (name.includes('ph') || name.includes('soil') || category.includes('suolo')) {
+      // Soil pH kit
+      return 'https://images.unsplash.com/photo-1603912699214-92627f304eb6?q=80&w=400&h=400&auto=format&fit=crop';
+    }
+    // Default: plant in a pot
+    return 'https://images.unsplash.com/photo-1464983953574-0892a716854b?q=80&w=400&h=400&auto=format&fit=crop';
+  };
+
   return (
     <div className="flex flex-col pt-6 pb-24">
       <div className="px-4">
@@ -264,9 +294,12 @@ const ShopTab = () => {
                 <Card key={product.id} className="overflow-hidden">
                   <div className="aspect-square overflow-hidden">
                     <img 
-                      src={product.image_url} 
+                      src={product.image_url || getProductFallbackImage(product)} 
                       alt={product.name} 
                       className="w-full h-full object-cover"
+                      onError={e => {
+                        (e.currentTarget as HTMLImageElement).src = getProductFallbackImage(product);
+                      }}
                     />
                   </div>
                   <div className="p-3">
