@@ -1,3 +1,4 @@
+
 import { useState, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
 
@@ -17,36 +18,6 @@ interface CameraHookReturn {
   stopCamera: () => void;
 }
 
-/**
- * Provides hooks for camera functionality including starting, stopping, switching, and capturing photos.
- * @example
- * const {
- *   isLoading,
- *   error,
- *   stream,
- *   videoRef,
- *   canvasRef,
- *   facingMode,
- *   hasFlash,
- *   flashEnabled,
- *   initializeCamera,
- *   switchCamera,
- *   toggleFlash,
- *   capturePhoto,
- *   stopCamera
- * } = useCamera();
- * 
- * initializeCamera();
- * capturePhoto();
- * // returns a base64 image data URL or null if capture failed
- * 
- * @param None - No parameters required for the hook itself.
- * @returns {CameraHookReturn} An object containing properties and methods to manage and control camera operations.
- * @description
- *   - This hook initializes and manages camera operations using `navigator.mediaDevices` API.
- *   - Handles camera permission errors and provides corresponding error messages.
- *   - Manages video stream and device orientation (user vs. environment) for optimal camera usage.
- */
 export const useCamera = (): CameraHookReturn => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -54,7 +25,6 @@ export const useCamera = (): CameraHookReturn => {
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('environment');
   const [hasFlash, setHasFlash] = useState(false);
   const [flashEnabled, setFlashEnabled] = useState(false);
-  const [cameraInitializedOnce, setCameraInitializedOnce] = useState(false);
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -82,6 +52,8 @@ export const useCamera = (): CameraHookReturn => {
         throw new Error('Camera not supported on this device');
       }
 
+      console.log('🎥 Requesting camera access...');
+
       // Request camera permissions with constraints
       const constraints: MediaStreamConstraints = {
         video: {
@@ -93,8 +65,9 @@ export const useCamera = (): CameraHookReturn => {
         audio: false
       };
 
-      console.log('Requesting camera access with constraints:', constraints);
       const mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
+      console.log('✅ Camera access granted');
+      
       setStream(mediaStream);
 
       if (videoRef.current) {
@@ -107,22 +80,24 @@ export const useCamera = (): CameraHookReturn => {
             return;
           }
 
-          videoRef.current.onloadedmetadata = () => {
-            if (videoRef.current) {
-              videoRef.current.play()
-                .then(() => {
-                  console.log('Camera initialized successfully');
-                  setIsLoading(false);
-                  // MODIFICA: Toast mostrato solo al primo avvio
-                  if (!cameraInitializedOnce) {
-                    toast.success('Camera initialized successfully');
-                    setCameraInitializedOnce(true);
-                  }
-                  resolve();
-                })
-                .catch(reject);
-            }
+          const video = videoRef.current;
+          
+          const handleLoadedMetadata = () => {
+            video.play()
+              .then(() => {
+                console.log('✅ Camera initialized and playing');
+                setIsLoading(false);
+                resolve();
+              })
+              .catch(reject);
           };
+
+          video.addEventListener('loadedmetadata', handleLoadedMetadata, { once: true });
+          
+          // Fallback timeout
+          setTimeout(() => {
+            reject(new Error('Camera initialization timeout'));
+          }, 10000);
         });
 
         // Check for flash capability
@@ -133,9 +108,8 @@ export const useCamera = (): CameraHookReturn => {
         }
       }
 
-      setIsLoading(false);
     } catch (err) {
-      console.error('Camera initialization error:', err);
+      console.error('❌ Camera initialization error:', err);
       let errorMessage = 'Unknown camera error';
       
       if (err instanceof Error) {
@@ -156,11 +130,11 @@ export const useCamera = (): CameraHookReturn => {
       setIsLoading(false);
       toast.error(`Camera error: ${errorMessage}`);
     }
-  }, [facingMode, stopCamera, cameraInitializedOnce]);
+  }, [facingMode, stopCamera]);
 
   const switchCamera = useCallback(() => {
     setFacingMode(prevMode => prevMode === 'user' ? 'environment' : 'user');
-    toast.info('Switching camera...');
+    console.log('🔄 Switching camera facing mode...');
   }, []);
 
   const toggleFlash = useCallback(async () => {
@@ -210,7 +184,7 @@ export const useCamera = (): CameraHookReturn => {
       // Convert to data URL
       const imageDataUrl = canvas.toDataURL('image/jpeg', 0.9);
       
-      console.log('Photo captured successfully');
+      console.log('📸 Photo captured successfully');
       toast.success('Photo captured successfully!');
       return imageDataUrl;
 
