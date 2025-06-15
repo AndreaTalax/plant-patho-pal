@@ -65,7 +65,18 @@ export const ExpertRealTimeChat: React.FC = () => {
               lastMessageText = messages[0].content || '';
               lastMessageAt = messages[0].sent_at;
               // Se è un messaggio autoSent, aggiungi badge
-              if (messages[0].metadata && (messages[0].metadata.type === 'consultation_data' || messages[0].metadata.autoSent === true)) {
+              const metadata = messages[0].metadata;
+              if (
+                metadata &&
+                typeof metadata === "object" &&
+                !Array.isArray(metadata) &&
+                (
+                  // @ts-expect-error: Types are loose here for supabase json
+                  (metadata.type === "consultation_data") ||
+                  // @ts-expect-error
+                  (metadata.autoSent === true)
+                )
+              ) {
                 lastMessageText = "🟢 Dati inviati automaticamente dal paziente";
               }
             }
