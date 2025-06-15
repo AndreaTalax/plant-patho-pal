@@ -118,8 +118,8 @@ export const useUserChatRealtime = (userId: string) => {
   }, [currentDbConversation?.id]);
   
   // Send message function - properly async
-  const handleSendMessage = async (text: string) => {
-    if (!text.trim()) {
+  const handleSendMessage = async (text: string, imageUrl?: string) => {
+    if ((!text.trim() && !imageUrl) ) {
       toast.error("Il messaggio non può essere vuoto");
       return;
     }
@@ -141,21 +141,24 @@ export const useUserChatRealtime = (userId: string) => {
         setCurrentDbConversation(conversation);
       }
 
-      // Messaggio TEMPORANEO: Aggiunto SEMPRE (anche dalla barra persistente)
+      // Messaggio TEMPORANEO: text o/and image
       const tempMessage: Message = {
         id: `temp-${Date.now()}-${Math.random()}`,
         sender: 'user',
-        text: text,
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        text: text || (imageUrl ? "📸 Immagine allegata" : ""),
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        ...(imageUrl ? { image_url: imageUrl } : {})
       };
       setMessages(prev => [...prev, tempMessage]);
 
-      // Send message to backend
+      // Send message to backend: if text + image, send both
       const success = await sendMessageService(
         conversation.id,
         userId,
         EXPERT_ID,
-        text
+        text,
+        undefined,
+        imageUrl
       );
 
       if (!success) {
@@ -164,9 +167,8 @@ export const useUserChatRealtime = (userId: string) => {
         toast.error("Errore nell'invio del messaggio");
         return;
       }
+      // Messaggio reale arriverà via realtime e il temp verrà eliminato
 
-      // Quando il messaggio arriverà via realtime, il temp verrà eliminato (vedi sopra)
-      
     } catch (error) {
       setMessages(prev => prev.filter(msg => !msg.id.startsWith('temp-')));
       toast.error("Errore nell'invio del messaggio");

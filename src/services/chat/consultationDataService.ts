@@ -46,10 +46,10 @@ export class ConsultationDataService {
       let mainMessage = `🌿 **Nuova Richiesta di Consulenza**
 
 👤 **Dati Utente:**
-- Nome: ${(userProfile.firstName || userProfile.first_name || '')} ${(userProfile.lastName || userProfile.last_name || '')}
+- Nome: ${userProfile.firstName || (userProfile as any).first_name || ''} ${userProfile.lastName || (userProfile as any).last_name || ''}
 - Email: ${userProfile.email || 'Non specificata'}
-- Data di nascita: ${(userProfile.birthDate || userProfile.birth_date || 'Non specificata')}
-- Luogo di nascita: ${(userProfile.birthPlace || userProfile.birth_place || 'Non specificato')}
+- Data di nascita: ${userProfile.birthDate || (userProfile as any).birth_date || 'Non specificata'}
+- Luogo di nascita: ${userProfile.birthPlace || (userProfile as any).birth_place || 'Non specificato'}
 
 🌱 **Informazioni della Pianta:**
 - Nome/Tipo: ${plantData.plantName || 'Pianta non identificata'}
