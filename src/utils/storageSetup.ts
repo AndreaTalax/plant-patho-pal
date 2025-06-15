@@ -1,47 +1,22 @@
 
 import { supabase } from '@/integrations/supabase/client';
 
-/**
- * Ensures the existence of the 'plant-images' storage bucket in the Supabase storage and creates it if it doesn't exist.
- * @example
- * sync()
- * // Logs message regarding the status of 'plant-images' bucket.
- * @returns {void} No return value.
- * @description
- *   - The bucket is configured to be publicly accessible and limited to image files with a maximum size of 10MB.
- *   - Logs status messages to the console indicating the success or failure of operations.
- */
+// Non crea più i bucket: solo logga che devono già esistere
 export const ensureStorageBuckets = async () => {
-  try {
-    console.log('Checking storage buckets...');
-    
-    // Check if plant-images bucket exists
-    const { data: buckets, error: listError } = await supabase.storage.listBuckets();
-    
-    if (listError) {
-      console.error('Error listing buckets:', listError);
-      return;
-    }
-    
-    const plantImagesBucket = buckets?.find(bucket => bucket.name === 'plant-images');
-    
-    if (!plantImagesBucket) {
-      console.log('Creating plant-images bucket...');
-      const { error: createError } = await supabase.storage.createBucket('plant-images', {
-        public: true,
-        allowedMimeTypes: ['image/*'],
-        fileSizeLimit: 10485760 // 10MB
-      });
-      
-      if (createError) {
-        console.error('Error creating bucket:', createError);
-      } else {
-        console.log('Plant-images bucket created successfully');
-      }
-    } else {
-      console.log('Plant-images bucket already exists');
-    }
-  } catch (error) {
-    console.error('Error in ensureStorageBuckets:', error);
+  console.log('Assicurati che i bucket "plant-images" e "avatars" esistano su Supabase Storage.');
+  // Opzionale: puoi ancora fare check di presenza, ma non tentare la creazione.
+  const { data: buckets, error } = await supabase.storage.listBuckets();
+  if (error) {
+    console.error('Errore recupero lista bucket:', error);
+    return;
+  }
+  const bucketsNeeded = ['plant-images', 'avatars'];
+  const missing = bucketsNeeded.filter(
+    name => !buckets?.find(bucket => bucket.name === name)
+  );
+  if (missing.length > 0) {
+    console.warn(`Mancano questi bucket su Supabase: ${missing.join(', ')}. Crea manualmente dalla dashboard.`);
+  } else {
+    console.log('Tutti i bucket necessari sono già presenti.');
   }
 };
