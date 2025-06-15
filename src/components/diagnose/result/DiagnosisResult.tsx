@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -14,6 +13,7 @@ import {
   Eye
 } from 'lucide-react';
 import { DiagnosedDisease, AnalysisDetails, PlantInfo } from '../types';
+import EppoDataPanel from './EppoDataPanel';
 
 interface DiagnosisResultProps {
   imageSrc: string;
@@ -212,6 +212,21 @@ const DiagnosisResult = ({
           )}
         </CardContent>
       </Card>
+
+      {/* SEZIONE: Diagnosi dal database EPPO */}
+      {analysisDetails?.eppoData?.diseaseMatches && Array.isArray(analysisDetails.eppoData.diseaseMatches) && analysisDetails.eppoData.diseaseMatches.length > 0 && (
+        <div className="w-full max-w-2xl mx-auto">
+          <EppoDataPanel
+            analysisDetails={analysisDetails}
+            userInput={
+              (analysisData.symptoms && analysisData.symptoms.length > 0)
+                ? analysisData.symptoms.join(', ')
+                : plantInfo.symptoms || ''
+            }
+            eppoData={analysisDetails.eppoData.diseaseMatches}
+          />
+        </div>
+      )}
 
       {/* Azioni */}
       <Card className="w-full max-w-2xl mx-auto">
