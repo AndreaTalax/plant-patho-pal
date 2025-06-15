@@ -18,6 +18,7 @@ interface MessageInputProps {
   isSending?: boolean;
   isMasterAccount?: boolean;
   disabledInput?: boolean;
+  variant?: 'default' | 'persistent';
 }
 
 const MessageInput = ({
@@ -28,7 +29,8 @@ const MessageInput = ({
   onSendMessage,
   isSending: externalIsSending = false,
   isMasterAccount = false,
-  disabledInput = false
+  disabledInput = false,
+  variant = 'default'
 }: any) => {
   const [message, setMessage] = useState('');
   const [internalIsSending, setInternalIsSending] = useState(false);
@@ -212,6 +214,82 @@ const MessageInput = ({
     setMessage(prev => prev + (emoji.native ?? emoji.shortcodes ?? ''));
     setShowEmoji(false);
   };
+
+  // Render persistent variant
+  if (variant === 'persistent') {
+    return (
+      <div className="fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm border-t border-gray-200 p-4">
+        <div className="max-w-4xl mx-auto">
+          {imagePreview && (
+            <div className="mb-4 relative inline-block">
+              <img 
+                src={imagePreview} 
+                alt="Anteprima" 
+                className="max-h-32 rounded-lg shadow-md"
+              />
+              <button
+                onClick={removeSelectedImage}
+                className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600 transition-colors"
+                tabIndex={-1}
+                disabled={disabledInput}
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </div>
+          )}
+
+          <div className="flex items-end gap-3 bg-white rounded-3xl shadow-lg border border-gray-200 p-3">
+            <div className="flex-1">
+              <Textarea
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                onKeyPress={handleKeyPress}
+                placeholder={
+                  disabledInput
+                    ? "Chat non disponibile. Controlla la connessione e riprova tra poco."
+                    : "Scrivi il tuo messaggio all'esperto..."
+                }
+                className="min-h-[50px] max-h-[120px] resize-none border-none bg-transparent text-gray-700 placeholder:text-gray-400 focus:ring-0 focus:outline-none p-3"
+                disabled={isSending || disabledInput}
+              />
+            </div>
+
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isSending || disabledInput}
+              className="h-12 w-12 rounded-2xl bg-gray-50 hover:bg-gray-100 border border-gray-200 flex-shrink-0"
+            >
+              <Image className="h-5 w-5 text-gray-600" />
+            </Button>
+
+            <Button
+              onClick={handleSend}
+              disabled={(!message.trim() && !selectedImage) || isSending || disabledInput}
+              className="h-12 w-12 rounded-2xl bg-drplant-green hover:bg-drplant-green-dark text-white shadow-md flex-shrink-0 disabled:opacity-50"
+            >
+              {isSending ? (
+                <Loader2 className="h-5 w-5 animate-spin" />
+              ) : (
+                <Send className="h-5 w-5" />
+              )}
+            </Button>
+
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleImageSelect}
+              className="hidden"
+              disabled={disabledInput}
+            />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="border-t border-drplant-green/20 bg-white/80 backdrop-blur-sm p-6">
