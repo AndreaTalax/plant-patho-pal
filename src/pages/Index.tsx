@@ -68,7 +68,7 @@ const Index = () => {
           title: "Completa prima la diagnosi della pianta!",
           description: "Per accedere alle altre sezioni devi inserire le informazioni richieste nella diagnosi.",
           duration: 3500,
-          variant: "warning"
+          variant: "destructive", // Fix: use allowed variant
         });
         setActiveTab("diagnose");
         return;
@@ -94,7 +94,7 @@ const Index = () => {
         title: "Completa prima la diagnosi della pianta!",
         description: "Per accedere alle altre sezioni devi inserire le informazioni richieste nella diagnosi.",
         duration: 3500,
-        variant: "warning"
+        variant: "destructive", // Fix: use allowed variant
       });
       setActiveTab("diagnose");
       return;
