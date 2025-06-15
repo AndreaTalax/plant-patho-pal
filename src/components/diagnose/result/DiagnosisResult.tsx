@@ -18,7 +18,7 @@ import EppoDataPanel from './EppoDataPanel';
 interface DiagnosisResultProps {
   imageSrc: string;
   plantInfo: PlantInfo;
-  analysisData: DiagnosedDisease | null;
+  analysisData: (DiagnosedDisease | null) & { meta?: any };
   isAnalyzing: boolean;
   onStartNewAnalysis: () => void;
   onChatWithExpert: () => void;
@@ -116,9 +116,40 @@ const DiagnosisResult = ({
   const confidencePercentage = Math.round(analysisData.confidence * 100);
   const isHighConfidence = analysisData.confidence >= 0.8;
 
+  // --- AGGIUNTA: Mostra percentuali AI, cromatica e aggregata ---
+  const meta = (analysisData as any)?.meta;
+  const aiConfidence = meta?.aiConfidence ?? undefined;
+  const greenConfidence = meta?.greenConfidence ?? undefined;
+  const presenceScore = meta?.presenceScore ?? undefined;
+  const plantAnalysisConfidence = meta?.plantAnalysisConfidence ?? undefined;
+
   return (
     <div className="space-y-6">
-      {/* Immagine e risultato principale */}
+      {/* Blocco sintesi presenza pianta */}
+      {(presenceScore || aiConfidence !== undefined || greenConfidence !== undefined) && (
+        <div className="max-w-2xl mx-auto my-2 px-2">
+          <div className="rounded-xl border border-green-200 bg-green-50 px-4 py-3 flex flex-col gap-2">
+            <span className="font-bold text-green-800 text-base tracking-tight">
+              Analisi presenza pianta nella foto
+            </span>
+            <div className="flex flex-col sm:flex-row sm:gap-6 gap-2">
+              <span className="text-sm">
+                <span className="font-medium">AI Confidenza:</span>{" "}
+                {aiConfidence !== undefined ? `${Math.round(aiConfidence * 100)}%` : "-"}
+              </span>
+              <span className="text-sm">
+                <span className="font-medium">Verde (analisi cromatica):</span>{" "}
+                {greenConfidence !== undefined ? `${Math.round(greenConfidence * 100)}%` : "-"}
+              </span>
+              <span className="text-sm">
+                <span className="font-medium">Score combinato:</span>{" "}
+                {presenceScore !== undefined ? `${presenceScore}%` : "-"}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Blocco risultati classico */}
       <Card className="w-full max-w-2xl mx-auto">
         <CardHeader>
           <div className="flex items-center justify-between">
