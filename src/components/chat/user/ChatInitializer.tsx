@@ -24,7 +24,7 @@ export const ChatInitializer: React.FC<ChatInitializerProps> = ({
 
   useEffect(() => {
     const sendInitialData = async () => {
-      // Condizioni più permissive per l'invio dei dati
+      // Condizioni per l'invio dei dati - più permissive
       if (
         !activeChat ||
         activeChat !== 'expert' ||
@@ -51,13 +51,13 @@ export const ChatInitializer: React.FC<ChatInitializerProps> = ({
           return;
         }
 
-        // Costruisci i dati della pianta anche se parziali
+        // Costruisci i dati della pianta sempre, anche se incompleti
         const plantData = {
-          symptoms: plantInfo?.symptoms || 'Sintomi da specificare',
-          wateringFrequency: plantInfo?.wateringFrequency || 'Frequenza da specificare',
-          sunExposure: plantInfo?.lightExposure || 'Esposizione da specificare',
-          environment: plantInfo?.isIndoor ? 'Interno' : 'Esterno',
-          plantName: plantInfo?.name || 'Pianta da identificare',
+          symptoms: plantInfo?.symptoms || 'Da descrivere durante la consulenza',
+          wateringFrequency: plantInfo?.wateringFrequency || 'Da specificare',
+          sunExposure: plantInfo?.lightExposure || 'Da specificare',
+          environment: plantInfo?.isIndoor !== undefined ? (plantInfo.isIndoor ? 'Interno' : 'Esterno') : 'Da specificare',
+          plantName: plantInfo?.name || 'Specie da identificare',
           imageUrl: plantInfo?.uploadedImageUrl,
           aiDiagnosis: (plantInfo as any)?.aiDiagnosis,
           useAI: plantInfo?.useAI,
@@ -90,13 +90,13 @@ export const ChatInitializer: React.FC<ChatInitializerProps> = ({
           toast({
             title: 'Dati inviati automaticamente all\'esperto!',
             description: 'Marco Nigro ha ricevuto tutte le informazioni disponibili e la foto della tua pianta',
-            duration: 4000,
+            duration: 5000,
           });
         } else {
           toast({
-            title: 'Attenzione: dati automatici non inviati, riprova tra poco.',
-            description: 'Potresti dover inserire manualmente le informazioni nella chat',
-            duration: 4000,
+            title: 'Attenzione: dati automatici non inviati completamente',
+            description: 'Alcuni dati potrebbero non essere stati inviati, riprova tra poco',
+            duration: 5000,
             variant: 'destructive'
           });
         }
@@ -106,19 +106,20 @@ export const ChatInitializer: React.FC<ChatInitializerProps> = ({
         console.error('[AUTO-DATA ❌]', error);
         toast({
           title: 'Errore nell\'invio automatico dei dati',
-          description: 'Inserisci manualmente le informazioni nella chat',
-          duration: 4000,
+          description: 'Inserisci manualmente le informazioni nella chat se necessario',
+          duration: 5000,
           variant: 'destructive'
         });
       }
     };
 
+    // Aspetta un po' di più per permettere al componente di caricarsi completamente
     if (
       activeChat === 'expert' &&
       currentConversationId &&
       userProfile
     ) {
-      const timer = setTimeout(sendInitialData, 1200);
+      const timer = setTimeout(sendInitialData, 1500);
       return () => clearTimeout(timer);
     }
   }, [
@@ -128,7 +129,7 @@ export const ChatInitializer: React.FC<ChatInitializerProps> = ({
     autoDataSent,
     setAutoDataSent,
     toast,
-    plantInfo // Aggiungiamo plantInfo alle dipendenze
+    plantInfo
   ]);
 
   return null; // This is a logic-only component

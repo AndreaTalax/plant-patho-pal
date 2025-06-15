@@ -31,65 +31,79 @@ export class ConsultationDataBuilder {
     const birthDate = userProfile.birthDate || (userProfile as any).birth_date || 'Non specificata';
     const birthPlace = userProfile.birthPlace || (userProfile as any).birth_place || 'Non specificato';
 
-    let mainMessage = `🌿 **Nuova Richiesta di Consulenza**
+    let mainMessage = `🌿 **NUOVA RICHIESTA DI CONSULENZA FITOSANITARIA**
 
-👤 **Dati Utente:**
-- Nome: ${firstName} ${lastName}
-- Email: ${email}
-- Data di nascita: ${birthDate}
-- Luogo di nascita: ${birthPlace}
+👤 **DATI PERSONALI DEL CLIENTE:**
+- **Nome completo:** ${firstName} ${lastName}
+- **Email:** ${email}
+- **Data di nascita:** ${birthDate}
+- **Luogo di nascita:** ${birthPlace}
 
-🌱 **Informazioni della Pianta:**
-- Nome/Tipo: ${plantData.plantName || 'Da identificare'}
-- Ambiente: ${plantData.environment || 'Non specificato'}
-- Sintomi: ${plantData.symptoms || 'Da descrivere durante la consulenza'}
-- Frequenza irrigazione: ${this.getWateringText(plantData.wateringFrequency)}
-- Esposizione solare: ${this.getSunExposureText(plantData.sunExposure)}`;
+🌱 **INFORMAZIONI DETTAGLIATE DELLA PIANTA:**
+- **Nome/Tipo pianta:** ${plantData.plantName || 'Specie da identificare durante la consulenza'}
+- **Ambiente di coltivazione:** ${plantData.environment || 'Da specificare'}
+- **Sintomi osservati:** ${plantData.symptoms || 'Da descrivere dettagliatamente durante la consulenza'}
+- **Frequenza di irrigazione:** ${this.getWateringText(plantData.wateringFrequency)}
+- **Esposizione alla luce:** ${this.getSunExposureText(plantData.sunExposure)}`;
 
     if (fromAIDiagnosis && plantData.aiDiagnosis) {
       mainMessage += `
 
-🤖 **Diagnosi AI Precedente:**
-- Pianta identificata: ${plantData.aiDiagnosis.consensus?.mostLikelyPlant?.plantName || 'Non identificata'}
-- Confidenza: ${plantData.aiDiagnosis.consensus?.overallConfidence || 0}%
-- Stato: ${plantData.aiDiagnosis.diseaseDetection?.length > 0 ? 'Problemi rilevati' : 'Apparentemente sana'}`;
+🤖 **ANALISI AI PRELIMINARE GIÀ EFFETTUATA:**
+- **Pianta identificata dall'AI:** ${plantData.aiDiagnosis.consensus?.mostLikelyPlant?.plantName || 'Non identificata con certezza'}
+- **Livello di confidenza:** ${plantData.aiDiagnosis.consensus?.overallConfidence || 0}%
+- **Stato di salute rilevato:** ${plantData.aiDiagnosis.diseaseDetection?.length > 0 ? 'Problemi rilevati - richiede attenzione esperta' : 'Apparentemente sana ma il cliente ha dubbi'}
+- **Note:** Il cliente richiede una seconda opinione professionale`;
     }
 
     if (plantData.imageUrl) {
-      mainMessage += `\n\n📸 **Immagine della pianta allegata**`;
+      mainMessage += `
+
+📸 **DOCUMENTAZIONE FOTOGRAFICA:**
+- Immagine ad alta risoluzione della pianta allegata automaticamente
+- Foto scattata per mostrare i sintomi e lo stato generale della pianta`;
     }
 
-    mainMessage += `\n\n*Dati (compresi dati personali) inviati automaticamente dal sistema Dr.Plant*`;
+    mainMessage += `
+
+📋 **RICHIESTA:**
+Il cliente richiede una consulenza professionale per:
+- Identificazione corretta della specie (se non già determinata)
+- Diagnosi accurata dei problemi fitosanitari
+- Piano di trattamento specifico e personalizzato
+- Consigli per la prevenzione
+
+💡 **NOTA TECNICA:** Tutti i dati (personali e fitosanitari) sono stati inviati automaticamente dal sistema Dr.Plant per garantire una consulenza completa e personalizzata.`;
 
     return mainMessage;
   }
 
   private static getWateringText(frequency?: string): string {
-    if (!frequency) return 'Da specificare durante la consulenza';
+    if (!frequency) return 'Da specificare durante la consulenza (frequenza attuale non indicata)';
     
     const wateringMap: { [key: string]: string } = {
-      'quotidiana': 'Quotidiana',
+      'quotidiana': 'Quotidiana (ogni giorno)',
       'ogni-2-giorni': 'Ogni 2 giorni',
       '2-volte-settimana': '2 volte a settimana',
-      'settimanale': 'Settimanale',
+      'settimanale': 'Settimanale (una volta a settimana)',
       'ogni-2-settimane': 'Ogni 2 settimane',
       'mensile': 'Mensile',
-      'quando-necessario': 'Quando il terreno è secco'
+      'quando-necessario': 'Quando il terreno risulta secco al tatto'
     };
-    return wateringMap[frequency] || frequency;
+    return wateringMap[frequency] || `${frequency} (da verificare durante la consulenza)`;
   }
 
   private static getSunExposureText(exposure?: string): string {
-    if (!exposure) return 'Da specificare durante la consulenza';
+    if (!exposure) return 'Da specificare durante la consulenza (esposizione attuale non indicata)';
     
     const exposureMap: { [key: string]: string } = {
-      'sole-diretto': 'Sole diretto',
-      'sole-parziale': 'Sole parziale',
-      'ombra-parziale': 'Ombra parziale',
-      'ombra-completa': 'Ombra completa',
-      'luce-indiretta': 'Luce indiretta',
-      'luce-artificiale': 'Luce artificiale'
+      'sole-diretto': 'Sole diretto (pieno sole per molte ore al giorno)',
+      'sole-parziale': 'Sole parziale (alcune ore di sole diretto)',
+      'ombra-parziale': 'Ombra parziale (luce filtrata)',
+      'ombra-completa': 'Ombra completa (nessun sole diretto)',
+      'luce-indiretta': 'Luce indiretta (luminoso ma senza sole diretto)',
+      'luce-artificiale': 'Luce artificiale (illuminazione LED/neon)'
     };
-    return exposureMap[exposure] || exposure;
+    return exposureMap[exposure] || `${exposure} (da verificare durante la consulenza)`;
   }
 }
