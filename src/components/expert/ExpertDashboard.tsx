@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { MARCO_NIGRO_ID } from '@/components/phytopathologist';
+import ExpertChatDetailView from './ExpertChatDetailView';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -67,6 +68,7 @@ const ExpertDashboard = () => {
   const [conversations, setConversations] = useState<ConversationSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [deletingConsultation, setDeletingConsultation] = useState<string | null>(null);
+  const [selectedConversation, setSelectedConversation] = useState<ConversationSummary | null>(null);
 
   useEffect(() => {
     loadExpertData();
@@ -295,6 +297,16 @@ const ExpertDashboard = () => {
     );
   }
 
+  // Nuova funzione per Apri Chat (apre la dettaglio view)
+  const handleOpenChat = (conversation: ConversationSummary) => {
+    setSelectedConversation(conversation);
+  };
+
+  // Funzione per tornare indietro dalla chat dettaglio
+  const handleCloseChat = () => {
+    setSelectedConversation(null);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -444,52 +456,64 @@ const ExpertDashboard = () => {
         </TabsContent>
 
         <TabsContent value="conversations" className="space-y-4">
-          {conversations.length === 0 ? (
-            <Card>
-              <CardContent className="py-8 text-center text-gray-500">
-                Nessuna conversazione disponibile
-              </CardContent>
-            </Card>
+          {selectedConversation ? (
+            <ExpertChatDetailView
+              conversation={selectedConversation}
+              onBack={handleCloseChat}
+            />
           ) : (
-            conversations.map((conversation) => (
-              <Card key={conversation.id}>
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <Avatar className="h-10 w-10">
-                        <AvatarFallback>
-                          {getInitials(conversation.user_profile?.first_name, conversation.user_profile?.last_name)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <div className="font-medium">
-                          {getUserDisplayName(conversation.user_profile)}
-                        </div>
-                        <div className="text-sm text-gray-500 truncate max-w-xs">
-                          {conversation.last_message_text || 'Nessun messaggio'}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="text-right">
-                        <div className="text-sm text-gray-500">
-                          {conversation.last_message_timestamp && 
-                            formatDistanceToNow(new Date(conversation.last_message_timestamp), {
-                              addSuffix: true,
-                              locale: it
-                            })
-                          }
-                        </div>
-                        <Button size="sm" variant="outline" className="mt-2">
-                          <MessageSquare className="h-4 w-4 mr-1" />
-                          Apri Chat
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
+            conversations.length === 0 ? (
+              <Card>
+                <CardContent className="py-8 text-center text-gray-500">
+                  Nessuna conversazione disponibile
                 </CardContent>
               </Card>
-            ))
+            ) : (
+              conversations.map((conversation) => (
+                <Card key={conversation.id}>
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-10 w-10">
+                          <AvatarFallback>
+                            {getInitials(conversation.user_profile?.first_name, conversation.user_profile?.last_name)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <div className="font-medium">
+                            {getUserDisplayName(conversation.user_profile)}
+                          </div>
+                          <div className="text-sm text-gray-500 truncate max-w-xs">
+                            {conversation.last_message_text || 'Nessun messaggio'}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="text-right">
+                          <div className="text-sm text-gray-500">
+                            {conversation.last_message_timestamp && 
+                              formatDistanceToNow(new Date(conversation.last_message_timestamp), {
+                                addSuffix: true,
+                                locale: it
+                              })
+                            }
+                          </div>
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            className="mt-2"
+                            onClick={() => handleOpenChat(conversation)}
+                          >
+                            <MessageSquare className="h-4 w-4 mr-1" />
+                            Apri Chat
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            )}
           )}
         </TabsContent>
       </Tabs>
