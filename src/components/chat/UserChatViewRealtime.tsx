@@ -221,9 +221,9 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
       {renderSummaryMessage()}
       <MessageList messages={messages} />
 
-      {/* Chat input SEMPRE visibile! */}
+      {/* La board è sempre visibile, con messaggio stato errore in overlay sopra ma input SEMPRE interattivo */}
       <div className="relative">
-        {/* Se errore connessione, mostra overlay sopra la board */}
+        {/* Stato errore visualizzato sopra la board */}
         {(!!connectionError || !currentConversationId) && (
           <div className="absolute inset-0 flex items-center justify-center bg-white/90 z-10 rounded-b-2xl pointer-events-none">
             <span className="text-red-700 text-base font-semibold text-center px-4">
@@ -231,16 +231,16 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
             </span>
           </div>
         )}
+        {/* Il componente MessageInput è SEMPRE attivo (disabledInput={false}) */}
         <MessageInput 
           onSendMessage={handleSendMessage}
-          isSending={isSending || !!connectionError}
+          isSending={isSending}
           conversationId={currentConversationId || ""}
           senderId={userId}
           recipientId="07c7fe19-33c3-4782-b9a0-4e87c8aa7044"
-          disabledInput={!currentConversationId || !!connectionError}
+          disabledInput={false}
         />
       </div>
-
       {(!!connectionError) && (
         <div className="p-4 text-center text-red-500 font-medium">
           {connectionError}
