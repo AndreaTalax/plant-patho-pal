@@ -65,18 +65,27 @@ export const usePlantDiagnosis = () => {
       plantInfo 
     });
 
-    // Se manca il nome pianta chiede a Plant.id
+    // Se manca il nome pianta chiedi a Plant.id e aggiorna plantInfo globale
     let plantInfoToUse: PlantInfo = { ...plantInfo }
+
+    // NEW: check if name is missing and update the state once found
     if (!plantInfo?.name || plantInfo.name.trim() === "") {
       try {
         const { plantName } = await identifyPlantFromImage(imageFile);
         if (plantName && plantName !== "Specie non identificata") {
           plantInfoToUse.name = plantName;
+          // Aggiorna info pianta globalmente se hook dalla UI
+          if (typeof window !== "undefined" && window.dispatchEvent) {
+            // Custom event to notify parent/contexts to update plantInfo
+            window.dispatchEvent(
+              new CustomEvent("updatePlantInfoName", { detail: plantName })
+            );
+          }
           console.log("🌱 Nome pianta rilevato da Plant.id:", plantName);
         }
       } catch (e: any) {
         console.warn("Nome pianta non identificato da Plant.id:", e?.message || e);
-        // Meglio proseguire con name vuoto che bloccarsi
+        // Prosegui con name vuoto che meglio che bloccarsi
       }
     }
 
@@ -270,6 +279,25 @@ export const usePlantDiagnosis = () => {
       return ['2', '1']; // General care products
     }
   };
+
+  // useEffect to actually update plantInfo on event
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      if (customEvent.detail && typeof customEvent.detail === "string") {
+        setUploadedImage(prev => prev); // keep image
+        // This assumes you have setPlantInfo in context or prop!
+        if (typeof window !== "undefined" && (window as any).setPlantInfo) {
+          (window as any).setPlantInfo((prev: any) => ({
+            ...prev,
+            name: customEvent.detail
+          }));
+        }
+      }
+    };
+    window.addEventListener("updatePlantInfoName", handler as any);
+    return () => window.removeEventListener("updatePlantInfoName", handler as any);
+  }, []);
 
   const stopCameraStream = () => {
     if (streamRef.current) {
