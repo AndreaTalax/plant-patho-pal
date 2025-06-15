@@ -21,6 +21,8 @@ export interface PlantAnalysisResult {
     source?: string;
     fallback?: boolean;
     reason?: string;
+    timestamp?: string;
+    imageSize?: number;
   };
 }
 
