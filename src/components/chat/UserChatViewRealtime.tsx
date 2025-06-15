@@ -77,11 +77,11 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
         };
 
         const userData = {
-          firstName: userProfile.first_name || '',
-          lastName: userProfile.last_name || '',
-          email: userProfile.email || '',
-          birthDate: userProfile.birth_date || 'Non specificata',
-          birthPlace: userProfile.birth_place || 'Non specificato'
+          firstName: userProfile.first_name || userProfile.firstName || "",
+          lastName: userProfile.last_name || userProfile.lastName || "",
+          email: userProfile.email || userProfile.mail || "",
+          birthDate: userProfile.birth_date || userProfile.birthDate || "",
+          birthPlace: userProfile.birth_place || userProfile.birthPlace || ""
         };
 
         console.log('[AUTO-DATA 📤] Invio Dati:', { ...plantData, hasImage: !!plantData.imageUrl });
@@ -157,6 +157,13 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
   // funzione helper per mostrare i dati utente + pianta nel messaggio automatico
   function renderSummaryMessage() {
     if (!(plantInfo?.infoComplete && userProfile)) return null;
+    // Sfrutta entrambi gli alias per robustezza test/admin
+    const firstName = userProfile.first_name || userProfile.firstName || "";
+    const lastName = userProfile.last_name || userProfile.lastName || "";
+    const email = userProfile.email || userProfile.mail || "";
+    const birthDate = userProfile.birth_date || userProfile.birthDate || "";
+    const birthPlace = userProfile.birth_place || userProfile.birthPlace || "";
+
     return (
       <div className="bg-blue-100 rounded-lg p-3 my-2 text-sm font-mono">
         <div className="mb-2 font-bold text-blue-900">**Dati della pianta inviati automaticamente**</div>
@@ -175,13 +182,13 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
         </div>
         <div className="mt-3 font-medium text-blue-800 border-t pt-2">
           <span className="block mb-1">**I tuoi dati personali:**</span>
-          <span className="inline-flex gap-1 items-center mr-2"><span role="img" aria-label="nome">👤</span> <b>Nome:</b> {userProfile.first_name} {userProfile.last_name}</span><br/>
-          <span className="inline-flex gap-1 items-center mr-2"><span role="img" aria-label="email">✉️</span> <b>Email:</b> {userProfile.email}</span><br/>
-          {userProfile.birth_date && (
-            <span className="inline-flex gap-1 items-center mr-2"><span role="img" aria-label="nascita">🎂</span> <b>Data di nascita:</b> {userProfile.birth_date}</span>
+          <span className="inline-flex gap-1 items-center mr-2"><span role="img" aria-label="nome">👤</span> <b>Nome:</b> {firstName} {lastName}</span><br/>
+          <span className="inline-flex gap-1 items-center mr-2"><span role="img" aria-label="email">✉️</span> <b>Email:</b> {email}</span><br/>
+          {birthDate && (
+            <span className="inline-flex gap-1 items-center mr-2"><span role="img" aria-label="nascita">🎂</span> <b>Data di nascita:</b> {birthDate}</span>
           )}
-          {userProfile.birth_place && (
-            <span className="inline-flex gap-1 items-center mr-2"><span role="img" aria-label="luogonascita">📍</span> <b>Luogo di nascita:</b> {userProfile.birth_place}</span>
+          {birthPlace && (
+            <span className="inline-flex gap-1 items-center mr-2"><span role="img" aria-label="luogonascita">📍</span> <b>Luogo di nascita:</b> {birthPlace}</span>
           )}
         </div>
       </div>
@@ -247,7 +254,7 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
           conversationId={currentConversationId || ""}
           senderId={userId}
           recipientId="07c7fe19-33c3-4782-b9a0-4e87c8aa7044"
-          disabledInput={false}  // <-- MAI disabilitato per admin/tester
+          disabledInput={false} // <-- Sempre abilitato
         />
       </div>
       {(!!connectionError) && (
