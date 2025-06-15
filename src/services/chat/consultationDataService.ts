@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { MARCO_NIGRO_ID } from '@/components/phytopathologist';
 import { toast } from 'sonner';
@@ -43,12 +42,14 @@ export class ConsultationDataService {
         return false;
       }
 
-      // Messaggio principale con i dati (senza immagine per evitare payload troppo grande)
+      // Messaggio principale con i dati (ora include sempre i dati personali)
       let mainMessage = `🌿 **Nuova Richiesta di Consulenza**
 
 👤 **Dati Utente:**
-- Nome: ${userProfile.firstName || ''} ${userProfile.lastName || ''}
+- Nome: ${(userProfile.firstName || userProfile.first_name || '')} ${(userProfile.lastName || userProfile.last_name || '')}
 - Email: ${userProfile.email || 'Non specificata'}
+- Data di nascita: ${(userProfile.birthDate || userProfile.birth_date || 'Non specificata')}
+- Luogo di nascita: ${(userProfile.birthPlace || userProfile.birth_place || 'Non specificato')}
 
 🌱 **Informazioni della Pianta:**
 - Nome/Tipo: ${plantData.plantName || 'Pianta non identificata'}
@@ -68,7 +69,7 @@ export class ConsultationDataService {
 
       mainMessage += `
 
-*Dati inviati automaticamente dal sistema Dr.Plant*`;
+*Dati (compresi dati personali) inviati automaticamente dal sistema Dr.Plant*`;
 
       // Invia il messaggio principale
       const { error: messageError } = await supabase
