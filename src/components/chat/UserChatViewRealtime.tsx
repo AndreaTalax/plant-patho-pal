@@ -181,13 +181,22 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
       {/* Mostra sempre la sintesi dati pianta + persona all'inizio se info completata */}
       {renderSummaryMessage()}
       <MessageList messages={messages} />
-      <MessageInput 
-        onSendMessage={handleSendMessage}
-        isSending={isSending}
-        conversationId={currentConversationId || undefined}
-        senderId={userId}
-        recipientId="07c7fe19-33c3-4782-b9a0-4e87c8aa7044"
-      />
+      {/* Verifica che tutti gli id passati siano presenti per MessageInput */}
+      {(currentConversationId && userId) && (
+        <MessageInput 
+          onSendMessage={handleSendMessage}
+          isSending={isSending}
+          conversationId={currentConversationId}
+          senderId={userId}
+          recipientId="07c7fe19-33c3-4782-b9a0-4e87c8aa7044"
+        />
+      )}
+      {/* Se manca currentConversationId, mostra un messaggio di errore/scaricamento */}
+      {(!currentConversationId || !userId) && (
+        <div className="p-4 text-center text-red-500 font-medium">
+          Errore nella connessione alla chat. Ricarica la pagina o riprova tra poco.
+        </div>
+      )}
     </div>
   );
 };
