@@ -66,10 +66,21 @@ const ProfileTab = () => {
   const navigate = useNavigate();
   const { logout, userProfile, updateProfile } = useAuth();
 
+  // Funzione per recuperare il giusto campo dal profilo anche con snake_case
+  const getField = (field: string, altField?: string) => {
+    if (!userProfile) return "";
+    return (
+      userProfile[field] ||
+      userProfile[altField || ""] ||
+      userProfile[field.replace(/([A-Z])/g, "_$1").toLowerCase()] ||
+      ""
+    );
+  };
+
   // Initialize state with user profile data
   useEffect(() => {
-    setPhoneValue(userProfile.phone || "");
-    setAddressValue(userProfile.address || "");
+    setPhoneValue(getField("phone"));
+    setAddressValue(getField("address"));
     fetchOrders();
   }, [userProfile]);
 
@@ -112,9 +123,9 @@ const ProfileTab = () => {
   };
 
   const getInitials = () => {
-    const firstName = userProfile.firstName || "";
-    const lastName = userProfile.lastName || "";
-    return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
+    const firstName = getField("firstName", "first_name");
+    const lastName = getField("lastName", "last_name");
+    return `${firstName?.charAt(0) || ""}${lastName?.charAt(0) || ""}`.toUpperCase();
   };
   
   const handleAvatarClick = () => {
@@ -197,7 +208,7 @@ const ProfileTab = () => {
       <div className="flex flex-col items-center pt-8 pb-6">
         <div className="relative">
           <Avatar className="h-24 w-24 mb-4 cursor-pointer" onClick={handleAvatarClick}>
-            <AvatarImage src={userProfile.avatarUrl || "/placeholder.svg"} alt="User avatar" />
+            <AvatarImage src={getField("avatarUrl", "avatar_url") || "/placeholder.svg"} alt="User avatar" />
             <AvatarFallback>{getInitials()}</AvatarFallback>
           </Avatar>
           <Button 
@@ -218,9 +229,9 @@ const ProfileTab = () => {
           />
         </div>
         <h2 className="text-2xl font-bold text-gray-900">
-          {userProfile.firstName} {userProfile.lastName}
+          {getField("firstName", "first_name")} {getField("lastName", "last_name")}
         </h2>
-        <p className="text-gray-500">{userProfile.email}</p>
+        <p className="text-gray-500">{getField("email")}</p>
         {uploading && <p className="text-sm text-gray-500 mt-1">Uploading...</p>}
       </div>
 
@@ -296,7 +307,7 @@ const ProfileTab = () => {
         <CardContent className="space-y-4">
           <div className="flex items-center gap-3 text-gray-600">
             <Mail className="h-5 w-5 flex-shrink-0" />
-            <span className="flex-grow">{userProfile.email}</span>
+            <span className="flex-grow">{getField("email")}</span>
           </div>
           
           <div className="flex items-center gap-3 text-gray-600">
@@ -315,7 +326,7 @@ const ProfileTab = () => {
               </div>
             ) : (
               <>
-                <span className="flex-grow">{userProfile.phone || "Not specified"}</span>
+                <span className="flex-grow">{phoneValue || "Not specified"}</span>
                 <Button variant="ghost" size="icon" onClick={() => setEditingPhone(true)}>
                   <Edit className="h-4 w-4" />
                 </Button>
@@ -339,7 +350,7 @@ const ProfileTab = () => {
               </div>
             ) : (
               <>
-                <span className="flex-grow">{userProfile.address || "Not specified"}</span>
+                <span className="flex-grow">{addressValue || "Not specified"}</span>
                 <Button variant="ghost" size="icon" onClick={() => setEditingAddress(true)}>
                   <Edit className="h-4 w-4" />
                 </Button>

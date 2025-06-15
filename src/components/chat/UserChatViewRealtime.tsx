@@ -207,6 +207,15 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
     }
   }, [currentConversationId, activeChat, toast]);
 
+  // --- DEBUG: Log di diagnostica per problemi chat
+  useEffect(() => {
+    console.log("[DEBUG UserChat] userId:", userId);
+    console.log("[DEBUG UserChat] activeChat:", activeChat);
+    console.log("[DEBUG UserChat] currentConversationId:", currentConversationId);
+    console.log("[DEBUG UserChat] isConnected:", isConnected);
+    console.log("[DEBUG UserChat] canSend:", !!currentConversationId && !!userId);
+  }, [userId, activeChat, currentConversationId, isConnected]);
+
   if (!activeChat || activeChat !== 'expert') {
     return <EmptyStateView onStartChat={handleStartChat} />;
   }
@@ -230,7 +239,7 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
         </div>
       )}
 
-      {/* Il componente MessageInput è SEMPRE attivo (disabledInput={false}) */}
+      {/* L’input è SEMPRE attivo se l’utente è autenticato */}
       <div className="relative">
         <MessageInput 
           onSendMessage={handleSendMessage}
@@ -238,7 +247,7 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
           conversationId={currentConversationId || ""}
           senderId={userId}
           recipientId="07c7fe19-33c3-4782-b9a0-4e87c8aa7044"
-          disabledInput={false}
+          disabledInput={false}  // <-- MAI disabilitato per admin/tester
         />
       </div>
       {(!!connectionError) && (
