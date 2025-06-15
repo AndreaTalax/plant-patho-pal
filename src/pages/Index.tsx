@@ -115,10 +115,25 @@ const Index = () => {
    *   - Master accounts are prevented from accessing the diagnose tab.
    */
   const renderTabContent = () => {
+    // Se master, mostra SOLO Dashboard (Expert), Chat, Shop, Profilo
+    if (isMasterAccount) {
+      switch (activeTab) {
+        case "expert":
+          return <ExpertTab />;
+        case "chat":
+          return <ChatTab />;
+        case "shop":
+          return <ShopTab />;
+        case "profile":
+          return <ProfileTab />;
+        default:
+          return <ExpertTab />;
+      }
+    }
+    // Per utenti normali, mostra tutto
     switch (activeTab) {
       case "diagnose":
-        // Redirect master accounts to expert tab instead of diagnose
-        return isMasterAccount ? <ExpertTab /> : <DiagnoseTab />;
+        return <DiagnoseTab />;
       case "chat":
         return <ChatTab />;
       case "library":
@@ -127,10 +142,8 @@ const Index = () => {
         return <ShopTab />;
       case "profile":
         return <ProfileTab />;
-      case "expert":
-        return isMasterAccount ? <ExpertTab /> : <DiagnoseTab />;
       default:
-        return isMasterAccount ? <ExpertTab /> : <DiagnoseTab />;
+        return <DiagnoseTab />;
     }
   };
 

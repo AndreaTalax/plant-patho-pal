@@ -125,7 +125,7 @@ export const ExpertRealTimeChat: React.FC = () => {
         <div className="p-4 border-b border-gray-200">
           <div className="flex items-center gap-2">
             <Users className="h-5 w-5 text-drplant-green" />
-            <h2 className="text-lg font-semibold">Conversazioni Pazienti</h2>
+            <h2 className="text-lg font-semibold">Conversazioni Clienti</h2>
           </div>
           <p className="text-sm text-gray-600 mt-1">
             {conversations.length} conversazioni attive

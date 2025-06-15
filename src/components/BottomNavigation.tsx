@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { 
@@ -27,18 +26,23 @@ const BottomNavigation = ({
 }: BottomNavigationProps) => {
   const [unreadCount] = useState(0);
 
+  // Se è un master, NON mostrare Diagnosi né Libreria
   const navItems = [
-    { id: "diagnose", label: "Diagnosi", icon: Home, locked: false },
-    { id: "chat", label: "Chat", icon: MessageSquare, hasNotification: unreadCount > 0,
-      locked: !canAccessTabs },
-    { id: "library", label: "Libreria", icon: BookOpen, locked: !canAccessTabs },
-    { id: "shop", label: "Shop", icon: ShoppingCart, locked: !canAccessTabs },
-    { id: "profile", label: "Profilo", icon: User, locked: !canAccessTabs }
+    // Mostra solo se NON è master
+    ...(!showExpertTab ? [
+      { id: "diagnose", label: "Diagnosi", icon: Home, locked: false },
+      { id: "chat", label: "Chat", icon: MessageSquare, hasNotification: unreadCount > 0, locked: !canAccessTabs },
+      { id: "library", label: "Libreria", icon: BookOpen, locked: !canAccessTabs },
+      { id: "shop", label: "Shop", icon: ShoppingCart, locked: !canAccessTabs },
+      { id: "profile", label: "Profilo", icon: User, locked: !canAccessTabs }
+    ] : [
+      // Se master, mostra solo: Dashboard (Expert), Chat, Shop, Profilo
+      { id: "expert", label: "Dashboard", icon: Stethoscope, locked: false },
+      { id: "chat", label: "Chat", icon: MessageSquare, hasNotification: unreadCount > 0, locked: false },
+      { id: "shop", label: "Shop", icon: ShoppingCart, locked: false },
+      { id: "profile", label: "Profilo", icon: User, locked: false }
+    ])
   ];
-
-  if (showExpertTab) {
-    navItems.splice(4, 0, { id: "expert", label: "Dashboard", icon: Stethoscope, locked: false });
-  }
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-2 z-50">
@@ -46,7 +50,6 @@ const BottomNavigation = ({
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = activeTab === item.id;
-          // Non più legato direttamente a plantInfoComplete ma alla nuova logica canAccessTabs
           const buttonDisabled = item.locked && !showExpertTab;
 
           return (
