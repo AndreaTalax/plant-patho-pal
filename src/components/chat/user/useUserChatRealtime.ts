@@ -24,7 +24,6 @@ export const useUserChatRealtime = (userId: string) => {
       try {
         console.log("🔄 Initializing expert chat for user:", userId);
         
-        // Get or create conversation with expert
         const conversation = await findOrCreateConversation(userId);
         if (!conversation) {
           console.error("❌ Could not start conversation with expert");
@@ -33,17 +32,14 @@ export const useUserChatRealtime = (userId: string) => {
         
         console.log("✅ Found/created conversation:", conversation.id);
         setCurrentDbConversation(conversation);
-        setActiveChat('expert'); // Always set expert as active chat
+        setActiveChat('expert');
         
-        // Load messages
         const messagesData = await loadMessages(conversation.id);
         console.log("📬 Loaded messages:", messagesData.length);
         
-        // Convert to UI format
         const messagesForConversation = messagesData.map(msg => convertToUIMessage(msg));
         
         if (!messagesForConversation || messagesForConversation.length === 0) {
-          // Add welcome message if no messages exist
           setMessages([{ 
             id: 'welcome-1', 
             sender: 'expert', 
@@ -62,7 +58,7 @@ export const useUserChatRealtime = (userId: string) => {
     initializeExpertChat();
   }, [userId]);
 
-  // Enhanced realtime subscription for messages with improved deduplication
+  // Enhanced realtime subscription for messages
   useEffect(() => {
     if (!currentDbConversation?.id) return;
     
@@ -87,7 +83,6 @@ export const useUserChatRealtime = (userId: string) => {
             const withoutTemporary = prev.filter(msg => {
               if (!msg.id.startsWith('temp-')) return true;
               
-              // Check if this temp message matches the incoming real message
               const textMatches = msg.text.trim() === formattedMessage.text.trim();
               const senderMatches = msg.sender === formattedMessage.sender;
               const imageMatches = msg.image_url === formattedMessage.image_url;
@@ -131,7 +126,6 @@ export const useUserChatRealtime = (userId: string) => {
     };
   }, [currentDbConversation?.id]);
   
-  // Improved send message function
   const handleSendMessage = async (text: string, imageUrl?: string) => {
     if ((!text.trim() && !imageUrl)) {
       toast.error("Il messaggio non può essere vuoto");
@@ -158,7 +152,6 @@ export const useUserChatRealtime = (userId: string) => {
         setCurrentDbConversation(conversation);
       }
 
-      // Create temporary message for immediate UI feedback
       const tempMessage: Message = {
         id: `temp-${Date.now()}-${Math.random()}`,
         sender: 'user',
@@ -174,7 +167,6 @@ export const useUserChatRealtime = (userId: string) => {
         return updated;
       });
 
-      // Send message to backend
       console.log('🚀 Sending to backend...');
       const result = await sendMessageService(
         conversation.id,
@@ -188,18 +180,15 @@ export const useUserChatRealtime = (userId: string) => {
 
       if (!result) {
         console.error('❌ Backend returned null/false');
-        // Remove temporary message on failure
         setMessages(prev => prev.filter(msg => msg.id !== tempMessage.id));
         toast.error("Errore nell'invio del messaggio");
         return;
       }
 
       console.log('✅ Message sent successfully');
-      // Real message will arrive via realtime and temporary will be removed
 
     } catch (error) {
       console.error('❌ Error sending message:', error);
-      // Remove all temporary messages on error
       setMessages(prev => prev.filter(msg => !msg.id.startsWith('temp-')));
       toast.error("Errore nell'invio del messaggio");
     } finally {

@@ -1,8 +1,7 @@
+
 import React, { useEffect } from 'react';
 import { useUserChatRealtime } from './user/useUserChatRealtime';
-import { usePlantInfo } from '@/context/PlantInfoContext';
 import { useAuth } from '@/context/AuthContext';
-import { ConsultationDataService } from '@/services/chat/consultationDataService';
 import { useToast } from '@/hooks/use-toast';
 import ChatHeader from './user/ChatHeader';
 import MessageList from './MessageList';
@@ -10,13 +9,14 @@ import MessageInput from './MessageInput';
 import EmptyStateView from './user/EmptyStateView';
 import UserPlantSummary from './user/UserPlantSummary';
 import ChatConnectionError from './user/ChatConnectionError';
+import { ChatInitializer } from './user/ChatInitializer';
+import { useConnectionManager } from './user/ConnectionManager';
 
 interface UserChatViewRealtimeProps {
   userId: string;
 }
 
 export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ userId }) => {
-  const { plantInfo } = usePlantInfo();
   const { userProfile } = useAuth();
   const {
     activeChat,
@@ -28,115 +28,14 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
     startChatWithExpert,
     currentConversationId
   } = useUserChatRealtime(userId);
-  const { toast, dismiss } = useToast();
-  const [popupDismissed, setPopupDismissed] = React.useState(false);
-
+  const { dismiss } = useToast();
   const [autoDataSent, setAutoDataSent] = React.useState(false);
+
+  const { connectionError } = useConnectionManager(currentConversationId, activeChat);
 
   useEffect(() => {
     dismiss();
-    setPopupDismissed(true);
   }, []);
-
-  useEffect(() => {
-    const sendInitialData = async () => {
-      if (
-        !activeChat ||
-        activeChat !== 'expert' ||
-        !currentConversationId ||
-        !plantInfo?.infoComplete ||
-        !userProfile ||
-        autoDataSent
-      ) {
-        return;
-      }
-
-      try {
-        console.log('[AUTO-DATA ✉️] Controllo invio dati automatico...');
-        const alreadySent = await ConsultationDataService.isConsultationDataSent(currentConversationId);
-
-        if (alreadySent) {
-          console.log('[AUTO-DATA ✅] Dati già inviati, nessuna azione necessaria');
-          setAutoDataSent(true);
-          return;
-        }
-
-        const plantData = {
-          symptoms: plantInfo.symptoms || 'Nessun sintomo specificato',
-          wateringFrequency: plantInfo.wateringFrequency || 'Non specificata',
-          sunExposure: plantInfo.lightExposure || 'Non specificata',
-          environment: plantInfo.isIndoor ? 'Interno' : 'Esterno',
-          plantName: plantInfo.name || 'Pianta non identificata',
-          imageUrl: plantInfo.uploadedImageUrl,
-          aiDiagnosis: (plantInfo as any).aiDiagnosis,
-          useAI: plantInfo.useAI,
-          sendToExpert: plantInfo.sendToExpert
-        };
-
-        const userData = {
-          firstName: userProfile.first_name || userProfile.firstName || "",
-          lastName: userProfile.last_name || userProfile.lastName || "",
-          email: userProfile.email || "",
-          birthDate: userProfile.birth_date || userProfile.birthDate || "",
-          birthPlace: userProfile.birth_place || userProfile.birthPlace || ""
-        };
-
-        console.log('[AUTO-DATA 📤] Invio Dati:', { ...plantData, hasImage: !!plantData.imageUrl });
-
-        const success = await ConsultationDataService.sendInitialConsultationData(
-          currentConversationId,
-          plantData,
-          userData,
-          plantInfo.useAI || false
-        );
-
-        setAutoDataSent(true);
-
-        if (success) {
-          toast({
-            title: 'Dati e foto inviati automaticamente all\'esperto!',
-            description: 'Marco Nigro ha ricevuto tutte le informazioni e la foto della tua pianta',
-            duration: 4000,
-          });
-        } else {
-          toast({
-            title: 'Attenzione: dati automatici non inviati, riprova tra poco.',
-            description: '',
-            duration: 4000,
-            variant: 'destructive'
-          });
-        }
-
-      } catch (error) {
-        setAutoDataSent(false);
-        console.error('[AUTO-DATA ❌]', error);
-        toast({
-          title: 'Errore nell\'invio automatico dei dati',
-          description: '',
-          duration: 4000,
-          variant: 'destructive'
-        });
-      }
-    };
-
-    if (
-      activeChat === 'expert' &&
-      currentConversationId &&
-      plantInfo?.infoComplete &&
-      userProfile
-    ) {
-      const timer = setTimeout(sendInitialData, 1200);
-      return () => clearTimeout(timer);
-    }
-  }, [
-    activeChat,
-    currentConversationId,
-    plantInfo?.infoComplete,
-    plantInfo?.uploadedImageUrl,
-    userProfile,
-    messages.length,
-    autoDataSent
-  ]);
 
   const handleStartChat = () => {
     setAutoDataSent(false);
@@ -147,24 +46,6 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
     setAutoDataSent(false);
     setActiveChat(null);
   };
-
-  const [connectionError, setConnectionError] = React.useState<string | null>(null);
-  useEffect(() => {
-    if (!currentConversationId && activeChat === 'expert') {
-      const timer = setTimeout(() => {
-        setConnectionError("Impossibile connettersi alla chat. Errore di connessione con il server.");
-        toast({
-          title: "Errore di connessione alla chat",
-          description: "Problemi di connessione o server (502). Riprova tra poco.",
-          duration: 10000,
-          variant: "destructive"
-        });
-      }, 4000);
-      return () => clearTimeout(timer);
-    } else {
-      setConnectionError(null);
-    }
-  }, [currentConversationId, activeChat, toast]);
 
   useEffect(() => {
     console.log("[DEBUG UserChat] userId:", userId);
@@ -180,6 +61,13 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
 
   return (
     <div className="flex flex-col h-full">
+      <ChatInitializer
+        activeChat={activeChat}
+        currentConversationId={currentConversationId}
+        autoDataSent={autoDataSent}
+        setAutoDataSent={setAutoDataSent}
+      />
+      
       <ChatHeader 
         onBackClick={handleBackClick}
         isConnected={isConnected}

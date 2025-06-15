@@ -2,6 +2,8 @@
 import { supabase } from '@/integrations/supabase/client';
 import { MARCO_NIGRO_ID } from '@/components/phytopathologist';
 import { toast } from 'sonner';
+import { ConsultationDataBuilder } from './consultationDataBuilder';
+import { MessageService } from './messageService';
 
 interface PlantData {
   symptoms?: string;
@@ -48,58 +50,30 @@ export class ConsultationDataService {
         return false;
       }
 
-      // Messaggio principale con i dati (sempre include dati personali)
-      let mainMessage = `🌿 **Nuova Richiesta di Consulenza**
-
-👤 **Dati Utente:**
-- Nome: ${userProfile.firstName || (userProfile as any).first_name || 'Non specificato'} ${userProfile.lastName || (userProfile as any).last_name || ''}
-- Email: ${userProfile.email || 'Non specificata'}
-- Data di nascita: ${userProfile.birthDate || (userProfile as any).birth_date || 'Non specificata'}
-- Luogo di nascita: ${userProfile.birthPlace || (userProfile as any).birth_place || 'Non specificato'}
-
-🌱 **Informazioni della Pianta:**
-- Nome/Tipo: ${plantData.plantName || 'Pianta non identificata'}
-- Ambiente: ${plantData.environment || 'Non specificato'}
-- Sintomi: ${plantData.symptoms || 'Nessun sintomo specificato'}
-- Frequenza irrigazione: ${this.getWateringText(plantData.wateringFrequency)}
-- Esposizione solare: ${this.getSunExposureText(plantData.sunExposure)}`;
-
-      if (fromAIDiagnosis && plantData.aiDiagnosis) {
-        mainMessage += `
-
-🤖 **Diagnosi AI Precedente:**
-- Pianta identificata: ${plantData.aiDiagnosis.consensus?.mostLikelyPlant?.plantName || 'Non identificata'}
-- Confidenza: ${plantData.aiDiagnosis.consensus?.overallConfidence || 0}%
-- Stato: ${plantData.aiDiagnosis.diseaseDetection?.length > 0 ? 'Problemi rilevati' : 'Apparentemente sana'}`;
-      }
-
-      if (plantData.imageUrl) {
-        mainMessage += `\n\n📸 **Immagine della pianta allegata**`;
-      }
-
-      mainMessage += `\n\n*Dati (compresi dati personali) inviati automaticamente dal sistema Dr.Plant*`;
+      // Costruisci il messaggio principale
+      const mainMessage = ConsultationDataBuilder.buildMainMessage(
+        plantData,
+        userProfile,
+        fromAIDiagnosis
+      );
 
       console.log('📝 Sending main consultation message...');
       
       // Invia il messaggio principale
-      const { error: messageError } = await supabase
-        .from('messages')
-        .insert({
-          conversation_id: conversationId,
-          sender_id: user.id,
-          recipient_id: MARCO_NIGRO_ID,
-          content: mainMessage,
-          text: mainMessage,
-          metadata: {
-            type: 'consultation_data',
-            autoSent: true,
-            fromAIDiagnosis,
-            consultationType: fromAIDiagnosis ? 'ai_diagnosis_review' : 'direct_consultation'
-          }
-        });
+      const mainMessageSent = await MessageService.sendMessage(
+        conversationId,
+        user.id,
+        mainMessage,
+        {
+          type: 'consultation_data',
+          autoSent: true,
+          fromAIDiagnosis,
+          consultationType: fromAIDiagnosis ? 'ai_diagnosis_review' : 'direct_consultation'
+        }
+      );
 
-      if (messageError) {
-        console.error('❌ Error sending main message:', messageError);
+      if (!mainMessageSent) {
+        console.error('❌ Error sending main message');
         return false;
       }
 
@@ -108,7 +82,7 @@ export class ConsultationDataService {
       // Invia l'immagine come messaggio separato se disponibile
       if (plantData.imageUrl) {
         console.log('📸 Sending plant image as separate message...');
-        await this.sendImageMessage(conversationId, user.id, plantData.imageUrl);
+        await MessageService.sendImageMessage(conversationId, user.id, plantData.imageUrl);
       }
 
       console.log('✅ Consultation data sent successfully');
@@ -121,106 +95,9 @@ export class ConsultationDataService {
   }
 
   /**
-   * Invia l'immagine come messaggio separato
-   */
-  private static async sendImageMessage(
-    conversationId: string,
-    senderId: string,
-    imageUrl: string
-  ): Promise<void> {
-    try {
-      console.log('📸 Preparing to send image message with URL:', imageUrl);
-
-      const imageMessage = `📸 **Immagine della Pianta**`;
-      
-      const { error } = await supabase
-        .from('messages')
-        .insert({
-          conversation_id: conversationId,
-          sender_id: senderId,
-          recipient_id: MARCO_NIGRO_ID,
-          content: imageMessage,
-          text: imageMessage,
-          image_url: imageUrl,
-          metadata: {
-            type: 'plant_image',
-            autoSent: true,
-            isPlantImage: true
-          }
-        });
-
-      if (error) {
-        console.error('❌ Error sending image message:', error);
-        throw error;
-      }
-
-      console.log('✅ Plant image message sent successfully');
-    } catch (error) {
-      console.error('❌ Failed to send image message:', error);
-      // Non bloccare il processo principale se l'immagine non viene inviata
-    }
-  }
-
-  /**
    * Verifica se i dati di consultazione sono già stati inviati
    */
   static async isConsultationDataSent(conversationId: string): Promise<boolean> {
-    try {
-      console.log('🔍 Checking if consultation data already sent for conversation:', conversationId);
-      
-      const { data: messages, error } = await supabase
-        .from('messages')
-        .select('metadata, content')
-        .eq('conversation_id', conversationId)
-        .not('metadata', 'is', null);
-
-      if (error) {
-        console.error('❌ Error checking consultation data:', error);
-        return false;
-      }
-
-      if (!messages || messages.length === 0) {
-        console.log('📭 No messages with metadata found');
-        return false;
-      }
-
-      // Controlla se esiste già un messaggio con dati di consultazione
-      const hasConsultationData = messages.some((msg: any) => 
-        msg.metadata && 
-        (msg.metadata.type === 'consultation_data' || 
-         msg.metadata.autoSent === true)
-      );
-
-      console.log('🔍 Consultation data already sent:', hasConsultationData);
-      return hasConsultationData;
-    } catch (error) {
-      console.error('❌ Error checking consultation data status:', error);
-      return false;
-    }
-  }
-
-  private static getWateringText(frequency?: string): string {
-    const wateringMap: { [key: string]: string } = {
-      'quotidiana': 'Quotidiana',
-      'ogni-2-giorni': 'Ogni 2 giorni',
-      '2-volte-settimana': '2 volte a settimana',
-      'settimanale': 'Settimanale',
-      'ogni-2-settimane': 'Ogni 2 settimane',
-      'mensile': 'Mensile',
-      'quando-necessario': 'Quando il terreno è secco'
-    };
-    return wateringMap[frequency || ''] || frequency || 'Non specificata';
-  }
-
-  private static getSunExposureText(exposure?: string): string {
-    const exposureMap: { [key: string]: string } = {
-      'sole-diretto': 'Sole diretto',
-      'sole-parziale': 'Sole parziale',
-      'ombra-parziale': 'Ombra parziale',
-      'ombra-completa': 'Ombra completa',
-      'luce-indiretta': 'Luce indiretta',
-      'luce-artificiale': 'Luce artificiale'
-    };
-    return exposureMap[exposure || ''] || exposure || 'Non specificata';
+    return MessageService.checkConsultationDataSent(conversationId);
   }
 }
