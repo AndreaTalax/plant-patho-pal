@@ -100,7 +100,8 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
           toast({
             title: 'Dati e foto inviati automaticamente all\'esperto!',
             description: 'Marco Nigro ha ricevuto tutte le informazioni e la foto della tua pianta',
-            duration: 4000
+            duration: 4000, // <-- chiude il toast dopo 4 secondi invece che lasciarlo frizzato
+            // rimuovo dismissible per evitare che resti frizzato
           });
         } else {
           toast({
@@ -255,7 +256,7 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
           conversationId={currentConversationId || ""}
           senderId={userId}
           recipientId="07c7fe19-33c3-4782-b9a0-4e87c8aa7044"
-          disabledInput={false} // <-- Sempre abilitato
+          disabledInput={false} // <-- SEMPRE FALSO! Il campo per scrivere è sempre attivo con tastiera
         />
       </div>
       {(!!connectionError) && (
