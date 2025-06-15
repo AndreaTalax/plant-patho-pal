@@ -6,8 +6,8 @@ import { sendMessage } from './chatService';
 import { toast } from 'sonner';
 import { uploadPlantImage } from '@/utils/imageStorage';
 import { supabase } from '@/integrations/supabase/client';
-import Picker from '@emoji-mart/react';
-import data from '@emoji-mart/data';
+import AudioRecorder from './AudioRecorder';
+import EmojiPicker from './EmojiPicker';
 
 interface MessageInputProps {
   conversationId?: string;
@@ -29,7 +29,7 @@ const MessageInput = ({
   isSending: externalIsSending = false,
   isMasterAccount = false,
   disabledInput = false
-}: MessageInputProps) => {
+}: any) => {
   const [message, setMessage] = useState('');
   const [internalIsSending, setInternalIsSending] = useState(false);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
@@ -41,14 +41,10 @@ const MessageInput = ({
   const [showEmoji, setShowEmoji] = useState(false);
   const emojiBtnRef = useRef<HTMLButtonElement>(null);
 
-  // Audio
-  const [isRecording, setIsRecording] = useState(false);
-  const [audioBlob, setAudioBlob] = useState<Blob|null>(null);
-  const [audioURL, setAudioURL] = useState<string | null>(null);
-  const mediaRecorderRef = useRef<MediaRecorder|null>(null);
-  const audioChunksRef = useRef<Blob[]>([]);
+  // AUDIO: stato solo per abilitare/disabilitare il bottone
+  const [isSendingAudio, setIsSendingAudio] = useState(false);
 
-  const isSending = externalIsSending || internalIsSending || uploadingImage;
+  const isSending = externalIsSending || internalIsSending || uploadingImage || isSendingAudio;
 
   const handleImageSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -77,81 +73,34 @@ const MessageInput = ({
     }
   };
 
-  // EMOJI HANDLER
-  const handleSelectEmoji = (emoji: any) => {
-    setMessage(prev => prev + (emoji.native ?? emoji.shortcodes ?? ''));
-    setShowEmoji(false);
-  };
-
-  // AUDIO HANDLER
-  const startRecording = async () => {
-    if (!navigator.mediaDevices?.getUserMedia) {
-      toast.error('Il tuo browser non supporta la registrazione audio');
-      return;
-    }
-    setIsRecording(true);
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new window.MediaRecorder(stream);
-      audioChunksRef.current = [];
-      mediaRecorderRef.current = mediaRecorder;
-
-      mediaRecorder.ondataavailable = (e) => {
-        if (e.data.size > 0) audioChunksRef.current.push(e.data);
-      };
-      mediaRecorder.onstop = async () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-        setAudioBlob(audioBlob);
-        const url = URL.createObjectURL(audioBlob);
-        setAudioURL(url);
-      };
-      mediaRecorder.start();
-    } catch (e) {
-      setIsRecording(false);
-      toast.error('Errore nell\'accedere al microfono');
-    }
-  };
-
-  const stopRecording = () => {
-    setIsRecording(false);
-    mediaRecorderRef.current?.stop();
-    mediaRecorderRef.current?.stream.getTracks().forEach(t => t.stop());
-  };
-
-  const sendAudioMessage = async () => {
+  // AUDIO: nuovo handler separato
+  const handleSendAudio = async (audioBlob: Blob) => {
     if (!audioBlob) return;
-    if (isSending) return;
+    setIsSendingAudio(true);
     try {
-      setInternalIsSending(true);
-      // Carica come file audio su storage, simile a image
-      // Puoi usare uploadPlantImage o implementare uploadPlantAudio
-      // Qui lo carico come fosse una immagine per semplicità: SUGGERITO creare storage audio
+      // Copia/usa la stessa logica che avevi in sendAudioMessage per upload su supabase e notifica
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         toast.error('User non autenticato');
-        setInternalIsSending(false);
+        setIsSendingAudio(false);
         return;
       }
       const fileName = `audio_${Date.now()}.webm`;
       const { data, error } = await supabase.storage
-        .from('plant-images') // suggerito: crea bucket 'plant-audios'
+        .from('plant-images')
         .upload(`${user.id}/${fileName}`, audioBlob, { contentType: 'audio/webm' });
       if (error) throw error;
-      // Ottieni url pubblico (controlla policy bucket)
       const { data: pubUrl } = supabase.storage
         .from('plant-images')
         .getPublicUrl(`${user.id}/${fileName}`);
-      // Manda come messaggio audio
       if (pubUrl?.publicUrl && onSendMessage) {
         await onSendMessage(`[AUDIO] ${pubUrl.publicUrl}`);
         toast.success('Messaggio vocale inviato!');
-        setAudioBlob(null);
-        setAudioURL(null);
       }
     } catch (e) {
       toast.error('Errore invio audio');
     }
-    setInternalIsSending(false);
+    setIsSendingAudio(false);
   };
 
   /**
@@ -258,6 +207,12 @@ const MessageInput = ({
     }
   };
 
+  // EMOJI HANDLER
+  const handleSelectEmoji = (emoji: any) => {
+    setMessage(prev => prev + (emoji.native ?? emoji.shortcodes ?? ''));
+    setShowEmoji(false);
+  };
+
   return (
     <div className="border-t border-drplant-green/20 bg-white/80 backdrop-blur-sm p-6">
       <div className="max-w-4xl mx-auto">
@@ -278,32 +233,10 @@ const MessageInput = ({
             </button>
           </div>
         )}
-        {/* AUDIO PREVIEW */}
-        {audioURL && (
-          <div className="mb-2 flex items-center gap-2 bg-blue-50 px-3 py-2 rounded border">
-            <audio src={audioURL} controls className="h-8" />
-            <Button onClick={sendAudioMessage} disabled={isSending || disabledInput} className="ml-2">
-              <Send className="h-4 w-4" />
-            </Button>
-            <Button
-              onClick={() => {
-                setAudioBlob(null);
-                setAudioURL(null);
-              }}
-              variant="outline"
-              className="ml-1"
-              disabled={isSending || disabledInput}
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
-        )}
-        {/* RECORDING STATUS */}
-        {isRecording && (
-          <div className="mb-2 flex items-center gap-2 text-orange-700 font-semibold">
-            ⏺ In registrazione... <Button variant="destructive" onClick={stopRecording} className="text-xs px-2 py-1 ml-3">Stop</Button>
-          </div>
-        )}
+
+        {/* AUDIO RECORDER */}
+        <AudioRecorder onSendAudio={handleSendAudio} disabled={isSending || disabledInput} />
+
         <div className="flex gap-2 sm:gap-4 items-end">
           <div className="flex-1">
             <Textarea
@@ -340,16 +273,6 @@ const MessageInput = ({
             >
               <Image className="h-5 w-5" />
             </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="lg"
-              onClick={() => (isRecording ? stopRecording() : startRecording())}
-              disabled={isSending || disabledInput}
-              className={`h-[44px] px-1 border-drplant-green/30 hover:bg-drplant-green/10 rounded-2xl ${isRecording ? "bg-orange-200" : ""}`}
-            >
-              <Mic className="h-5 w-5" />
-            </Button>
           </div>
           <Button
             onClick={handleSend}
@@ -363,18 +286,12 @@ const MessageInput = ({
             )}
           </Button>
         </div>
-        {showEmoji && (
-          <div className="absolute z-30 mt-2">
-            {/* FIX: emoji-mart v5 needs data + onEmojiSelect props */}
-            <Picker
-              data={data}
-              onEmojiSelect={handleSelectEmoji}
-              theme="light"
-              // showPreview={false} // Uncomment if you want to hide preview panel
-              // showSkinTones={true}
-            />
-          </div>
-        )}
+        {/* EMOJI PICKER */}
+        <EmojiPicker
+          open={showEmoji}
+          onSelect={handleSelectEmoji}
+          onClose={() => setShowEmoji(false)}
+        />
         <input
           ref={fileInputRef}
           type="file"
