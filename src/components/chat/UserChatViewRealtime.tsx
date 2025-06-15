@@ -159,12 +159,11 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
   function renderSummaryMessage() {
     if (!(plantInfo?.infoComplete && userProfile)) return null;
     // Sfrutta entrambi gli alias per robustezza test/admin
-    const firstName = userProfile.first_name || userProfile.firstName || "";
-    const lastName = userProfile.last_name || userProfile.lastName || "";
-    // FIX: rimosso mail
-    const email = userProfile.email || "";
-    const birthDate = userProfile.birth_date || userProfile.birthDate || "";
-    const birthPlace = userProfile.birth_place || userProfile.birthPlace || "";
+    const firstName = userProfile.first_name || userProfile.firstName || "Non specificato";
+    const lastName = userProfile.last_name || userProfile.lastName || "Non specificato";
+    const email = userProfile.email || "Non specificato";
+    const birthDate = userProfile.birth_date || userProfile.birthDate || "Non specificata";
+    const birthPlace = userProfile.birth_place || userProfile.birthPlace || "Non specificato";
 
     return (
       <div className="bg-blue-100 rounded-lg p-3 my-2 text-sm font-mono">
@@ -186,12 +185,8 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
           <span className="block mb-1">**I tuoi dati personali:**</span>
           <span className="inline-flex gap-1 items-center mr-2"><span role="img" aria-label="nome">👤</span> <b>Nome:</b> {firstName} {lastName}</span><br/>
           <span className="inline-flex gap-1 items-center mr-2"><span role="img" aria-label="email">✉️</span> <b>Email:</b> {email}</span><br/>
-          {birthDate && (
-            <span className="inline-flex gap-1 items-center mr-2"><span role="img" aria-label="nascita">🎂</span> <b>Data di nascita:</b> {birthDate}</span>
-          )}
-          {birthPlace && (
-            <span className="inline-flex gap-1 items-center mr-2"><span role="img" aria-label="luogonascita">📍</span> <b>Luogo di nascita:</b> {birthPlace}</span>
-          )}
+          <span className="inline-flex gap-1 items-center mr-2"><span role="img" aria-label="nascita">🎂</span> <b>Data di nascita:</b> {birthDate}</span><br/>
+          <span className="inline-flex gap-1 items-center mr-2"><span role="img" aria-label="luogonascita">📍</span> <b>Luogo di nascita:</b> {birthPlace}</span>
         </div>
       </div>
     );
@@ -235,11 +230,9 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
         onBackClick={handleBackClick}
         isConnected={isConnected}
       />
-      {/* Mostra sempre la sintesi dati pianta + persona all'inizio se info completata */}
       {renderSummaryMessage()}
       <MessageList messages={messages} />
 
-      {/* AVVISO ERRORE sopra la chat, MA input SEMPRE visibile/interattivo */}
       {(!!connectionError || !currentConversationId) && (
         <div className="absolute left-0 right-0 top-20 flex items-center justify-center z-30 rounded-b-2xl pointer-events-none">
           <span className="text-red-700 text-base font-semibold text-center px-4 bg-white/90 shadow border rounded-lg">
@@ -248,7 +241,7 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
         </div>
       )}
 
-      {/* L’input è SEMPRE attivo se l’utente è autenticato */}
+      {/* SEMPRE attivo tranne caso estremo (manca userId) */}
       <div className="relative">
         <MessageInput 
           onSendMessage={handleSendMessage}
@@ -256,7 +249,7 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
           conversationId={currentConversationId || ""}
           senderId={userId}
           recipientId="07c7fe19-33c3-4782-b9a0-4e87c8aa7044"
-          disabledInput={false} // <-- SEMPRE FALSO! Il campo per scrivere è sempre attivo con tastiera
+          disabledInput={!userId}
         />
       </div>
       {(!!connectionError) && (
