@@ -104,6 +104,22 @@ export const ExpertRealTimeChat: React.FC = () => {
     }
   };
 
+  // --- SUBSCRIPTION CANALE REALTIME NOTIFICHE ---
+  useEffect(() => {
+    // Iscrizione solo se loggato come Marco Nigro
+    if (userProfile?.id !== MARCO_NIGRO_ID) return;
+    const channel = supabase.channel(`expert-notifications:${MARCO_NIGRO_ID}`);
+    channel.on("broadcast", { event: "new_plant_consultation" }, (payload) => {
+      // Log notifica e aggiorna conversazioni
+      console.log("[Expert] Notifica realtime ricevuta:", payload);
+      loadConversations();
+    }).subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+    // eslint-disable-next-line
+  }, [userProfile]);
+
   useEffect(() => {
     if (userProfile?.id === MARCO_NIGRO_ID) {
       loadConversations();
