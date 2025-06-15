@@ -1,4 +1,3 @@
-
 import Header from '@/components/Header';
 import { useTheme } from '@/context/ThemeContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -28,30 +27,22 @@ const Services = () => {
     {
       icon: Camera,
       title: "plantDiagnosis",
-      description: "plantDiagnosisDesc",
-      actionText: "diagnosePlant",
-      action: () => navigate('/')
+      description: "plantDiagnosisDesc"
     },
     {
       icon: MessageCircle,
       title: "expertConsultation",
-      description: "expertConsultationDesc",
-      actionText: "chatWithExperts",
-      action: () => navigate('/')
+      description: "expertConsultationDesc"
     },
     {
       icon: ShoppingBag,
       title: "plantCareShop",
-      description: "plantCareShopDesc",
-      actionText: "visitShop",
-      action: () => navigate('/')
+      description: "plantCareShopDesc"
     },
     {
       icon: Leaf,
       title: "plantCareLibrary",
-      description: "plantCareLibraryDesc",
-      actionText: "browseLibrary",
-      action: () => navigate('/')
+      description: "plantCareLibraryDesc"
     },
   ];
 
@@ -82,12 +73,6 @@ const Services = () => {
                 </CardHeader>
                 <CardContent>
                   <p className="text-gray-600 mb-6">{t(service.description)}</p>
-                  <Button 
-                    className="w-full bg-drplant-blue hover:bg-drplant-blue-dark" 
-                    onClick={service.action}
-                  >
-                    {t(service.actionText)}
-                  </Button>
                 </CardContent>
               </Card>
             ))}
