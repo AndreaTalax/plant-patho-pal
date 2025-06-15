@@ -191,5 +191,3 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
     </div>
   );
 };
-
-export { UserChatViewRealtime };
