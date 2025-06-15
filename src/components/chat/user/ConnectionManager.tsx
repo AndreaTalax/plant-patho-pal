@@ -2,15 +2,12 @@
 import { useEffect, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 
-interface ConnectionManagerProps {
+interface UseConnectionManagerProps {
   currentConversationId: string | null;
   activeChat: string | null;
 }
 
-export const ConnectionManager: React.FC<ConnectionManagerProps> = ({
-  currentConversationId,
-  activeChat
-}) => {
+export const useConnectionManager = (currentConversationId: string | null, activeChat: string | null) => {
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const { toast } = useToast();
 
@@ -32,9 +29,4 @@ export const ConnectionManager: React.FC<ConnectionManagerProps> = ({
   }, [currentConversationId, activeChat, toast]);
 
   return { connectionError };
-};
-
-export const useConnectionManager = (currentConversationId: string | null, activeChat: string | null) => {
-  const manager = ConnectionManager({ currentConversationId, activeChat });
-  return manager;
 };
