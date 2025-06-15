@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -369,3 +368,37 @@ export const enhancePlantAnalysisWithVision = (baseAnalysis: any, visionResults:
     };
   }
 };
+
+/**
+ * Calls Supabase Edge Function to use Plant.id and returns best guess species name and confidence.
+ * @param imageFile file (jpeg/png)
+ * @returns {Promise<{plantName: string, confidence: number, rawResult: object}>}
+ */
+export const identifyPlantFromImage = async (imageFile: File): Promise<{plantName: string, confidence: number, rawResult: any}> => {
+  try {
+    // Convert file to base64 (no prefix)
+    const base64String = await fileToBase64WithoutPrefix(imageFile);
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_SUPABASE_URL || "https://otdmqmpxukifoxjlgzmq.supabase.co"}/functions/v1/plant-id-diagnosis`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ imageBase64: base64String }),
+      }
+    );
+    const data = await response.json();
+    // Parse best result
+    const best = Array.isArray(data?.suggestions) ? data.suggestions[0] : null;
+    return {
+      plantName: best?.plant_details?.scientific_name || best?.plant_details?.common_names?.[0] || "Specie non identificata",
+      confidence: best?.probability ?? 0,
+      rawResult: data
+    }
+  } catch (e: any) {
+    return {
+      plantName: "Specie non identificata",
+      confidence: 0,
+      rawResult: { error: e?.message || "Errore chiamata Plant.id" }
+    }
+  }
+}

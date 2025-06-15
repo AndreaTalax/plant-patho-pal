@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { analyzeWithEnhancedAI } from '@/utils/plant-analysis/enhanced-analysis';
 import { handleAnalysisError, createFallbackDiagnosisResult, safeAnalysisWrapper } from '@/utils/error-handling';
 import type { AnalysisProgress } from '../services/aiProviders';
+import { identifyPlantFromImage } from '@/utils/plant-analysis/plant-id-service';
 
 /**
  * Provides functionalities for plant disease diagnosis, analysis, and image processing.
@@ -57,13 +58,28 @@ export const usePlantDiagnosis = () => {
     setDiagnosedDisease(null);
     setAnalysisProgress(0);
     setAnalysisDetails(null);
-    
+
     console.log('🔍 Starting flexible plant analysis...', { 
       fileName: imageFile?.name, 
       fileSize: imageFile?.size,
       plantInfo 
     });
-    
+
+    // Se manca il nome pianta chiede a Plant.id
+    let plantInfoToUse: PlantInfo = { ...plantInfo }
+    if (!plantInfo?.name || plantInfo.name.trim() === "") {
+      try {
+        const { plantName } = await identifyPlantFromImage(imageFile);
+        if (plantName && plantName !== "Specie non identificata") {
+          plantInfoToUse.name = plantName;
+          console.log("🌱 Nome pianta rilevato da Plant.id:", plantName);
+        }
+      } catch (e: any) {
+        console.warn("Nome pianta non identificato da Plant.id:", e?.message || e);
+        // Meglio proseguire con name vuoto che bloccarsi
+      }
+    }
+
     // Use safe wrapper for the entire analysis operation
     const analysisResult = await safeAnalysisWrapper(
       async () => {
@@ -80,7 +96,7 @@ export const usePlantDiagnosis = () => {
           
           progressCallback({ stage: 'initialization', percentage: 10, message: 'Inizializzazione analisi...' });
           
-          const enhancedResult = await analyzeWithEnhancedAI(imageFile, plantInfo, progressCallback);
+          const enhancedResult = await analyzeWithEnhancedAI(imageFile, plantInfoToUse, progressCallback);
           
           progressCallback({ stage: 'processing', percentage: 80, message: 'Elaborazione risultati...' });
           
@@ -159,7 +175,7 @@ export const usePlantDiagnosis = () => {
               dataSource: "Multi-AI Flexible Analysis"
             },
             risultatiCompleti: {
-              plantInfo: plantInfo,
+              plantInfo: plantInfoToUse,
               accuracyGuarantee: isHighConfidence ? "80%+" : "60%+"
             },
             identifiedFeatures: [
