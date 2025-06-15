@@ -48,39 +48,20 @@ const AboutUs = () => {
                 {t("teamDescription")}
               </p>
               
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 justify-center">
                 <Card>
                   <CardContent className="pt-6">
                     <div className="text-center">
-                      <div className="w-24 h-24 rounded-full bg-drplant-blue/10 mx-auto mb-4 flex items-center justify-center">
-                        <Users className="w-10 h-10 text-drplant-blue" />
+                      <div className="w-24 h-24 rounded-full bg-drplant-green/10 mx-auto mb-4 flex items-center justify-center overflow-hidden">
+                        <img
+                          src="https://images.unsplash.com/photo-1618160702438-9b02ab6515c9?q=80&w=150&h=150&auto=format&fit=crop&ixlib=rb-4.0.3"
+                          alt="Marco Nigro"
+                          className="rounded-full object-cover w-20 h-20"
+                        />
                       </div>
-                      <h3 className="font-medium text-lg">Dr. Marco Rossi</h3>
-                      <p className="text-gray-500 text-sm">{t("plantPathologist")}</p>
-                    </div>
-                  </CardContent>
-                </Card>
-                
-                <Card>
-                  <CardContent className="pt-6">
-                    <div className="text-center">
-                      <div className="w-24 h-24 rounded-full bg-drplant-green/10 mx-auto mb-4 flex items-center justify-center">
-                        <Users className="w-10 h-10 text-drplant-green" />
-                      </div>
-                      <h3 className="font-medium text-lg">Dr. Sofia Bianchi</h3>
-                      <p className="text-gray-500 text-sm">{t("agronomist")}</p>
-                    </div>
-                  </CardContent>
-                </Card>
-                
-                <Card>
-                  <CardContent className="pt-6">
-                    <div className="text-center">
-                      <div className="w-24 h-24 rounded-full bg-drplant-blue/10 mx-auto mb-4 flex items-center justify-center">
-                        <Users className="w-10 h-10 text-drplant-blue" />
-                      </div>
-                      <h3 className="font-medium text-lg">Dr. Luca Verdi</h3>
-                      <p className="text-gray-500 text-sm">{t("botanist")}</p>
+                      <h3 className="font-medium text-lg">Marco Nigro</h3>
+                      <p className="text-gray-500 text-sm">Agrotecnico Fitopatologico</p>
+                      <p className="text-xs text-gray-400 mt-2">agrotecnicomarconigro@gmail.com</p>
                     </div>
                   </CardContent>
                 </Card>
@@ -135,3 +116,4 @@ const AboutUs = () => {
 };
 
 export default AboutUs;
+
