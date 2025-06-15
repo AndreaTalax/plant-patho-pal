@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { supabase, EXPERT_ID } from '@/integrations/supabase/client';
@@ -151,15 +150,24 @@ export const useUserChatRealtime = (userId: string) => {
       };
       setMessages(prev => [...prev, tempMessage]);
 
-      // Send message to backend: if text + image, send both
-      const success = await sendMessageService(
-        conversation.id,
-        userId,
-        EXPERT_ID,
-        text,
-        undefined,
-        imageUrl
-      );
+      // Send message to backend: text (and image as optional 5th arg)
+      let success: boolean;
+      if (imageUrl) {
+        success = await sendMessageService(
+          conversation.id,
+          userId,
+          EXPERT_ID,
+          text,
+          imageUrl
+        );
+      } else {
+        success = await sendMessageService(
+          conversation.id,
+          userId,
+          EXPERT_ID,
+          text
+        );
+      }
 
       if (!success) {
         // Rimuovi messaggio temp se invio fallito
@@ -194,4 +202,3 @@ export const useUserChatRealtime = (userId: string) => {
     currentConversationId: currentDbConversation?.id || null
   };
 };
-
