@@ -1,4 +1,3 @@
-
 import { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -7,8 +6,8 @@ import { sendMessage } from './chatService';
 import { toast } from 'sonner';
 import { uploadPlantImage } from '@/utils/imageStorage';
 import { supabase } from '@/integrations/supabase/client';
-import { Picker } from 'emoji-mart';
-import 'emoji-mart/css/emoji-mart.css';
+import Picker from '@emoji-mart/react';
+import data from '@emoji-mart/data';
 
 interface MessageInputProps {
   conversationId?: string;
@@ -80,7 +79,7 @@ const MessageInput = ({
 
   // EMOJI HANDLER
   const handleSelectEmoji = (emoji: any) => {
-    setMessage(prev => prev + emoji.native);
+    setMessage(prev => prev + (emoji.native ?? emoji.shortcodes ?? ''));
     setShowEmoji(false);
   };
 
@@ -366,10 +365,13 @@ const MessageInput = ({
         </div>
         {showEmoji && (
           <div className="absolute z-30 mt-2">
+            {/* FIX: emoji-mart v5 needs data + onEmojiSelect props */}
             <Picker
-              onSelect={handleSelectEmoji}
+              data={data}
+              onEmojiSelect={handleSelectEmoji}
               theme="light"
-              emojiTooltip={true}
+              // showPreview={false} // Uncomment if you want to hide preview panel
+              // showSkinTones={true}
             />
           </div>
         )}
