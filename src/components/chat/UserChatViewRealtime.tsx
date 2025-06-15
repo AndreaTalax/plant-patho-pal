@@ -79,7 +79,7 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
         const userData = {
           firstName: userProfile.first_name || userProfile.firstName || "",
           lastName: userProfile.last_name || userProfile.lastName || "",
-          email: userProfile.email || userProfile.mail || "",
+          email: userProfile.email || "",
           birthDate: userProfile.birth_date || userProfile.birthDate || "",
           birthPlace: userProfile.birth_place || userProfile.birthPlace || ""
         };
@@ -160,7 +160,8 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
     // Sfrutta entrambi gli alias per robustezza test/admin
     const firstName = userProfile.first_name || userProfile.firstName || "";
     const lastName = userProfile.last_name || userProfile.lastName || "";
-    const email = userProfile.email || userProfile.mail || "";
+    // FIX: rimosso mail
+    const email = userProfile.email || "";
     const birthDate = userProfile.birth_date || userProfile.birthDate || "";
     const birthPlace = userProfile.birth_place || userProfile.birthPlace || "";
 
