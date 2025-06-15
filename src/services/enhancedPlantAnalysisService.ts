@@ -79,14 +79,38 @@ export class EnhancedPlantAnalysisService {
         processedImage.processedImage, 
         updateProgress
       );
-      
+
+      // --- INIZIO INTEGRAZIONE CONSULTAZIONE EPPO DATABASE ---
       updateProgress('eppo', 75, 'Consultazione database EPPO...');
-      
-      const eppoData = await this.enhanceWithEppoData(results, updateProgress);
+      let eppoExtraData = undefined;
+      try {
+        // Estraggo sintomi dalle malattie trovate dalle AI
+        const allSymptoms = results.diseases.flatMap(d => d.symptoms).filter(Boolean);
+        const mainSymptoms = allSymptoms.length > 0 ? allSymptoms.join(', ') : null;
+        // Faccio la chiamata alla funzione edge eppo-api, se ci sono sintomi
+        if (mainSymptoms) {
+          const { createClient } = await import("@/integrations/supabase/client");
+          const supabase = createClient();
+          const { data, error } = await supabase.functions.invoke('eppo-api', {
+            body: {
+              endpoint: 'pests',
+              userInput: mainSymptoms,
+              query: ''
+            }
+          });
+          if (!error && data?.data) {
+            eppoExtraData = data.data;
+          }
+        }
+      } catch (eppoError) {
+        // in caso di errore proseguo comunque con la diagnosi AI
+        eppoExtraData = undefined;
+      }
+      // --- FINE INTEGRAZIONE EPPO ---
       
       updateProgress('consensus', 85, 'Elaborazione consensus...');
       
-      const consensus = this.calculateEnhancedConsensus(results, eppoData);
+      const consensus = this.calculateEnhancedConsensus(results, undefined);
       
       const totalProcessingTime = Date.now() - startTime;
       const aiProvidersUsed = this.getUsedProviders(results);
@@ -95,7 +119,8 @@ export class EnhancedPlantAnalysisService {
         plantIdentification: results.identifications,
         diseaseDetection: results.diseases,
         consensus,
-        eppoData,
+        // integrazione dati aggiuntivi EPPO qui:
+        eppoData: eppoExtraData ? { eppoMatches: eppoExtraData } : undefined,
         analysisMetadata: {
           timestamp: new Date().toISOString(),
           totalProcessingTime,
