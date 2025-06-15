@@ -98,6 +98,7 @@ const LibraryTab = () => {
 
       if (error) throw error;
       setArticles(data.articles || []);
+      console.log('[LibraryTab] Articles loaded:', data.articles); // <--- Debug immagini
     } catch (error) {
       console.error('Error fetching articles:', error);
       toast.error('Failed to load articles');
@@ -128,9 +129,11 @@ const LibraryTab = () => {
       if (error) throw error;
       setSelectedArticle(data.article);
       setActiveArticle(articleId);
+      console.log('[LibraryTab] Fetched selectedArticle:', data.article); // <--- Debug dettaglio
     } catch (error) {
       console.error('Error fetching article:', error);
       toast.error('Failed to load article');
+      setSelectedArticle(null);
     }
   };
 
@@ -192,7 +195,11 @@ const LibraryTab = () => {
                   >
                     <div className="w-24 h-24">
                       <img 
-                        src={article.image_url || getArticleFallbackImage(article)} 
+                        src={
+                          article.image_url && article.image_url.trim() !== ""
+                            ? article.image_url
+                            : getArticleFallbackImage(article)
+                        } 
                         alt={article.title} 
                         className="h-full w-full object-cover"
                         onError={e => {
@@ -240,13 +247,30 @@ const LibraryTab = () => {
         </div>
       ) : (
         <div className="flex flex-col h-full">
-          {/* Article detail */}
-          {selectedArticle && (
+          {/* DEBUG: Se nessun selectedArticle, mostra placeholder e bottone indietro */}
+          {!selectedArticle ? (
+            <div className="flex flex-col items-center justify-center h-full p-6">
+              <p className="text-center text-gray-500 mb-4">
+                Articolo non trovato o errore di caricamento.<br />
+                <span className="text-xs">Riprovare oppure tornare indietro.</span>
+              </p>
+              <Button
+                variant="outline"
+                onClick={() => setActiveArticle(null)}
+              >
+                Torna alla libreria
+              </Button>
+            </div>
+          ) : (
             <>
               <div className="relative h-48">
                 <img 
-                  src={selectedArticle.image_url || getArticleFallbackImage(selectedArticle)} 
-                  alt={selectedArticle.title} 
+                  src={
+                    selectedArticle.image_url && selectedArticle.image_url.trim() !== ""
+                      ? selectedArticle.image_url
+                      : getArticleFallbackImage(selectedArticle)
+                  }
+                  alt={selectedArticle.title}
                   className="w-full h-full object-cover brightness-90"
                   onError={e => {
                     (e.currentTarget as HTMLImageElement).src = getArticleFallbackImage(selectedArticle);
@@ -281,9 +305,13 @@ const LibraryTab = () => {
                 <div>
                   <h3 className="text-lg font-semibold text-drplant-green">Tags</h3>
                   <div className="flex flex-wrap gap-2 mt-2">
-                    {selectedArticle.tags.map((tag, i) => (
-                      <Badge key={i} variant="outline">{tag}</Badge>
-                    ))}
+                    {selectedArticle.tags && selectedArticle.tags.length > 0 ? (
+                      selectedArticle.tags.map((tag, i) => (
+                        <Badge key={i} variant="outline">{tag}</Badge>
+                      ))
+                    ) : (
+                      <span className="text-gray-400 text-sm">No tag for this article</span>
+                    )}
                   </div>
                 </div>
               </div>

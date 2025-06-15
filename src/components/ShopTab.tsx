@@ -76,6 +76,8 @@ const ShopTab = () => {
 
       if (error) throw error;
       setProducts(data.products || []);
+      // AGGIUNGO DEBUG LOG
+      console.log('[ShopTab] Products loaded:', data.products);
     } catch (error) {
       console.error('Error fetching products:', error);
       toast.error('Failed to load products');
@@ -293,9 +295,13 @@ const ShopTab = () => {
               {products.map(product => (
                 <Card key={product.id} className="overflow-hidden">
                   <div className="aspect-square overflow-hidden">
-                    <img 
-                      src={product.image_url || getProductFallbackImage(product)} 
-                      alt={product.name} 
+                    <img
+                      src={
+                        product.image_url && product.image_url.trim() !== ""
+                          ? product.image_url
+                          : getProductFallbackImage(product)
+                      }
+                      alt={product.name}
                       className="w-full h-full object-cover"
                       onError={e => {
                         (e.currentTarget as HTMLImageElement).src = getProductFallbackImage(product);
