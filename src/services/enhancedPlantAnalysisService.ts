@@ -89,8 +89,8 @@ export class EnhancedPlantAnalysisService {
         const mainSymptoms = allSymptoms.length > 0 ? allSymptoms.join(', ') : null;
         // Faccio la chiamata alla funzione edge eppo-api, se ci sono sintomi
         if (mainSymptoms) {
-          const { createClient } = await import("@/integrations/supabase/client");
-          const supabase = createClient();
+          // Usa direttamente supabase importato, non createClient
+          const { supabase } = await import("@/integrations/supabase/client");
           const { data, error } = await supabase.functions.invoke('eppo-api', {
             body: {
               endpoint: 'pests',
@@ -111,16 +111,21 @@ export class EnhancedPlantAnalysisService {
       updateProgress('consensus', 85, 'Elaborazione consensus...');
       
       const consensus = this.calculateEnhancedConsensus(results, undefined);
-      
       const totalProcessingTime = Date.now() - startTime;
       const aiProvidersUsed = this.getUsedProviders(results);
       
+      // Mappa i dati EPPO nella chiave formalmente esistente del tipo CombinedAnalysisResult
+      // Qui puoi scegliere la chiave più appropriata; uso diseaseMatches se sono sintomi malattia
+      let eppoData;
+      if (eppoExtraData) {
+        eppoData = { diseaseMatches: eppoExtraData };
+      }
+
       const finalResult: CombinedAnalysisResult = {
         plantIdentification: results.identifications,
         diseaseDetection: results.diseases,
         consensus,
-        // integrazione dati aggiuntivi EPPO qui:
-        eppoData: eppoExtraData ? { eppoMatches: eppoExtraData } : undefined,
+        eppoData, // ora coerente con CombinedAnalysisResult
         analysisMetadata: {
           timestamp: new Date().toISOString(),
           totalProcessingTime,
@@ -130,11 +135,8 @@ export class EnhancedPlantAnalysisService {
       };
       
       await CacheService.set(cacheKey, finalResult);
-      
       updateProgress('complete', 100, 'Analisi completata con successo');
-      
       return finalResult;
-      
     } catch (error) {
       console.error('Enhanced analysis error:', error);
       toast.error('Errore durante l\'analisi. Utilizzo dati di fallback.');
