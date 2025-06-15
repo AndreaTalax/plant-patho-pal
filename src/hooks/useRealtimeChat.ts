@@ -25,7 +25,7 @@ export const useRealtimeChat = ({
   useEffect(() => {
     if (!userId) return;
 
-    console.log('🔄 Setting up real-time chat subscriptions...');
+    console.log('🔄 Setting up real-time chat subscriptions for user:', userId);
 
     // Create a unique channel for this user/conversation
     const channelName = conversationId 
@@ -44,7 +44,7 @@ export const useRealtimeChat = ({
           table: 'messages',
           filter: conversationId 
             ? `conversation_id=eq.${conversationId}`
-            : undefined
+            : `or(sender_id.eq.${userId},recipient_id.eq.${userId})`
         },
         (payload) => {
           console.log('📨 New message received:', payload.new);
@@ -52,7 +52,10 @@ export const useRealtimeChat = ({
           
           // Only show toast for messages from others
           if (newMessage.sender_id !== userId) {
-            toast.success('Nuovo messaggio ricevuto!');
+            toast.success('Nuovo messaggio ricevuto!', {
+              description: newMessage.text?.slice(0, 50) + (newMessage.text?.length > 50 ? '...' : ''),
+              duration: 4000,
+            });
           }
           
           onNewMessage?.(newMessage);
@@ -63,7 +66,10 @@ export const useRealtimeChat = ({
         {
           event: 'UPDATE',
           schema: 'public',
-          table: 'conversations'
+          table: 'conversations',
+          filter: conversationId 
+            ? `id=eq.${conversationId}`
+            : `or(user_id.eq.${userId},expert_id.eq.${userId})`
         },
         (payload) => {
           console.log('💬 Conversation updated:', payload.new);
@@ -110,28 +116,24 @@ export const useRealtimeChat = ({
         throw new Error('Not authenticated');
       }
 
-      const response = await fetch('/api/send-message', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`
-        },
-        body: JSON.stringify({
+      console.log('📤 Sending message via API:', { conversationId, recipientId, text });
+
+      const response = await supabase.functions.invoke('send-message', {
+        body: {
           conversationId,
           recipientId,
           text,
           imageUrl,
           products
-        })
+        }
       });
 
-      const result = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(result.error || 'Failed to send message');
+      if (response.error) {
+        throw new Error(response.error.message || 'Failed to send message');
       }
 
-      return result.message;
+      console.log('✅ Message sent successfully');
+      return response.data?.message;
     } catch (error) {
       console.error('❌ Error sending message:', error);
       throw error;
@@ -146,19 +148,15 @@ export const useRealtimeChat = ({
         throw new Error('Not authenticated');
       }
 
-      const response = await fetch(`/api/get-conversation/${id}`, {
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`
-        }
+      const response = await supabase.functions.invoke('get-conversation', {
+        body: { conversationId: id }
       });
 
-      const result = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(result.error || 'Failed to get conversation');
+      if (response.error) {
+        throw new Error(response.error.message || 'Failed to get conversation');
       }
 
-      return result;
+      return response.data;
     } catch (error) {
       console.error('❌ Error getting conversation:', error);
       throw error;

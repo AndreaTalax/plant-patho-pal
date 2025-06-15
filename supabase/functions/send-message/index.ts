@@ -3,6 +3,8 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
 
+const MARCO_NIGRO_ID = "07c7fe19-33c3-4782-b9a0-4e87c8aa7044";
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -103,7 +105,88 @@ serve(async (req) => {
 
     if (updateError) {
       console.error("⚠️ Warning: Could not update conversation:", updateError);
-      // Non bloccare il processo se l'update della conversazione fallisce
+    }
+
+    // Send notification to Marco Nigro if he's the recipient
+    if (recipientId === MARCO_NIGRO_ID && user.id !== MARCO_NIGRO_ID) {
+      console.log("🔔 Sending notification to Marco Nigro");
+      
+      // Get sender profile for notification
+      const { data: senderProfile } = await supabaseClient
+        .from('profiles')
+        .select('first_name, last_name, email')
+        .eq('id', user.id)
+        .single();
+
+      const senderName = senderProfile 
+        ? `${senderProfile.first_name || ''} ${senderProfile.last_name || ''}`.trim() || senderProfile.email
+        : 'Utente sconosciuto';
+
+      // Call notification service
+      try {
+        const { error: notifyError } = await supabaseClient.functions.invoke('send-specialist-notification', {
+          body: {
+            conversation_id: conversationId,
+            sender_id: user.id,
+            recipient_id: recipientId,
+            message_text: text,
+            expert_email: "marco.nigro@drplant.it",
+            user_details: {
+              id: user.id,
+              firstName: senderProfile?.first_name || '',
+              lastName: senderProfile?.last_name || '',
+              email: senderProfile?.email || ''
+            },
+            image_url: imageUrl,
+            plant_details: products
+          }
+        });
+
+        if (notifyError) {
+          console.error("⚠️ Error sending notification:", notifyError);
+        } else {
+          console.log("✅ Notification sent successfully");
+        }
+      } catch (notifyError) {
+        console.error("⚠️ Error in notification service:", notifyError);
+      }
+    }
+
+    // Send notification to user if Marco replies
+    if (user.id === MARCO_NIGRO_ID && recipientId !== MARCO_NIGRO_ID) {
+      console.log("🔔 Sending reply notification to user");
+      
+      // Get recipient profile for notification
+      const { data: recipientProfile } = await supabaseClient
+        .from('profiles')
+        .select('email')
+        .eq('id', recipientId)
+        .single();
+
+      if (recipientProfile?.email) {
+        try {
+          const { error: notifyError } = await supabaseClient.functions.invoke('send-specialist-notification', {
+            body: {
+              conversation_id: conversationId,
+              sender_id: user.id,
+              recipient_id: recipientId,
+              message_text: text,
+              recipient_email: recipientProfile.email,
+              user_details: {
+                id: recipientId
+              }
+            }
+          });
+
+          if (notifyError) {
+            console.error("⚠️ Error sending user notification:", notifyError);
+          } else {
+            console.log("✅ User notification sent successfully");
+          }
+        } catch (notifyError) {
+          console.error("⚠️ Error in user notification service:", notifyError);
+        }
+      }
     }
 
     console.log("✅ Send message operation completed successfully");
