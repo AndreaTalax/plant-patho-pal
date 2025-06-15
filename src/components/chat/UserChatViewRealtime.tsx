@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import { useUserChatRealtime } from './user/useUserChatRealtime';
 import { usePlantInfo } from '@/context/PlantInfoContext';
@@ -8,6 +9,8 @@ import ChatHeader from './user/ChatHeader';
 import MessageList from './MessageList';
 import MessageInput from './MessageInput';
 import EmptyStateView from './user/EmptyStateView';
+import UserPlantSummary from './user/UserPlantSummary';
+import ChatConnectionError from './user/ChatConnectionError';
 
 interface UserChatViewRealtimeProps {
   userId: string;
@@ -29,16 +32,13 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
   const { toast, dismiss } = useToast();
   const [popupDismissed, setPopupDismissed] = React.useState(false);
 
-  // Stato per evitare invii multipli durante lo stesso primo caricamento
   const [autoDataSent, setAutoDataSent] = React.useState(false);
 
-  // Dismiss tutti i toast quando si monta la chat per evitare freeze
   useEffect(() => {
     dismiss();
     setPopupDismissed(true);
-  }, []); // Solo al mount
+  }, []);
 
-  // Nuova logica: invio dati e immagine appena pronto e non già inviato (immediatamente dopo ogni caricamento chat/messaggi)
   useEffect(() => {
     const sendInitialData = async () => {
       if (
@@ -54,7 +54,6 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
 
       try {
         console.log('[AUTO-DATA ✉️] Controllo invio dati automatico...');
-        // Verifica se già presenti tra i messaggi
         const alreadySent = await ConsultationDataService.isConsultationDataSent(currentConversationId);
 
         if (alreadySent) {
@@ -63,7 +62,6 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
           return;
         }
 
-        // Prepara i dati pianta e utente
         const plantData = {
           symptoms: plantInfo.symptoms || 'Nessun sintomo specificato',
           wateringFrequency: plantInfo.wateringFrequency || 'Non specificata',
@@ -86,7 +84,6 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
 
         console.log('[AUTO-DATA 📤] Invio Dati:', { ...plantData, hasImage: !!plantData.imageUrl });
 
-        // Invia dati
         const success = await ConsultationDataService.sendInitialConsultationData(
           currentConversationId,
           plantData,
@@ -100,8 +97,7 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
           toast({
             title: 'Dati e foto inviati automaticamente all\'esperto!',
             description: 'Marco Nigro ha ricevuto tutte le informazioni e la foto della tua pianta',
-            duration: 4000, // <-- chiude il toast dopo 4 secondi invece che lasciarlo frizzato
-            // rimuovo dismissible per evitare che resti frizzato
+            duration: 4000,
           });
         } else {
           toast({
@@ -124,14 +120,12 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
       }
     };
 
-    // Se c'è una foto da inviare, l'invio è prioritario
     if (
       activeChat === 'expert' &&
       currentConversationId &&
       plantInfo?.infoComplete &&
       userProfile
     ) {
-      // Piccolo delay per sicurezza UX
       const timer = setTimeout(sendInitialData, 1200);
       return () => clearTimeout(timer);
     }
@@ -146,7 +140,7 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
   ]);
 
   const handleStartChat = () => {
-    setAutoDataSent(false); // reset lo stato invio automatico quando si riavvia la chat!
+    setAutoDataSent(false);
     startChatWithExpert();
   };
 
@@ -155,44 +149,6 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
     setActiveChat(null);
   };
 
-  // funzione helper per mostrare i dati utente + pianta nel messaggio automatico
-  function renderSummaryMessage() {
-    if (!(plantInfo?.infoComplete && userProfile)) return null;
-    // Sfrutta entrambi gli alias per robustezza test/admin
-    const firstName = userProfile.first_name || userProfile.firstName || "Non specificato";
-    const lastName = userProfile.last_name || userProfile.lastName || "Non specificato";
-    const email = userProfile.email || "Non specificato";
-    const birthDate = userProfile.birth_date || userProfile.birthDate || "Non specificata";
-    const birthPlace = userProfile.birth_place || userProfile.birthPlace || "Non specificato";
-
-    return (
-      <div className="bg-blue-100 rounded-lg p-3 my-2 text-sm font-mono">
-        <div className="mb-2 font-bold text-blue-900">**Dati della pianta inviati automaticamente**</div>
-        <div>
-          <span className="inline-flex gap-1 items-center mr-2"><span role="img" aria-label="nome">🌱</span> <b>Nome pianta:</b> {plantInfo.name || "Non identificata"}</span><br/>
-          <span className="inline-flex gap-1 items-center mr-2"><span role="img" aria-label="ambiente">🏠</span> <b>Ambiente:</b> {plantInfo.isIndoor ? "Interno" : "Esterno"}</span><br/>
-          <span className="inline-flex gap-1 items-center mr-2"><span role="img" aria-label="luce">☀️</span> <b>Luce:</b> {plantInfo.lightExposure ?? "Non specificata"}</span><br/>
-          <span className="inline-flex gap-1 items-center mr-2"><span role="img" aria-label="acqua">💧</span> <b>Irrigazione:</b> {plantInfo.wateringFrequency ?? "Non specificata"}</span><br/>
-          <span className="inline-flex gap-1 items-center mr-2"><span role="img" aria-label="sintomi">🦠</span> <b>Sintomi:</b> {plantInfo.symptoms ?? "Non specificato"}</span>
-          {plantInfo.uploadedImageUrl && (
-            <div className="mt-1">
-              <span className="block font-bold">📸 Foto allegata</span>
-              <img src={plantInfo.uploadedImageUrl} alt="Immagine pianta" className="rounded border max-w-xs mt-1" />
-            </div>
-          )}
-        </div>
-        <div className="mt-3 font-medium text-blue-800 border-t pt-2">
-          <span className="block mb-1">**I tuoi dati personali:**</span>
-          <span className="inline-flex gap-1 items-center mr-2"><span role="img" aria-label="nome">👤</span> <b>Nome:</b> {firstName} {lastName}</span><br/>
-          <span className="inline-flex gap-1 items-center mr-2"><span role="img" aria-label="email">✉️</span> <b>Email:</b> {email}</span><br/>
-          <span className="inline-flex gap-1 items-center mr-2"><span role="img" aria-label="nascita">🎂</span> <b>Data di nascita:</b> {birthDate}</span><br/>
-          <span className="inline-flex gap-1 items-center mr-2"><span role="img" aria-label="luogonascita">📍</span> <b>Luogo di nascita:</b> {birthPlace}</span>
-        </div>
-      </div>
-    );
-  }
-
-  // ERRORE DI CONVERSAZIONE (502)
   const [connectionError, setConnectionError] = React.useState<string | null>(null);
   useEffect(() => {
     if (!currentConversationId && activeChat === 'expert') {
@@ -211,7 +167,6 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
     }
   }, [currentConversationId, activeChat, toast]);
 
-  // --- DEBUG: Log di diagnostica per problemi chat
   useEffect(() => {
     console.log("[DEBUG UserChat] userId:", userId);
     console.log("[DEBUG UserChat] activeChat:", activeChat);
@@ -230,18 +185,11 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
         onBackClick={handleBackClick}
         isConnected={isConnected}
       />
-      {renderSummaryMessage()}
+      <UserPlantSummary />
       <MessageList messages={messages} />
 
-      {(!!connectionError || !currentConversationId) && (
-        <div className="absolute left-0 right-0 top-20 flex items-center justify-center z-30 rounded-b-2xl pointer-events-none">
-          <span className="text-red-700 text-base font-semibold text-center px-4 bg-white/90 shadow border rounded-lg">
-            {connectionError || "Chat non disponibile. Problema di connessione o server."}
-          </span>
-        </div>
-      )}
+      <ChatConnectionError message={connectionError || (!currentConversationId ? "Chat non disponibile. Problema di connessione o server." : undefined)} />
 
-      {/* SEMPRE attivo tranne caso estremo (manca userId) */}
       <div className="relative">
         <MessageInput 
           onSendMessage={handleSendMessage}
@@ -252,7 +200,7 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
           disabledInput={!userId}
         />
       </div>
-      {(!!connectionError) && (
+      {!!connectionError && (
         <div className="p-4 text-center text-red-500 font-medium">
           {connectionError}
         </div>
