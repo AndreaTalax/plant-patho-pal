@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,6 +6,8 @@ import { Brain, MessageCircle, Zap, Users, Crown, Lock } from 'lucide-react';
 import { usePremiumStatus } from '@/services/premiumService';
 import { toast } from 'sonner';
 import AIAccuracyStats from './AIAccuracyStats';
+import { PremiumPaywallModal } from "./PremiumPaywallModal";
+import { useState } from "react";
 
 interface DiagnosisOptionsProps {
   onSelectAI: () => void;
@@ -18,12 +19,11 @@ const DiagnosisOptions: React.FC<DiagnosisOptionsProps> = ({
   onSelectExpert
 }) => {
   const { hasAIAccess, upgradeMessage } = usePremiumStatus();
+  const [paywallOpen, setPaywallOpen] = useState(false);
 
   const handleAISelection = () => {
     if (!hasAIAccess) {
-      toast.error(upgradeMessage, {
-        description: "Puoi comunque consultare direttamente il nostro esperto!"
-      });
+      setPaywallOpen(true);
       return;
     }
     onSelectAI();
@@ -35,7 +35,7 @@ const DiagnosisOptions: React.FC<DiagnosisOptionsProps> = ({
       
       <div className="grid md:grid-cols-2 gap-4">
         {/* Opzione Diagnosi AI */}
-        <Card className={`relative transition-all hover:shadow-lg ${!hasAIAccess ? 'opacity-75' : ''}`}>
+        <Card className={`relative transition-all hover:shadow-lg`}>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="flex items-center gap-2 text-lg">
@@ -73,7 +73,6 @@ const DiagnosisOptions: React.FC<DiagnosisOptionsProps> = ({
               onClick={handleAISelection}
               className="w-full"
               variant={!hasAIAccess ? "outline" : "default"}
-              disabled={!hasAIAccess}
             >
               {!hasAIAccess && <Lock className="h-4 w-4 mr-2" />}
               {hasAIAccess ? 'Analizza con AI' : 'Richiede Premium'}
@@ -134,6 +133,11 @@ const DiagnosisOptions: React.FC<DiagnosisOptionsProps> = ({
           le tue informazioni e foto all'esperto per una valutazione completa.
         </p>
       </div>
+      {/* Paywall modale */}
+      <PremiumPaywallModal
+        open={paywallOpen}
+        onClose={() => setPaywallOpen(false)}
+      />
     </div>
   );
 };

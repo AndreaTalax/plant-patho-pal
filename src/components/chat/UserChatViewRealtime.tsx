@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { useUserChatRealtime } from './user/useUserChatRealtime';
 import { usePlantInfo } from '@/context/PlantInfoContext';
@@ -135,6 +134,40 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
     setActiveChat(null);
   };
 
+  // funzione helper per mostrare i dati utente + pianta nel messaggio automatico
+  function renderSummaryMessage() {
+    if (!(plantInfo?.infoComplete && userProfile)) return null;
+    return (
+      <div className="bg-blue-100 rounded-lg p-3 my-2 text-sm font-mono">
+        <div className="mb-2 font-bold text-blue-900">**Dati della pianta inviati automaticamente**</div>
+        <div>
+          <span className="inline-flex gap-1 items-center mr-2"><span role="img" aria-label="nome">🌱</span> <b>Nome pianta:</b> {plantInfo.name || "Non identificata"}</span><br/>
+          <span className="inline-flex gap-1 items-center mr-2"><span role="img" aria-label="ambiente">🏠</span> <b>Ambiente:</b> {plantInfo.isIndoor ? "Interno" : "Esterno"}</span><br/>
+          <span className="inline-flex gap-1 items-center mr-2"><span role="img" aria-label="luce">☀️</span> <b>Luce:</b> {plantInfo.lightExposure ?? "Non specificata"}</span><br/>
+          <span className="inline-flex gap-1 items-center mr-2"><span role="img" aria-label="acqua">💧</span> <b>Irrigazione:</b> {plantInfo.wateringFrequency ?? "Non specificata"}</span><br/>
+          <span className="inline-flex gap-1 items-center mr-2"><span role="img" aria-label="sintomi">🦠</span> <b>Sintomi:</b> {plantInfo.symptoms ?? "Non specificato"}</span>
+          {plantInfo.uploadedImageUrl && (
+            <div className="mt-1">
+              <span className="block font-bold">📸 Foto allegata</span>
+              <img src={plantInfo.uploadedImageUrl} alt="Immagine pianta" className="rounded border max-w-xs mt-1" />
+            </div>
+          )}
+        </div>
+        <div className="mt-3 font-medium text-blue-800 border-t pt-2">
+          <span className="block mb-1">**I tuoi dati personali:**</span>
+          <span className="inline-flex gap-1 items-center mr-2"><span role="img" aria-label="nome">👤</span> <b>Nome:</b> {userProfile.first_name} {userProfile.last_name}</span><br/>
+          <span className="inline-flex gap-1 items-center mr-2"><span role="img" aria-label="email">✉️</span> <b>Email:</b> {userProfile.email}</span><br/>
+          {userProfile.birth_date && (
+            <span className="inline-flex gap-1 items-center mr-2"><span role="img" aria-label="nascita">🎂</span> <b>Data di nascita:</b> {userProfile.birth_date}</span>
+          )}
+          {userProfile.birth_place && (
+            <span className="inline-flex gap-1 items-center mr-2"><span role="img" aria-label="luogonascita">📍</span> <b>Luogo di nascita:</b> {userProfile.birth_place}</span>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   if (!activeChat || activeChat !== 'expert') {
     return <EmptyStateView onStartChat={handleStartChat} />;
   }
@@ -145,6 +178,8 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
         onBackClick={handleBackClick}
         isConnected={isConnected}
       />
+      {/* Mostra sempre la sintesi dati pianta + persona all'inizio se info completata */}
+      {renderSummaryMessage()}
       <MessageList messages={messages} />
       <MessageInput 
         onSendMessage={handleSendMessage}
@@ -156,3 +191,5 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
     </div>
   );
 };
+
+export { UserChatViewRealtime };
