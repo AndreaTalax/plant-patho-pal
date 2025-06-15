@@ -1,10 +1,10 @@
-
 import React from "react";
 import { usePlantInfo } from "@/context/PlantInfoContext";
 import { useAuth } from "@/context/AuthContext";
 
 /**
- * Mostra sempre sia i dati della pianta sia i dati personali tra quelli inviati in automatico.
+ * Mostra sempre sia i dati personali sia quelli della pianta tra quelli inviati in automatico.
+ * Ora i dati personali vengono visualizzati PRIMA rispetto a quelli della pianta.
  */
 const UserPlantSummary: React.FC = () => {
   const { plantInfo } = usePlantInfo();
@@ -51,13 +51,14 @@ const UserPlantSummary: React.FC = () => {
     return null;
   }
 
+  // User data fields
   const firstName = userProfile?.first_name || userProfile?.firstName || "Non specificato";
   const lastName = userProfile?.last_name || userProfile?.lastName || "";
   const email = userProfile?.email || "Non specificato";
   const birthDate = userProfile?.birth_date || userProfile?.birthDate || "Non specificata";
   const birthPlace = userProfile?.birth_place || userProfile?.birthPlace || "Non specificato";
 
-  // Dati della pianta con fallback migliori
+  // Pianta fields
   const plantName = plantInfo?.name || "Specie da identificare durante la consulenza";
   const environment = plantInfo?.isIndoor !== undefined ? (plantInfo.isIndoor ? "Interno" : "Esterno") : "Da specificare durante la consulenza";
   const lightExposure = plantInfo?.lightExposure || "Da specificare durante la consulenza";
@@ -93,8 +94,8 @@ const UserPlantSummary: React.FC = () => {
         <span>✅</span>
         <span>Dati inviati automaticamente all'esperto</span>
       </div>
-      
-      {/* Foto della pianta - SEMPRE IN EVIDENZA SE PRESENTE */}
+
+      {/* Foto della pianta */}
       {plantInfo?.uploadedImageUrl && (
         <div className="mb-4 p-3 bg-white rounded-lg border border-green-100">
           <div className="font-semibold text-green-800 mb-3 flex items-center gap-2">
@@ -112,8 +113,48 @@ const UserPlantSummary: React.FC = () => {
           <p className="text-center text-xs text-gray-600 mt-2">Clicca per ingrandire</p>
         </div>
       )}
-      
-      {/* Dati della pianta */}
+
+      {/* Dati personali PRIMA dei dati pianta */}
+      {hasUserData && (
+        <div className="mb-4 p-3 bg-white rounded-lg border border-green-100">
+          <div className="font-semibold text-green-800 mb-3 flex items-center gap-2">
+            <span>👤</span>
+            <span>I tuoi dati personali:</span>
+          </div>
+          <div className="space-y-2">
+            <div className="flex items-start gap-2">
+              <span className="text-blue-600 mt-0.5">👤</span> 
+              <div>
+                <span className="font-medium">Nome completo:</span>
+                <div className="text-gray-700">{firstName} {lastName}</div>
+              </div>
+            </div>
+            <div className="flex items-start gap-2">
+              <span className="text-blue-600 mt-0.5">✉️</span> 
+              <div>
+                <span className="font-medium">Email:</span>
+                <div className="text-gray-700">{email}</div>
+              </div>
+            </div>
+            <div className="flex items-start gap-2">
+              <span className="text-blue-600 mt-0.5">🎂</span> 
+              <div>
+                <span className="font-medium">Data di nascita:</span>
+                <div className="text-gray-700">{birthDate}</div>
+              </div>
+            </div>
+            <div className="flex items-start gap-2">
+              <span className="text-blue-600 mt-0.5">📍</span> 
+              <div>
+                <span className="font-medium">Luogo di nascita:</span>
+                <div className="text-gray-700">{birthPlace}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Dati della pianta DOPO i dati personali */}
       {hasAnyPlantData && (
         <div className="mb-4 p-3 bg-white rounded-lg border border-green-100">
           <div className="font-semibold text-green-800 mb-3 flex items-center gap-2">
@@ -160,49 +201,11 @@ const UserPlantSummary: React.FC = () => {
         </div>
       )}
 
-      {/* Dati personali */}
-      {hasUserData && (
-        <div className="p-3 bg-white rounded-lg border border-green-100">
-          <div className="font-semibold text-green-800 mb-3 flex items-center gap-2">
-            <span>👤</span>
-            <span>I tuoi dati personali:</span>
-          </div>
-          <div className="space-y-2">
-            <div className="flex items-start gap-2">
-              <span className="text-blue-600 mt-0.5">👤</span> 
-              <div>
-                <span className="font-medium">Nome completo:</span>
-                <div className="text-gray-700">{firstName} {lastName}</div>
-              </div>
-            </div>
-            <div className="flex items-start gap-2">
-              <span className="text-blue-600 mt-0.5">✉️</span> 
-              <div>
-                <span className="font-medium">Email:</span>
-                <div className="text-gray-700">{email}</div>
-              </div>
-            </div>
-            <div className="flex items-start gap-2">
-              <span className="text-blue-600 mt-0.5">🎂</span> 
-              <div>
-                <span className="font-medium">Data di nascita:</span>
-                <div className="text-gray-700">{birthDate}</div>
-              </div>
-            </div>
-            <div className="flex items-start gap-2">
-              <span className="text-blue-600 mt-0.5">📍</span> 
-              <div>
-                <span className="font-medium">Luogo di nascita:</span>
-                <div className="text-gray-700">{birthPlace}</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-      
       <div className="mt-3 p-2 bg-blue-50 rounded border border-blue-200 text-xs text-blue-800 flex items-center gap-2">
         <span>ℹ️</span>
-        <span>Tutti questi dati sono stati inviati automaticamente a Marco Nigro per una consulenza completa</span>
+        <span>
+          Tutti questi dati sono stati inviati automaticamente a Marco Nigro per una consulenza completa
+        </span>
       </div>
     </div>
   );
