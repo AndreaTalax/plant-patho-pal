@@ -1,5 +1,4 @@
 
-# This file lists all the edge functions that will be deployed with the app
 project_id = "otdmqmpxukifoxjlgzmq"
 
 [functions.analyze-plant]
@@ -15,4 +14,7 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.analyze-plant-diseases]
+verify_jwt = false
+
+[functions.create-checkout]
 verify_jwt = false
