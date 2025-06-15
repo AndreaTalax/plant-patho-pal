@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { UserProfile } from './types';
@@ -61,6 +60,13 @@ export const authenticateUser = async (email: string, password: string): Promise
       });
 
       if (loginData.user && loginData.session && !loginError) {
+        // --- Ruolo admin per test@gmail.com
+        let role = 'user';
+        if (email === 'test@gmail.com') {
+          role = 'admin';
+        } else if (email.includes('marco') || email.includes('fitopatologo')) {
+          role = 'expert';
+        }
         // Create/update profile
         await createOrUpdateProfile(loginData.user.id, {
           email: email,
@@ -69,7 +75,7 @@ export const authenticateUser = async (email: string, password: string): Promise
           last_name: email === 'test@gmail.com' ? 'User' : 'Name',
           birth_date: '1990-01-01',
           birth_place: 'Roma',
-          role: email.includes('marco') || email.includes('fitopatologo') ? 'expert' : 'user',
+          role: role,
           subscription_plan: email === 'premium@gmail.com' ? 'premium' : 'free'
         });
         
@@ -103,6 +109,12 @@ export const createOrUpdateProfile = async (userId: string, profileData: any) =>
   try {
     console.log('Creating/updating profile for user:', userId);
     
+    // Imposta il ruolo a 'admin' se test@gmail.com
+    let role = profileData.role || 'user';
+    if (profileData.email === 'test@gmail.com') {
+      role = 'admin';
+    }
+
     const dbProfileData = {
       id: userId,
       email: profileData.email || null,
@@ -111,7 +123,7 @@ export const createOrUpdateProfile = async (userId: string, profileData: any) =>
       last_name: profileData.last_name || null,
       phone: profileData.phone || null,
       address: profileData.address || null,
-      role: profileData.role || 'user',
+      role: role,
       birth_date: profileData.birth_date || null,
       birth_place: profileData.birth_place || null,
       subscription_plan: profileData.subscription_plan || 'free',
