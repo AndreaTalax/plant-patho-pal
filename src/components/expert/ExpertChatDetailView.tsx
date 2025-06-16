@@ -50,16 +50,20 @@ const ExpertChatDetailView = ({ conversation, onBack }: {
           throw new Error('Sessione scaduta, effettua di nuovo il login');
         }
         
+        console.log('📤 Calling get-conversation with conversationId:', conversation.id);
+        
         const response = await supabase.functions.invoke('get-conversation', {
-          body: { conversationId: conversation.id },
+          body: JSON.stringify({ conversationId: conversation.id }),
           headers: {
-            Authorization: `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`,
           },
         });
 
         console.log('📨 Get-conversation response:', response);
 
         if (response.error) {
+          console.error('❌ Response error:', response.error);
           throw new Error(response.error.message || "Errore nel caricamento messaggi");
         }
 
@@ -120,9 +124,10 @@ const ExpertChatDetailView = ({ conversation, onBack }: {
         }
         
         const response = await supabase.functions.invoke('get-conversation', {
-          body: { conversationId: conversation.id },
+          body: JSON.stringify({ conversationId: conversation.id }),
           headers: {
-            Authorization: `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`,
           },
         });
 
