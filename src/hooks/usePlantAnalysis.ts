@@ -74,7 +74,16 @@ export const usePlantAnalysis = () => {
           dataSource: 'Real Plant APIs'
         },
         risultatiCompleti: {
-          plantInfo: plantInfo || {},
+          plantInfo: plantInfo || {
+            isIndoor: false,
+            wateringFrequency: '',
+            lightExposure: '',
+            symptoms: '',
+            useAI: false,
+            sendToExpert: false,
+            name: '',
+            infoComplete: false
+          },
           accuracyGuarantee: (analysisResult.confidence || 0) >= 0.8 ? "80%+" : 
                            (analysisResult.confidence || 0) >= 0.6 ? "60%+" : "40%+"
         },
