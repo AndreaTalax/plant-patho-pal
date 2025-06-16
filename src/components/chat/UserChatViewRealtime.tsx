@@ -38,11 +38,13 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
   }, []);
 
   const handleStartChat = () => {
+    console.log('🚀 Starting chat with expert');
     setAutoDataSent(false);
     startChatWithExpert();
   };
 
   const handleBackClick = () => {
+    console.log('⬅️ Back button clicked');
     setAutoDataSent(false);
     setActiveChat(null);
   };
@@ -53,14 +55,15 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
     console.log("[DEBUG UserChat] currentConversationId:", currentConversationId);
     console.log("[DEBUG UserChat] isConnected:", isConnected);
     console.log("[DEBUG UserChat] canSend:", !!currentConversationId && !!userId);
-  }, [userId, activeChat, currentConversationId, isConnected]);
+    console.log("[DEBUG UserChat] messages count:", messages.length);
+  }, [userId, activeChat, currentConversationId, isConnected, messages.length]);
 
   if (!activeChat || activeChat !== 'expert') {
     return <EmptyStateView onStartChat={handleStartChat} />;
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full bg-gray-50">
       <ChatInitializer
         activeChat={activeChat}
         currentConversationId={currentConversationId}
@@ -72,27 +75,25 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
         onBackClick={handleBackClick}
         isConnected={isConnected}
       />
+      
       <UserPlantSummary />
+      
       <MessageList messages={messages} />
 
-      <ChatConnectionError message={connectionError || (!currentConversationId ? "Chat non disponibile. Problema di connessione o server." : undefined)} />
+      {connectionError && <ChatConnectionError message={connectionError} />}
 
-      <div className="relative">
+      <div className="bg-white border-t border-gray-200 p-4">
         <MessageInput 
           onSendMessage={handleSendMessage}
           isSending={isSending}
           conversationId={currentConversationId || ""}
           senderId={userId}
           recipientId="07c7fe19-33c3-4782-b9a0-4e87c8aa7044"
-          disabledInput={!userId}
+          disabledInput={!userId || !currentConversationId || !isConnected}
           variant="persistent"
+          placeholder={isConnected ? "Scrivi un messaggio..." : "Connessione in corso..."}
         />
       </div>
-      {!!connectionError && (
-        <div className="p-4 text-center text-red-500 font-medium">
-          {connectionError}
-        </div>
-      )}
     </div>
   );
 };

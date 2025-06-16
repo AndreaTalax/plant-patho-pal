@@ -15,7 +15,7 @@ export const useUserChatRealtime = (userId: string) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [currentDbConversation, setCurrentDbConversation] = useState<DatabaseConversation | null>(null);
   const [isSending, setIsSending] = useState(false);
-  const [isConnected, setIsConnected] = useState(true);
+  const [isConnected, setIsConnected] = useState(false);
   
   useEffect(() => {
     if (!userId) return;
@@ -52,6 +52,7 @@ export const useUserChatRealtime = (userId: string) => {
         
       } catch (error) {
         console.error("❌ Error initializing expert chat:", error);
+        toast.error("Errore nell'inizializzazione della chat");
       }
     };
     
@@ -79,34 +80,29 @@ export const useUserChatRealtime = (userId: string) => {
           const formattedMessage = convertToUIMessage(newMsg as any);
 
           setMessages(prev => {
-            console.log('📋 Current messages before update:', prev.length);
+            // Check if message already exists
+            const messageExists = prev.some(msg => msg.id === formattedMessage.id);
+            if (messageExists) {
+              console.log('⚠️ Message already exists, skipping:', formattedMessage.id);
+              return prev;
+            }
             
-            // Remove any temporary message that matches this real message
-            const withoutTemporary = prev.filter(msg => {
+            // Remove any temporary message with same content
+            const withoutTemp = prev.filter(msg => {
               if (!msg.id.startsWith('temp-')) return true;
               
-              const textMatches = msg.text.trim() === formattedMessage.text.trim();
-              const senderMatches = msg.sender === formattedMessage.sender;
-              const imageMatches = msg.image_url === formattedMessage.image_url;
+              const contentMatches = msg.text.trim() === formattedMessage.text.trim() && 
+                                   msg.sender === formattedMessage.sender;
               
-              if (textMatches && senderMatches && imageMatches) {
+              if (contentMatches) {
                 console.log('🧹 Removing temporary message:', msg.id);
                 return false;
               }
               return true;
             });
             
-            // Check if real message already exists
-            const messageExists = withoutTemporary.some(msg => msg.id === formattedMessage.id);
-            if (messageExists) {
-              console.log('⚠️ Real message already exists, skipping:', formattedMessage.id);
-              return withoutTemporary;
-            }
-            
-            console.log('✅ Adding new real message:', formattedMessage.id);
-            const updated = [...withoutTemporary, formattedMessage];
-            console.log('📋 Updated messages count:', updated.length);
-            return updated;
+            console.log('✅ Adding new message:', formattedMessage.id);
+            return [...withoutTemp, formattedMessage];
           });
           
           if (formattedMessage.sender === 'expert' && 
@@ -121,6 +117,13 @@ export const useUserChatRealtime = (userId: string) => {
       .subscribe((status) => {
         console.log('🔗 Subscription status:', status);
         setIsConnected(status === 'SUBSCRIBED');
+        
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ Realtime connected successfully');
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('❌ Realtime connection failed');
+          setIsConnected(false);
+        }
       });
 
     return () => {
@@ -142,44 +145,30 @@ export const useUserChatRealtime = (userId: string) => {
       return;
     }
 
+    if (!currentDbConversation?.id) {
+      toast.error("Chat non disponibile");
+      return;
+    }
+
     console.log('📤 Starting to send message:', { text, imageUrl });
     setIsSending(true);
 
-    // Create temporary message immediately for instant UI feedback
+    // Create temporary message for immediate UI feedback
     const tempMessage: Message = {
       id: `temp-${Date.now()}-${Math.random()}`,
       sender: 'user',
-      text: text || (imageUrl ? "📸 Immagine allegata" : ""),
+      text: text || "📸 Immagine allegata",
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       ...(imageUrl ? { image_url: imageUrl } : {})
     };
     
-    console.log('⌛ Adding temporary message immediately:', tempMessage.id);
-    
-    // Add message to UI immediately
-    setMessages(prev => {
-      const updated = [...prev, tempMessage];
-      console.log('📋 Messages after immediate temp add:', updated.length);
-      return updated;
-    });
+    console.log('⌛ Adding temporary message:', tempMessage.id);
+    setMessages(prev => [...prev, tempMessage]);
 
     try {
-      let conversation = currentDbConversation;
-      if (!conversation) {
-        console.log('🔄 Creating new conversation...');
-        conversation = await findOrCreateConversation(userId);
-        if (!conversation) {
-          // Remove temp message on error
-          setMessages(prev => prev.filter(msg => msg.id !== tempMessage.id));
-          toast.error("Impossibile creare la conversazione");
-          return;
-        }
-        setCurrentDbConversation(conversation);
-      }
-
       console.log('🚀 Sending to backend...');
       const result = await sendMessageService(
-        conversation.id,
+        currentDbConversation.id,
         userId,
         EXPERT_ID,
         text || "📸 Immagine allegata",
@@ -195,11 +184,10 @@ export const useUserChatRealtime = (userId: string) => {
         return;
       }
 
-      console.log('✅ Message sent successfully, waiting for realtime update to replace temp message');
+      console.log('✅ Message sent successfully');
 
     } catch (error) {
       console.error('❌ Error sending message:', error);
-      // Remove temp message on error
       setMessages(prev => prev.filter(msg => msg.id !== tempMessage.id));
       toast.error("Errore nell'invio del messaggio");
     } finally {
