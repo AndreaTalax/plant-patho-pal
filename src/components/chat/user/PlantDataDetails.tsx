@@ -2,50 +2,68 @@
 import React from "react";
 
 interface PlantDataDetailsProps {
+  plantName?: string;
   symptoms: string;
   wateringText: string;
   environment: string;
   exposureText: string;
   imgUploaded: boolean;
+  hasAiDiagnosis?: boolean;
 }
 
 const PlantDataDetails: React.FC<PlantDataDetailsProps> = ({
+  plantName,
   symptoms,
   wateringText,
   environment,
   exposureText,
   imgUploaded,
+  hasAiDiagnosis,
 }) => (
-  <div>
-    <span className="block font-semibold text-green-900 mb-1">{"\u{1F331}"} Dati della Pianta:</span>
-    <ul className="space-y-1 text-sm ml-2">
-      <li>
-        <span className="font-medium">• Sintomi:</span>{" "}
-        {symptoms || <span className="italic text-gray-400">-</span>}
-      </li>
-      <li>
-        <span className="font-medium">• Irrigazione:</span>{" "}
-        {wateringText || <span className="italic text-gray-400">-</span>}
-      </li>
-      <li>
-        <span className="font-medium">• Esposizione:</span>{" "}
-        {environment
-          ? environment + (exposureText ? ` ${exposureText}` : "")
-          : exposureText || <span className="italic text-gray-400">-</span>}
-      </li>
-      <li>
-        <span className="font-medium">• Immagine:</span>{" "}
-        {imgUploaded ? (
-          <span className="text-green-700 font-semibold">
-            Caricata {"\u2714"}
-          </span>
-        ) : (
-          <span className="text-gray-400 font-medium">
-            Non caricata {"\u2716"}
-          </span>
-        )}
-      </li>
-    </ul>
+  <div className="space-y-2">
+    {plantName && (
+      <div className="flex flex-wrap">
+        <span className="font-medium text-sm">• Nome pianta:</span>
+        <span className="text-sm ml-1 text-green-700 font-medium">{plantName}</span>
+      </div>
+    )}
+    
+    {symptoms && (
+      <div className="flex flex-wrap">
+        <span className="font-medium text-sm">• Sintomi:</span>
+        <span className="text-sm ml-1">{symptoms}</span>
+      </div>
+    )}
+    
+    {wateringText && (
+      <div className="flex flex-wrap">
+        <span className="font-medium text-sm">• Irrigazione:</span>
+        <span className="text-sm ml-1">{wateringText}</span>
+      </div>
+    )}
+    
+    {(environment || exposureText) && (
+      <div className="flex flex-wrap">
+        <span className="font-medium text-sm">• Esposizione:</span>
+        <span className="text-sm ml-1">
+          {environment && exposureText ? `${environment}, ${exposureText}` : environment || exposureText}
+        </span>
+      </div>
+    )}
+    
+    <div className="flex flex-wrap">
+      <span className="font-medium text-sm">• Immagine:</span>
+      <span className={`text-sm ml-1 font-medium ${imgUploaded ? 'text-green-700' : 'text-gray-400'}`}>
+        {imgUploaded ? "Caricata ✓" : "Non caricata ✗"}
+      </span>
+    </div>
+    
+    {hasAiDiagnosis && (
+      <div className="flex flex-wrap">
+        <span className="font-medium text-sm">• Diagnosi AI:</span>
+        <span className="text-sm ml-1 text-blue-700 font-medium">Disponibile ✓</span>
+      </div>
+    )}
   </div>
 );
 
