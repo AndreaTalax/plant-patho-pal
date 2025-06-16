@@ -4,13 +4,16 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
 
 serve(async (req) => {
-  // Handle CORS preflight requests
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
-
+  console.log(`🔍 === NEW REQUEST === ${new Date().toISOString()}`);
   console.log(`🔍 Request method: ${req.method}`);
   console.log(`🔍 Request URL: ${req.url}`);
+  console.log(`🔍 Request headers:`, Object.fromEntries(req.headers.entries()));
+
+  // Handle CORS preflight requests
+  if (req.method === "OPTIONS") {
+    console.log("✅ Handling CORS preflight request");
+    return new Response(null, { headers: corsHeaders });
+  }
 
   if (req.method !== "POST") {
     console.error(`❌ Method not allowed: ${req.method}. Expected POST.`);
@@ -25,13 +28,23 @@ serve(async (req) => {
   }
 
   try {
+    console.log("🔍 Creating Supabase client...");
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
+    console.log("🔍 Environment variables:", {
+      supabaseUrl: supabaseUrl ? "present" : "missing",
+      supabaseAnonKey: supabaseAnonKey ? "present" : "missing"
+    });
+
     const supabaseClient = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_ANON_KEY") ?? ""
+      supabaseUrl ?? "",
+      supabaseAnonKey ?? ""
     );
 
     // Get authentication token
     const authHeader = req.headers.get("Authorization");
+    console.log("🔍 Authorization header:", authHeader ? "present" : "missing");
+    
     if (!authHeader) {
       console.error("❌ Missing authorization header");
       return new Response(JSON.stringify({ error: "Missing authorization header" }), {
@@ -41,6 +54,9 @@ serve(async (req) => {
     }
 
     const token = authHeader.replace("Bearer ", "");
+    console.log("🔍 Extracted token length:", token.length);
+    
+    console.log("🔍 Verifying user authentication...");
     const { data: { user }, error: authError } = await supabaseClient.auth.getUser(token);
     
     if (authError || !user) {
@@ -58,6 +74,7 @@ serve(async (req) => {
     try {
       const bodyText = await req.text();
       console.log("📝 Raw request body:", bodyText);
+      console.log("📝 Body length:", bodyText.length);
       
       if (!bodyText.trim()) {
         console.error("❌ Empty request body");
@@ -68,6 +85,7 @@ serve(async (req) => {
       }
       
       requestBody = JSON.parse(bodyText);
+      console.log("📝 Parsed request body:", requestBody);
     } catch (parseError) {
       console.error("❌ Error parsing request body:", parseError);
       return new Response(JSON.stringify({ error: "Invalid JSON in request body" }), {
@@ -77,6 +95,7 @@ serve(async (req) => {
     }
     
     const { conversationId } = requestBody;
+    console.log("🔍 Extracted conversationId:", conversationId);
     
     if (!conversationId) {
       console.error("❌ Missing conversationId in request body");
@@ -89,6 +108,7 @@ serve(async (req) => {
     console.log("🔍 Loading conversation:", conversationId);
 
     // Get conversation details
+    console.log("📊 Querying conversations table...");
     const { data: conversation, error: conversationError } = await supabaseClient
       .from('conversations')
       .select('*')
@@ -106,9 +126,15 @@ serve(async (req) => {
       });
     }
 
-    console.log("✅ Conversation found:", conversation.id);
+    console.log("✅ Conversation found:", {
+      id: conversation.id,
+      userId: conversation.user_id,
+      expertId: conversation.expert_id,
+      status: conversation.status
+    });
 
     // Get messages for this conversation
+    console.log("📊 Querying messages table...");
     const { data: messages, error: messagesError } = await supabaseClient
       .from('messages')
       .select(`
@@ -138,8 +164,16 @@ serve(async (req) => {
     }
 
     console.log("✅ Messages loaded:", messages?.length || 0);
+    if (messages && messages.length > 0) {
+      console.log("📋 Sample message:", {
+        id: messages[0].id,
+        senderId: messages[0].sender_id,
+        text: messages[0].text?.slice(0, 50) + "..."
+      });
+    }
 
     // Get user profile for the conversation
+    console.log("📊 Querying user profile...");
     const { data: userProfile, error: profileError } = await supabaseClient
       .from('profiles')
       .select('first_name, last_name, email')
@@ -148,6 +182,12 @@ serve(async (req) => {
 
     if (profileError) {
       console.error("⚠️ Error fetching user profile:", profileError);
+    } else {
+      console.log("✅ User profile loaded:", {
+        firstName: userProfile?.first_name,
+        lastName: userProfile?.last_name,
+        email: userProfile?.email
+      });
     }
 
     const response = {
@@ -159,7 +199,11 @@ serve(async (req) => {
       total_messages: messages?.length || 0
     };
 
-    console.log("✅ Response prepared successfully");
+    console.log("✅ Preparing successful response with", {
+      messagesCount: response.messages.length,
+      conversationId: response.conversation.id,
+      hasUserProfile: !!response.conversation.user_profile
+    });
 
     return new Response(JSON.stringify(response), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -168,6 +212,7 @@ serve(async (req) => {
 
   } catch (error) {
     console.error("❌ Unexpected error in get-conversation:", error);
+    console.error("❌ Error stack:", error.stack);
     return new Response(JSON.stringify({ 
       error: "Internal server error",
       message: error.message

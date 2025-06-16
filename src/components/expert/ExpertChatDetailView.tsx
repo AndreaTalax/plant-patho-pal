@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { DatabaseMessage } from "@/services/chat/types";
@@ -44,39 +43,75 @@ const ExpertChatDetailView = ({ conversation, onBack }: {
       
       try {
         console.log('🔄 Loading conversation messages for:', conversation.id);
+        console.log('📋 Conversation object:', JSON.stringify(conversation, null, 2));
         
-        const { data: { session } } = await supabase.auth.getSession();
+        // Test 1: Verifica sessione
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        console.log('🔐 Session check:', { 
+          hasSession: !!session, 
+          sessionError, 
+          userId: session?.user?.id,
+          accessToken: session?.access_token ? 'present' : 'missing'
+        });
+        
         if (!session) {
           throw new Error('Sessione scaduta, effettua di nuovo il login');
         }
         
-        console.log('📤 Calling get-conversation with conversationId:', conversation.id);
+        // Test 2: Prepara body della richiesta
+        const requestBody = { conversationId: conversation.id };
+        console.log('📤 Request body to send:', requestBody);
+        console.log('📤 Request body stringified:', JSON.stringify(requestBody));
         
+        // Test 3: Prepara headers
+        const headers = {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        };
+        console.log('📤 Headers to send:', headers);
+        
+        console.log('📤 About to call supabase.functions.invoke...');
+        
+        // Test 4: Chiamata alla funzione
         const response = await supabase.functions.invoke('get-conversation', {
-          body: JSON.stringify({ conversationId: conversation.id }),
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${session.access_token}`,
-          },
+          body: JSON.stringify(requestBody),
+          headers: headers,
         });
 
-        console.log('📨 Get-conversation response:', response);
+        console.log('📨 Raw response received:', response);
+        console.log('📨 Response data:', response.data);
+        console.log('📨 Response error:', response.error);
+        console.log('📨 Response status:', response.status);
 
+        // Test 5: Controlla tipo di errore
         if (response.error) {
-          console.error('❌ Response error:', response.error);
+          console.error('❌ Response error details:', {
+            message: response.error.message,
+            details: response.error.details,
+            hint: response.error.hint,
+            code: response.error.code
+          });
           throw new Error(response.error.message || "Errore nel caricamento messaggi");
         }
 
+        // Test 6: Verifica struttura risposta
+        console.log('✅ Response successful, checking data structure...');
         if (response.data?.messages) {
-          console.log('✅ Messages loaded successfully:', response.data.messages.length);
+          console.log('✅ Messages found:', response.data.messages.length);
+          console.log('📋 Sample message:', response.data.messages[0]);
           setMessages(response.data.messages);
         } else {
-          console.log('📭 No messages found for conversation');
+          console.log('📭 No messages found, response.data:', response.data);
           setMessages([]);
         }
 
       } catch (e: any) {
-        console.error('❌ Error loading conversation:', e);
+        console.error('❌ Error in loadMessages:', {
+          message: e?.message,
+          stack: e?.stack,
+          name: e?.name,
+          cause: e?.cause
+        });
         setError(e?.message || "Errore nel caricamento della chat");
         toast.error(e?.message || "Errore caricamento chat");
       } finally {
@@ -85,7 +120,10 @@ const ExpertChatDetailView = ({ conversation, onBack }: {
     };
 
     if (conversation?.id) {
+      console.log('🚀 Starting loadMessages for conversation:', conversation.id);
       loadMessages();
+    } else {
+      console.error('❌ No conversation ID provided:', conversation);
     }
   }, [conversation]);
 
@@ -113,6 +151,7 @@ const ExpertChatDetailView = ({ conversation, onBack }: {
   };
 
   const handleRetry = () => {
+    console.log('🔄 Retry button clicked');
     const loadMessages = async () => {
       setLoading(true);
       setError(null);
