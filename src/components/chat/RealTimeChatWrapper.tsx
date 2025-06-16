@@ -26,16 +26,26 @@ export const RealTimeChatWrapper: React.FC<RealTimeChatWrapperProps> = ({
   const [conversation, setConversation] = useState<DatabaseConversation | null>(null);
 
   const handleNewMessage = (newMessage: DatabaseMessage) => {
+    console.log('📨 Nuovo messaggio ricevuto via realtime:', newMessage);
     const uiMessage = convertToUIMessage(newMessage);
+    console.log('🔄 Messaggio convertito per UI:', uiMessage);
+    
     setMessages(prev => {
       // Avoid duplicates
       const exists = prev.some(msg => msg.id === uiMessage.id);
-      if (exists) return prev;
-      return [...prev, uiMessage];
+      if (exists) {
+        console.log('⚠️ Messaggio già esistente, skip:', uiMessage.id);
+        return prev;
+      }
+      
+      const newMessages = [...prev, uiMessage];
+      console.log('✅ Messaggi aggiornati:', newMessages);
+      return newMessages;
     });
   };
 
   const handleConversationUpdate = (updatedConversation: DatabaseConversation) => {
+    console.log('💬 Conversazione aggiornata:', updatedConversation);
     setConversation(updatedConversation);
   };
 
@@ -63,6 +73,7 @@ export const RealTimeChatWrapper: React.FC<RealTimeChatWrapperProps> = ({
         return;
       }
 
+      console.log('✅ Conversazione caricata:', conversationData);
       setConversation(conversationData);
 
       // Load messages
@@ -77,9 +88,15 @@ export const RealTimeChatWrapper: React.FC<RealTimeChatWrapperProps> = ({
         return;
       }
 
-      const uiMessages = messagesData.map((msg: DatabaseMessage) => 
-        convertToUIMessage(msg)
-      );
+      console.log('📬 Messaggi raw dal database:', messagesData);
+
+      const uiMessages = messagesData.map((msg: DatabaseMessage) => {
+        const converted = convertToUIMessage(msg);
+        console.log('🔄 Messaggio convertito:', { original: msg, converted });
+        return converted;
+      });
+      
+      console.log('📩 Messaggi ricevuti (UI format):', uiMessages);
       setMessages(uiMessages);
       
       console.log('✅ Loaded conversation and messages successfully');
@@ -88,18 +105,49 @@ export const RealTimeChatWrapper: React.FC<RealTimeChatWrapperProps> = ({
     }
   };
 
+  // Enhanced sendMessage wrapper that calls refreshMessages after sending
+  const enhancedSendMessage = async (recipientId: string, text: string, imageUrl?: string) => {
+    try {
+      console.log('📤 Invio messaggio:', { recipientId, text, imageUrl });
+      
+      const result = await sendMessage(recipientId, text, imageUrl);
+      console.log('✅ Messaggio inviato, risultato:', result);
+      
+      // Refresh messages immediately after sending
+      console.log('🔄 Aggiornamento messaggi dopo invio...');
+      await refreshMessages();
+      
+      return result;
+    } catch (error) {
+      console.error('❌ Errore nell\'invio del messaggio:', error);
+      throw error;
+    }
+  };
+
   useEffect(() => {
     if (conversationId) {
+      console.log('🚀 Inizializzazione chat per conversazione:', conversationId);
       refreshMessages();
     }
   }, [conversationId]);
+
+  // Debug log per stato corrente
+  useEffect(() => {
+    console.log('📊 Stato corrente chat:', {
+      conversationId,
+      userId,
+      isConnected,
+      messagesCount: messages.length,
+      messages: messages
+    });
+  }, [conversationId, userId, isConnected, messages]);
 
   return (
     <>
       {children({
         messages,
         isConnected,
-        sendMessage,
+        sendMessage: enhancedSendMessage,
         refreshMessages
       })}
     </>
