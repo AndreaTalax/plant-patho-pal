@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { DatabaseMessage } from "@/services/chat/types";
@@ -7,6 +8,7 @@ import { ArrowLeft, Loader2, Send, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { useRealtimeChat } from "@/hooks/useRealtimeChat";
 import { MARCO_NIGRO_ID } from "@/components/phytopathologist";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 /**
  * Dettaglio Chat Esperto (singola conversazione) con messaggistica real-time
@@ -23,7 +25,7 @@ const ExpertChatDetailView = ({ conversation, onBack }: {
 
   // Setup real-time chat
   const { isConnected, sendMessage } = useRealtimeChat({
-    conversationId: conversation.id,
+    conversationId: conversation?.id,
     userId: MARCO_NIGRO_ID,
     onNewMessage: (message) => {
       setMessages(prev => {
@@ -37,82 +39,87 @@ const ExpertChatDetailView = ({ conversation, onBack }: {
 
   // Carica messaggi della conversazione
   useEffect(() => {
+    let isMounted = true; // Previene aggiornamenti se il componente è smontato
+
     const loadMessages = async () => {
+      if (!conversation?.id) {
+        setError("ID conversazione mancante");
+        setLoading(false);
+        return;
+      }
+
       setLoading(true);
       setError(null);
       
       try {
         console.log('🔄 Loading conversation messages for:', conversation.id);
-        console.log('📋 Conversation object:', JSON.stringify(conversation, null, 2));
         
-        // Test 1: Verifica sessione
+        // Verifica sessione
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-        console.log('🔐 Session check:', { 
-          hasSession: !!session, 
-          sessionError, 
-          userId: session?.user?.id,
-          accessToken: session?.access_token ? 'present' : 'missing'
-        });
+        
+        if (sessionError) {
+          throw new Error(`Errore sessione: ${sessionError.message}`);
+        }
         
         if (!session) {
           throw new Error('Sessione scaduta, effettua di nuovo il login');
         }
         
-        // Test 2: Prova una chiamata più semplice
-        console.log('📤 About to call supabase.functions.invoke with simple parameters...');
+        console.log('📤 Calling get-conversation function...');
         
         const response = await supabase.functions.invoke('get-conversation', {
           body: { conversationId: conversation.id }
         });
 
-        console.log('📨 Raw response received:', {
+        console.log('📨 Response received:', {
           hasData: !!response.data,
-          hasError: !!response.error,
-          errorMessage: response.error?.message,
-          dataKeys: response.data ? Object.keys(response.data) : null
+          hasError: !!response.error
         });
 
-        // Test 3: Controlla tipo di errore
         if (response.error) {
-          console.error('❌ Response error details:', {
-            message: response.error.message,
-            details: response.error
-          });
+          console.error('❌ Function error:', response.error);
           throw new Error(response.error.message || "Errore nel caricamento messaggi");
         }
 
-        // Test 4: Verifica struttura risposta
-        console.log('✅ Response successful, checking data structure...');
+        // Controlla se il componente è ancora montato prima di aggiornare lo stato
+        if (!isMounted) return;
+
         if (response.data?.messages) {
-          console.log('✅ Messages found:', response.data.messages.length);
-          console.log('📋 Sample message:', response.data.messages[0]);
+          console.log('✅ Messages loaded:', response.data.messages.length);
           setMessages(response.data.messages);
         } else {
-          console.log('📭 No messages found, response.data:', response.data);
+          console.log('📭 No messages found');
           setMessages([]);
         }
 
       } catch (e: any) {
-        console.error('❌ Error in loadMessages:', {
-          message: e?.message,
-          stack: e?.stack,
-          name: e?.name,
-          cause: e?.cause
-        });
-        setError(e?.message || "Errore nel caricamento della chat");
+        console.error('❌ Error in loadMessages:', e);
+        
+        // Controlla se il componente è ancora montato prima di aggiornare lo stato
+        if (!isMounted) return;
+        
+        // Gestisci specificamente l'errore "conversazione non trovata"
+        if (e?.message?.includes("PGRST116") || e?.message?.includes("0 rows")) {
+          setError("Conversazione non trovata. Potrebbe essere stata eliminata.");
+        } else {
+          setError(e?.message || "Errore nel caricamento della chat");
+        }
+        
         toast.error(e?.message || "Errore caricamento chat");
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
 
-    if (conversation?.id) {
-      console.log('🚀 Starting loadMessages for conversation:', conversation.id);
-      loadMessages();
-    } else {
-      console.error('❌ No conversation ID provided:', conversation);
-    }
-  }, [conversation]);
+    loadMessages();
+
+    // Cleanup function per prevenire memory leaks
+    return () => {
+      isMounted = false;
+    };
+  }, [conversation?.id]); // Solo conversation.id come dipendenza
 
   const handleSendMessage = async () => {
     if (!newMessage.trim() || sending) return;
@@ -138,35 +145,32 @@ const ExpertChatDetailView = ({ conversation, onBack }: {
   };
 
   const handleRetry = () => {
-    console.log('🔄 Retry button clicked');
-    const loadMessages = async () => {
-      setLoading(true);
-      setError(null);
-      
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) {
-          throw new Error('Sessione scaduta');
-        }
-        
-        const response = await supabase.functions.invoke('get-conversation', {
-          body: { conversationId: conversation.id }
-        });
-
-        if (response.error) {
-          throw new Error(response.error.message || "Errore nel caricamento messaggi");
-        }
-
-        setMessages(response.data?.messages || []);
-      } catch (e: any) {
-        setError(e?.message || "Errore nel caricamento della chat");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadMessages();
+    console.log('🔄 Retry button clicked - reloading messages...');
+    // Forza il reload resettando lo stato e richiamando useEffect
+    setLoading(true);
+    setError(null);
+    // useEffect si riattiva automaticamente quando cambia lo stato
   };
+
+  // Se non abbiamo un ID conversazione valido
+  if (!conversation?.id) {
+    return (
+      <div className="max-w-2xl mx-auto mt-6 bg-white/95 rounded-2xl p-6 shadow-lg">
+        <div className="flex items-center mb-4">
+          <Button variant="ghost" onClick={onBack} className="mr-2">
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <h2 className="text-xl font-bold">Errore</h2>
+        </div>
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            Dati della conversazione non validi. Torna indietro e riprova.
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-2xl mx-auto mt-6 bg-white/95 rounded-2xl p-6 shadow-lg">
@@ -198,10 +202,10 @@ const ExpertChatDetailView = ({ conversation, onBack }: {
         </div>
       ) : error ? (
         <div className="flex flex-col justify-center items-center h-40 gap-4">
-          <div className="flex items-center gap-2 text-red-600">
-            <AlertCircle className="h-6 w-6" />
-            <span className="text-center">{error}</span>
-          </div>
+          <Alert variant="destructive" className="w-full">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
           <Button onClick={handleRetry} variant="outline">
             Riprova
           </Button>
