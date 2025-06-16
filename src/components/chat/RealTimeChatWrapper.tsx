@@ -4,6 +4,7 @@ import { useRealtimeChat } from '@/hooks/useRealtimeChat';
 import { DatabaseMessage, DatabaseConversation } from '@/services/chat/types';
 import { convertToUIMessage } from '@/services/chat/messageUtils';
 import { Message } from '@/components/chat/types';
+import { supabase } from '@/integrations/supabase/client';
 
 interface RealTimeChatWrapperProps {
   conversationId: string;
@@ -38,25 +39,52 @@ export const RealTimeChatWrapper: React.FC<RealTimeChatWrapperProps> = ({
     setConversation(updatedConversation);
   };
 
-  const { isConnected, sendMessage, getConversation } = useRealtimeChat({
+  const { isConnected, sendMessage } = useRealtimeChat({
     conversationId,
     userId,
     onNewMessage: handleNewMessage,
     onConversationUpdate: handleConversationUpdate
   });
 
-  // Load initial conversation data
+  // Load initial conversation data using direct API call
   const refreshMessages = async () => {
     try {
-      const result = await getConversation(conversationId);
-      setConversation(result.conversation);
+      console.log('🔄 Loading conversation and messages for:', conversationId);
       
-      const uiMessages = result.messages.map((msg: DatabaseMessage) => 
+      // Load conversation details
+      const { data: conversationData, error: conversationError } = await supabase
+        .from('conversations')
+        .select('*')
+        .eq('id', conversationId)
+        .single();
+
+      if (conversationError) {
+        console.error('❌ Error loading conversation:', conversationError);
+        return;
+      }
+
+      setConversation(conversationData);
+
+      // Load messages
+      const { data: messagesData, error: messagesError } = await supabase
+        .from('messages')
+        .select('*')
+        .eq('conversation_id', conversationId)
+        .order('sent_at', { ascending: true });
+
+      if (messagesError) {
+        console.error('❌ Error loading messages:', messagesError);
+        return;
+      }
+
+      const uiMessages = messagesData.map((msg: DatabaseMessage) => 
         convertToUIMessage(msg)
       );
       setMessages(uiMessages);
+      
+      console.log('✅ Loaded conversation and messages successfully');
     } catch (error) {
-      console.error('Error loading conversation:', error);
+      console.error('❌ Error in refreshMessages:', error);
     }
   };
 
