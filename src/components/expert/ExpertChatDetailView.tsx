@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { DatabaseMessage } from "@/services/chat/types";
@@ -61,35 +62,37 @@ const ExpertChatDetailView = ({ conversation, onBack }: {
         // Test 2: Prepara body della richiesta
         const requestBody = { conversationId: conversation.id };
         console.log('📤 Request body to send:', requestBody);
-        console.log('📤 Request body stringified:', JSON.stringify(requestBody));
         
         // Test 3: Prepara headers
         const headers = {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${session.access_token}`,
         };
-        console.log('📤 Headers to send:', headers);
+        console.log('📤 Headers to send (sanitized):', {
+          'Content-Type': headers['Content-Type'],
+          'Authorization': headers.Authorization ? 'Bearer [TOKEN_PRESENT]' : 'missing'
+        });
         
         console.log('📤 About to call supabase.functions.invoke...');
         
         // Test 4: Chiamata alla funzione
         const response = await supabase.functions.invoke('get-conversation', {
-          body: JSON.stringify(requestBody),
+          body: requestBody,
           headers: headers,
         });
 
-        console.log('📨 Raw response received:', response);
-        console.log('📨 Response data:', response.data);
-        console.log('📨 Response error:', response.error);
-        console.log('📨 Response status:', response.status);
+        console.log('📨 Raw response received:', {
+          hasData: !!response.data,
+          hasError: !!response.error,
+          errorMessage: response.error?.message,
+          dataKeys: response.data ? Object.keys(response.data) : null
+        });
 
         // Test 5: Controlla tipo di errore
         if (response.error) {
           console.error('❌ Response error details:', {
             message: response.error.message,
-            details: response.error.details,
-            hint: response.error.hint,
-            code: response.error.code
+            details: response.error
           });
           throw new Error(response.error.message || "Errore nel caricamento messaggi");
         }
@@ -163,7 +166,7 @@ const ExpertChatDetailView = ({ conversation, onBack }: {
         }
         
         const response = await supabase.functions.invoke('get-conversation', {
-          body: JSON.stringify({ conversationId: conversation.id }),
+          body: { conversationId: conversation.id },
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${session.access_token}`,
