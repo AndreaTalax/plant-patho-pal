@@ -193,7 +193,7 @@ const ExpertChatDetailView = ({ conversation, onBack }: {
                 <div className="text-xs text-gray-500 mb-1">
                   {m.sender_id === conversation.user_id ? "Utente" : "Marco Nigro"}
                   <span className="ml-2">
-                    {new Date(m.sent_at || m.created_at).toLocaleTimeString('it-IT', { 
+                    {new Date(m.sent_at).toLocaleTimeString('it-IT', { 
                       hour: '2-digit', 
                       minute: '2-digit' 
                     })}
