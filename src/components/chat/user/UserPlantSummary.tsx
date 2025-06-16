@@ -1,4 +1,3 @@
-
 import React from "react";
 import { usePlantInfo } from "@/context/PlantInfoContext";
 import { useAuth } from "@/context/AuthContext";
@@ -29,10 +28,10 @@ const UserPlantSummary: React.FC = () => {
       ? "Interno" 
       : "Esterno";
   
-  // Check for all possible image sources
+  // Check for all possible image sources - using correct property names
   const plantImageUrl = plantInfo?.uploadedImageUrl || 
                        plantInfo?.uploadedFile || 
-                       plantInfo?.imageUrl ||
+                       (plantInfo as any)?.imageUrl ||
                        (plantInfo as any)?.image ||
                        (plantInfo as any)?.plantImage;
   
