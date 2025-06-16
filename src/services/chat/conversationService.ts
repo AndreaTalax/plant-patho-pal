@@ -30,17 +30,21 @@ export class ConversationService {
       }
 
       if (existingConversations && existingConversations.length > 0) {
+        console.log('✅ Found existing conversation:', existingConversations[0].id);
         return existingConversations[0].id;
       }
 
       // Create new conversation
+      console.log('🆕 Creating new conversation for user:', userId);
       const { data, error } = await supabase
         .from('conversations')
         .insert({
           user_id: userId,
           expert_id: MARCO_NIGRO_ID,
           title: title || 'Consulenza esperto',
-          status: 'active'
+          status: 'active',
+          last_message_text: null,
+          last_message_at: new Date().toISOString()
         })
         .select()
         .single();
@@ -51,6 +55,7 @@ export class ConversationService {
         return null;
       }
 
+      console.log('✅ New conversation created:', data.id);
       return data.id;
 
     } catch (error) {
@@ -65,6 +70,8 @@ export class ConversationService {
    */
   static async findOrCreateConversation(userId: string) {
     try {
+      console.log('🔍 Finding or creating conversation for user:', userId);
+      
       // Check if conversation already exists
       const { data: existingConversations, error: searchError } = await supabase
         .from('conversations')
@@ -78,17 +85,21 @@ export class ConversationService {
       }
 
       if (existingConversations && existingConversations.length > 0) {
+        console.log('✅ Found existing conversation:', existingConversations[0]);
         return existingConversations[0];
       }
 
       // Create new conversation
+      console.log('🆕 Creating new conversation...');
       const { data, error } = await supabase
         .from('conversations')
         .insert({
           user_id: userId,
           expert_id: MARCO_NIGRO_ID,
           title: 'Consulenza esperto',
-          status: 'active'
+          status: 'active',
+          last_message_text: null,
+          last_message_at: new Date().toISOString()
         })
         .select()
         .single();
@@ -98,6 +109,7 @@ export class ConversationService {
         return null;
       }
 
+      console.log('✅ New conversation created:', data);
       return data;
     } catch (error) {
       console.error('Error in findOrCreateConversation:', error);

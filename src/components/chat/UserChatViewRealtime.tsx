@@ -38,7 +38,7 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
   }, []);
 
   const handleStartChat = () => {
-    console.log('🚀 Starting chat with expert');
+    console.log('🚀 User starting chat with expert');
     setAutoDataSent(false);
     startChatWithExpert();
   };
@@ -49,13 +49,16 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
     setActiveChat(null);
   };
 
+  // Debug logging
   useEffect(() => {
-    console.log("[DEBUG UserChat] userId:", userId);
-    console.log("[DEBUG UserChat] activeChat:", activeChat);
-    console.log("[DEBUG UserChat] currentConversationId:", currentConversationId);
-    console.log("[DEBUG UserChat] isConnected:", isConnected);
-    console.log("[DEBUG UserChat] canSend:", !!currentConversationId && !!userId);
-    console.log("[DEBUG UserChat] messages count:", messages.length);
+    console.log("[DEBUG UserChat] State:", {
+      userId,
+      activeChat,
+      currentConversationId,
+      isConnected,
+      messagesCount: messages.length,
+      canSend: !!currentConversationId && !!userId && isConnected
+    });
   }, [userId, activeChat, currentConversationId, isConnected, messages.length]);
 
   if (!activeChat || activeChat !== 'expert') {

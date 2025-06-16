@@ -85,38 +85,39 @@ export const useRealtimeChat = ({
           console.log('✅ Real-time chat connected successfully');
         } else if (status === 'CHANNEL_ERROR') {
           console.error('❌ Real-time chat connection failed');
-          toast.error('Connessione chat in tempo reale fallita');
+          toast.error('Connessione real-time fallita');
         }
       });
 
     setChannel(realtimeChannel);
 
     return () => {
-      console.log('🔌 Cleaning up real-time subscriptions...');
-      realtimeChannel.unsubscribe();
+      console.log('🔌 Cleaning up real-time chat subscriptions');
+      supabase.removeChannel(realtimeChannel);
       setChannel(null);
       setIsConnected(false);
     };
   }, [conversationId, userId, onNewMessage, onConversationUpdate]);
 
-  // Send message via API
-  const sendMessage = useCallback(async (
-    recipientId: string,
-    text: string,
-    imageUrl?: string,
-    products?: any[]
-  ) => {
-    if (!conversationId) {
-      throw new Error('No conversation ID provided');
+  // Send message function using the edge function
+  const sendMessage = useCallback(async (recipientId: string, text: string, imageUrl?: string, products?: any) => {
+    if (!conversationId || !text.trim()) {
+      throw new Error('Missing required data for sending message');
     }
 
     try {
+      console.log('📤 Sending message via edge function:', {
+        conversationId,
+        recipientId,
+        text,
+        hasImage: !!imageUrl,
+        hasProducts: !!products
+      });
+
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
-        throw new Error('Not authenticated');
+        throw new Error('User not authenticated');
       }
-
-      console.log('📤 Sending message via API:', { conversationId, recipientId, text });
 
       const response = await supabase.functions.invoke('send-message', {
         body: {
@@ -125,48 +126,29 @@ export const useRealtimeChat = ({
           text,
           imageUrl,
           products
-        }
+        },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
       });
 
       if (response.error) {
+        console.error('❌ Send message error:', response.error);
         throw new Error(response.error.message || 'Failed to send message');
       }
 
-      console.log('✅ Message sent successfully');
-      return response.data?.message;
-    } catch (error) {
-      console.error('❌ Error sending message:', error);
+      console.log('✅ Message sent successfully:', response.data);
+      return response.data;
+
+    } catch (error: any) {
+      console.error('❌ Error in sendMessage:', error);
       throw error;
     }
   }, [conversationId]);
 
-  // Get conversation data via API
-  const getConversation = useCallback(async (id: string) => {
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        throw new Error('Not authenticated');
-      }
-
-      const response = await supabase.functions.invoke('get-conversation', {
-        body: { conversationId: id }
-      });
-
-      if (response.error) {
-        throw new Error(response.error.message || 'Failed to get conversation');
-      }
-
-      return response.data;
-    } catch (error) {
-      console.error('❌ Error getting conversation:', error);
-      throw error;
-    }
-  }, []);
-
   return {
     isConnected,
-    sendMessage,
-    getConversation,
-    channel
+    channel,
+    sendMessage
   };
 };
