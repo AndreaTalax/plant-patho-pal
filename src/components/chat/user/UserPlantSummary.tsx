@@ -49,7 +49,11 @@ const UserPlantSummary: React.FC = () => {
   const wateringText = wateringMap[watering] || watering;
   const exposureText = exposureMap[exposure] || exposure;
 
-  // Rimuovo if (!firstName && !symptoms) return null; => Mostra sempre il box con dati parziali
+  // Se non ci sono dati significativi, non mostrare il box
+  if (!firstName && !symptoms && !watering && !exposure && !imgUploaded) {
+    return null;
+  }
+
   return (
     <div className="my-4">
       <div className="rounded-t-xl border border-blue-200 bg-blue-50 px-5 py-3 flex items-center gap-2 shadow-sm">

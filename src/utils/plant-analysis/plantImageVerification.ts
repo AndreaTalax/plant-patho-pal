@@ -2,7 +2,7 @@
 import { toast } from 'sonner';
 
 /**
- * Verifica se un'immagine contiene effettivamente una pianta usando analisi cromatica
+ * Verifica RIGOROSA se un'immagine contiene effettivamente una pianta
  */
 export const verifyImageContainsPlant = async (imageFile: File): Promise<{
   isPlant: boolean;
@@ -32,9 +32,10 @@ export const verifyImageContainsPlant = async (imageFile: File): Promise<{
       const pixels = imageData.data;
       let totalPixels = 0;
       let greenPixels = 0;
-      let plantLikePixels = 0;
+      let naturalPixels = 0;
+      let artificialPixels = 0;
       
-      // Analizza ogni pixel
+      // Analizza ogni pixel con criteri più rigorosi
       for (let i = 0; i < pixels.length; i += 4) {
         const r = pixels[i];
         const g = pixels[i + 1];
@@ -42,42 +43,67 @@ export const verifyImageContainsPlant = async (imageFile: File): Promise<{
         
         totalPixels++;
         
-        // Rileva sfumature di verde tipiche delle piante
-        const isGreen = g > r && g > b && g > 50;
-        const isPlantGreen = isGreen && (g - r > 20) && (g - b > 10);
-        const isNaturalGreen = g > 80 && g < 200 && r < g * 0.8 && b < g * 0.9;
+        // Rileva verde naturale delle piante (più specifico)
+        const isNaturalGreen = g > r && g > b && 
+                              g > 70 && g < 220 && 
+                              (g - r) > 15 && (g - b) > 10 &&
+                              r < 150 && b < 150;
         
-        // Rileva marroni tipici di tronchi/terra
-        const isBrown = r > 80 && r < 160 && g > 60 && g < 140 && b > 40 && b < 120 && 
-                       Math.abs(r - g) < 50 && Math.abs(g - b) < 50;
+        // Rileva marroni naturali (tronchi, terra)
+        const isNaturalBrown = r > 80 && r < 160 && 
+                              g > 60 && g < 140 && 
+                              b > 40 && b < 120 && 
+                              Math.abs(r - g) < 40;
         
-        if (isPlantGreen || isNaturalGreen) {
+        // Rileva colori artificiali (come tasti di tastiera)
+        const isArtificial = (r === g && g === b) || // Grigi
+                            (Math.abs(r - g) < 10 && Math.abs(g - b) < 10) || // Colori uniformi
+                            (r > 200 && g > 200 && b > 200) || // Bianchi
+                            (r < 50 && g < 50 && b < 50); // Neri
+        
+        if (isNaturalGreen) {
           greenPixels++;
-          plantLikePixels++;
-        } else if (isBrown) {
-          plantLikePixels++;
+          naturalPixels++;
+        } else if (isNaturalBrown) {
+          naturalPixels++;
+        } else if (isArtificial) {
+          artificialPixels++;
         }
       }
       
       const greenPercentage = (greenPixels / totalPixels) * 100;
-      const plantLikePercentage = (plantLikePixels / totalPixels) * 100;
+      const naturalPercentage = (naturalPixels / totalPixels) * 100;
+      const artificialPercentage = (artificialPixels / totalPixels) * 100;
       
-      // Criteri per identificare una pianta
-      const hasEnoughGreen = greenPercentage > 5; // Almeno 5% di verde
-      const hasPlantColors = plantLikePercentage > 15; // Almeno 15% di colori naturali
-      const confidence = Math.min(95, Math.max(0, greenPercentage * 2 + plantLikePercentage));
+      // Criteri MOLTO PIÙ RIGOROSI per identificare una pianta
+      const hasEnoughGreen = greenPercentage > 8; // Almeno 8% di verde naturale
+      const hasNaturalColors = naturalPercentage > 20; // Almeno 20% di colori naturali
+      const tooMuchArtificial = artificialPercentage > 60; // Troppi colori artificiali
       
       let isPlant = false;
+      let confidence = 0;
       let reason = '';
       
-      if (hasEnoughGreen && hasPlantColors) {
+      if (tooMuchArtificial) {
+        isPlant = false;
+        confidence = Math.max(0, 100 - artificialPercentage);
+        reason = `Troppi colori artificiali rilevati (${artificialPercentage.toFixed(1)}%). Sembra un oggetto artificiale, non una pianta.`;
+      } else if (hasEnoughGreen && hasNaturalColors) {
         isPlant = true;
-        reason = `Rilevato ${greenPercentage.toFixed(1)}% di verde e ${plantLikePercentage.toFixed(1)}% di colori naturali`;
+        confidence = Math.min(95, (greenPercentage * 3) + (naturalPercentage * 2) - (artificialPercentage));
+        reason = `Rilevato ${greenPercentage.toFixed(1)}% di verde naturale e ${naturalPercentage.toFixed(1)}% di colori naturali`;
       } else if (!hasEnoughGreen) {
-        reason = `Troppo poco verde nell'immagine (${greenPercentage.toFixed(1)}%)`;
+        isPlant = false;
+        confidence = Math.max(0, greenPercentage * 5);
+        reason = `Troppo poco verde naturale nell'immagine (${greenPercentage.toFixed(1)}%). Non sembra una pianta.`;
       } else {
-        reason = `Colori non compatibili con una pianta (${plantLikePercentage.toFixed(1)}% naturali)`;
+        isPlant = false;
+        confidence = Math.max(0, naturalPercentage * 2);
+        reason = `Colori non compatibili con una pianta viva (${naturalPercentage.toFixed(1)}% naturali)`;
       }
+      
+      console.log(`🔍 Analisi immagine: Verde=${greenPercentage.toFixed(1)}%, Naturale=${naturalPercentage.toFixed(1)}%, Artificiale=${artificialPercentage.toFixed(1)}%`);
+      console.log(`🔍 Risultato: isPianta=${isPlant}, confidenza=${confidence.toFixed(1)}%`);
       
       resolve({ isPlant, confidence, reason });
     };

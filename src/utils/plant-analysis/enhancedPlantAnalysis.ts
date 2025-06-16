@@ -25,7 +25,7 @@ export interface EnhancedAnalysisResult {
 }
 
 /**
- * Analisi completa e rigorosa delle piante
+ * Analisi completa e rigorosa delle piante - BLOCCA diagnosi su non-piante
  */
 export const performEnhancedPlantAnalysis = async (
   imageFile: File,
@@ -53,37 +53,41 @@ export const performEnhancedPlantAnalysis = async (
       };
     }
     
-    // 2. Verifica che l'immagine contenga una pianta
-    console.log('🌿 Verifica presenza pianta nell\'immagine...');
-    toast.info('Verifico che l\'immagine contenga una pianta...', { duration: 2000 });
+    // 2. Verifica RIGOROSA che l'immagine contenga una pianta
+    console.log('🌿 Verifica RIGOROSA presenza pianta nell\'immagine...');
+    toast.info('Verifico che l\'immagine contenga una pianta...', { duration: 3000 });
     
     const plantVerification = await verifyImageContainsPlant(imageFile);
     
-    if (!plantVerification.isPlant || plantVerification.confidence < 30) {
-      toast.error('Immagine non valida per diagnosi', {
-        description: plantVerification.reason
+    // CRITERI MOLTO PIÙ RIGOROSI - minimo 60% di confidenza
+    if (!plantVerification.isPlant || plantVerification.confidence < 60) {
+      const errorMessage = `L'immagine non contiene una pianta riconoscibile. ${plantVerification.reason}`;
+      
+      toast.error('🚫 Immagine NON valida per diagnosi', {
+        description: errorMessage,
+        duration: 8000
       });
       
       return {
         success: false,
-        error: `L'immagine non sembra contenere una pianta: ${plantVerification.reason}`,
+        error: errorMessage,
         analysisDetails: {
           verificationPassed: false,
           qualityCheck: true,
-          source: 'Plant Verification'
+          source: 'Plant Verification - FAILED'
         }
       };
     }
     
-    console.log('✅ Pianta rilevata con confidenza:', plantVerification.confidence);
-    toast.success(`Pianta rilevata (${Math.round(plantVerification.confidence)}% confidenza)`);
+    console.log('✅ Pianta rilevata con confidenza sufficiente:', plantVerification.confidence);
+    toast.success(`✅ Pianta rilevata (${Math.round(plantVerification.confidence)}% confidenza)`);
     
     // 3. Converti immagine in base64
     const imageBase64 = await new Promise<string>((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = () => {
         const result = reader.result as string;
-        resolve(result.split(',')[1]); // Rimuovi il prefisso data:image
+        resolve(result.split(',')[1]);
       };
       reader.onerror = reject;
       reader.readAsDataURL(imageFile);
@@ -102,7 +106,20 @@ export const performEnhancedPlantAnalysis = async (
         analysisDetails: {
           verificationPassed: true,
           qualityCheck: true,
-          source: 'Plant Identification'
+          source: 'Plant Identification - FAILED'
+        }
+      };
+    }
+    
+    // Verifica che la confidenza dell'identificazione sia sufficiente
+    if ((identification.confidence || 0) < 0.4) {
+      return {
+        success: false,
+        error: `Identificazione troppo incerta (${Math.round((identification.confidence || 0) * 100)}%). L'immagine potrebbe non essere sufficientemente chiara.`,
+        analysisDetails: {
+          verificationPassed: true,
+          qualityCheck: true,
+          source: 'Plant Identification - LOW CONFIDENCE'
         }
       };
     }
@@ -126,7 +143,7 @@ export const performEnhancedPlantAnalysis = async (
         plantName: identification.plantName,
         scientificName: identification.scientificName,
         confidence: identification.confidence,
-        isHealthy: true, // Assumi sana se non possiamo diagnosticare problemi
+        isHealthy: true,
         diseases: [],
         recommendations: [
           'Identificazione riuscita ma diagnosi dettagliata non disponibile',

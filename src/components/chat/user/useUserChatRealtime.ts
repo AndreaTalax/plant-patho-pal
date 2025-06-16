@@ -62,6 +62,8 @@ export const useUserChatRealtime = (userId: string) => {
   useEffect(() => {
     if (!currentDbConversation?.id) return;
     
+    console.log('🔄 Setting up realtime subscription for conversation:', currentDbConversation.id);
+    
     const messagesSubscription = supabase
       .channel(`messages-channel-${currentDbConversation.id}`)
       .on('postgres_changes', 
@@ -116,10 +118,13 @@ export const useUserChatRealtime = (userId: string) => {
           }
         }
       )
-      .subscribe();
-    setIsConnected(true);
+      .subscribe((status) => {
+        console.log('🔗 Subscription status:', status);
+        setIsConnected(status === 'SUBSCRIBED');
+      });
 
     return () => {
+      console.log('🔌 Cleaning up realtime subscription...');
       if (messagesSubscription) {
         supabase.removeChannel(messagesSubscription);
       }
