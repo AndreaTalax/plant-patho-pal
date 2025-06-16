@@ -44,6 +44,31 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const isProfileComplete = !!(userProfile?.firstName && userProfile?.lastName && userProfile?.birthDate && userProfile?.birthPlace);
   const isMasterAccount = userProfile?.email === 'agrotecnicomarconigro@gmail.com' || userProfile?.email === 'premium@gmail.com';
 
+  // Funzione per garantire che i dati utente siano sempre completi
+  const ensureCompleteUserData = async (userId: string) => {
+    try {
+      const profile = await fetchUserProfile(userId);
+      if (profile) {
+        const normalizedProfile = normalizeProfile(profile);
+        setUserProfile(normalizedProfile);
+        
+        // Log per debug - assicurati che i dati siano sempre disponibili
+        console.log('👤 [AUTH] Dati utente caricati:', {
+          id: normalizedProfile.id,
+          email: normalizedProfile.email,
+          name: `${normalizedProfile.firstName || normalizedProfile.first_name} ${normalizedProfile.lastName || normalizedProfile.last_name}`,
+          birthInfo: `${normalizedProfile.birthDate || normalizedProfile.birth_date} - ${normalizedProfile.birthPlace || normalizedProfile.birth_place}`,
+          isComplete: !!(normalizedProfile.firstName && normalizedProfile.lastName && normalizedProfile.birthDate && normalizedProfile.birthPlace)
+        });
+        
+        return normalizedProfile;
+      }
+    } catch (error) {
+      console.error('❌ [AUTH] Error loading complete user data:', error);
+    }
+    return null;
+  };
+
   useEffect(() => {
     let mounted = true;
 
@@ -57,13 +82,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          // Use setTimeout to avoid blocking the auth state change
+          // Carica SEMPRE i dati utente completi quando c'è una sessione
           setTimeout(async () => {
             if (!mounted) return;
-            const profile = await fetchUserProfile(session.user.id);
-            if (mounted && profile) {
-              setUserProfile(normalizeProfile(profile));
-            }
+            await ensureCompleteUserData(session.user.id);
             if (mounted) {
               setLoading(false);
             }
@@ -78,19 +100,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     );
 
     // Check for existing session
-    /**
-    * Initializes user authentication session and retrieves user profile data
-    * @example
-    * sync()
-    * Undefined
-    * @param {boolean} mounted - Determines if the component using this function is still mounted.
-    * @returns {void} Does not return a value.
-    * @description
-    *   - Fetches the session data from Supabase auth and checks the initial session status.
-    *   - Updates the session and user state, and retrieves user profile if a session exists.
-    *   - Handles errors during the session initialization process.
-    *   - Ensures setLoading is called in the end to update UI loading state.
-    */
     const initializeAuth = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
@@ -101,10 +110,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          const profile = await fetchUserProfile(session.user.id);
-          if (mounted && profile) {
-            setUserProfile(normalizeProfile(profile));
-          }
+          await ensureCompleteUserData(session.user.id);
         }
       } catch (error) {
         console.error('Error initializing auth:', error);

@@ -19,12 +19,44 @@ export const ChatInitializer: React.FC<ChatInitializerProps> = ({
   setAutoDataSent
 }) => {
   const { plantInfo } = usePlantInfo();
-  const { userProfile } = useAuth();
+  const { userProfile, updateProfile } = useAuth();
   const { toast } = useToast();
+
+  // Funzione per garantire che i dati utente siano sempre completi nel contesto
+  const ensureUserDataInContext = async () => {
+    if (!userProfile) return null;
+
+    // Controlla se mancano dati essenziali e li completa se necessario
+    const userData = {
+      firstName: userProfile.first_name || userProfile.firstName || "Non specificato",
+      lastName: userProfile.last_name || userProfile.lastName || "Non specificato", 
+      email: userProfile.email || "Non specificato",
+      birthDate: userProfile.birth_date || userProfile.birthDate || "Non specificata",
+      birthPlace: userProfile.birth_place || userProfile.birthPlace || "Non specificato"
+    };
+
+    // Se alcuni dati sono mancanti ma possiamo recuperarli, aggiorniamo il profilo
+    if (userProfile.email && (!userProfile.first_name && !userProfile.firstName)) {
+      console.log('[CHAT-INIT] 🔄 Aggiornamento dati utente nel contesto...');
+      try {
+        // Aggiorna solo se abbiamo informazioni da aggiungere
+        await updateProfile({
+          firstName: userData.firstName,
+          lastName: userData.lastName,
+          birthDate: userData.birthDate,
+          birthPlace: userData.birthPlace
+        });
+      } catch (error) {
+        console.warn('[CHAT-INIT] ⚠️ Impossibile aggiornare il profilo:', error);
+      }
+    }
+
+    return userData;
+  };
 
   useEffect(() => {
     const sendInitialData = async () => {
-      // Condizioni per l'invio dei dati - più permissive
+      // Condizioni per l'invio dei dati
       if (
         !activeChat ||
         activeChat !== 'expert' ||
@@ -32,7 +64,7 @@ export const ChatInitializer: React.FC<ChatInitializerProps> = ({
         !userProfile ||
         autoDataSent
       ) {
-        console.log('[AUTO-DATA 🚫] Condizioni non soddisfatte:', {
+        console.log('[CHAT-INIT 🚫] Condizioni non soddisfatte:', {
           activeChat,
           currentConversationId: !!currentConversationId,
           userProfile: !!userProfile,
@@ -42,68 +74,58 @@ export const ChatInitializer: React.FC<ChatInitializerProps> = ({
       }
 
       try {
-        console.log('[AUTO-DATA ✉️] Controllo invio dati automatico...');
+        console.log('[CHAT-INIT ✉️] Controllo invio dati automatico...');
+        
+        // Verifica se i dati sono già stati inviati
         const alreadySent = await ConsultationDataService.isConsultationDataSent(currentConversationId);
 
         if (alreadySent) {
-          console.log('[AUTO-DATA ✅] Dati già inviati, nessuna azione necessaria');
+          console.log('[CHAT-INIT ✅] Dati già inviati, nessuna azione necessaria');
           setAutoDataSent(true);
           return;
         }
 
-        // Verifica se abbiamo QUALSIASI dato da inviare
-        const hasPlantData = plantInfo && (
-          plantInfo.symptoms || 
-          plantInfo.wateringFrequency || 
-          plantInfo.lightExposure || 
-          plantInfo.name || 
-          plantInfo.uploadedImageUrl ||
-          plantInfo.isIndoor !== undefined
-        );
-
-        const hasUserData = userProfile && (
-          userProfile.first_name || 
-          userProfile.firstName || 
-          userProfile.email
-        );
-
-        if (!hasPlantData && !hasUserData) {
-          console.log('[AUTO-DATA ⚠️] Nessun dato significativo da inviare');
+        // Assicurati che i dati utente siano completi nel contesto
+        const userData = await ensureUserDataInContext();
+        
+        if (!userData) {
+          console.log('[CHAT-INIT ⚠️] Impossibile recuperare dati utente');
           return;
         }
 
-        // Costruisci i dati della pianta sempre, anche se incompleti
+        // Costruisci sempre i dati della pianta, anche se parziali
         const plantData = {
           symptoms: plantInfo?.symptoms || 'Da descrivere durante la consulenza',
           wateringFrequency: plantInfo?.wateringFrequency || 'Da specificare',
-          sunExposure: plantInfo?.lightExposure || 'Da specificare',
+          sunExposure: plantInfo?.lightExposure || 'Da specificare', 
           environment: plantInfo?.isIndoor !== undefined ? (plantInfo.isIndoor ? 'Interno' : 'Esterno') : 'Da specificare',
           plantName: plantInfo?.name || 'Specie da identificare',
           imageUrl: plantInfo?.uploadedImageUrl,
           aiDiagnosis: (plantInfo as any)?.aiDiagnosis,
-          useAI: plantInfo?.useAI,
-          sendToExpert: plantInfo?.sendToExpert
+          useAI: plantInfo?.useAI || false,
+          sendToExpert: plantInfo?.sendToExpert || false
         };
 
-        const userData = {
-          firstName: userProfile.first_name || userProfile.firstName || "Non specificato",
-          lastName: userProfile.last_name || userProfile.lastName || "Non specificato",
-          email: userProfile.email || "Non specificato",
-          birthDate: userProfile.birth_date || userProfile.birthDate || "Non specificata",
-          birthPlace: userProfile.birth_place || userProfile.birthPlace || "Non specificato"
-        };
-
-        console.log('[AUTO-DATA 📤] Invio Dati:', { 
-          plantData: { ...plantData, hasImage: !!plantData.imageUrl },
-          userData,
-          hasPlantData,
-          hasUserData
+        console.log('[CHAT-INIT 📤] Invio Dati Completi:', { 
+          userData: {
+            firstName: userData.firstName,
+            lastName: userData.lastName,
+            email: userData.email,
+            hasBirthData: !!(userData.birthDate && userData.birthPlace)
+          },
+          plantData: { 
+            ...plantData, 
+            hasImage: !!plantData.imageUrl,
+            hasSymptoms: !!plantInfo?.symptoms,
+            hasCompleteInfo: !!(plantInfo?.symptoms && plantInfo?.wateringFrequency && plantInfo?.lightExposure)
+          }
         });
 
+        // Invia SEMPRE i dati completi (utente + pianta)
         const success = await ConsultationDataService.sendInitialConsultationData(
           currentConversationId,
           plantData,
-          userData,
+          userData, // Sempre incluso, anche se lo stesso utente
           plantInfo?.useAI || false
         );
 
@@ -112,7 +134,7 @@ export const ChatInitializer: React.FC<ChatInitializerProps> = ({
         if (success) {
           toast({
             title: 'Dati inviati automaticamente all\'esperto!',
-            description: 'Marco Nigro ha ricevuto tutte le informazioni disponibili e la foto della tua pianta',
+            description: `Marco Nigro ha ricevuto i tuoi dati personali${plantData.imageUrl ? ', le informazioni della pianta e la foto' : ' e le informazioni della pianta'}`,
             duration: 5000,
           });
         } else {
@@ -126,7 +148,7 @@ export const ChatInitializer: React.FC<ChatInitializerProps> = ({
 
       } catch (error) {
         setAutoDataSent(false);
-        console.error('[AUTO-DATA ❌]', error);
+        console.error('[CHAT-INIT ❌]', error);
         toast({
           title: 'Errore nell\'invio automatico dei dati',
           description: 'Inserisci manualmente le informazioni nella chat se necessario',
@@ -136,7 +158,7 @@ export const ChatInitializer: React.FC<ChatInitializerProps> = ({
       }
     };
 
-    // Aspetta un po' di più per permettere al componente di caricarsi completamente
+    // Avvia l'invio con un timer per permettere al componente di caricarsi
     if (
       activeChat === 'expert' &&
       currentConversationId &&
@@ -152,7 +174,8 @@ export const ChatInitializer: React.FC<ChatInitializerProps> = ({
     autoDataSent,
     setAutoDataSent,
     toast,
-    plantInfo
+    plantInfo,
+    updateProfile
   ]);
 
   return null; // This is a logic-only component
