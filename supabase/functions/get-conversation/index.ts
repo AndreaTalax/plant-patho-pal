@@ -9,10 +9,18 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  console.log(`🔍 Request method: ${req.method}`);
+  console.log(`🔍 Request URL: ${req.url}`);
+
   if (req.method !== "POST") {
-    return new Response(JSON.stringify({ error: "Method not allowed" }), {
+    console.error(`❌ Method not allowed: ${req.method}. Expected POST.`);
+    return new Response(JSON.stringify({ error: "Method not allowed. Use POST." }), {
       status: 405,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { 
+        ...corsHeaders, 
+        "Content-Type": "application/json",
+        "Allow": "POST"
+      },
     });
   }
 
@@ -46,10 +54,32 @@ serve(async (req) => {
     console.log("✅ User authenticated:", user.id);
 
     // Get request body
-    const { conversationId } = await req.json();
+    let requestBody;
+    try {
+      const bodyText = await req.text();
+      console.log("📝 Raw request body:", bodyText);
+      
+      if (!bodyText.trim()) {
+        console.error("❌ Empty request body");
+        return new Response(JSON.stringify({ error: "Empty request body" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      
+      requestBody = JSON.parse(bodyText);
+    } catch (parseError) {
+      console.error("❌ Error parsing request body:", parseError);
+      return new Response(JSON.stringify({ error: "Invalid JSON in request body" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    
+    const { conversationId } = requestBody;
     
     if (!conversationId) {
-      console.error("❌ Missing conversationId");
+      console.error("❌ Missing conversationId in request body");
       return new Response(JSON.stringify({ error: "Missing conversationId" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
