@@ -1,98 +1,55 @@
+
 import { toast } from "sonner";
-import { dataURLtoFile, formatPercentage, preprocessImage, getCachedResponse, cacheResponse, generateImageHash } from './plantAnalysisUtils';
-import { formatHuggingFaceResult } from './result-formatter';
-import { analyzeWithCloudVision } from './plant-id-service';
-import { supabase } from "@/integrations/supabase/client";
-import { analyzeWithEnhancedAI } from './enhanced-analysis';
-import type { AnalysisProgress } from '../../services/aiProviders';
-import { getPlantGreenConfidence } from './plantColorDetection';
+import { performEnhancedPlantAnalysis } from './enhancedPlantAnalysis';
 
-// Export the utilities for use in other files
-export { formatHuggingFaceResult, dataURLtoFile, formatPercentage };
+// Export delle utility per compatibilità
+export { formatHuggingFaceResult } from './result-formatter';
+export { dataURLtoFile, formatPercentage } from './plantAnalysisUtils';
 
-// Plant analysis system with computer vision integration
 /**
- * Conducts an enhanced computer vision plant analysis on an image file.
- * @example
- * sync(imageFile, plantInfo)
- * { stage: 'analyzing', confidence: 0.85, ...}
- * @param {File} imageFile - Image file of the plant to be analyzed.
- * @param {any} plantInfo - (Optional) Additional information about the plant to enhance analysis.
- * @returns {object|null} Returns analysis result with confidence or null if analysis fails.
- * @description
- *   - The analysis requires a minimum confidence level of 50%.
- *   - Displays different toast messages based on the accuracy level obtained.
- *   - Analysis progress is logged with a callback function.
- *   - Handles errors and displays an error message to the user if analysis fails.
- */
-/**
- * Fa doppio check: AI + cromatica, e aggrega le percentuali di tutte le AI specialistiche.
+ * Analisi delle piante con verifica rigorosa che l'immagine contenga effettivamente una pianta
  */
 export const analyzePlant = async (imageFile: File, plantInfo: any = null) => {
   try {
     toast.dismiss();
-    console.log("🔍 Avvio doppia analisi presenza pianta...");
+    console.log("🔍 Avvio analisi rigorosa delle piante...");
 
-    // --------- 1: Analisi AI presenza pianta ---------
-    // Suppose you already have verifyImageContainsPlant in your backend, here dummy logic:
-    let aiConfidence = 0.85;
-    let aiThinksPlant = true;
-    // TODO: Se hai una vera analisi, usa il risultato!
-    // Esempio di simulazione:
-    // const resultAI = await verifyImageContainsPlant(imageFile, ...);
-    // aiConfidence = resultAI.confidence;
-    // aiThinksPlant = resultAI.isPlant;
-
-    // --------- 2: Analisi cromatica (verde) ---------
-    const greenConfidence = await getPlantGreenConfidence(imageFile);
-
-    // --------- 3: Sintesi aggregata su presenza pianta ---------
-    // Usiamo una media pesata: AI pesa 60%, cromatico 40%
-    const presenceScore = Math.round((aiConfidence * 0.6 + greenConfidence * 0.4) * 100);
-
-    // Dai feedback user-friendly
-    if (presenceScore > 80) {
-      toast.success(`Foto OK! La presenza di una pianta è confermata (${presenceScore}%)`);
-    } else if (presenceScore > 50) {
-      toast.warning(`Immagine OK ma attenzione: possibilità pianta ${presenceScore}%`);
-    } else {
-      toast.error(`Attenzione: la foto NON sembra contenere una pianta chiara (${presenceScore}%)`);
+    // Usa il nuovo sistema di analisi che include tutte le verifiche
+    const result = await performEnhancedPlantAnalysis(imageFile, plantInfo);
+    
+    if (!result.success) {
+      console.error("❌ Analisi fallita:", result.error);
+      return null; // Ritorna null per indicare fallimento
     }
-
-    // ------------- CONTINUA con le analisi AI specialistiche -------------
-    // Mantieni il resto del flusso invariato (AI specialistiche già presenti nel restante file)
-    const analysisResult = await analyzeWithEnhancedAI(imageFile, plantInfo, (progress) => {
-      console.log(`${progress.stage}: ${progress.percentage}% - ${progress.message}`);
-      
-      if (progress.percentage < 100) {
-        toast.info(`${progress.message} (${progress.percentage}%)`, { duration: 2000 });
-      }
-    });
-
-    if (!analysisResult || analysisResult.confidence < 0.5) {
-      const accuracy = analysisResult?.confidence ? Math.round(analysisResult.confidence * 100) : 0;
-      throw new Error(`Accuratezza insufficiente: ${accuracy}%. Richiesta accuratezza minima: 50% con computer vision`);
-    }
-
-    // ---------------- AGGREGAZIONE TOTALE ----------------
-    // Ritorna tutto quello che serve per la UI
+    
+    // Converti il risultato nel formato atteso dal resto dell'applicazione
     return {
-      ...analysisResult,
+      plantName: result.plantName,
+      scientificName: result.scientificName,
+      confidence: result.confidence,
+      healthy: result.isHealthy,
+      isHealthy: result.isHealthy,
+      diseases: result.diseases || [],
+      recommendations: result.recommendations || [],
+      label: result.plantName,
+      analysisDetails: {
+        source: result.analysisDetails?.source || 'Enhanced Plant Analysis',
+        verificationPassed: result.analysisDetails?.verificationPassed,
+        qualityCheck: result.analysisDetails?.qualityCheck
+      },
       meta: {
-        aiConfidence: aiConfidence,
-        greenConfidence: greenConfidence,
-        presenceScore: presenceScore,
-        plantAnalysisConfidence: Math.round(analysisResult.confidence * 100)
+        plantAnalysisConfidence: Math.round((result.confidence || 0) * 100),
+        verificationPassed: result.analysisDetails?.verificationPassed || false,
+        realApiUsed: true
       }
     };
   } catch (error) {
-    console.error("❌ Computer vision plant analysis failed:", error);
+    console.error("❌ Errore durante l'analisi:", error);
     toast.error(`Analisi fallita: ${error.message}`, {
-      description: "Prova con un'immagine più chiara o consulta direttamente l'esperto",
+      description: "Verifica che l'immagine contenga una pianta chiara e riprova",
       duration: 6000
     });
     
-    // Return null to indicate failure
     return null;
   }
 };

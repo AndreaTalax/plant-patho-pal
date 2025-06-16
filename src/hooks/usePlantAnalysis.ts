@@ -1,13 +1,9 @@
 
 import { useState } from 'react';
-import { analyzeWithEnhancedAI } from '@/utils/plant-analysis/enhanced-analysis';
-import { handleAnalysisError, createFallbackDiagnosisResult, safeAnalysisWrapper } from '@/utils/error-handling';
+import { performEnhancedPlantAnalysis, type EnhancedAnalysisResult } from '@/utils/plant-analysis/enhancedPlantAnalysis';
 import { toast } from 'sonner';
 import type { PlantInfo } from '@/components/diagnose/types';
 import type { AnalysisDetails, DiagnosedDisease } from '@/components/diagnose/types';
-import { identifyPlantFromImage } from '@/utils/plant-analysis/plant-id-service';
-import { selectRelevantProducts } from '@/utils/plant-analysis/selectRelevantProducts';
-import type { AnalysisProgress } from '../services/aiProviders';
 
 export const usePlantAnalysis = () => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -23,209 +19,102 @@ export const usePlantAnalysis = () => {
     setAnalysisProgress(0);
     setAnalysisDetails(null);
 
-    let plantInfoToUse: PlantInfo = { ...plantInfo };
-
-    // Enhanced image validation
-    if (!imageFile || imageFile.size === 0) {
-      toast.error("File immagine non valido");
-      setIsAnalyzing(false);
-      return;
-    }
-
-    // Check file size (max 10MB)
-    if (imageFile.size > 10 * 1024 * 1024) {
-      toast.error("Immagine troppo grande. Massimo 10MB consentito");
-      setIsAnalyzing(false);
-      return;
-    }
-
-    // Check file type
-    if (!imageFile.type.startsWith('image/')) {
-      toast.error("Formato file non supportato. Usa JPG, PNG o WebP");
-      setIsAnalyzing(false);
-      return;
-    }
-
-    console.log('🔍 Starting enhanced image analysis...', {
-      fileName: imageFile.name,
-      fileSize: `${(imageFile.size / 1024 / 1024).toFixed(2)}MB`,
-      fileType: imageFile.type,
-      plantInfo: plantInfoToUse
-    });
-
-    // Plant.id recognizer for missing names (with better error handling)
-    if (!plantInfo?.name || plantInfo.name.trim() === "") {
-      try {
-        setAnalysisProgress(5);
-        toast.info("Identificazione preliminare della pianta...", { duration: 2000 });
+    try {
+      console.log('🔍 Avvio analisi rigorosa dell\'immagine...');
+      setAnalysisProgress(10);
+      
+      // Usa il nuovo sistema di analisi rigoroso
+      const analysisResult: EnhancedAnalysisResult = await performEnhancedPlantAnalysis(imageFile, plantInfo);
+      
+      setAnalysisProgress(90);
+      
+      if (!analysisResult.success) {
+        // Mostra errore specifico
+        toast.error('Analisi non riuscita', {
+          description: analysisResult.error,
+          duration: 6000
+        });
         
-        const { plantName } = await identifyPlantFromImage(imageFile);
-        if (plantName && plantName !== "Specie non identificata") {
-          plantInfoToUse.name = plantName;
-          if (typeof window !== "undefined" && window.dispatchEvent) {
-            window.dispatchEvent(new CustomEvent("updatePlantInfoName", { detail: plantName }));
-          }
-          console.log('🌱 Plant pre-identified as:', plantName);
-        }
-      } catch (e: any) {
-        console.log('⚠️ Pre-identification failed, proceeding with analysis:', e.message);
+        setDiagnosisResult('Analisi non completata');
+        setAnalysisProgress(0);
+        return;
       }
-    }
-
-    const analysisResult = await safeAnalysisWrapper(
-      async () => {
-        const progressCallback = (progress: AnalysisProgress) => {
-          const progressValue = Math.min(progress.percentage, 95);
-          setAnalysisProgress(progressValue);
-          
-          // Enhanced progress messages
-          if (progressValue < 95) {
-            toast.info(`${progress.message} (${progressValue}%)`, { duration: 1500 });
-          }
-        };
-
-        try {
-          toast.info("Analisi avanzata in corso con AI...", { duration: 3000 });
-          progressCallback({ stage: 'initialization', percentage: 15, message: 'Inizializzazione servizi AI...' });
-
-          const enhancedResult = await analyzeWithEnhancedAI(imageFile, plantInfoToUse, progressCallback);
-
-          progressCallback({ stage: 'processing', percentage: 85, message: 'Elaborazione risultati finali...' });
-
-          if (!enhancedResult) {
-            throw new Error("Analisi fallita. Nessun risultato ottenuto dai servizi AI.");
-          }
-
-          // Enhanced result processing
-          const plantLabel = enhancedResult.label || enhancedResult.plantName || "Specie sconosciuta";
-          const confidence = Math.max(0, Math.min(1, enhancedResult.confidence || 0));
-          const isHealthy = enhancedResult.healthy ?? enhancedResult.isHealthy ?? null;
-          const isHighConfidence = confidence >= 0.8;
-          const isGoodConfidence = confidence >= 0.6;
-          const isModerateConfidence = confidence >= 0.4;
-
-          let diseaseInfo: DiagnosedDisease;
-
-          if (!isHealthy && (enhancedResult.disease || enhancedResult.diseases?.length > 0)) {
-            const primaryDisease = enhancedResult.disease || enhancedResult.diseases?.[0];
-            diseaseInfo = {
-              id: `disease-${Date.now()}`,
-              name: primaryDisease?.name || "Possibile malattia rilevata",
-              description: primaryDisease?.description || "Possibili problemi di salute rilevati dall'analisi AI",
-              causes: primaryDisease?.causes || "Cause non determinate dall'analisi automatica",
-              symptoms: Array.isArray(primaryDisease?.symptoms)
-                ? primaryDisease.symptoms
-                : ["Sintomi rilevati dall'analisi AI"],
-              treatments: Array.isArray(primaryDisease?.treatments)
-                ? primaryDisease.treatments
-                : primaryDisease?.treatment ? [primaryDisease.treatment] : ["Consulenza esperta raccomandata per trattamento specifico"],
-              confidence,
-              healthy: false,
-              products: enhancedResult.recommendedProducts || [],
-              disclaimer: !isHighConfidence
-                ? `L'analisi AI ha ${isGoodConfidence ? 'buona' : isModerateConfidence ? 'moderata' : 'bassa'} accuratezza (${Math.round(confidence * 100)}%). Consulenza esperta raccomandata per conferma.`
-                : undefined,
-              recommendExpertConsultation: !isHighConfidence,
-            };
-          } else {
-            diseaseInfo = {
-              id: `healthy-${Date.now()}`,
-              name: plantLabel,
-              description: `Pianta apparentemente sana${!isHighConfidence ? ` (accuratezza ${Math.round(confidence * 100)}%)` : ''}`,
-              causes: "N/A - Pianta sana",
-              symptoms: ["Nessun sintomo di malattia rilevato"],
-              treatments: ["Mantenere le cure standard", "Monitoraggio regolare"],
-              confidence,
-              healthy: true,
-              products: enhancedResult.recommendedProducts || [],
-              disclaimer: !isHighConfidence
-                ? `Identificazione con accuratezza ${Math.round(confidence * 100)}%. Per maggiore certezza sulla salute della pianta, consulta un fitopatologo.`
-                : undefined,
-              recommendExpertConsultation: !isGoodConfidence,
-            };
-          }
-
-          if (!diseaseInfo.products || diseaseInfo.products.length === 0) {
-            diseaseInfo.products = selectRelevantProducts(plantLabel, isHealthy);
-          }
-
-          const detailedAnalysis: AnalysisDetails = {
-            multiServiceInsights: {
-              plantName: plantLabel,
-              plantSpecies: enhancedResult.scientificName || plantLabel,
-              plantPart: enhancedResult.plantPart || "whole plant",
-              isHealthy: isHealthy,
-              isValidPlantImage: true,
-              primaryService: enhancedResult.sources?.[0] || enhancedResult.analysisDetails?.source || "Enhanced AI",
-              agreementScore: confidence,
-              huggingFaceResult: {
-                label: plantLabel,
-                score: confidence
-              },
-              dataSource: "Enhanced Multi-AI Analysis"
-            },
-            risultatiCompleti: {
-              plantInfo: plantInfoToUse,
-              accuracyGuarantee: isHighConfidence ? "80%+" : isGoodConfidence ? "60%+" : "40%+"
-            },
-            identifiedFeatures: [
-              plantLabel,
-              `Accuratezza: ${Math.round(confidence * 100)}%`,
-              isHealthy ? "Pianta sana" : "Possibili problemi rilevati",
-              enhancedResult.analysisDetails?.source || "AI Analysis"
-            ],
-            sistemaDigitaleFoglia: enhancedResult.plantPart === "leaf",
-            analysisTechnology: "Enhanced Multi-AI Analysis with Real APIs"
-          };
-
-          progressCallback({ stage: 'finalizing', percentage: 98, message: 'Finalizzazione risultati...' });
-
-          return { diseaseInfo, detailedAnalysis, plantLabel, confidence, isGoodConfidence, isHighConfidence };
-
-        } catch (analysisError) {
-          console.error('❌ Enhanced analysis error:', analysisError);
-          throw analysisError;
-        }
-      },
-      null
-    );
-
-    if (analysisResult) {
-      const { diseaseInfo, detailedAnalysis, plantLabel, confidence, isGoodConfidence, isHighConfidence } = analysisResult;
+      
+      // Converti risultato nel formato atteso dall'UI
+      const diseaseInfo: DiagnosedDisease = {
+        id: `diagnosis-${Date.now()}`,
+        name: analysisResult.plantName || 'Pianta identificata',
+        description: analysisResult.isHealthy ? 
+          'La pianta appare in buona salute secondo l\'analisi specializzata' :
+          'Sono stati rilevati possibili problemi di salute',
+        causes: analysisResult.isHealthy ? 'N/A - Pianta sana' : 'Vedere malattie specifiche rilevate',
+        symptoms: analysisResult.diseases?.map(d => d.name) || ['Nessun sintomo specifico'],
+        treatments: analysisResult.diseases?.map(d => d.treatment) || analysisResult.recommendations || [],
+        confidence: analysisResult.confidence || 0,
+        healthy: analysisResult.isHealthy || false,
+        products: [], // Da implementare se necessario
+        recommendExpertConsultation: (analysisResult.confidence || 0) < 0.7,
+        disclaimer: (analysisResult.confidence || 0) < 0.7 ? 
+          'Confidenza moderata. Consultazione esperta raccomandata per conferma.' : undefined
+      };
+      
+      const detailedAnalysis: AnalysisDetails = {
+        multiServiceInsights: {
+          plantName: analysisResult.plantName || 'Sconosciuta',
+          plantSpecies: analysisResult.scientificName || 'Non determinata',
+          plantPart: 'whole plant',
+          isHealthy: analysisResult.isHealthy || false,
+          isValidPlantImage: true,
+          primaryService: analysisResult.analysisDetails?.source || 'Enhanced Analysis',
+          agreementScore: analysisResult.confidence || 0,
+          huggingFaceResult: {
+            label: analysisResult.plantName || 'Pianta',
+            score: analysisResult.confidence || 0
+          },
+          dataSource: 'Real Plant APIs'
+        },
+        risultatiCompleti: {
+          plantInfo: plantInfo || {},
+          accuracyGuarantee: (analysisResult.confidence || 0) >= 0.8 ? "80%+" : 
+                           (analysisResult.confidence || 0) >= 0.6 ? "60%+" : "40%+"
+        },
+        identifiedFeatures: [
+          analysisResult.plantName || 'Pianta non identificata',
+          `Confidenza: ${Math.round((analysisResult.confidence || 0) * 100)}%`,
+          analysisResult.isHealthy ? 'Pianta sana' : 'Problemi rilevati',
+          'Analisi con API specializzate'
+        ],
+        sistemaDigitaleFoglia: false,
+        analysisTechnology: 'Plant.id Professional API'
+      };
+      
       setDiagnosedDisease(diseaseInfo);
-      setDiagnosisResult(`${plantLabel} identificata con ${Math.round(confidence * 100)}% di accuratezza`);
+      setDiagnosisResult(`${analysisResult.plantName} identificata con ${Math.round((analysisResult.confidence || 0) * 100)}% di confidenza`);
       setAnalysisDetails(detailedAnalysis);
       setAnalysisProgress(100);
-
-      // Enhanced user feedback
-      if (isHighConfidence) {
-        toast.success(`✅ Pianta identificata con alta accuratezza (${Math.round(confidence * 100)}%)!`, { duration: 4000 });
-      } else if (isGoodConfidence) {
-        toast.success(
-          `✅ Pianta identificata con buona accuratezza (${Math.round(confidence * 100)}%). Consulenza esperta raccomandata per maggiore certezza.`,
-          { duration: 5000 }
-        );
+      
+      // Feedback finale
+      const confidencePercent = Math.round((analysisResult.confidence || 0) * 100);
+      if ((analysisResult.confidence || 0) >= 0.8) {
+        toast.success(`✅ Analisi completata con alta precisione (${confidencePercent}%)!`);
+      } else if ((analysisResult.confidence || 0) >= 0.6) {
+        toast.success(`✅ Analisi completata (${confidencePercent}%). Consulenza esperta raccomandata per maggiore certezza.`);
       } else {
-        toast.warning(
-          `⚠️ Identificazione con accuratezza moderata (${Math.round(confidence * 100)}%). Fortemente consigliata consulenza esperta.`,
-          { duration: 6000 }
-        );
+        toast.warning(`⚠️ Analisi completata ma con confidenza moderata (${confidencePercent}%). Consulenza esperta fortemente raccomandata.`);
       }
-    } else {
-      // Enhanced error handling
-      const errorResult = handleAnalysisError(new Error("Analisi non completata - servizi AI non disponibili"));
-      const fallbackDisease = createFallbackDiagnosisResult(errorResult);
-      setDiagnosedDisease(fallbackDisease);
-      setDiagnosisResult("Analisi automatica non disponibile - consulenza esperta raccomandata");
-      setAnalysisProgress(0);
-
-      toast.error(errorResult.message, {
-        description: "Il nostro fitopatologo Marco Nigro può aiutarti con una diagnosi professionale",
-        duration: 8000
+      
+    } catch (error) {
+      console.error('❌ Errore durante l\'analisi:', error);
+      toast.error('Errore durante l\'analisi', {
+        description: 'Si è verificato un errore tecnico. Riprova o consulta un esperto.',
+        duration: 6000
       });
+      
+      setDiagnosisResult('Errore durante l\'analisi');
+      setAnalysisProgress(0);
+    } finally {
+      setIsAnalyzing(false);
     }
-
-    setIsAnalyzing(false);
   };
 
   return {
