@@ -2,38 +2,50 @@
 import React from "react";
 import { usePlantInfo } from "@/context/PlantInfoContext";
 import { useAuth } from "@/context/AuthContext";
-import { Info, User, Leaf, Camera } from "lucide-react";
-import UserProfileDetails from "./UserProfileDetails";
-import PlantDataDetails from "./PlantDataDetails";
+import { Info, User, Leaf, Camera, MapPin, Calendar, Mail, Droplet, Sun, Home } from "lucide-react";
 
 const UserPlantSummary: React.FC = () => {
   const { plantInfo } = usePlantInfo();
   const { userProfile } = useAuth();
 
-  // User data - comprehensive extraction
+  console.log('🔍 UserPlantSummary - PlantInfo:', plantInfo);
+  console.log('🔍 UserPlantSummary - UserProfile:', userProfile);
+
+  // User data - comprehensive extraction with multiple fallbacks
   const firstName = userProfile?.first_name || userProfile?.firstName || "";
   const lastName = userProfile?.last_name || userProfile?.lastName || "";
   const email = userProfile?.email || "";
   const birthDate = userProfile?.birth_date || userProfile?.birthDate || "";
   const birthPlace = userProfile?.birth_place || userProfile?.birthPlace || "";
 
-  // Plant data - comprehensive extraction
-  const symptoms = plantInfo?.symptoms ?? "";
-  const watering = plantInfo?.wateringFrequency ?? "";
-  const exposure = plantInfo?.lightExposure ?? "";
-  const plantName = plantInfo?.name ?? "";
+  // Plant data - comprehensive extraction with detailed mapping
+  const symptoms = plantInfo?.symptoms || "";
+  const watering = plantInfo?.wateringFrequency || "";
+  const exposure = plantInfo?.lightExposure || "";
+  const plantName = plantInfo?.name || "";
   const environment = plantInfo?.isIndoor === undefined 
     ? "" 
     : plantInfo.isIndoor 
       ? "Interno" 
       : "Esterno";
-  const imgUploaded = !!(plantInfo?.uploadedImageUrl || plantInfo?.uploadedFile);
-  const hasAiDiagnosis = !!(plantInfo as any)?.aiDiagnosis;
+  
+  // Check for all possible image sources
+  const plantImageUrl = plantInfo?.uploadedImageUrl || 
+                       plantInfo?.uploadedFile || 
+                       plantInfo?.imageUrl ||
+                       (plantInfo as any)?.image ||
+                       (plantInfo as any)?.plantImage;
+  
+  const hasAiDiagnosis = !!(plantInfo as any)?.aiDiagnosis || 
+                        !!(plantInfo as any)?.diagnosis ||
+                        !!(plantInfo as any)?.analysisResult;
 
-  // Mapping for display
+  console.log('🖼️ Image URL found:', plantImageUrl);
+
+  // Enhanced mapping for display
   const wateringMap: { [key: string]: string } = {
     quotidiana: "Ogni giorno",
-    "ogni-2-giorni": "Ogni 2 giorni",
+    "ogni-2-giorni": "Ogni 2 giorni", 
     "2-volte-settimana": "2 volte a settimana",
     settimanale: "1 volta a settimana",
     "ogni-2-settimane": "Ogni 2 settimane",
@@ -43,7 +55,7 @@ const UserPlantSummary: React.FC = () => {
   
   const exposureMap: { [key: string]: string } = {
     "sole-diretto": "Sole diretto",
-    "sole-parziale": "Sole parziale",
+    "sole-parziale": "Sole parziale", 
     "ombra-parziale": "Ombra parziale",
     "ombra-completa": "Ombra completa",
     "luce-indiretta": "Luce indiretta",
@@ -55,7 +67,7 @@ const UserPlantSummary: React.FC = () => {
 
   // Enhanced data availability check
   const hasUserData = !!(firstName || lastName || email || birthDate || birthPlace);
-  const hasPlantData = !!(symptoms || watering || exposure || plantName || imgUploaded || hasAiDiagnosis);
+  const hasPlantData = !!(symptoms || watering || exposure || plantName || plantImageUrl || hasAiDiagnosis);
   
   // Show summary if we have ANY data
   if (!hasUserData && !hasPlantData) {
@@ -94,53 +106,138 @@ const UserPlantSummary: React.FC = () => {
       
       <div className="border-x border-b border-blue-200 bg-white rounded-b-xl p-4 space-y-4">
         {hasUserData && (
-          <div className="space-y-3">
-            <div className="flex items-center gap-2 text-sm font-medium text-gray-700 border-b border-gray-100 pb-2">
+          <div className="bg-gray-50 rounded-lg p-3 space-y-3">
+            <div className="flex items-center gap-2 text-sm font-semibold text-blue-700 border-b border-blue-100 pb-2">
               <User className="w-4 h-4 text-blue-500 flex-shrink-0" />
               <span>Profilo Utente</span>
             </div>
-            <UserProfileDetails
-              firstName={firstName}
-              lastName={lastName}
-              email={email}
-              birthDate={birthDate}
-              birthPlace={birthPlace}
-            />
+            <div className="space-y-2">
+              {(firstName || lastName) && (
+                <div className="flex items-center gap-2">
+                  <User className="w-3 h-3 text-gray-500 flex-shrink-0" />
+                  <span className="text-xs font-medium text-gray-600">Nome:</span>
+                  <span className="text-xs text-gray-800 font-semibold uppercase">
+                    {`${firstName} ${lastName}`.trim()}
+                  </span>
+                </div>
+              )}
+              
+              {email && (
+                <div className="flex items-center gap-2">
+                  <Mail className="w-3 h-3 text-gray-500 flex-shrink-0" />
+                  <span className="text-xs font-medium text-gray-600">Email:</span>
+                  <span className="text-xs text-gray-800">{email}</span>
+                </div>
+              )}
+              
+              {birthDate && (
+                <div className="flex items-center gap-2">
+                  <Calendar className="w-3 h-3 text-gray-500 flex-shrink-0" />
+                  <span className="text-xs font-medium text-gray-600">Data di nascita:</span>
+                  <span className="text-xs text-gray-800">{birthDate}</span>
+                </div>
+              )}
+              
+              {birthPlace && (
+                <div className="flex items-center gap-2">
+                  <MapPin className="w-3 h-3 text-gray-500 flex-shrink-0" />
+                  <span className="text-xs font-medium text-gray-600">Luogo di nascita:</span>
+                  <span className="text-xs text-gray-800">{birthPlace}</span>
+                </div>
+              )}
+            </div>
           </div>
         )}
         
         {hasPlantData && (
-          <div className="space-y-3">
-            <div className="flex items-center gap-2 text-sm font-medium text-gray-700 border-b border-gray-100 pb-2">
+          <div className="bg-green-50 rounded-lg p-3 space-y-3">
+            <div className="flex items-center gap-2 text-sm font-semibold text-green-700 border-b border-green-100 pb-2">
               <Leaf className="w-4 h-4 text-green-500 flex-shrink-0" />
               <span>Dati della Pianta</span>
             </div>
-            <PlantDataDetails
-              plantName={plantName}
-              symptoms={symptoms}
-              wateringText={wateringText}
-              environment={environment}
-              exposureText={exposureText}
-              imgUploaded={imgUploaded}
-              hasAiDiagnosis={hasAiDiagnosis}
-            />
+            <div className="space-y-2">
+              {plantName && (
+                <div className="flex items-center gap-2">
+                  <Leaf className="w-3 h-3 text-gray-500 flex-shrink-0" />
+                  <span className="text-xs font-medium text-gray-600">Nome pianta:</span>
+                  <span className="text-xs text-green-700 font-semibold">{plantName}</span>
+                </div>
+              )}
+              
+              {symptoms && (
+                <div className="flex items-start gap-2">
+                  <Info className="w-3 h-3 text-gray-500 flex-shrink-0 mt-0.5" />
+                  <span className="text-xs font-medium text-gray-600">Sintomi:</span>
+                  <span className="text-xs text-gray-800 flex-1">{symptoms}</span>
+                </div>
+              )}
+              
+              {wateringText && (
+                <div className="flex items-center gap-2">
+                  <Droplet className="w-3 h-3 text-gray-500 flex-shrink-0" />
+                  <span className="text-xs font-medium text-gray-600">Irrigazione:</span>
+                  <span className="text-xs text-gray-800">{wateringText}</span>
+                </div>
+              )}
+              
+              {environment && (
+                <div className="flex items-center gap-2">
+                  <Home className="w-3 h-3 text-gray-500 flex-shrink-0" />
+                  <span className="text-xs font-medium text-gray-600">Ambiente:</span>
+                  <span className="text-xs text-gray-800">{environment}</span>
+                </div>
+              )}
+              
+              {exposureText && (
+                <div className="flex items-center gap-2">
+                  <Sun className="w-3 h-3 text-gray-500 flex-shrink-0" />
+                  <span className="text-xs font-medium text-gray-600">Esposizione:</span>
+                  <span className="text-xs text-gray-800">{exposureText}</span>
+                </div>
+              )}
+              
+              <div className="flex items-center gap-2">
+                <Camera className="w-3 h-3 text-gray-500 flex-shrink-0" />
+                <span className="text-xs font-medium text-gray-600">Immagine:</span>
+                <span className={`text-xs font-semibold ${plantImageUrl ? 'text-green-700' : 'text-red-500'}`}>
+                  {plantImageUrl ? "Caricata ✓" : "Non caricata ✗"}
+                </span>
+              </div>
+              
+              {hasAiDiagnosis && (
+                <div className="flex items-center gap-2">
+                  <Info className="w-3 h-3 text-gray-500 flex-shrink-0" />
+                  <span className="text-xs font-medium text-gray-600">Diagnosi AI:</span>
+                  <span className="text-xs text-blue-700 font-semibold">Disponibile ✓</span>
+                </div>
+              )}
+            </div>
           </div>
         )}
 
-        {imgUploaded && plantInfo?.uploadedImageUrl && (
-          <div className="space-y-3">
-            <div className="flex items-center gap-2 text-sm font-medium text-gray-700 border-b border-gray-100 pb-2">
+        {/* Sezione Immagine Separata e Prominente */}
+        {plantImageUrl && (
+          <div className="bg-purple-50 rounded-lg p-3 space-y-3">
+            <div className="flex items-center gap-2 text-sm font-semibold text-purple-700 border-b border-purple-100 pb-2">
               <Camera className="w-4 h-4 text-purple-500 flex-shrink-0" />
-              <span>Immagine Caricata</span>
+              <span>Immagine della Pianta</span>
             </div>
-            <div className="bg-gray-50 rounded-lg p-3">
+            <div className="text-center">
               <img 
-                src={plantInfo.uploadedImageUrl} 
-                alt="Pianta analizzata" 
-                className="w-full max-w-xs mx-auto rounded-lg shadow-sm"
+                src={plantImageUrl} 
+                alt="Immagine della pianta analizzata" 
+                className="w-full max-w-sm mx-auto rounded-lg shadow-md border border-gray-200 cursor-pointer hover:shadow-lg transition-shadow"
+                onClick={() => window.open(plantImageUrl, '_blank')}
+                onError={(e) => {
+                  console.error('❌ Errore caricamento immagine:', plantImageUrl);
+                  (e.target as HTMLImageElement).style.display = 'none';
+                }}
+                onLoad={() => {
+                  console.log('✅ Immagine caricata con successo:', plantImageUrl);
+                }}
               />
-              <p className="text-xs text-gray-600 text-center mt-2">
-                Immagine condivisa con l'esperto
+              <p className="text-xs text-purple-600 mt-2 font-medium">
+                📸 Clicca per ingrandire • Condivisa con l'esperto
               </p>
             </div>
           </div>
