@@ -46,6 +46,7 @@ interface ConversationSummary {
   last_message_text?: string;
   last_message_timestamp?: string;
   status: string;
+  message_count?: number;
   user_profile?: {
     first_name: string;
     last_name: string;
@@ -391,7 +392,7 @@ const ExpertDashboard = () => {
                             </p>
                             <div className="flex items-center gap-2 mt-1">
                               <span className="text-xs text-gray-500">
-                                {conversation.message_count} messaggi
+                                {conversation.message_count || 0} messaggi
                               </span>
                               {conversation.last_message_timestamp && (
                                 <span className="text-xs text-gray-500">
