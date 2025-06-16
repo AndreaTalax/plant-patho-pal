@@ -144,8 +144,6 @@ const DiagnosisStages: React.FC<DiagnosisStagesProps> = ({
       <CameraCapture 
         onCapture={onCapture} 
         onCancel={onCancelCamera}
-        videoRef={videoRef}
-        canvasRef={canvasRef}
       />
     );
   }

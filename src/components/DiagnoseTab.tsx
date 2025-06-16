@@ -33,8 +33,6 @@ const DiagnoseTab = () => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [autoSentToExpert, setAutoSentToExpert] = useState(false);
   
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Plant info completion handler
@@ -521,8 +519,6 @@ const DiagnoseTab = () => {
       <CameraCapture
         onCapture={handleCameraCapture}
         onCancel={() => setShowCamera(false)}
-        videoRef={videoRef}
-        canvasRef={canvasRef}
       />
     );
   }
