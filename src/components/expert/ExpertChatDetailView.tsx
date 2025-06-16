@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { DatabaseMessage } from "@/services/chat/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Loader2, Send } from "lucide-react";
+import { ArrowLeft, Loader2, Send, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { useRealtimeChat } from "@/hooks/useRealtimeChat";
 import { MARCO_NIGRO_ID } from "@/components/phytopathologist";
@@ -18,6 +18,7 @@ const ExpertChatDetailView = ({ conversation, onBack }: {
 }) => {
   const [messages, setMessages] = useState<DatabaseMessage[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [newMessage, setNewMessage] = useState("");
   const [sending, setSending] = useState(false);
 
@@ -39,26 +40,44 @@ const ExpertChatDetailView = ({ conversation, onBack }: {
   useEffect(() => {
     const loadMessages = async () => {
       setLoading(true);
+      setError(null);
+      
       try {
+        console.log('🔄 Loading conversation messages for:', conversation.id);
+        
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) {
-          toast.error('Sessione scaduta, effettua di nuovo il login');
-          return;
+          throw new Error('Sessione scaduta, effettua di nuovo il login');
         }
         
         const response = await supabase.functions.invoke('get-conversation', {
-          body: { conversationId: conversation.id }
+          body: { conversationId: conversation.id },
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
         });
+
+        console.log('📨 Get-conversation response:', response);
 
         if (response.error) {
           throw new Error(response.error.message || "Errore nel caricamento messaggi");
         }
 
-        setMessages(response.data?.messages || []);
+        if (response.data?.messages) {
+          console.log('✅ Messages loaded successfully:', response.data.messages.length);
+          setMessages(response.data.messages);
+        } else {
+          console.log('📭 No messages found for conversation');
+          setMessages([]);
+        }
+
       } catch (e: any) {
+        console.error('❌ Error loading conversation:', e);
+        setError(e?.message || "Errore nel caricamento della chat");
         toast.error(e?.message || "Errore caricamento chat");
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
 
     if (conversation?.id) {
@@ -89,6 +108,39 @@ const ExpertChatDetailView = ({ conversation, onBack }: {
     }
   };
 
+  const handleRetry = () => {
+    const loadMessages = async () => {
+      setLoading(true);
+      setError(null);
+      
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          throw new Error('Sessione scaduta');
+        }
+        
+        const response = await supabase.functions.invoke('get-conversation', {
+          body: { conversationId: conversation.id },
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+        });
+
+        if (response.error) {
+          throw new Error(response.error.message || "Errore nel caricamento messaggi");
+        }
+
+        setMessages(response.data?.messages || []);
+      } catch (e: any) {
+        setError(e?.message || "Errore nel caricamento della chat");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadMessages();
+  };
+
   return (
     <div className="max-w-2xl mx-auto mt-6 bg-white/95 rounded-2xl p-6 shadow-lg">
       <div className="mb-4 flex items-center justify-between">
@@ -112,7 +164,20 @@ const ExpertChatDetailView = ({ conversation, onBack }: {
 
       {loading ? (
         <div className="flex justify-center items-center h-40">
-          <Loader2 className="animate-spin h-6 w-6 text-gray-500" />
+          <div className="flex items-center gap-2">
+            <Loader2 className="h-6 w-6 animate-spin text-drplant-green" />
+            <span className="text-gray-600">Caricamento messaggi...</span>
+          </div>
+        </div>
+      ) : error ? (
+        <div className="flex flex-col justify-center items-center h-40 gap-4">
+          <div className="flex items-center gap-2 text-red-600">
+            <AlertCircle className="h-6 w-6" />
+            <span className="text-center">{error}</span>
+          </div>
+          <Button onClick={handleRetry} variant="outline">
+            Riprova
+          </Button>
         </div>
       ) : (
         <>
@@ -128,13 +193,13 @@ const ExpertChatDetailView = ({ conversation, onBack }: {
                 <div className="text-xs text-gray-500 mb-1">
                   {m.sender_id === conversation.user_id ? "Utente" : "Marco Nigro"}
                   <span className="ml-2">
-                    {new Date(m.sent_at).toLocaleTimeString('it-IT', { 
+                    {new Date(m.sent_at || m.created_at).toLocaleTimeString('it-IT', { 
                       hour: '2-digit', 
                       minute: '2-digit' 
                     })}
                   </span>
                 </div>
-                <div className="font-medium">{m.text}</div>
+                <div className="font-medium">{m.text || m.content}</div>
                 {m.image_url && (
                   <img src={m.image_url} alt="Allegato" className="mt-2 max-h-24 rounded-lg" />
                 )}
