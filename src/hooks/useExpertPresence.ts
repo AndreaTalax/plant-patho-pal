@@ -29,7 +29,7 @@ export const useExpertPresence = () => {
         console.log('👨‍⚕️ Expert presence sync:', { isOnline, presenceState });
         setIsExpertOnline(isOnline);
         
-        if (isOnline && expertPresence[0]) {
+        if (isOnline && expertPresence[0] && expertPresence[0].online_at) {
           setExpertLastSeen(expertPresence[0].online_at);
         }
       })
@@ -37,7 +37,7 @@ export const useExpertPresence = () => {
         if (key === MARCO_NIGRO_ID) {
           console.log('👨‍⚕️ Expert joined:', newPresences);
           setIsExpertOnline(true);
-          if (newPresences[0]) {
+          if (newPresences[0] && newPresences[0].online_at) {
             setExpertLastSeen(newPresences[0].online_at);
           }
         }
@@ -46,7 +46,7 @@ export const useExpertPresence = () => {
         if (key === MARCO_NIGRO_ID) {
           console.log('👨‍⚕️ Expert left:', leftPresences);
           setIsExpertOnline(false);
-          if (leftPresences[0]) {
+          if (leftPresences[0] && leftPresences[0].online_at) {
             setExpertLastSeen(leftPresences[0].online_at);
           }
         }
