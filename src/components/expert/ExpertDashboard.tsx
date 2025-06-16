@@ -46,7 +46,6 @@ interface ConversationSummary {
   last_message_text?: string;
   last_message_timestamp?: string;
   status: string;
-  message_count?: number;
   user_profile?: {
     first_name: string;
     last_name: string;
@@ -68,7 +67,7 @@ const ExpertDashboard = () => {
     try {
       console.log('🔄 Loading expert dashboard data...');
       
-      // Load conversations with messages count for better visibility
+      // Load conversations with a simpler query to avoid timeouts
       const { data: conversationsData, error: conversationsError } = await supabase
         .from('conversations')
         .select(`
@@ -81,7 +80,8 @@ const ExpertDashboard = () => {
           updated_at
         `)
         .eq('expert_id', MARCO_NIGRO_ID)
-        .order('updated_at', { ascending: false });
+        .order('updated_at', { ascending: false })
+        .limit(50); // Limit to prevent large queries
 
       if (conversationsError) {
         console.error('❌ Error loading conversations:', conversationsError);
@@ -89,42 +89,47 @@ const ExpertDashboard = () => {
       } else {
         console.log('✅ Conversations loaded:', conversationsData?.length || 0);
         
-        // Get user profiles and message counts
-        const conversationsWithDetails = await Promise.all(
-          (conversationsData || []).map(async (conversation) => {
-            // Get user profile
-            const { data: profile } = await supabase
-              .from('profiles')
-              .select('first_name, last_name, email')
-              .eq('id', conversation.user_id)
-              .single();
-            
-            // Get message count for this conversation
-            const { count: messageCount } = await supabase
-              .from('messages')
-              .select('*', { count: 'exact' })
-              .eq('conversation_id', conversation.id);
-            
-            return {
-              id: conversation.id,
-              user_id: conversation.user_id,
-              last_message_text: conversation.last_message_text || 'Nessun messaggio ancora',
-              last_message_timestamp: conversation.last_message_at,
-              status: conversation.status || 'active',
-              user_profile: profile,
-              message_count: messageCount || 0
-            };
+        // Get user profiles in batches to avoid timeout
+        const conversationsWithProfiles = await Promise.all(
+          (conversationsData || []).slice(0, 20).map(async (conversation) => { // Limit to first 20
+            try {
+              const { data: profile } = await supabase
+                .from('profiles')
+                .select('first_name, last_name, email')
+                .eq('id', conversation.user_id)
+                .single();
+              
+              return {
+                id: conversation.id,
+                user_id: conversation.user_id,
+                last_message_text: conversation.last_message_text || 'Nessun messaggio ancora',
+                last_message_timestamp: conversation.last_message_at,
+                status: conversation.status || 'active',
+                user_profile: profile
+              };
+            } catch (error) {
+              console.error('Error loading profile for conversation:', conversation.id, error);
+              return {
+                id: conversation.id,
+                user_id: conversation.user_id,
+                last_message_text: conversation.last_message_text || 'Nessun messaggio ancora',
+                last_message_timestamp: conversation.last_message_at,
+                status: conversation.status || 'active',
+                user_profile: null
+              };
+            }
           })
         );
         
-        setConversations(conversationsWithDetails);
+        setConversations(conversationsWithProfiles);
       }
 
       // Load consultations
       const { data: consultationsData, error: consultationsError } = await supabase
         .from('expert_consultations')
         .select('*')
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(20); // Limit consultations too
 
       if (consultationsError) {
         console.error('❌ Error loading consultations:', consultationsError);
@@ -134,16 +139,24 @@ const ExpertDashboard = () => {
         
         const consultationsWithProfiles = await Promise.all(
           (consultationsData || []).map(async (consultation) => {
-            const { data: profile } = await supabase
-              .from('profiles')
-              .select('first_name, last_name, email')
-              .eq('id', consultation.user_id)
-              .single();
-            
-            return {
-              ...consultation,
-              user_profile: profile
-            };
+            try {
+              const { data: profile } = await supabase
+                .from('profiles')
+                .select('first_name, last_name, email')
+                .eq('id', consultation.user_id)
+                .single();
+              
+              return {
+                ...consultation,
+                user_profile: profile
+              };
+            } catch (error) {
+              console.error('Error loading profile for consultation:', consultation.id, error);
+              return {
+                ...consultation,
+                user_profile: null
+              };
+            }
           })
         );
         
@@ -162,32 +175,25 @@ const ExpertDashboard = () => {
   useEffect(() => {
     loadExpertData();
     
-    // Setup real-time subscriptions with better error handling
+    // Setup simplified real-time subscriptions
     const conversationsChannel = supabase
-      .channel('expert-conversations-main')
+      .channel('expert-conversations-simple')
       .on('postgres_changes', 
-        { event: '*', schema: 'public', table: 'conversations' },
+        { event: '*', schema: 'public', table: 'conversations', filter: `expert_id=eq.${MARCO_NIGRO_ID}` },
         (payload) => {
           console.log('🔄 Conversation change detected:', payload);
-          loadExpertData();
-        }
-      )
-      .on('postgres_changes',
-        { event: '*', schema: 'public', table: 'messages' },
-        (payload) => {
-          console.log('📨 Message change detected:', payload);
-          loadExpertData();
+          // Only reload if it's a significant change
+          if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+            loadExpertData();
+          }
         }
       )
       .subscribe((status) => {
         console.log('📡 Conversations subscription status:', status);
-        if (status === 'SUBSCRIBED') {
-          console.log('✅ Real-time conversations connected');
-        }
       });
 
     const consultationsChannel = supabase
-      .channel('expert-consultations-main')
+      .channel('expert-consultations-simple')
       .on('postgres_changes', 
         { event: '*', schema: 'public', table: 'expert_consultations' },
         (payload) => {
@@ -195,9 +201,7 @@ const ExpertDashboard = () => {
           loadExpertData();
         }
       )
-      .subscribe((status) => {
-        console.log('📡 Consultations subscription status:', status);
-      });
+      .subscribe();
 
     return () => {
       supabase.removeChannel(conversationsChannel);
@@ -225,7 +229,6 @@ const ExpertDashboard = () => {
     }
   };
 
-  // Funzione per eliminare consultazione
   const handleDeleteConsultation = async (consultationId: string) => {
     try {
       setDeletingConsultation(consultationId);
@@ -246,7 +249,6 @@ const ExpertDashboard = () => {
         throw new Error(response.error.message || 'Errore durante l\'eliminazione');
       }
 
-      // Ricarica i dati
       await loadExpertData();
       toast.success('Consultazione eliminata con successo');
     } catch (error: any) {
@@ -390,19 +392,14 @@ const ExpertDashboard = () => {
                             <p className="text-sm text-gray-600 max-w-md truncate">
                               {conversation.last_message_text}
                             </p>
-                            <div className="flex items-center gap-2 mt-1">
-                              <span className="text-xs text-gray-500">
-                                {conversation.message_count || 0} messaggi
-                              </span>
-                              {conversation.last_message_timestamp && (
-                                <span className="text-xs text-gray-500">
-                                  • {formatDistanceToNow(new Date(conversation.last_message_timestamp), { 
-                                    addSuffix: true, 
-                                    locale: it 
-                                  })}
-                                </span>
-                              )}
-                            </div>
+                            {conversation.last_message_timestamp && (
+                              <div className="text-xs text-gray-500 mt-1">
+                                {formatDistanceToNow(new Date(conversation.last_message_timestamp), { 
+                                  addSuffix: true, 
+                                  locale: it 
+                                })}
+                              </div>
+                            )}
                           </div>
                         </div>
                         <Button 
