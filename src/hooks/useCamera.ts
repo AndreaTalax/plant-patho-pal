@@ -15,9 +15,10 @@ export const useCamera = (): CameraHookReturn => {
 
   const stopCamera = useCallback(() => {
     if (state.stream) {
+      console.log('🛑 Stopping camera stream:', state.stream.id);
       state.stream.getTracks().forEach(track => {
         track.stop();
-        console.log('Camera track stopped:', track.kind);
+        console.log('🛑 Camera track stopped:', track.kind);
       });
       setters.setStream(null);
     }
