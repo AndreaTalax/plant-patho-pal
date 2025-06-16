@@ -1,5 +1,5 @@
 
-import { useRef, useCallback } from 'react';
+import { useRef, useCallback, useEffect } from 'react';
 import { useCameraState } from './camera/useCameraState';
 import { useCameraCapture } from './camera/useCameraCapture';
 import { useCameraControls } from './camera/useCameraControls';
@@ -26,7 +26,24 @@ export const useCamera = (): CameraHookReturn => {
 
   const { capturePhoto } = useCameraCapture(refs);
   const { switchCamera, toggleFlash } = useCameraControls(state, setters);
-  const { initializeCamera } = useCameraInitialization(state, setters, refs, stopCamera);
+  const { initializeCamera, cleanup } = useCameraInitialization(state, setters, refs);
+
+  // Initialize camera only once when component mounts
+  useEffect(() => {
+    console.log('🎬 Camera hook mounted, initializing camera...');
+    
+    // Small delay to ensure component is fully mounted
+    const timer = setTimeout(() => {
+      initializeCamera();
+    }, 100);
+
+    return () => {
+      console.log('🎬 Camera hook unmounting, cleaning up...');
+      clearTimeout(timer);
+      stopCamera();
+      cleanup();
+    };
+  }, []); // Empty dependency array - only run once on mount
 
   return {
     isLoading: state.isLoading,

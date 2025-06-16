@@ -1,5 +1,5 @@
 
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 import { toast } from 'sonner';
 import type { CameraState, CameraRefs } from './types';
 
@@ -11,32 +11,41 @@ export const useCameraInitialization = (
     setStream: (stream: MediaStream | null) => void;
     setHasFlash: (hasFlash: boolean) => void;
   },
-  refs: CameraRefs,
-  stopCamera: () => void
+  refs: CameraRefs
 ) => {
   const { facingMode } = state;
   const { setIsLoading, setError, setStream, setHasFlash } = setters;
   const { videoRef } = refs;
+  
+  // Use ref to track initialization state and prevent loops
+  const initializingRef = useRef(false);
+  const mountedRef = useRef(true);
 
   const initializeCamera = useCallback(async () => {
+    // Prevent multiple simultaneous initializations
+    if (initializingRef.current) {
+      console.log('🎥 Camera initialization already in progress, skipping...');
+      return;
+    }
+
+    // Check if component is still mounted
+    if (!mountedRef.current) {
+      console.log('🎥 Component unmounted, skipping camera initialization');
+      return;
+    }
+
     console.log('🎥 Starting camera initialization...', { facingMode });
     
     try {
+      initializingRef.current = true;
       setIsLoading(true);
       setError(null);
-
-      // Stop existing stream if any
-      stopCamera();
-
-      // Add small delay to ensure cleanup is complete
-      await new Promise(resolve => setTimeout(resolve, 100));
 
       // Check if getUserMedia is supported
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         const errorMsg = 'Camera API non supportata su questo dispositivo';
         toast.error(errorMsg);
         setError(errorMsg);
-        setIsLoading(false);
         return;
       }
 
@@ -57,19 +66,19 @@ export const useCameraInitialization = (
       console.log('✅ Camera access granted, stream:', mediaStream.id);
       
       // Check if component is still mounted and video ref exists
-      if (!videoRef.current) {
-        console.log('❌ Video ref not available, stopping stream');
+      if (!mountedRef.current || !videoRef.current) {
+        console.log('❌ Component unmounted or video ref not available, stopping stream');
         mediaStream.getTracks().forEach(track => track.stop());
-        setIsLoading(false);
         return;
       }
 
       setStream(mediaStream);
 
-      // Wait for video to be ready with timeout
+      // Set up video element
       const video = videoRef.current;
       video.srcObject = mediaStream;
 
+      // Wait for video to be ready
       await new Promise<void>((resolve, reject) => {
         const timeoutId = setTimeout(() => {
           console.log('❌ Camera initialization timeout');
@@ -79,17 +88,18 @@ export const useCameraInitialization = (
         const handleLoadedMetadata = () => {
           clearTimeout(timeoutId);
           
+          if (!mountedRef.current) {
+            reject(new Error('Component unmounted during initialization'));
+            return;
+          }
+          
           video.play()
             .then(() => {
               console.log('✅ Camera initialized and playing');
-              setIsLoading(false);
               resolve();
             })
             .catch((err) => {
-              clearTimeout(timeoutId);
               console.error('❌ Error during video.play():', err);
-              setError('Impossibile avviare il video della fotocamera');
-              setIsLoading(false);
               reject(err);
             });
         };
@@ -97,8 +107,6 @@ export const useCameraInitialization = (
         const handleError = (err: Event) => {
           clearTimeout(timeoutId);
           console.error('❌ Video error event:', err);
-          setError('Errore nel caricamento del video');
-          setIsLoading(false);
           reject(new Error('Video loading error'));
         };
 
@@ -138,11 +146,23 @@ export const useCameraInitialization = (
         }
       }
       
-      setError(errorMessage);
-      setIsLoading(false);
-      toast.error(`Errore fotocamera: ${errorMessage}`);
+      if (mountedRef.current) {
+        setError(errorMessage);
+        toast.error(`Errore fotocamera: ${errorMessage}`);
+      }
+    } finally {
+      if (mountedRef.current) {
+        setIsLoading(false);
+      }
+      initializingRef.current = false;
     }
-  }, [facingMode, stopCamera, setIsLoading, setError, setStream, setHasFlash, videoRef]);
+  }, [facingMode, setIsLoading, setError, setStream, setHasFlash, videoRef]);
 
-  return { initializeCamera };
+  // Cleanup function to call when component unmounts
+  const cleanup = useCallback(() => {
+    mountedRef.current = false;
+    initializingRef.current = false;
+  }, []);
+
+  return { initializeCamera, cleanup };
 };

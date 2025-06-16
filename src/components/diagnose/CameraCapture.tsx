@@ -1,5 +1,5 @@
 
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Camera, X, RotateCcw, Zap, ZapOff } from 'lucide-react';
@@ -24,32 +24,11 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
     facingMode,
     hasFlash,
     flashEnabled,
-    initializeCamera,
     switchCamera,
     toggleFlash,
     capturePhoto,
     stopCamera
   } = useCamera();
-
-  // Initialize camera only once on mount
-  useEffect(() => {
-    console.log('🎬 CameraCapture mounted, initializing camera...');
-    let isMounted = true;
-
-    const init = async () => {
-      if (isMounted) {
-        await initializeCamera();
-      }
-    };
-
-    init();
-
-    return () => {
-      console.log('🎬 CameraCapture unmounting, stopping camera...');
-      isMounted = false;
-      stopCamera();
-    };
-  }, [initializeCamera, stopCamera]);
 
   const handleCapture = () => {
     console.log('📸 Capture button clicked');
@@ -67,13 +46,9 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
     onCancel();
   };
 
-  const handleSwitchCamera = async () => {
+  const handleSwitchCamera = () => {
     console.log('🔄 Switch camera button clicked');
     switchCamera();
-    // Re-initialize with new facing mode after a short delay
-    setTimeout(() => {
-      initializeCamera();
-    }, 200);
   };
 
   if (error) {
@@ -84,11 +59,8 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
             <h2 className="text-xl font-bold mb-4 text-red-600">Errore Fotocamera</h2>
             <p className="text-gray-600 mb-6">{error}</p>
             <div className="space-y-3">
-              <Button onClick={initializeCamera} className="w-full">
-                Riprova
-              </Button>
               <Button onClick={handleCancel} variant="outline" className="w-full">
-                Annulla
+                Torna Indietro
               </Button>
             </div>
           </div>
