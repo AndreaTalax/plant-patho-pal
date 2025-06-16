@@ -21,7 +21,7 @@ export const useRealtimeChat = ({
   const [isConnected, setIsConnected] = useState(false);
   const [channel, setChannel] = useState<RealtimeChannel | null>(null);
 
-  // Setup real-time subscriptions
+  // Setup real-time subscriptions with better error handling
   useEffect(() => {
     if (!userId) return;
 
@@ -32,7 +32,13 @@ export const useRealtimeChat = ({
       ? `chat:conversation:${conversationId}`
       : `chat:user:${userId}`;
 
-    const realtimeChannel = supabase.channel(channelName);
+    const realtimeChannel = supabase.channel(channelName, {
+      config: {
+        presence: {
+          key: userId,
+        },
+      },
+    });
 
     // Subscribe to new messages in this conversation or user's conversations
     realtimeChannel
@@ -47,18 +53,24 @@ export const useRealtimeChat = ({
             : `or(sender_id.eq.${userId},recipient_id.eq.${userId})`
         },
         (payload) => {
-          console.log('📨 New message received:', payload.new);
-          const newMessage = payload.new as DatabaseMessage;
-          
-          // Only show toast for messages from others
-          if (newMessage.sender_id !== userId) {
-            toast.success('Nuovo messaggio ricevuto!', {
-              description: newMessage.text?.slice(0, 50) + (newMessage.text?.length > 50 ? '...' : ''),
-              duration: 4000,
-            });
+          try {
+            console.log('📨 New message received:', payload.new);
+            const newMessage = payload.new as DatabaseMessage;
+            
+            // Only show toast for messages from others
+            if (newMessage.sender_id !== userId) {
+              toast.success('Nuovo messaggio ricevuto!', {
+                description: newMessage.text?.slice(0, 50) + (newMessage.text?.length > 50 ? '...' : ''),
+                duration: 4000,
+              });
+            }
+            
+            if (onNewMessage) {
+              onNewMessage(newMessage);
+            }
+          } catch (error) {
+            console.error('❌ Error handling new message:', error);
           }
-          
-          onNewMessage?.(newMessage);
         }
       )
       .on(
@@ -72,19 +84,25 @@ export const useRealtimeChat = ({
             : `or(user_id.eq.${userId},expert_id.eq.${userId})`
         },
         (payload) => {
-          console.log('💬 Conversation updated:', payload.new);
-          const updatedConversation = payload.new as DatabaseConversation;
-          onConversationUpdate?.(updatedConversation);
+          try {
+            console.log('💬 Conversation updated:', payload.new);
+            const updatedConversation = payload.new as DatabaseConversation;
+            if (onConversationUpdate) {
+              onConversationUpdate(updatedConversation);
+            }
+          } catch (error) {
+            console.error('❌ Error handling conversation update:', error);
+          }
         }
       )
-      .subscribe((status) => {
-        console.log('🔗 Real-time subscription status:', status);
+      .subscribe((status, err) => {
+        console.log('🔗 Real-time subscription status:', status, err);
         setIsConnected(status === 'SUBSCRIBED');
         
         if (status === 'SUBSCRIBED') {
           console.log('✅ Real-time chat connected successfully');
         } else if (status === 'CHANNEL_ERROR') {
-          console.error('❌ Real-time chat connection failed');
+          console.error('❌ Real-time chat connection failed:', err);
           toast.error('Connessione real-time fallita');
         }
       });
@@ -93,13 +111,20 @@ export const useRealtimeChat = ({
 
     return () => {
       console.log('🔌 Cleaning up real-time chat subscriptions');
-      supabase.removeChannel(realtimeChannel);
+      try {
+        if (realtimeChannel) {
+          realtimeChannel.unsubscribe();
+          supabase.removeChannel(realtimeChannel);
+        }
+      } catch (error) {
+        console.warn('⚠️ Error during channel cleanup:', error);
+      }
       setChannel(null);
       setIsConnected(false);
     };
   }, [conversationId, userId, onNewMessage, onConversationUpdate]);
 
-  // Send message function using the edge function
+  // Send message function using the edge function with better error handling
   const sendMessage = useCallback(async (recipientId: string, text: string, imageUrl?: string, products?: any) => {
     if (!conversationId || !text.trim()) {
       throw new Error('Missing required data for sending message');
@@ -145,6 +170,20 @@ export const useRealtimeChat = ({
       throw error;
     }
   }, [conversationId]);
+
+  // Add cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (channel) {
+        try {
+          channel.unsubscribe();
+          supabase.removeChannel(channel);
+        } catch (error) {
+          console.warn('⚠️ Error during final cleanup:', error);
+        }
+      }
+    };
+  }, [channel]);
 
   return {
     isConnected,
