@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { supabase, EXPERT_ID } from '@/integrations/supabase/client';
@@ -24,10 +23,37 @@ export const useUserChatRealtime = (userId: string) => {
       try {
         console.log("🔄 Initializing expert chat for user:", userId);
         
-        const conversation = await findOrCreateConversation(userId);
+        // Use safer query instead of .single()
+        const { data: conversationList, error } = await supabase
+          .from('conversations')
+          .select('*')
+          .eq('user_id', userId)
+          .eq('expert_id', EXPERT_ID)
+          .limit(1);
+
+        let conversation = conversationList?.[0];
+
         if (!conversation) {
-          console.error("❌ Could not start conversation with expert");
-          return;
+          // Create new conversation if none exists
+          console.log("🆕 No conversation found, creating new one...");
+          const { data: newConversation, error: createError } = await supabase
+            .from('conversations')
+            .insert({
+              user_id: userId,
+              expert_id: EXPERT_ID,
+              title: 'Consulenza esperto',
+              status: 'active'
+            })
+            .select()
+            .single();
+
+          if (createError) {
+            console.error("❌ Error creating conversation:", createError);
+            toast.error("Errore nella creazione della conversazione");
+            return;
+          }
+
+          conversation = newConversation;
         }
         
         console.log("✅ Found/created conversation:", conversation.id);

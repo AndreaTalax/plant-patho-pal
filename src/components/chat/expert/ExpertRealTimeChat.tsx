@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client'; 
@@ -51,69 +50,77 @@ export const ExpertRealTimeChat: React.FC = () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
 
-      // Recupera tutte le conversazioni dell'esperto
-      const response = await fetch('/api/get-conversations', {
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`
-        }
-      });
+      // Use safer query to get conversations
+      const { data: conversationList, error } = await supabase
+        .from('conversations')
+        .select(`
+          *,
+          profiles!conversations_user_id_fkey(id, first_name, last_name, avatar_url)
+        `)
+        .eq('expert_id', MARCO_NIGRO_ID)
+        .order('last_message_at', { ascending: false });
 
-      const result = await response.json();
+      if (error) {
+        console.error('❌ Error loading conversations:', error);
+        return;
+      }
 
-      if (response.ok && Array.isArray(result.conversations)) {
-        // Miglioramento: carica per ogni conversazione l’ultimo messaggio vero, cat non quello filtrato solo per l’utente
-        const conversationsWithLastMessage = await Promise.all(result.conversations.map(async (conv: any) => {
-          // Find last relevant message (inclusi autoSent)
-          let lastMessageText = conv.last_message_text;
-          let lastMessageAt = conv.last_message_at;
-          let unread_count = conv.unread_count || 0;
+      if (!conversationList || conversationList.length === 0) {
+        console.log('🟡 Nessuna conversazione trovata per questo esperto.');
+        setConversations([]);
+        return;
+      }
 
-          // Fallback: se non c'è un message brevity, prendi l'ultimo dalla tabella messages, anche se autoSent
-          if (!lastMessageText) {
-            const { data: messages } = await supabase
-              .from('messages')
-              .select('content, sent_at, metadata')
-              .eq('conversation_id', conv.id)
-              .order('sent_at', { ascending: false })
-              .limit(1);
-            if (messages && messages.length > 0) {
-              lastMessageText = messages[0].content || '';
-              lastMessageAt = messages[0].sent_at;
-              // Se è un messaggio autoSent, aggiungi badge
-              const metadata = messages[0].metadata;
-              if (
-                metadata &&
-                typeof metadata === "object" &&
-                !Array.isArray(metadata) &&
-                (
-                  (metadata as any).type === "consultation_data" ||
-                  (metadata as any).autoSent === true
-                )
-              ) {
-                lastMessageText = "🟢 Dati inviati automaticamente dal paziente";
-              }
+      // Process conversations with enhanced last message handling
+      const conversationsWithLastMessage = await Promise.all(conversationList.map(async (conv: any) => {
+        let lastMessageText = conv.last_message_text;
+        let lastMessageAt = conv.last_message_at;
+        let unread_count = 0; // TODO: Implement proper unread count
+
+        // Fallback: if no last message, get the latest from messages table
+        if (!lastMessageText) {
+          const { data: messages } = await supabase
+            .from('messages')
+            .select('content, sent_at, metadata')
+            .eq('conversation_id', conv.id)
+            .order('sent_at', { ascending: false })
+            .limit(1);
+            
+          if (messages && messages.length > 0) {
+            lastMessageText = messages[0].content || '';
+            lastMessageAt = messages[0].sent_at;
+            
+            const metadata = messages[0].metadata;
+            if (
+              metadata &&
+              typeof metadata === "object" &&
+              !Array.isArray(metadata) &&
+              (
+                (metadata as any).type === "consultation_data" ||
+                (metadata as any).autoSent === true
+              )
+            ) {
+              lastMessageText = "🟢 Dati inviati automaticamente dal paziente";
             }
           }
+        }
 
-          // Retrieve user profile
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('first_name, last_name, avatar_url')
-            .eq('id', conv.user_profile?.id || conv.user_id)
-            .maybeSingle();
-
-          return {
-            ...conv,
-            last_message_text: lastMessageText,
-            last_message_at: lastMessageAt,
-            unread_count,
-            user_profile: profile || conv.user_profile
+        return {
+          ...conv,
+          last_message_text: lastMessageText,
+          last_message_at: lastMessageAt,
+          unread_count,
+          user_profile: conv.profiles || { 
+            id: conv.user_id, 
+            first_name: 'Utente', 
+            last_name: 'Sconosciuto' 
           }
-        }));
-        setConversations(conversationsWithLastMessage);
-      }
+        };
+      }));
+      
+      setConversations(conversationsWithLastMessage);
     } catch (error) {
-      console.error('Error loading conversations:', error);
+      console.error('❌ Error loading conversations:', error);
     } finally {
       setLoading(false);
     }
@@ -185,6 +192,9 @@ export const ExpertRealTimeChat: React.FC = () => {
       </div>
     );
   }
+
+  // Safe conversation lookup with fallback
+  const selectedConversation = conversations.find(c => c.id === selectedConversationId);
 
   return (
     <div className="flex h-full">
@@ -287,7 +297,7 @@ export const ExpertRealTimeChat: React.FC = () => {
 
       {/* Chat Area */}
       <div className="flex-1 flex flex-col">
-        {selectedConversationId ? (
+        {selectedConversationId && selectedConversation ? (
           <RealTimeChatWrapper
             conversationId={selectedConversationId}
             userId={userProfile.id}
@@ -325,9 +335,9 @@ export const ExpertRealTimeChat: React.FC = () => {
                 <MessageInput
                   conversationId={selectedConversationId}
                   senderId={userProfile.id}
-                  recipientId={conversations.find(c => c.id === selectedConversationId)?.user_profile?.id || ''}
+                  recipientId={selectedConversation.user_profile?.id || ''}
                   onSendMessage={async (text: string) => {
-                    const recipientId = conversations.find(c => c.id === selectedConversationId)?.user_profile?.id;
+                    const recipientId = selectedConversation.user_profile?.id;
                     if (recipientId) {
                       await sendMessage(recipientId, text);
                     }
@@ -343,12 +353,21 @@ export const ExpertRealTimeChat: React.FC = () => {
               <CardHeader>
                 <CardTitle className="text-center flex items-center justify-center gap-2">
                   <MessageCircle className="h-6 w-6 text-drplant-green" />
-                  Seleziona una Conversazione
+                  {selectedConversationId && !selectedConversation ? 
+                    'Conversazione Non Trovata' : 
+                    'Seleziona una Conversazione'
+                  }
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-center text-gray-600">
-                  Scegli una conversazione dalla lista per iniziare a chattare con i tuoi pazienti.
+                  {selectedConversationId && !selectedConversation ? (
+                    <span className="text-red-600">
+                      🟡 Nessuna conversazione trovata per questo utente.
+                    </span>
+                  ) : (
+                    'Scegli una conversazione dalla lista per iniziare a chattare con i tuoi pazienti.'
+                  )}
                 </p>
               </CardContent>
             </Card>
