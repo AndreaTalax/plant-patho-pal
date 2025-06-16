@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { DatabaseMessage } from "@/services/chat/types";
@@ -59,26 +58,11 @@ const ExpertChatDetailView = ({ conversation, onBack }: {
           throw new Error('Sessione scaduta, effettua di nuovo il login');
         }
         
-        // Test 2: Prepara body della richiesta
-        const requestBody = { conversationId: conversation.id };
-        console.log('📤 Request body to send:', requestBody);
+        // Test 2: Prova una chiamata più semplice
+        console.log('📤 About to call supabase.functions.invoke with simple parameters...');
         
-        // Test 3: Prepara headers
-        const headers = {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
-        };
-        console.log('📤 Headers to send (sanitized):', {
-          'Content-Type': headers['Content-Type'],
-          'Authorization': headers.Authorization ? 'Bearer [TOKEN_PRESENT]' : 'missing'
-        });
-        
-        console.log('📤 About to call supabase.functions.invoke...');
-        
-        // Test 4: Chiamata alla funzione
         const response = await supabase.functions.invoke('get-conversation', {
-          body: requestBody,
-          headers: headers,
+          body: { conversationId: conversation.id }
         });
 
         console.log('📨 Raw response received:', {
@@ -88,7 +72,7 @@ const ExpertChatDetailView = ({ conversation, onBack }: {
           dataKeys: response.data ? Object.keys(response.data) : null
         });
 
-        // Test 5: Controlla tipo di errore
+        // Test 3: Controlla tipo di errore
         if (response.error) {
           console.error('❌ Response error details:', {
             message: response.error.message,
@@ -97,7 +81,7 @@ const ExpertChatDetailView = ({ conversation, onBack }: {
           throw new Error(response.error.message || "Errore nel caricamento messaggi");
         }
 
-        // Test 6: Verifica struttura risposta
+        // Test 4: Verifica struttura risposta
         console.log('✅ Response successful, checking data structure...');
         if (response.data?.messages) {
           console.log('✅ Messages found:', response.data.messages.length);
@@ -166,11 +150,7 @@ const ExpertChatDetailView = ({ conversation, onBack }: {
         }
         
         const response = await supabase.functions.invoke('get-conversation', {
-          body: { conversationId: conversation.id },
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${session.access_token}`,
-          },
+          body: { conversationId: conversation.id }
         });
 
         if (response.error) {

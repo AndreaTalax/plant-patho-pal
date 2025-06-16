@@ -36,9 +36,17 @@ serve(async (req) => {
       supabaseAnonKey: supabaseAnonKey ? "present" : "missing"
     });
 
+    if (!supabaseUrl || !supabaseAnonKey) {
+      console.error("❌ Missing environment variables");
+      return new Response(JSON.stringify({ error: "Server configuration error" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const supabaseClient = createClient(
-      supabaseUrl ?? "",
-      supabaseAnonKey ?? ""
+      supabaseUrl,
+      supabaseAnonKey
     );
 
     // Get authentication token
