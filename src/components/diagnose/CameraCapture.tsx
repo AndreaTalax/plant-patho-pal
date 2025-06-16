@@ -1,5 +1,5 @@
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Camera, X, RotateCcw, Zap, ZapOff } from 'lucide-react';
@@ -9,22 +9,18 @@ import CameraLoading from './camera/CameraLoading';
 interface CameraCaptureProps {
   onCapture: (imageDataUrl: string) => void;
   onCancel: () => void;
-  videoRef: React.RefObject<HTMLVideoElement>;
-  canvasRef: React.RefObject<HTMLCanvasElement>;
 }
 
 const CameraCapture: React.FC<CameraCaptureProps> = ({
   onCapture,
-  onCancel,
-  videoRef: externalVideoRef,
-  canvasRef: externalCanvasRef
+  onCancel
 }) => {
   const {
     isLoading,
     error,
     stream,
-    videoRef: internalVideoRef,
-    canvasRef: internalCanvasRef,
+    videoRef,
+    canvasRef,
     facingMode,
     hasFlash,
     flashEnabled,
@@ -34,10 +30,6 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
     capturePhoto,
     stopCamera
   } = useCamera();
-
-  // Use internal refs for camera functionality
-  const activeVideoRef = videoRef || internalVideoRef;
-  const activeCanvasRef = canvasRef || internalCanvasRef;
 
   // Initialize camera only once on mount
   useEffect(() => {
@@ -57,15 +49,7 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
       isMounted = false;
       stopCamera();
     };
-  }, []); // Empty dependency array - initialize only once
-
-  // Sync external refs with internal stream
-  useEffect(() => {
-    if (stream && externalVideoRef?.current) {
-      console.log('🔄 Syncing external video ref with stream');
-      externalVideoRef.current.srcObject = stream;
-    }
-  }, [stream, externalVideoRef]);
+  }, [initializeCamera, stopCamera]);
 
   const handleCapture = () => {
     console.log('📸 Capture button clicked');
@@ -117,7 +101,7 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
     <div className="min-h-screen bg-black relative">
       {/* Video Stream */}
       <video
-        ref={activeVideoRef}
+        ref={videoRef}
         className="w-full h-full object-cover"
         playsInline
         muted
@@ -125,7 +109,7 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
       />
 
       {/* Hidden Canvas for Capture */}
-      <canvas ref={activeCanvasRef} className="hidden" />
+      <canvas ref={canvasRef} className="hidden" />
 
       {/* Loading Overlay */}
       <CameraLoading visible={isLoading} />
