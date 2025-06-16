@@ -1,27 +1,12 @@
+
 import { useEffect, useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { MessageSquare, Clock, CheckCircle, AlertCircle, User, Calendar, Trash2, Loader2, RefreshCw } from 'lucide-react';
+import { MessageSquare, Clock, AlertCircle, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { formatDistanceToNow } from 'date-fns';
-import { it } from 'date-fns/locale';
 import { MARCO_NIGRO_ID } from '@/components/phytopathologist';
 import ExpertChatDetailView from './ExpertChatDetailView';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
 import ConsultationCard from './ConsultationCard';
 import ConversationCard from './ConversationCard';
 
@@ -53,21 +38,19 @@ interface ConversationSummary {
   } | null;
 }
 
-const ExpertDashboard = () => {
+const OptimizedExpertDashboard = () => {
   const [consultations, setConsultations] = useState<Consultation[]>([]);
   const [conversations, setConversations] = useState<ConversationSummary[]>([]);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [deletingConsultation, setDeletingConsultation] = useState<string | null>(null);
   const [selectedConversation, setSelectedConversation] = useState<ConversationSummary | null>(null);
+  const [activeTab, setActiveTab] = useState('conversations');
 
-  const loadExpertData = async (showRefreshing = false) => {
-    if (showRefreshing) setRefreshing(true);
-    
+  // Load data more efficiently with better error handling
+  const loadExpertData = async () => {
     try {
       console.log('🔄 Loading expert dashboard data...');
       
-      // Load conversations with messages count for better visibility
+      // Load conversations directly from database with proper error handling
       const { data: conversationsData, error: conversationsError } = await supabase
         .from('conversations')
         .select(`
@@ -88,35 +71,27 @@ const ExpertDashboard = () => {
       } else {
         console.log('✅ Conversations loaded:', conversationsData?.length || 0);
         
-        // Get user profiles and message counts
-        const conversationsWithDetails = await Promise.all(
+        // Get user profiles for conversations
+        const conversationsWithProfiles = await Promise.all(
           (conversationsData || []).map(async (conversation) => {
-            // Get user profile
             const { data: profile } = await supabase
               .from('profiles')
               .select('first_name, last_name, email')
               .eq('id', conversation.user_id)
               .single();
             
-            // Get message count for this conversation
-            const { count: messageCount } = await supabase
-              .from('messages')
-              .select('*', { count: 'exact' })
-              .eq('conversation_id', conversation.id);
-            
             return {
               id: conversation.id,
               user_id: conversation.user_id,
-              last_message_text: conversation.last_message_text || 'Nessun messaggio ancora',
+              last_message_text: conversation.last_message_text || 'Nessun messaggio',
               last_message_timestamp: conversation.last_message_at,
               status: conversation.status || 'active',
-              user_profile: profile,
-              message_count: messageCount || 0
+              user_profile: profile
             };
           })
         );
         
-        setConversations(conversationsWithDetails);
+        setConversations(conversationsWithProfiles);
       }
 
       // Load consultations
@@ -154,7 +129,6 @@ const ExpertDashboard = () => {
       toast.error('Errore nel caricamento dei dati');
     } finally {
       setLoading(false);
-      if (showRefreshing) setRefreshing(false);
     }
   };
 
@@ -163,7 +137,7 @@ const ExpertDashboard = () => {
     
     // Setup real-time subscriptions with better error handling
     const conversationsChannel = supabase
-      .channel('expert-conversations-main')
+      .channel('expert-conversations-optimized')
       .on('postgres_changes', 
         { event: '*', schema: 'public', table: 'conversations' },
         (payload) => {
@@ -179,14 +153,11 @@ const ExpertDashboard = () => {
         }
       )
       .subscribe((status) => {
-        console.log('📡 Conversations subscription status:', status);
-        if (status === 'SUBSCRIBED') {
-          console.log('✅ Real-time conversations connected');
-        }
+        console.log('📡 Real-time subscription status:', status);
       });
 
     const consultationsChannel = supabase
-      .channel('expert-consultations-main')
+      .channel('expert-consultations-optimized')
       .on('postgres_changes', 
         { event: '*', schema: 'public', table: 'expert_consultations' },
         (payload) => {
@@ -194,80 +165,13 @@ const ExpertDashboard = () => {
           loadExpertData();
         }
       )
-      .subscribe((status) => {
-        console.log('📡 Consultations subscription status:', status);
-      });
+      .subscribe();
 
     return () => {
       supabase.removeChannel(conversationsChannel);
       supabase.removeChannel(consultationsChannel);
     };
   }, []);
-
-  const updateConsultationStatus = async (consultationId: string, newStatus: string) => {
-    try {
-      const { error } = await supabase
-        .from('expert_consultations')
-        .update({ status: newStatus })
-        .eq('id', consultationId);
-
-      if (error) {
-        console.error('Error updating consultation status:', error);
-        toast.error('Errore nell\'aggiornamento dello stato');
-      } else {
-        toast.success('Stato aggiornato con successo');
-        loadExpertData();
-      }
-    } catch (error) {
-      console.error('Error updating consultation status:', error);
-      toast.error('Errore nell\'aggiornamento dello stato');
-    }
-  };
-
-  // Funzione per eliminare consultazione
-  const handleDeleteConsultation = async (consultationId: string) => {
-    try {
-      setDeletingConsultation(consultationId);
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        toast.error('Sessione scaduta');
-        return;
-      }
-
-      const response = await supabase.functions.invoke('delete-consultation', {
-        body: { consultationId },
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      });
-
-      if (response.error) {
-        throw new Error(response.error.message || 'Errore durante l\'eliminazione');
-      }
-
-      // Ricarica i dati
-      await loadExpertData();
-      toast.success('Consultazione eliminata con successo');
-    } catch (error: any) {
-      console.error('Error deleting consultation:', error);
-      toast.error(error.message || 'Errore durante l\'eliminazione della consultazione');
-    } finally {
-      setDeletingConsultation(null);
-    }
-  };
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return <Badge variant="outline" className="text-yellow-600"><Clock className="h-3 w-3 mr-1" />In attesa</Badge>;
-      case 'in_progress':
-        return <Badge variant="outline" className="text-blue-600"><AlertCircle className="h-3 w-3 mr-1" />In corso</Badge>;
-      case 'completed':
-        return <Badge variant="outline" className="text-green-600"><CheckCircle className="h-3 w-3 mr-1" />Completato</Badge>;
-      default:
-        return <Badge variant="outline">{status}</Badge>;
-    }
-  };
 
   const getInitials = (firstName?: string, lastName?: string) => {
     if (!firstName && !lastName) return 'U';
@@ -282,8 +186,17 @@ const ExpertDashboard = () => {
     return userProfile.email || 'Utente sconosciuto';
   };
 
-  const handleRefresh = () => {
-    loadExpertData(true);
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'pending':
+        return <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-yellow-100 text-yellow-800"><Clock className="h-3 w-3 mr-1" />In attesa</span>;
+      case 'in_progress':
+        return <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800"><AlertCircle className="h-3 w-3 mr-1" />In corso</span>;
+      case 'completed':
+        return <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-green-100 text-green-800">Completato</span>;
+      default:
+        return <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-gray-100 text-gray-800">{status}</span>;
+    }
   };
 
   const handleOpenChat = (conversation: ConversationSummary) => {
@@ -308,18 +221,8 @@ const ExpertDashboard = () => {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Dashboard Esperto</h1>
-        <div className="flex items-center gap-4">
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={handleRefresh}
-            disabled={refreshing}
-            className="flex items-center gap-2"
-          >
-            <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
-            {refreshing ? 'Aggiornamento...' : 'Aggiorna'}
-          </Button>
+        <h1 className="text-2xl font-bold text-gray-900">Dashboard Esperto Ottimizzata</h1>
+        <div className="flex gap-4">
           <Card className="px-4 py-2">
             <div className="text-sm text-gray-500">Conversazioni Attive</div>
             <div className="text-2xl font-bold text-drplant-green">
@@ -327,15 +230,15 @@ const ExpertDashboard = () => {
             </div>
           </Card>
           <Card className="px-4 py-2">
-            <div className="text-sm text-gray-500">Consultazioni</div>
+            <div className="text-sm text-gray-500">Consultazioni Pending</div>
             <div className="text-2xl font-bold text-blue-600">
-              {consultations.filter(c => c.status !== 'completed').length}
+              {consultations.filter(c => c.status === 'pending').length}
             </div>
           </Card>
         </div>
       </div>
 
-      <Tabs defaultValue="conversations" className="w-full">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="conversations" className="flex items-center gap-2">
             <MessageSquare className="h-4 w-4" />
@@ -358,63 +261,20 @@ const ExpertDashboard = () => {
               <Card>
                 <CardContent className="py-8 text-center text-gray-500">
                   <MessageSquare className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                  <p className="text-lg font-medium">Nessuna conversazione disponibile</p>
-                  <p className="text-sm mt-2">Le nuove conversazioni appariranno qui automaticamente</p>
-                  <Button 
-                    variant="outline" 
-                    onClick={handleRefresh}
-                    className="mt-4"
-                  >
-                    <RefreshCw className="h-4 w-4 mr-2" />
-                    Controlla aggiornamenti
-                  </Button>
+                  <p>Nessuna conversazione disponibile</p>
+                  <p className="text-sm mt-2">Le nuove conversazioni appariranno qui</p>
                 </CardContent>
               </Card>
             ) : (
-              <div className="space-y-3">
-                {conversations.map((conversation) => (
-                  <Card key={conversation.id} className="hover:shadow-md transition-shadow">
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <Avatar>
-                            <AvatarFallback>
-                              {getInitials(conversation.user_profile?.first_name, conversation.user_profile?.last_name)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <h3 className="font-medium">
-                              {getUserDisplayName(conversation.user_profile)}
-                            </h3>
-                            <p className="text-sm text-gray-600 max-w-md truncate">
-                              {conversation.last_message_text}
-                            </p>
-                            <div className="flex items-center gap-2 mt-1">
-                              <span className="text-xs text-gray-500">
-                                {conversation.message_count} messaggi
-                              </span>
-                              {conversation.last_message_timestamp && (
-                                <span className="text-xs text-gray-500">
-                                  • {formatDistanceToNow(new Date(conversation.last_message_timestamp), { 
-                                    addSuffix: true, 
-                                    locale: it 
-                                  })}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                        <Button 
-                          variant="outline"
-                          onClick={() => handleOpenChat(conversation)}
-                        >
-                          Apri Chat
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
+              conversations.map((conversation) => (
+                <ConversationCard
+                  key={conversation.id}
+                  conversation={conversation}
+                  getInitials={getInitials}
+                  getUserDisplayName={getUserDisplayName}
+                  handleOpenChat={handleOpenChat}
+                />
+              ))
             )
           )}
         </TabsContent>
@@ -424,7 +284,7 @@ const ExpertDashboard = () => {
             <Card>
               <CardContent className="py-8 text-center text-gray-500">
                 <Clock className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                <p className="text-lg font-medium">Nessuna consultazione disponibile</p>
+                <p>Nessuna consultazione disponibile</p>
                 <p className="text-sm mt-2">Le nuove consultazioni appariranno qui</p>
               </CardContent>
             </Card>
@@ -436,9 +296,9 @@ const ExpertDashboard = () => {
                 getInitials={getInitials}
                 getUserDisplayName={getUserDisplayName}
                 getStatusBadge={getStatusBadge}
-                updateConsultationStatus={updateConsultationStatus}
-                deletingConsultation={deletingConsultation}
-                handleDeleteConsultation={handleDeleteConsultation}
+                updateConsultationStatus={() => {}}
+                deletingConsultation={null}
+                handleDeleteConsultation={() => {}}
               />
             ))
           )}
@@ -448,4 +308,4 @@ const ExpertDashboard = () => {
   );
 };
 
-export default ExpertDashboard;
+export default OptimizedExpertDashboard;
