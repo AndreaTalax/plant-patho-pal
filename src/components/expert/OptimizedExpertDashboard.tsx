@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -207,6 +206,38 @@ const OptimizedExpertDashboard = () => {
     setSelectedConversation(null);
   };
 
+  const handleDeleteConversation = async (conversationId: string) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error('Sessione scaduta');
+        return;
+      }
+
+      const response = await supabase.functions.invoke('delete-conversation', {
+        body: { conversationId },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+
+      if (response.error) {
+        throw new Error(response.error.message || 'Errore durante l\'eliminazione');
+      }
+
+      // Se la conversazione eliminata era quella selezionata, deseleziona
+      if (selectedConversation?.id === conversationId) {
+        setSelectedConversation(null);
+      }
+
+      await loadExpertData();
+      toast.success('Conversazione eliminata con successo');
+    } catch (error: any) {
+      console.error('Error deleting conversation:', error);
+      toast.error(error.message || 'Errore durante l\'eliminazione della conversazione');
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -273,6 +304,8 @@ const OptimizedExpertDashboard = () => {
                   getInitials={getInitials}
                   getUserDisplayName={getUserDisplayName}
                   handleOpenChat={handleOpenChat}
+                  onDeleteConversation={handleDeleteConversation}
+                  deletingConversation={null}
                 />
               ))
             )

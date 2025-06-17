@@ -229,6 +229,42 @@ const ExpertDashboard = () => {
     }
   };
 
+  const handleDeleteConversation = async (conversationId: string) => {
+    try {
+      setDeletingConsultation(conversationId);
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error('Sessione scaduta');
+        return;
+      }
+
+      const response = await supabase.functions.invoke('delete-conversation', {
+        body: { conversationId },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+
+      if (response.error) {
+        throw new Error(response.error.message || 'Errore durante l\'eliminazione');
+      }
+
+      await loadExpertData();
+      
+      // Se la conversazione eliminata era quella selezionata, deseleziona
+      if (selectedConversation?.id === conversationId) {
+        setSelectedConversation(null);
+      }
+      
+      toast.success('Conversazione eliminata con successo');
+    } catch (error: any) {
+      console.error('Error deleting conversation:', error);
+      toast.error(error.message || 'Errore durante l\'eliminazione della conversazione');
+    } finally {
+      setDeletingConsultation(null);
+    }
+  };
+
   const handleDeleteConsultation = async (consultationId: string) => {
     try {
       setDeletingConsultation(consultationId);
@@ -376,41 +412,15 @@ const ExpertDashboard = () => {
             ) : (
               <div className="space-y-3">
                 {conversations.map((conversation) => (
-                  <Card key={conversation.id} className="hover:shadow-md transition-shadow">
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <Avatar>
-                            <AvatarFallback>
-                              {getInitials(conversation.user_profile?.first_name, conversation.user_profile?.last_name)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <h3 className="font-medium">
-                              {getUserDisplayName(conversation.user_profile)}
-                            </h3>
-                            <p className="text-sm text-gray-600 max-w-md truncate">
-                              {conversation.last_message_text}
-                            </p>
-                            {conversation.last_message_timestamp && (
-                              <div className="text-xs text-gray-500 mt-1">
-                                {formatDistanceToNow(new Date(conversation.last_message_timestamp), { 
-                                  addSuffix: true, 
-                                  locale: it 
-                                })}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                        <Button 
-                          variant="outline"
-                          onClick={() => handleOpenChat(conversation)}
-                        >
-                          Apri Chat
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
+                  <ConversationCard
+                    key={conversation.id}
+                    conversation={conversation}
+                    getInitials={getInitials}
+                    getUserDisplayName={getUserDisplayName}
+                    handleOpenChat={handleOpenChat}
+                    onDeleteConversation={handleDeleteConversation}
+                    deletingConversation={deletingConsultation}
+                  />
                 ))}
               </div>
             )
