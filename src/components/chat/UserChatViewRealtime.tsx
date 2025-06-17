@@ -1,26 +1,19 @@
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useUserChatRealtime } from './user/useUserChatRealtime';
-import { useAuth } from '@/context/AuthContext';
-import { useToast } from '@/hooks/use-toast';
-import ChatHeader from './user/ChatHeader';
 import MessageList from './MessageList';
 import MessageInput from './MessageInput';
-import EmptyStateView from './user/EmptyStateView';
-import UserPlantSummary from './user/UserPlantSummary';
-import ChatConnectionError from './user/ChatConnectionError';
-import { ChatInitializer } from './user/ChatInitializer';
-import { useConnectionManager } from './user/ConnectionManager';
+import { Card, CardContent } from '@/components/ui/card';
+import { MessageCircle, Wifi, WifiOff, RefreshCw } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface UserChatViewRealtimeProps {
   userId: string;
 }
 
 export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ userId }) => {
-  const { userProfile } = useAuth();
   const {
     activeChat,
-    setActiveChat,
     messages,
     isSending,
     isConnected,
@@ -28,75 +21,139 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
     startChatWithExpert,
     currentConversationId
   } = useUserChatRealtime(userId);
-  const { dismiss } = useToast();
-  const [autoDataSent, setAutoDataSent] = React.useState(false);
 
-  const { connectionError } = useConnectionManager(currentConversationId, activeChat);
+  const [isInitializing, setIsInitializing] = useState(true);
+
+  console.log('🎯 UserChatViewRealtime - Stato attuale:', {
+    userId,
+    activeChat,
+    messagesCount: messages.length,
+    currentConversationId,
+    isConnected,
+    isSending,
+    messages: messages
+  });
 
   useEffect(() => {
-    dismiss();
-  }, []);
+    console.log('🚀 UserChatViewRealtime - Inizializzazione per userId:', userId);
+    if (userId && !activeChat) {
+      startChatWithExpert();
+    }
+    
+    // Reset initializing state after a delay
+    const timer = setTimeout(() => {
+      setIsInitializing(false);
+    }, 2000);
 
-  const handleStartChat = () => {
-    console.log('🚀 User starting chat with expert');
-    setAutoDataSent(false);
-    startChatWithExpert();
+    return () => clearTimeout(timer);
+  }, [userId, activeChat, startChatWithExpert]);
+
+  // Force refresh function
+  const handleForceRefresh = () => {
+    console.log('🔄 Force refresh triggered');
+    window.location.reload();
   };
 
-  const handleBackClick = () => {
-    console.log('⬅️ Back button clicked');
-    setAutoDataSent(false);
-    setActiveChat(null);
-  };
+  if (!userId) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <Card className="w-96">
+          <CardContent className="p-6 text-center">
+            <MessageCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Accesso Richiesto</h3>
+            <p className="text-gray-600">Effettua l'accesso per utilizzare la chat</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
-  // Debug logging
-  useEffect(() => {
-    console.log("[DEBUG UserChat] State:", {
-      userId,
-      activeChat,
-      currentConversationId,
-      isConnected,
-      messagesCount: messages.length,
-      canSend: !!currentConversationId && !!userId && isConnected
-    });
-  }, [userId, activeChat, currentConversationId, isConnected, messages.length]);
-
-  if (!activeChat || activeChat !== 'expert') {
-    return <EmptyStateView onStartChat={handleStartChat} />;
+  if (isInitializing && !currentConversationId) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <Card className="w-96">
+          <CardContent className="p-6 text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-drplant-green mx-auto mb-4"></div>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Inizializzazione Chat</h3>
+            <p className="text-gray-600">Preparazione della conversazione con l'esperto...</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   return (
-    <div className="flex flex-col h-full bg-gray-50">
-      <ChatInitializer
-        activeChat={activeChat}
-        currentConversationId={currentConversationId}
-        autoDataSent={autoDataSent}
-        setAutoDataSent={setAutoDataSent}
-      />
-      
-      <ChatHeader 
-        onBackClick={handleBackClick}
-        isConnected={isConnected}
-      />
-      
-      <UserPlantSummary />
-      
+    <div className="flex flex-col h-full">
+      {/* Connection Status Bar */}
+      <div className="bg-white border-b border-gray-200 px-4 py-2">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            {isConnected ? (
+              <Wifi className="h-4 w-4 text-green-500" />
+            ) : (
+              <WifiOff className="h-4 w-4 text-red-500" />
+            )}
+            <span className="text-sm text-gray-600">
+              {isConnected ? 'Connesso' : 'Disconnesso'}
+            </span>
+            <span className="text-xs text-gray-400">
+              • Conv: {currentConversationId ? currentConversationId.slice(0, 8) : 'N/A'}
+            </span>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-gray-400">
+              Messaggi: {messages.length}
+            </span>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleForceRefresh}
+              className="h-6 w-6 p-0"
+            >
+              <RefreshCw className="h-3 w-3" />
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Debug Info */}
+      <div className="bg-blue-50 border-b border-blue-200 px-4 py-2">
+        <div className="text-xs text-blue-700">
+          <strong>🔍 Debug:</strong> UserId: {userId.slice(0, 8)}, 
+          Chat: {activeChat || 'N/A'}, 
+          Msgs: {messages.length}, 
+          Connected: {isConnected ? '✅' : '❌'}
+        </div>
+      </div>
+
+      {/* Messages */}
       <MessageList messages={messages} />
 
-      {connectionError && <ChatConnectionError message={connectionError} />}
-
-      <div className="bg-white border-t border-gray-200 p-4">
-        <MessageInput 
+      {/* Message Input */}
+      {currentConversationId ? (
+        <MessageInput
           onSendMessage={handleSendMessage}
           isSending={isSending}
-          conversationId={currentConversationId || ""}
-          senderId={userId}
-          recipientId="07c7fe19-33c3-4782-b9a0-4e87c8aa7044"
-          disabledInput={!userId || !currentConversationId || !isConnected}
-          variant="persistent"
-          placeholder={isConnected ? "Scrivi un messaggio..." : "Connessione in corso..."}
+          disabledInput={!isConnected}
+          variant="default"
         />
-      </div>
+      ) : (
+        <div className="p-4 border-t border-gray-200 bg-gray-50">
+          <div className="text-center text-gray-500">
+            Conversazione non disponibile. Ricarica la pagina.
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleForceRefresh}
+              className="ml-2"
+            >
+              <RefreshCw className="h-4 w-4 mr-1" />
+              Ricarica
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
