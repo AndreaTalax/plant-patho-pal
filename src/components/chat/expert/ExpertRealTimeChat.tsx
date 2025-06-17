@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client'; 
@@ -34,6 +35,7 @@ interface ConversationListItem {
     first_name: string;
     last_name: string;
     avatar_url?: string;
+    is_online?: boolean;
   };
 }
 
@@ -56,7 +58,7 @@ export const ExpertRealTimeChat: React.FC = () => {
         .from('conversations')
         .select(`
           *,
-          profiles!conversations_user_id_fkey(id, first_name, last_name, avatar_url)
+          profiles!conversations_user_id_fkey(id, first_name, last_name, avatar_url, is_online)
         `)
         .eq('expert_id', MARCO_NIGRO_ID)
         .order('last_message_at', { ascending: false });
@@ -114,7 +116,8 @@ export const ExpertRealTimeChat: React.FC = () => {
           user_profile: conv.profiles || { 
             id: conv.user_id, 
             first_name: 'Utente', 
-            last_name: 'Sconosciuto' 
+            last_name: 'Sconosciuto',
+            is_online: false
           }
         };
       }));
@@ -233,15 +236,23 @@ export const ExpertRealTimeChat: React.FC = () => {
                     className="flex-1 cursor-pointer flex items-start gap-3"
                     onClick={() => setSelectedConversationId(conv.id)}
                   >
-                    <Avatar className="h-10 w-10 flex-shrink-0">
-                      <AvatarImage 
-                        src={conv.user_profile?.avatar_url} 
-                        alt={`${conv.user_profile?.first_name} ${conv.user_profile?.last_name}`}
-                      />
-                      <AvatarFallback className="bg-drplant-green/10 text-drplant-green">
-                        {conv.user_profile?.first_name?.charAt(0)}{conv.user_profile?.last_name?.charAt(0)}
-                      </AvatarFallback>
-                    </Avatar>
+                    <div className="relative">
+                      <Avatar className="h-10 w-10 flex-shrink-0">
+                        <AvatarImage 
+                          src={conv.user_profile?.avatar_url} 
+                          alt={`${conv.user_profile?.first_name} ${conv.user_profile?.last_name}`}
+                        />
+                        <AvatarFallback className="bg-drplant-green/10 text-drplant-green">
+                          {conv.user_profile?.first_name?.charAt(0)}{conv.user_profile?.last_name?.charAt(0)}
+                        </AvatarFallback>
+                      </Avatar>
+                      {/* Indicatore stato online */}
+                      <div className="absolute -bottom-1 -right-1">
+                        <div className={`w-3 h-3 rounded-full border-2 border-white ${
+                          conv.user_profile?.is_online ? 'bg-green-500' : 'bg-gray-400'
+                        }`} />
+                      </div>
+                    </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <h3 className="font-medium text-gray-900 truncate">
@@ -255,6 +266,13 @@ export const ExpertRealTimeChat: React.FC = () => {
                         {conv.last_message_text?.startsWith("🟢") && (
                           <Badge variant="outline" className="text-xs text-green-700 border-green-400">Dati auto</Badge>
                         )}
+                        <span className={`text-xs px-2 py-1 rounded-full ${
+                          conv.user_profile?.is_online 
+                            ? 'bg-green-100 text-green-700' 
+                            : 'bg-gray-100 text-gray-500'
+                        }`}>
+                          {conv.user_profile?.is_online ? 'Online' : 'Offline'}
+                        </span>
                       </div>
                       <p className="text-sm text-gray-600 truncate mt-1">
                         {conv.last_message_text || 'Nessun messaggio'}
@@ -318,15 +336,22 @@ export const ExpertRealTimeChat: React.FC = () => {
                 <div className="p-4 border-b border-gray-200 bg-white">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <Avatar className="h-8 w-8">
-                        <AvatarImage 
-                          src={selectedConversation.user_profile?.avatar_url} 
-                          alt={`${selectedConversation.user_profile?.first_name} ${selectedConversation.user_profile?.last_name}`}
-                        />
-                        <AvatarFallback className="bg-drplant-green/10 text-drplant-green text-sm">
-                          {selectedConversation.user_profile?.first_name?.charAt(0)}{selectedConversation.user_profile?.last_name?.charAt(0)}
-                        </AvatarFallback>
-                      </Avatar>
+                      <div className="relative">
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage 
+                            src={selectedConversation.user_profile?.avatar_url} 
+                            alt={`${selectedConversation.user_profile?.first_name} ${selectedConversation.user_profile?.last_name}`}
+                          />
+                          <AvatarFallback className="bg-drplant-green/10 text-drplant-green text-sm">
+                            {selectedConversation.user_profile?.first_name?.charAt(0)}{selectedConversation.user_profile?.last_name?.charAt(0)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="absolute -bottom-1 -right-1">
+                          <div className={`w-3 h-3 rounded-full border-2 border-white ${
+                            selectedConversation.user_profile?.is_online ? 'bg-green-500' : 'bg-gray-400'
+                          }`} />
+                        </div>
+                      </div>
                       <div>
                         <h3 className="font-medium text-gray-900">
                           Chat con {selectedConversation.user_profile?.first_name} {selectedConversation.user_profile?.last_name}
@@ -334,6 +359,13 @@ export const ExpertRealTimeChat: React.FC = () => {
                         <div className="flex items-center gap-2 text-sm text-gray-500">
                           <MessageCircle className="h-4 w-4" />
                           <span>Conversazione Attiva</span>
+                          <span className={`text-xs px-2 py-1 rounded-full ${
+                            selectedConversation.user_profile?.is_online 
+                              ? 'bg-green-100 text-green-700' 
+                              : 'bg-gray-100 text-gray-500'
+                          }`}>
+                            {selectedConversation.user_profile?.is_online ? 'Online' : 'Offline'}
+                          </span>
                         </div>
                       </div>
                     </div>

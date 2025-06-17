@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -34,6 +35,7 @@ interface ConversationSummary {
     first_name: string;
     last_name: string;
     email: string;
+    is_online?: boolean;
   } | null;
 }
 
@@ -43,6 +45,7 @@ const OptimizedExpertDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [selectedConversation, setSelectedConversation] = useState<ConversationSummary | null>(null);
   const [activeTab, setActiveTab] = useState('conversations');
+  const [deletingConversation, setDeletingConversation] = useState<string | null>(null);
 
   // Load data more efficiently with better error handling
   const loadExpertData = async () => {
@@ -75,7 +78,7 @@ const OptimizedExpertDashboard = () => {
           (conversationsData || []).map(async (conversation) => {
             const { data: profile } = await supabase
               .from('profiles')
-              .select('first_name, last_name, email')
+              .select('first_name, last_name, email, is_online')
               .eq('id', conversation.user_id)
               .single();
             
@@ -208,6 +211,7 @@ const OptimizedExpertDashboard = () => {
 
   const handleDeleteConversation = async (conversationId: string) => {
     try {
+      setDeletingConversation(conversationId);
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         toast.error('Sessione scaduta');
@@ -235,6 +239,8 @@ const OptimizedExpertDashboard = () => {
     } catch (error: any) {
       console.error('Error deleting conversation:', error);
       toast.error(error.message || 'Errore durante l\'eliminazione della conversazione');
+    } finally {
+      setDeletingConversation(null);
     }
   };
 
@@ -305,7 +311,7 @@ const OptimizedExpertDashboard = () => {
                   getUserDisplayName={getUserDisplayName}
                   handleOpenChat={handleOpenChat}
                   onDeleteConversation={handleDeleteConversation}
-                  deletingConversation={null}
+                  deletingConversation={deletingConversation}
                 />
               ))
             )
