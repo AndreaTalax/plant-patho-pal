@@ -34,8 +34,8 @@ export default function ConversationCard({
   onDeleteConversation,
   deletingConversation,
 }: ConversationCardProps) {
-  // Simula lo stato online (in futuro può essere collegato a dati reali)
-  const isUserOnline = Math.random() > 0.5; // Placeholder per demo
+  // Usa lo stato online reale dal profilo utente
+  const isUserOnline = conversation.user_profile?.is_online || false;
 
   return (
     <Card>

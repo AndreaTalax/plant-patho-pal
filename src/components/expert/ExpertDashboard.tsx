@@ -50,6 +50,8 @@ interface ConversationSummary {
     first_name: string;
     last_name: string;
     email: string;
+    is_online?: boolean;
+    last_seen_at?: string;
   } | null;
 }
 
@@ -67,7 +69,7 @@ const ExpertDashboard = () => {
     try {
       console.log('🔄 Loading expert dashboard data...');
       
-      // Load conversations with a simpler query to avoid timeouts
+      // Load conversations with user presence information
       const { data: conversationsData, error: conversationsError } = await supabase
         .from('conversations')
         .select(`
@@ -81,7 +83,7 @@ const ExpertDashboard = () => {
         `)
         .eq('expert_id', MARCO_NIGRO_ID)
         .order('updated_at', { ascending: false })
-        .limit(50); // Limit to prevent large queries
+        .limit(50);
 
       if (conversationsError) {
         console.error('❌ Error loading conversations:', conversationsError);
@@ -89,13 +91,13 @@ const ExpertDashboard = () => {
       } else {
         console.log('✅ Conversations loaded:', conversationsData?.length || 0);
         
-        // Get user profiles in batches to avoid timeout
+        // Get user profiles with online status
         const conversationsWithProfiles = await Promise.all(
-          (conversationsData || []).slice(0, 20).map(async (conversation) => { // Limit to first 20
+          (conversationsData || []).slice(0, 20).map(async (conversation) => {
             try {
               const { data: profile } = await supabase
                 .from('profiles')
-                .select('first_name, last_name, email')
+                .select('first_name, last_name, email, is_online, last_seen_at')
                 .eq('id', conversation.user_id)
                 .single();
               
@@ -129,7 +131,7 @@ const ExpertDashboard = () => {
         .from('expert_consultations')
         .select('*')
         .order('created_at', { ascending: false })
-        .limit(20); // Limit consultations too
+        .limit(20);
 
       if (consultationsError) {
         console.error('❌ Error loading consultations:', consultationsError);
@@ -182,7 +184,6 @@ const ExpertDashboard = () => {
         { event: '*', schema: 'public', table: 'conversations', filter: `expert_id=eq.${MARCO_NIGRO_ID}` },
         (payload) => {
           console.log('🔄 Conversation change detected:', payload);
-          // Only reload if it's a significant change
           if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
             loadExpertData();
           }

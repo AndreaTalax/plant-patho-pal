@@ -58,7 +58,6 @@ export const sendMessage = async (
       hasProducts: !!products
     });
 
-    // Get the current session to ensure we have a valid token
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();
     
     if (sessionError || !session) {
@@ -89,12 +88,12 @@ export const sendMessage = async (
   }
 };
 
-// Load conversations for expert view - Fixed query
+// Load conversations for expert view with user presence
 export const loadConversations = async (expertId: string): Promise<DatabaseConversation[]> => {
   try {
     console.log('📚 Loading conversations for expert:', expertId);
     
-    // First get conversations
+    // Get conversations
     const { data: conversationsData, error: conversationsError } = await supabase
       .from('conversations')
       .select('*')
@@ -109,27 +108,28 @@ export const loadConversations = async (expertId: string): Promise<DatabaseConve
 
     console.log('✅ Conversations loaded successfully:', conversationsData?.length || 0);
 
-    // Then get user profiles separately and merge them
+    // Get user profiles with online status
     const conversationsWithProfiles = await Promise.all(
       (conversationsData || []).map(async (conversation) => {
         const { data: userProfile, error: profileError } = await supabase
           .from('profiles')
-          .select('id, username, first_name, last_name')
+          .select('id, username, first_name, last_name, is_online, last_seen_at')
           .eq('id', conversation.user_id)
           .single();
 
         if (profileError) {
           console.error('⚠️ Error loading user profile:', profileError);
-          // Return conversation without user profile if profile fetch fails
           return {
             ...conversation,
-            user: undefined
+            user: undefined,
+            user_profile: null
           };
         }
 
         return {
           ...conversation,
-          user: userProfile
+          user: userProfile,
+          user_profile: userProfile
         };
       })
     );

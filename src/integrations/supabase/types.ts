@@ -421,7 +421,9 @@ export type Database = {
           email: string | null
           first_name: string | null
           id: string
+          is_online: boolean | null
           last_name: string | null
+          last_seen_at: string | null
           phone: string | null
           role: string | null
           subscription_plan: string | null
@@ -437,7 +439,9 @@ export type Database = {
           email?: string | null
           first_name?: string | null
           id: string
+          is_online?: boolean | null
           last_name?: string | null
+          last_seen_at?: string | null
           phone?: string | null
           role?: string | null
           subscription_plan?: string | null
@@ -453,7 +457,9 @@ export type Database = {
           email?: string | null
           first_name?: string | null
           id?: string
+          is_online?: boolean | null
           last_name?: string | null
+          last_seen_at?: string | null
           phone?: string | null
           role?: string | null
           subscription_plan?: string | null
@@ -498,11 +504,42 @@ export type Database = {
         }
         Relationships: []
       }
+      user_sessions: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          last_activity_at: string
+          session_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          last_activity_at?: string
+          session_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          last_activity_at?: string
+          session_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      cleanup_expired_sessions: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       send_message: {
         Args: { p_conversation_id: number; p_sender_id: string; p_text: string }
         Returns: undefined
