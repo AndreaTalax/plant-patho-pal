@@ -10,7 +10,7 @@ export const loadMessages = async (conversationId: string): Promise<DatabaseMess
       .from('messages')
       .select('*')
       .eq('conversation_id', conversationId)
-      .order('sent_at', { ascending: true }); // Use sent_at instead of created_at
+      .order('sent_at', { ascending: true });
 
     if (error) {
       console.error('❌ Error loading messages:', error);
@@ -89,33 +89,52 @@ export const sendMessage = async (
   }
 };
 
-// Load conversations for expert view
+// Load conversations for expert view - Fixed query
 export const loadConversations = async (expertId: string): Promise<DatabaseConversation[]> => {
   try {
     console.log('📚 Loading conversations for expert:', expertId);
     
-    const { data, error } = await supabase
+    // First get conversations
+    const { data: conversationsData, error: conversationsError } = await supabase
       .from('conversations')
-      .select(`
-        *,
-        user:profiles!conversations_user_id_fkey (
-          id,
-          username,
-          first_name,
-          last_name
-        )
-      `)
+      .select('*')
       .eq('expert_id', expertId)
       .eq('status', 'active')
       .order('updated_at', { ascending: false });
 
-    if (error) {
-      console.error('❌ Error loading conversations:', error);
-      throw error;
+    if (conversationsError) {
+      console.error('❌ Error loading conversations:', conversationsError);
+      throw conversationsError;
     }
 
-    console.log('✅ Conversations loaded successfully:', data?.length || 0);
-    return data || [];
+    console.log('✅ Conversations loaded successfully:', conversationsData?.length || 0);
+
+    // Then get user profiles separately and merge them
+    const conversationsWithProfiles = await Promise.all(
+      (conversationsData || []).map(async (conversation) => {
+        const { data: userProfile, error: profileError } = await supabase
+          .from('profiles')
+          .select('id, username, first_name, last_name')
+          .eq('id', conversation.user_id)
+          .single();
+
+        if (profileError) {
+          console.error('⚠️ Error loading user profile:', profileError);
+          // Return conversation without user profile if profile fetch fails
+          return {
+            ...conversation,
+            user: undefined
+          };
+        }
+
+        return {
+          ...conversation,
+          user: userProfile
+        };
+      })
+    );
+
+    return conversationsWithProfiles;
   } catch (error) {
     console.error('❌ Error in loadConversations:', error);
     throw error;
