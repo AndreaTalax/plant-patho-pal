@@ -48,7 +48,7 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
     // Reset initializing state after a delay
     const timer = setTimeout(() => {
       setIsInitializing(false);
-    }, 3000);
+    }, 5000); // Aumentato il timeout
 
     return () => clearTimeout(timer);
   }, [userId, activeChat, startChatWithExpert]);
@@ -58,6 +58,8 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
     console.log('🔄 Force refresh triggered');
     if (forceRefresh) {
       forceRefresh();
+      setIsInitializing(true);
+      setTimeout(() => setIsInitializing(false), 3000);
     } else {
       window.location.reload();
     }
@@ -77,7 +79,7 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
     );
   }
 
-  if (isInitializing && !currentConversationId) {
+  if (isInitializing && !currentConversationId && connectionRetries < 3) {
     return (
       <div className="flex items-center justify-center h-full">
         <Card className="w-96">
@@ -96,6 +98,43 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
                 </div>
               </div>
             )}
+
+            <div className="mt-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleForceRefresh}
+                className="gap-2"
+              >
+                <RefreshCw className="h-4 w-4" />
+                Ricarica Chat
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Se ci sono troppi tentativi falliti, mostra errore
+  if (connectionRetries >= 3 && !currentConversationId) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <Card className="w-96">
+          <CardContent className="p-6 text-center">
+            <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-red-900 mb-2">Errore di Connessione</h3>
+            <p className="text-red-600 mb-4">
+              Impossibile collegarsi al server. Controlla la tua connessione internet.
+            </p>
+            <Button
+              variant="outline"
+              onClick={handleForceRefresh}
+              className="gap-2"
+            >
+              <RefreshCw className="h-4 w-4" />
+              Riprova
+            </Button>
           </CardContent>
         </Card>
       </div>
@@ -176,17 +215,6 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
         )}
       </div>
 
-      {/* Debug Info */}
-      <div className="bg-blue-50 border-b border-blue-200 px-4 py-2">
-        <div className="text-xs text-blue-700">
-          <strong>🔍 Debug:</strong> UserId: {userId.slice(0, 8)}, 
-          Chat: {activeChat || 'N/A'}, 
-          Msgs: {messages.length}, 
-          Connected: {isConnected ? '✅' : '❌'},
-          Retries: {connectionRetries}
-        </div>
-      </div>
-
       {/* Messages */}
       <MessageList messages={messages} />
 
@@ -195,7 +223,7 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
         <MessageInput
           onSendMessage={handleSendMessage}
           isSending={isSending}
-          disabledInput={!isConnected && connectionRetries >= 3}
+          disabledInput={!currentConversationId}
           variant="default"
         />
       ) : (
@@ -203,7 +231,7 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
           <div className="text-center text-gray-500">
             <div className="mb-2">
               <AlertTriangle className="h-6 w-6 text-yellow-500 mx-auto mb-2" />
-              Conversazione non disponibile
+              Chat in inizializzazione...
             </div>
             <Button
               variant="outline"

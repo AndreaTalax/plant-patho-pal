@@ -74,39 +74,36 @@ export const useUserChatRealtime = (userId: string) => {
     }
   };
 
-  // Funzione per testare la connessione a Supabase
-  const testSupabaseConnection = async () => {
+  // Funzione per verificare se una conversazione esiste realmente
+  const verifyConversationExists = async (conversationId: string) => {
     try {
-      console.log('🔍 Testing Supabase connection...');
-      const { data, error } = await supabase.from('conversations').select('id').limit(1);
+      const { data, error } = await supabase
+        .from('conversations')
+        .select('id')
+        .eq('id', conversationId)
+        .single();
       
-      if (error) {
-        console.error('❌ Supabase connection failed:', error);
+      if (error || !data) {
+        console.log('❌ Conversation does not exist:', conversationId);
         return false;
       }
       
-      console.log('✅ Supabase connection successful');
+      console.log('✅ Conversation verified:', conversationId);
       return true;
     } catch (error) {
-      console.error('❌ Supabase connection test failed:', error);
+      console.error('❌ Error verifying conversation:', error);
       return false;
     }
   };
 
-  // Inizializzazione della chat expert con retry
+  // Inizializzazione della chat expert con controllo migliore
   useEffect(() => {
     if (!userId || isInitialized) return;
     
     const initializeExpertChat = async () => {
       try {
         console.log("🔄 Initializing expert chat for user:", userId);
-        
-        // Test connessione prima di procedere
-        const connectionOk = await testSupabaseConnection();
-        if (!connectionOk) {
-          toast.error("Problema di connessione al server. Riprova tra poco.");
-          return;
-        }
+        setConnectionRetries(0);
         
         // Cerca conversazione esistente
         const { data: conversationList, error } = await supabase
@@ -114,12 +111,12 @@ export const useUserChatRealtime = (userId: string) => {
           .select('*')
           .eq('user_id', userId)
           .eq('expert_id', EXPERT_ID)
+          .order('created_at', { ascending: false })
           .limit(1);
 
         if (error) {
           console.error("❌ Error fetching conversation:", error);
-          toast.error("Errore nel caricamento della conversazione");
-          return;
+          throw new Error("Errore nel caricamento della conversazione");
         }
 
         let conversation = conversationList?.[0];
@@ -139,38 +136,63 @@ export const useUserChatRealtime = (userId: string) => {
 
           if (createError) {
             console.error("❌ Error creating conversation:", createError);
-            toast.error("Errore nella creazione della conversazione");
-            return;
+            throw new Error("Errore nella creazione della conversazione");
           }
 
           conversation = newConversation;
+          console.log("✅ New conversation created:", conversation.id);
+        } else {
+          console.log("✅ Found existing conversation:", conversation.id);
         }
         
-        console.log("✅ Found/created conversation:", conversation.id);
+        // Verifica che la conversazione esista realmente
+        const exists = await verifyConversationExists(conversation.id);
+        if (!exists) {
+          console.log("⚠️ Conversation doesn't exist, creating new one...");
+          const { data: newConversation, error: createError } = await supabase
+            .from('conversations')
+            .insert({
+              user_id: userId,
+              expert_id: EXPERT_ID,
+              title: 'Consulenza esperto',
+              status: 'active'
+            })
+            .select()
+            .single();
+
+          if (createError) throw createError;
+          conversation = newConversation;
+        }
+        
         setCurrentDbConversation(conversation);
         setActiveChat('expert');
         
         // Carica i messaggi esistenti
-        const messagesLoaded = await loadExistingMessages(conversation.id);
+        await loadExistingMessages(conversation.id);
         
-        if (messagesLoaded) {
-          setIsInitialized(true);
-          toast.success("Chat collegata con successo!");
-        } else {
-          toast.warning("Chat collegata, ma potrebbero esserci problemi nel caricamento dei messaggi");
-          setIsInitialized(true);
-        }
+        setIsInitialized(true);
+        console.log("✅ Chat initialized successfully");
+        toast.success("Chat collegata con successo!");
         
       } catch (error) {
         console.error("❌ Error initializing expert chat:", error);
-        toast.error("Errore nell'inizializzazione della chat");
+        setConnectionRetries(prev => prev + 1);
+        
+        if (connectionRetries < 3) {
+          console.log('🔄 Retrying initialization in 3s...');
+          setTimeout(() => {
+            setIsInitialized(false);
+          }, 3000);
+        } else {
+          toast.error("Errore nell'inizializzazione della chat. Ricarica la pagina.");
+        }
       }
     };
     
     initializeExpertChat();
-  }, [userId, isInitialized]);
+  }, [userId, isInitialized, connectionRetries]);
 
-  // Setup real-time subscription con retry robusto
+  // Setup real-time subscription con gestione errori migliorata
   useEffect(() => {
     if (!currentDbConversation?.id || !isInitialized) return;
     
@@ -254,28 +276,13 @@ export const useUserChatRealtime = (userId: string) => {
         if (status === 'SUBSCRIBED') {
           console.log('✅ Realtime connected successfully');
           setConnectionRetries(0);
-          toast.success("Connessione real-time attivata");
         } else if (status === 'CHANNEL_ERROR') {
           console.error('❌ Realtime connection failed:', err);
           setIsConnected(false);
           setConnectionRetries(prev => prev + 1);
-          
-          // Retry logic
-          if (connectionRetries < 3) {
-            console.log('🔄 Retrying connection in 5s...');
-            setTimeout(() => {
-              console.log('🔄 Attempting to reconnect...');
-              // Force re-setup
-              setIsInitialized(false);
-              setTimeout(() => setIsInitialized(true), 1000);
-            }, 5000);
-          } else {
-            toast.error("Connessione real-time non disponibile. I messaggi potrebbero non aggiornarsi automaticamente.");
-          }
         } else if (status === 'TIMED_OUT') {
           console.error('⏰ Realtime connection timed out');
           setIsConnected(false);
-          toast.warning("Connessione lenta. Riprova tra poco.");
         }
       });
 
@@ -293,7 +300,7 @@ export const useUserChatRealtime = (userId: string) => {
       }
       setSubscription(null);
     };
-  }, [currentDbConversation?.id, userId, isInitialized, connectionRetries]);
+  }, [currentDbConversation?.id, userId, isInitialized]);
 
   // Periodic message refresh se la connessione real-time fallisce
   useEffect(() => {
@@ -383,24 +390,24 @@ export const useUserChatRealtime = (userId: string) => {
   const startChatWithExpert = async () => {
     console.log('🎯 startChatWithExpert called - current state:', { activeChat, isInitialized });
     if (!activeChat && !isInitialized) {
-      setActiveChat('expert');
+      setIsInitialized(false); // Force re-initialization
     }
   };
 
-  // Funzione per forzare il refresh
+  // Funzione per forzare il refresh completo
   const forceRefresh = async () => {
     console.log('🔄 Force refresh triggered');
-    if (currentDbConversation?.id) {
-      setIsInitialized(false);
-      setMessages([]);
-      setIsConnected(false);
-      
-      // Restart initialization
-      setTimeout(() => {
-        loadExistingMessages(currentDbConversation.id);
-        setIsInitialized(true);
-      }, 1000);
-    }
+    setIsInitialized(false);
+    setMessages([]);
+    setIsConnected(false);
+    setCurrentDbConversation(null);
+    setActiveChat(null);
+    setConnectionRetries(0);
+    
+    // Restart initialization dopo un breve delay
+    setTimeout(() => {
+      console.log('🔄 Restarting initialization...');
+    }, 1000);
   };
 
   // Cleanup on unmount
