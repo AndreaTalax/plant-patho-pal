@@ -1,3 +1,4 @@
+
 import { MARCO_NIGRO_PROFILE } from '@/components/phytopathologist';
 
 export interface Message {
@@ -74,17 +75,19 @@ export const MOCK_PRODUCTS: Product[] = [
   }
 ];
 
-// Database types
+// Database types - Updated to match actual database schema
 export interface DatabaseMessage {
   id: string;
   sender_id: string;
   recipient_id: string;
   conversation_id: string;
-  text: string;
-  sent_at: string;
+  content: string; // Primary text field
+  text: string; // Legacy field for compatibility
+  sent_at: string; // Database uses sent_at, not created_at
   read: boolean;
   products?: any;
   metadata?: any;
+  image_url?: string; // Added image_url field
 }
 
 export interface DatabaseConversation {

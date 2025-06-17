@@ -10,7 +10,7 @@ export const loadMessages = async (conversationId: string): Promise<DatabaseMess
       .from('messages')
       .select('*')
       .eq('conversation_id', conversationId)
-      .order('created_at', { ascending: true });
+      .order('sent_at', { ascending: true }); // Use sent_at instead of created_at
 
     if (error) {
       console.error('❌ Error loading messages:', error);
@@ -31,7 +31,7 @@ export const convertToUIMessage = (dbMessage: DatabaseMessage): Message => {
     sender: dbMessage.sender_id === dbMessage.recipient_id ? 'expert' : 
            (dbMessage.sender_id ? 'user' : 'expert'),
     text: dbMessage.content || dbMessage.text || '',
-    time: new Date(dbMessage.created_at).toLocaleTimeString([], { 
+    time: new Date(dbMessage.sent_at).toLocaleTimeString([], { 
       hour: '2-digit', 
       minute: '2-digit' 
     }),
@@ -45,7 +45,8 @@ export const sendMessage = async (
   senderId: string,
   recipientId: string,
   text: string,
-  imageUrl?: string
+  imageUrl?: string,
+  products?: any
 ): Promise<boolean> => {
   try {
     console.log('📤 Sending message via Supabase function:', {
@@ -53,7 +54,8 @@ export const sendMessage = async (
       senderId,
       recipientId,
       textLength: text?.length || 0,
-      hasImage: !!imageUrl
+      hasImage: !!imageUrl,
+      hasProducts: !!products
     });
 
     // Get the current session to ensure we have a valid token
@@ -69,7 +71,8 @@ export const sendMessage = async (
         conversationId,
         recipientId,
         text,
-        imageUrl
+        imageUrl,
+        products
       }
     });
 
@@ -83,5 +86,111 @@ export const sendMessage = async (
   } catch (error) {
     console.error('❌ Error in sendMessage:', error);
     throw error;
+  }
+};
+
+// Load conversations for expert view
+export const loadConversations = async (expertId: string): Promise<DatabaseConversation[]> => {
+  try {
+    console.log('📚 Loading conversations for expert:', expertId);
+    
+    const { data, error } = await supabase
+      .from('conversations')
+      .select(`
+        *,
+        user:profiles!conversations_user_id_fkey (
+          id,
+          username,
+          first_name,
+          last_name
+        )
+      `)
+      .eq('expert_id', expertId)
+      .eq('status', 'active')
+      .order('updated_at', { ascending: false });
+
+    if (error) {
+      console.error('❌ Error loading conversations:', error);
+      throw error;
+    }
+
+    console.log('✅ Conversations loaded successfully:', data?.length || 0);
+    return data || [];
+  } catch (error) {
+    console.error('❌ Error in loadConversations:', error);
+    throw error;
+  }
+};
+
+// Find or create conversation for user
+export const findOrCreateConversation = async (userId: string, expertId?: string): Promise<DatabaseConversation | null> => {
+  try {
+    const targetExpertId = expertId || (await import('@/integrations/supabase/client')).EXPERT_ID;
+    console.log('🔍 Finding or creating conversation:', { userId, expertId: targetExpertId });
+
+    // First, try to find existing conversation
+    const { data: existing, error: findError } = await supabase
+      .from('conversations')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('expert_id', targetExpertId)
+      .eq('status', 'active')
+      .single();
+
+    if (findError && findError.code !== 'PGRST116') {
+      console.error('❌ Error finding conversation:', findError);
+      throw findError;
+    }
+
+    if (existing) {
+      console.log('✅ Found existing conversation:', existing.id);
+      return existing;
+    }
+
+    // Create new conversation
+    const { data: newConversation, error: createError } = await supabase
+      .from('conversations')
+      .insert({
+        user_id: userId,
+        expert_id: targetExpertId,
+        title: 'Consulenza esperto',
+        status: 'active'
+      })
+      .select()
+      .single();
+
+    if (createError) {
+      console.error('❌ Error creating conversation:', createError);
+      throw createError;
+    }
+
+    console.log('✅ Created new conversation:', newConversation.id);
+    return newConversation;
+  } catch (error) {
+    console.error('❌ Error in findOrCreateConversation:', error);
+    return null;
+  }
+};
+
+// Update conversation status
+export const updateConversationStatus = async (conversationId: string, status: string): Promise<boolean> => {
+  try {
+    console.log('🔄 Updating conversation status:', { conversationId, status });
+
+    const { error } = await supabase
+      .from('conversations')
+      .update({ status, updated_at: new Date().toISOString() })
+      .eq('id', conversationId);
+
+    if (error) {
+      console.error('❌ Error updating conversation status:', error);
+      return false;
+    }
+
+    console.log('✅ Conversation status updated successfully');
+    return true;
+  } catch (error) {
+    console.error('❌ Error in updateConversationStatus:', error);
+    return false;
   }
 };

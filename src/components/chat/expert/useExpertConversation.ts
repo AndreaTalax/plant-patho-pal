@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase, EXPERT_ID } from '@/integrations/supabase/client';
 import { Conversation, DatabaseConversation, Message, Product } from '../types';
@@ -294,12 +293,16 @@ export const useExpertConversation = (userId: string) => {
     try {
       setIsSending(true);
 
+      // Convert products array to a formatted text message with products data
+      const productText = 'I recommend the following products for your plant:';
+
       const success = await sendMessageService(
         currentDbConversation.id,
         EXPERT_ID,
         currentDbConversation.user_id,
-        'I recommend the following products for your plant:',
-        products
+        productText,
+        undefined, // no image
+        products // pass products as the products parameter
       );
         
       if (!success) {
