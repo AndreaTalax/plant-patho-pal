@@ -4,7 +4,7 @@ import { useUserChatRealtime } from './user/useUserChatRealtime';
 import MessageList from './MessageList';
 import MessageInput from './MessageInput';
 import { Card, CardContent } from '@/components/ui/card';
-import { MessageCircle, Wifi, WifiOff, RefreshCw } from 'lucide-react';
+import { MessageCircle, Wifi, WifiOff, RefreshCw, AlertTriangle, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface UserChatViewRealtimeProps {
@@ -19,7 +19,10 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
     isConnected,
     handleSendMessage,
     startChatWithExpert,
-    currentConversationId
+    currentConversationId,
+    forceRefresh,
+    connectionRetries,
+    lastMessageLoad
   } = useUserChatRealtime(userId);
 
   const [isInitializing, setIsInitializing] = useState(true);
@@ -31,6 +34,8 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
     currentConversationId,
     isConnected,
     isSending,
+    connectionRetries,
+    lastMessageLoad,
     messages: messages
   });
 
@@ -43,7 +48,7 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
     // Reset initializing state after a delay
     const timer = setTimeout(() => {
       setIsInitializing(false);
-    }, 2000);
+    }, 3000);
 
     return () => clearTimeout(timer);
   }, [userId, activeChat, startChatWithExpert]);
@@ -51,7 +56,11 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
   // Force refresh function
   const handleForceRefresh = () => {
     console.log('🔄 Force refresh triggered');
-    window.location.reload();
+    if (forceRefresh) {
+      forceRefresh();
+    } else {
+      window.location.reload();
+    }
   };
 
   if (!userId) {
@@ -76,33 +85,76 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-drplant-green mx-auto mb-4"></div>
             <h3 className="text-lg font-medium text-gray-900 mb-2">Inizializzazione Chat</h3>
             <p className="text-gray-600">Preparazione della conversazione con l'esperto...</p>
+            
+            {connectionRetries > 0 && (
+              <div className="mt-4 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+                <div className="flex items-center justify-center gap-2">
+                  <AlertTriangle className="h-4 w-4 text-yellow-600" />
+                  <span className="text-sm text-yellow-700">
+                    Tentativo di connessione {connectionRetries}/3...
+                  </span>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
     );
   }
 
+  const getConnectionStatus = () => {
+    if (isConnected) {
+      return {
+        icon: <Wifi className="h-4 w-4 text-green-500" />,
+        text: "Connesso",
+        bgColor: "bg-green-50",
+        textColor: "text-green-700"
+      };
+    } else if (connectionRetries > 0) {
+      return {
+        icon: <RefreshCw className="h-4 w-4 text-yellow-500 animate-spin" />,
+        text: `Riconnessione (${connectionRetries}/3)`,
+        bgColor: "bg-yellow-50",
+        textColor: "text-yellow-700"
+      };
+    } else {
+      return {
+        icon: <WifiOff className="h-4 w-4 text-red-500" />,
+        text: "Disconnesso",
+        bgColor: "bg-red-50",
+        textColor: "text-red-700"
+      };
+    }
+  };
+
+  const connectionStatus = getConnectionStatus();
+
   return (
     <div className="flex flex-col h-full">
       {/* Connection Status Bar */}
-      <div className="bg-white border-b border-gray-200 px-4 py-2">
+      <div className={`border-b border-gray-200 px-4 py-3 ${connectionStatus.bgColor}`}>
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            {isConnected ? (
-              <Wifi className="h-4 w-4 text-green-500" />
-            ) : (
-              <WifiOff className="h-4 w-4 text-red-500" />
+          <div className="flex items-center gap-3">
+            {connectionStatus.icon}
+            <span className={`text-sm font-medium ${connectionStatus.textColor}`}>
+              {connectionStatus.text}
+            </span>
+            
+            {lastMessageLoad && (
+              <div className="flex items-center gap-1">
+                <CheckCircle className="h-3 w-3 text-green-500" />
+                <span className="text-xs text-gray-500">
+                  Aggiornato: {lastMessageLoad.toLocaleTimeString()}
+                </span>
+              </div>
             )}
-            <span className="text-sm text-gray-600">
-              {isConnected ? 'Connesso' : 'Disconnesso'}
-            </span>
-            <span className="text-xs text-gray-400">
-              • Conv: {currentConversationId ? currentConversationId.slice(0, 8) : 'N/A'}
-            </span>
           </div>
           
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-gray-400">
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-gray-500">
+              Conv: {currentConversationId ? currentConversationId.slice(0, 8) : 'N/A'}
+            </span>
+            <span className="text-xs text-gray-500">
               Messaggi: {messages.length}
             </span>
             <Button
@@ -110,11 +162,18 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
               size="sm"
               onClick={handleForceRefresh}
               className="h-6 w-6 p-0"
+              title="Ricarica chat"
             >
               <RefreshCw className="h-3 w-3" />
             </Button>
           </div>
         </div>
+        
+        {!isConnected && connectionRetries >= 3 && (
+          <div className="mt-2 p-2 bg-red-100 rounded text-xs text-red-700">
+            ⚠️ Connessione real-time non disponibile. I messaggi potrebbero non aggiornarsi automaticamente.
+          </div>
+        )}
       </div>
 
       {/* Debug Info */}
@@ -123,7 +182,8 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
           <strong>🔍 Debug:</strong> UserId: {userId.slice(0, 8)}, 
           Chat: {activeChat || 'N/A'}, 
           Msgs: {messages.length}, 
-          Connected: {isConnected ? '✅' : '❌'}
+          Connected: {isConnected ? '✅' : '❌'},
+          Retries: {connectionRetries}
         </div>
       </div>
 
@@ -135,21 +195,24 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
         <MessageInput
           onSendMessage={handleSendMessage}
           isSending={isSending}
-          disabledInput={!isConnected}
+          disabledInput={!isConnected && connectionRetries >= 3}
           variant="default"
         />
       ) : (
         <div className="p-4 border-t border-gray-200 bg-gray-50">
           <div className="text-center text-gray-500">
-            Conversazione non disponibile. Ricarica la pagina.
+            <div className="mb-2">
+              <AlertTriangle className="h-6 w-6 text-yellow-500 mx-auto mb-2" />
+              Conversazione non disponibile
+            </div>
             <Button
               variant="outline"
               size="sm"
               onClick={handleForceRefresh}
-              className="ml-2"
+              className="gap-2"
             >
-              <RefreshCw className="h-4 w-4 mr-1" />
-              Ricarica
+              <RefreshCw className="h-4 w-4" />
+              Ricarica Chat
             </Button>
           </div>
         </div>
