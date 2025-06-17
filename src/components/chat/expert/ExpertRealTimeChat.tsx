@@ -7,7 +7,8 @@ import MessageInput from '../MessageInput';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { MessageCircle, Users, Clock, Trash2 } from 'lucide-react';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { MessageCircle, Users, Clock, Trash2, User } from 'lucide-react';
 import { MARCO_NIGRO_ID } from '@/components/phytopathologist';
 import { toast } from 'sonner';
 import {
@@ -229,40 +230,49 @@ export const ExpertRealTimeChat: React.FC = () => {
               >
                 <div className="flex items-start justify-between">
                   <div 
-                    className="flex-1 cursor-pointer"
+                    className="flex-1 cursor-pointer flex items-start gap-3"
                     onClick={() => setSelectedConversationId(conv.id)}
                   >
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-medium text-gray-900">
-                        {conv.user_profile?.first_name} {conv.user_profile?.last_name}
-                      </h3>
-                      {conv.unread_count > 0 && (
-                        <Badge variant="destructive" className="text-xs">
-                          {conv.unread_count}
-                        </Badge>
-                      )}
-                      {/* Badge se è messaggio autosent */}
-                      {conv.last_message_text?.startsWith("🟢") && (
-                        <Badge variant="outline" className="text-xs text-green-700 border-green-400">Dati auto</Badge>
-                      )}
-                    </div>
-                    <p className="text-sm text-gray-600 truncate mt-1">
-                      {conv.last_message_text || 'Nessun messaggio'}
-                    </p>
-                    <div className="flex items-center gap-1 mt-2 text-xs text-gray-500">
-                      <Clock className="h-3 w-3" />
-                      {conv.last_message_at ? new Date(conv.last_message_at).toLocaleString('it-IT') : ''}
+                    <Avatar className="h-10 w-10 flex-shrink-0">
+                      <AvatarImage 
+                        src={conv.user_profile?.avatar_url} 
+                        alt={`${conv.user_profile?.first_name} ${conv.user_profile?.last_name}`}
+                      />
+                      <AvatarFallback className="bg-drplant-green/10 text-drplant-green">
+                        {conv.user_profile?.first_name?.charAt(0)}{conv.user_profile?.last_name?.charAt(0)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-medium text-gray-900 truncate">
+                          {conv.user_profile?.first_name} {conv.user_profile?.last_name}
+                        </h3>
+                        {conv.unread_count > 0 && (
+                          <Badge variant="destructive" className="text-xs">
+                            {conv.unread_count}
+                          </Badge>
+                        )}
+                        {conv.last_message_text?.startsWith("🟢") && (
+                          <Badge variant="outline" className="text-xs text-green-700 border-green-400">Dati auto</Badge>
+                        )}
+                      </div>
+                      <p className="text-sm text-gray-600 truncate mt-1">
+                        {conv.last_message_text || 'Nessun messaggio'}
+                      </p>
+                      <div className="flex items-center gap-1 mt-2 text-xs text-gray-500">
+                        <Clock className="h-3 w-3" />
+                        {conv.last_message_at ? new Date(conv.last_message_at).toLocaleString('it-IT') : ''}
+                      </div>
                     </div>
                   </div>
                   
-                  {/* Pulsante Elimina - Solo per admin */}
-                  <div className="ml-2">
+                  <div className="ml-2 flex-shrink-0">
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                          className="text-red-500 hover:text-red-700 hover:bg-red-50 h-8 w-8 p-0"
                           disabled={deletingConversation === conv.id}
                         >
                           <Trash2 className="h-4 w-4" />
@@ -304,18 +314,66 @@ export const ExpertRealTimeChat: React.FC = () => {
           >
             {({ messages, isConnected, sendMessage }) => (
               <>
-                {/* Chat Header */}
+                {/* Chat Header with User Avatar */}
                 <div className="p-4 border-b border-gray-200 bg-white">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <MessageCircle className="h-5 w-5 text-drplant-green" />
-                      <h3 className="font-medium">Conversazione Attiva</h3>
+                    <div className="flex items-center gap-3">
+                      <Avatar className="h-8 w-8">
+                        <AvatarImage 
+                          src={selectedConversation.user_profile?.avatar_url} 
+                          alt={`${selectedConversation.user_profile?.first_name} ${selectedConversation.user_profile?.last_name}`}
+                        />
+                        <AvatarFallback className="bg-drplant-green/10 text-drplant-green text-sm">
+                          {selectedConversation.user_profile?.first_name?.charAt(0)}{selectedConversation.user_profile?.last_name?.charAt(0)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <h3 className="font-medium text-gray-900">
+                          Chat con {selectedConversation.user_profile?.first_name} {selectedConversation.user_profile?.last_name}
+                        </h3>
+                        <div className="flex items-center gap-2 text-sm text-gray-500">
+                          <MessageCircle className="h-4 w-4" />
+                          <span>Conversazione Attiva</span>
+                        </div>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`} />
-                      <span className="text-sm text-gray-600">
-                        {isConnected ? 'Connesso' : 'Disconnesso'}
-                      </span>
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2">
+                        <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`} />
+                        <span className="text-sm text-gray-600">
+                          {isConnected ? 'Connesso' : 'Disconnesso'}
+                        </span>
+                      </div>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-red-500 hover:text-red-700 border-red-200 hover:border-red-300"
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Elimina Chat
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Elimina Conversazione</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Sei sicuro di voler eliminare questa conversazione con {selectedConversation.user_profile?.first_name} {selectedConversation.user_profile?.last_name}?
+                              Tutti i messaggi verranno eliminati permanentemente.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Annulla</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => handleDeleteConversation(selectedConversationId)}
+                              className="bg-red-600 hover:bg-red-700"
+                            >
+                              Elimina
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     </div>
                   </div>
                 </div>
@@ -327,6 +385,8 @@ export const ExpertRealTimeChat: React.FC = () => {
                       key={message.id} 
                       message={message} 
                       isExpertView={true}
+                      userAvatar={selectedConversation.user_profile?.avatar_url}
+                      userName={`${selectedConversation.user_profile?.first_name} ${selectedConversation.user_profile?.last_name}`}
                     />
                   ))}
                 </div>
