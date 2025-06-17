@@ -1,4 +1,3 @@
-
 // Client-side API service for interacting with backend endpoints
 class ApiClient {
   private baseUrl: string;
@@ -25,8 +24,15 @@ class ApiClient {
   private async makeRequest(endpoint: string, options: RequestInit = {}) {
     const url = `${this.baseUrl}${endpoint}`;
     
+    // Get auth token from Supabase
+    const { supabase } = await import('@/integrations/supabase/client');
+    const { data: { session } } = await supabase.auth.getSession();
+    
     const defaultHeaders = {
       'Content-Type': 'application/json',
+      ...(session?.access_token && {
+        'Authorization': `Bearer ${session.access_token}`
+      }),
       ...options.headers,
     };
 
