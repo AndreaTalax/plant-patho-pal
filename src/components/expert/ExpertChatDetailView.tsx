@@ -73,11 +73,23 @@ const ExpertChatDetailView = ({ conversation, onBack }: {
 
         console.log('📨 Response received:', {
           hasData: !!response.data,
-          hasError: !!response.error
+          hasError: !!response.error,
+          status: response.status
         });
 
         if (response.error) {
           console.error('❌ Function error:', response.error);
+          
+          // Gestione specifica per conversazione eliminata
+          if (response.error.message?.includes("not found") || 
+              response.error.message?.includes("deleted") ||
+              response.status === 410) {
+            console.log('🗑️ Conversation was deleted, going back');
+            toast.error('Questa conversazione è stata eliminata');
+            onBack(); // Torna automaticamente alla lista
+            return;
+          }
+          
           throw new Error(response.error.message || "Errore nel caricamento messaggi");
         }
 
@@ -99,13 +111,18 @@ const ExpertChatDetailView = ({ conversation, onBack }: {
         if (!isMounted) return;
         
         // Gestisci specificamente l'errore "conversazione non trovata"
-        if (e?.message?.includes("PGRST116") || e?.message?.includes("0 rows")) {
-          setError("Conversazione non trovata. Potrebbe essere stata eliminata.");
+        if (e?.message?.includes("PGRST116") || 
+            e?.message?.includes("0 rows") ||
+            e?.message?.includes("not found") ||
+            e?.message?.includes("deleted")) {
+          console.log('🗑️ Conversation not found, probably deleted');
+          toast.error('Conversazione non trovata o eliminata');
+          onBack(); // Torna automaticamente alla lista
+          return;
         } else {
           setError(e?.message || "Errore nel caricamento della chat");
+          toast.error(e?.message || "Errore caricamento chat");
         }
-        
-        toast.error(e?.message || "Errore caricamento chat");
       } finally {
         if (isMounted) {
           setLoading(false);
@@ -119,7 +136,7 @@ const ExpertChatDetailView = ({ conversation, onBack }: {
     return () => {
       isMounted = false;
     };
-  }, [conversation?.id]); // Solo conversation.id come dipendenza
+  }, [conversation?.id, onBack]); // Aggiungo onBack alle dipendenze
 
   const handleSendMessage = async () => {
     if (!newMessage.trim() || sending) return;
@@ -206,9 +223,14 @@ const ExpertChatDetailView = ({ conversation, onBack }: {
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>{error}</AlertDescription>
           </Alert>
-          <Button onClick={handleRetry} variant="outline">
-            Riprova
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={handleRetry} variant="outline">
+              Riprova
+            </Button>
+            <Button onClick={onBack} variant="ghost">
+              Torna alla lista
+            </Button>
+          </div>
         </div>
       ) : (
         <>

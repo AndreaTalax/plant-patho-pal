@@ -7,7 +7,6 @@ serve(async (req) => {
   console.log(`🔍 === NEW REQUEST === ${new Date().toISOString()}`);
   console.log(`🔍 Request method: ${req.method}`);
   console.log(`🔍 Request URL: ${req.url}`);
-  console.log(`🔍 Request headers:`, Object.fromEntries(req.headers.entries()));
 
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
@@ -31,10 +30,6 @@ serve(async (req) => {
     console.log("🔍 Creating Supabase client...");
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
-    console.log("🔍 Environment variables:", {
-      supabaseUrl: supabaseUrl ? "present" : "missing",
-      supabaseAnonKey: supabaseAnonKey ? "present" : "missing"
-    });
 
     if (!supabaseUrl || !supabaseAnonKey) {
       console.error("❌ Missing environment variables");
@@ -44,14 +39,10 @@ serve(async (req) => {
       });
     }
 
-    const supabaseClient = createClient(
-      supabaseUrl,
-      supabaseAnonKey
-    );
+    const supabaseClient = createClient(supabaseUrl, supabaseAnonKey);
 
     // Get authentication token
     const authHeader = req.headers.get("Authorization");
-    console.log("🔍 Authorization header:", authHeader ? "present" : "missing");
     
     if (!authHeader) {
       console.error("❌ Missing authorization header");
@@ -62,7 +53,6 @@ serve(async (req) => {
     }
 
     const token = authHeader.replace("Bearer ", "");
-    console.log("🔍 Extracted token length:", token.length);
     
     console.log("🔍 Verifying user authentication...");
     const { data: { user }, error: authError } = await supabaseClient.auth.getUser(token);
@@ -82,7 +72,6 @@ serve(async (req) => {
     try {
       const bodyText = await req.text();
       console.log("📝 Raw request body:", bodyText);
-      console.log("📝 Body length:", bodyText.length);
       
       if (!bodyText.trim()) {
         console.error("❌ Empty request body");
@@ -121,15 +110,27 @@ serve(async (req) => {
       .from('conversations')
       .select('*')
       .eq('id', conversationId)
-      .single();
+      .maybeSingle(); // Cambiato da .single() a .maybeSingle()
 
     if (conversationError) {
       console.error("❌ Error fetching conversation:", conversationError);
       return new Response(JSON.stringify({ 
-        error: "Conversation not found", 
+        error: "Error fetching conversation", 
         details: conversationError.message 
       }), {
-        status: 404,
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Se la conversazione non esiste, restituisci un errore specifico
+    if (!conversation) {
+      console.log("⚠️ Conversation not found or deleted:", conversationId);
+      return new Response(JSON.stringify({ 
+        error: "Conversation not found or has been deleted",
+        conversationId: conversationId
+      }), {
+        status: 410, // 410 Gone - indica che la risorsa esisteva ma è stata eliminata
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -172,13 +173,6 @@ serve(async (req) => {
     }
 
     console.log("✅ Messages loaded:", messages?.length || 0);
-    if (messages && messages.length > 0) {
-      console.log("📋 Sample message:", {
-        id: messages[0].id,
-        senderId: messages[0].sender_id,
-        text: messages[0].text?.slice(0, 50) + "..."
-      });
-    }
 
     // Get user profile for the conversation
     console.log("📊 Querying user profile...");
@@ -186,7 +180,7 @@ serve(async (req) => {
       .from('profiles')
       .select('first_name, last_name, email')
       .eq('id', conversation.user_id)
-      .single();
+      .maybeSingle(); // Anche qui uso maybeSingle per sicurezza
 
     if (profileError) {
       console.error("⚠️ Error fetching user profile:", profileError);

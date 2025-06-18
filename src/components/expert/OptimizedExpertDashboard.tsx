@@ -146,14 +146,21 @@ const OptimizedExpertDashboard = () => {
           if (payload.eventType === 'DELETE') {
             console.log('🗑️ Conversation deletion detected:', payload.old?.id);
             // Remove deleted conversation immediately from UI
-            setConversations(prev => prev.filter(conv => conv.id !== payload.old?.id));
+            setConversations(prev => {
+              const filtered = prev.filter(conv => conv.id !== payload.old?.id);
+              console.log(`📊 Conversations after deletion: ${filtered.length} (was ${prev.length})`);
+              return filtered;
+            });
             
             // If currently selected conversation was deleted, deselect it
             if (selectedConversation?.id === payload.old?.id) {
               console.log('🔄 Deselecting deleted conversation');
               setSelectedConversation(null);
+              toast.success('Conversazione eliminata con successo');
             }
           } else {
+            // Per altri eventi, ricarica i dati
+            console.log('🔄 Reloading data due to conversation change');
             loadExpertData();
           }
         }
@@ -226,9 +233,11 @@ const OptimizedExpertDashboard = () => {
       console.log('🗑️ Starting conversation deletion for ID:', conversationId);
       
       // First, immediately remove the conversation from local state for instant UI feedback
-      setConversations(prevConversations => 
-        prevConversations.filter(conv => conv.id !== conversationId)
-      );
+      setConversations(prevConversations => {
+        const filtered = prevConversations.filter(conv => conv.id !== conversationId);
+        console.log(`📊 Local state updated: ${filtered.length} conversations remaining`);
+        return filtered;
+      });
       
       // If the deleted conversation was selected, deselect it
       if (selectedConversation?.id === conversationId) {
@@ -255,20 +264,25 @@ const OptimizedExpertDashboard = () => {
       console.log('🔄 Delete conversation response:', response);
 
       if (response.error) {
+        console.error('❌ Delete conversation failed:', response.error);
         throw new Error(response.error.message || 'Errore durante l\'eliminazione');
       }
       
       toast.success('Conversazione eliminata con successo');
       console.log('✅ Conversation deleted successfully');
       
-      // Force refresh data after successful deletion
-      setTimeout(() => loadExpertData(), 500);
+      // Force refresh data after successful deletion to ensure consistency
+      setTimeout(() => {
+        console.log('🔄 Force refreshing data after deletion');
+        loadExpertData();
+      }, 500);
       
     } catch (error: any) {
       console.error('❌ Error deleting conversation:', error);
       toast.error(error.message || 'Errore durante l\'eliminazione della conversazione');
       
       // Restore state by reloading data if deletion failed
+      console.log('🔄 Restoring data due to deletion failure');
       await loadExpertData();
     } finally {
       setDeletingConversation(null);
