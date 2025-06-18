@@ -73,17 +73,16 @@ const ExpertChatDetailView = ({ conversation, onBack }: {
 
         console.log('📨 Response received:', {
           hasData: !!response.data,
-          hasError: !!response.error,
-          status: response.status
+          hasError: !!response.error
         });
 
         if (response.error) {
           console.error('❌ Function error:', response.error);
           
-          // Gestione specifica per conversazione eliminata
+          // Gestione specifica per conversazione eliminata - controlla il messaggio di errore
           if (response.error.message?.includes("not found") || 
               response.error.message?.includes("deleted") ||
-              response.status === 410) {
+              response.error.message?.includes("Conversation not found or has been deleted")) {
             console.log('🗑️ Conversation was deleted, going back');
             toast.error('Questa conversazione è stata eliminata');
             onBack(); // Torna automaticamente alla lista
