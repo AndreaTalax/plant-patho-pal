@@ -143,26 +143,8 @@ const OptimizedExpertDashboard = () => {
         { event: '*', schema: 'public', table: 'conversations' },
         (payload) => {
           console.log('🔄 Conversation change detected:', payload);
-          if (payload.eventType === 'DELETE') {
-            console.log('🗑️ Conversation deletion detected:', payload.old?.id);
-            // Remove deleted conversation immediately from UI
-            setConversations(prev => {
-              const filtered = prev.filter(conv => conv.id !== payload.old?.id);
-              console.log(`📊 Conversations after deletion: ${filtered.length} (was ${prev.length})`);
-              return filtered;
-            });
-            
-            // If currently selected conversation was deleted, deselect it
-            if (selectedConversation?.id === payload.old?.id) {
-              console.log('🔄 Deselecting deleted conversation');
-              setSelectedConversation(null);
-              toast.success('Conversazione eliminata con successo');
-            }
-          } else {
-            // Per altri eventi, ricarica i dati
-            console.log('🔄 Reloading data due to conversation change');
-            loadExpertData();
-          }
+          // Always reload data for any conversation change
+          loadExpertData();
         }
       )
       .on('postgres_changes',
@@ -232,24 +214,9 @@ const OptimizedExpertDashboard = () => {
       setDeletingConversation(conversationId);
       console.log('🗑️ Starting conversation deletion for ID:', conversationId);
       
-      // First, immediately remove the conversation from local state for instant UI feedback
-      setConversations(prevConversations => {
-        const filtered = prevConversations.filter(conv => conv.id !== conversationId);
-        console.log(`📊 Local state updated: ${filtered.length} conversations remaining`);
-        return filtered;
-      });
-      
-      // If the deleted conversation was selected, deselect it
-      if (selectedConversation?.id === conversationId) {
-        console.log('🔄 Deselecting deleted conversation');
-        setSelectedConversation(null);
-      }
-
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         toast.error('Sessione scaduta');
-        // Restore conversation if API call couldn't be made
-        await loadExpertData();
         return;
       }
 
@@ -268,22 +235,23 @@ const OptimizedExpertDashboard = () => {
         throw new Error(response.error.message || 'Errore durante l\'eliminazione');
       }
       
-      toast.success('Conversazione eliminata con successo');
       console.log('✅ Conversation deleted successfully');
       
-      // Force refresh data after successful deletion to ensure consistency
-      setTimeout(() => {
-        console.log('🔄 Force refreshing data after deletion');
-        loadExpertData();
-      }, 500);
+      // If the deleted conversation was selected, deselect it
+      if (selectedConversation?.id === conversationId) {
+        console.log('🔄 Deselecting deleted conversation');
+        setSelectedConversation(null);
+      }
+      
+      // Force immediate reload of the data to ensure UI is updated
+      console.log('🔄 Force reloading data after deletion');
+      await loadExpertData();
+      
+      toast.success('Conversazione eliminata con successo');
       
     } catch (error: any) {
       console.error('❌ Error deleting conversation:', error);
       toast.error(error.message || 'Errore durante l\'eliminazione della conversazione');
-      
-      // Restore state by reloading data if deletion failed
-      console.log('🔄 Restoring data due to deletion failure');
-      await loadExpertData();
     } finally {
       setDeletingConversation(null);
     }
