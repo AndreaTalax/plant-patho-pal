@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client'; 
@@ -136,9 +135,22 @@ export const ExpertRealTimeChat: React.FC = () => {
       setDeletingConversation(conversationId);
       console.log('🗑️ Starting conversation deletion for ID:', conversationId);
       
+      // First, immediately remove the conversation from local state for instant UI feedback
+      setConversations(prevConversations => 
+        prevConversations.filter(conv => conv.id !== conversationId)
+      );
+      
+      // If the conversation being deleted is currently selected, deselect it
+      if (selectedConversationId === conversationId) {
+        console.log('🔄 Deselecting deleted conversation');
+        setSelectedConversationId(null);
+      }
+      
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         toast.error('Sessione scaduta');
+        // Restore conversation if API call couldn't be made
+        await loadConversations();
         return;
       }
 
@@ -155,22 +167,18 @@ export const ExpertRealTimeChat: React.FC = () => {
         throw new Error(response.error.message || 'Errore durante l\'eliminazione');
       }
 
-      // Se la conversazione eliminata era quella selezionata, deseleziona
-      if (selectedConversationId === conversationId) {
-        setSelectedConversationId(null);
-      }
-
-      // Rimuovi immediatamente la conversazione dalla lista locale
-      setConversations(prev => prev.filter(conv => conv.id !== conversationId));
-
-      // Ricarica la lista delle conversazioni per sincronizzare
-      await loadConversations();
-      
       toast.success('Conversazione eliminata con successo');
       console.log('✅ Conversation deleted successfully');
+      
+      // Force refresh data after successful deletion
+      setTimeout(() => loadConversations(), 500);
+
     } catch (error: any) {
       console.error('❌ Error deleting conversation:', error);
       toast.error(error.message || 'Errore durante l\'eliminazione della conversazione');
+      
+      // Restore state by reloading data if deletion failed
+      await loadConversations();
     } finally {
       setDeletingConversation(null);
     }
@@ -204,9 +212,13 @@ export const ExpertRealTimeChat: React.FC = () => {
           (payload) => {
             console.log('🔄 Conversation change detected:', payload);
             if (payload.eventType === 'DELETE') {
-              // Remove deleted conversation immediately
+              console.log('🗑️ Conversation deletion detected:', payload.old?.id);
+              // Remove deleted conversation immediately from UI
               setConversations(prev => prev.filter(conv => conv.id !== payload.old?.id));
+              
+              // If currently selected conversation was deleted, deselect it
               if (selectedConversationId === payload.old?.id) {
+                console.log('🔄 Deselecting deleted conversation');
                 setSelectedConversationId(null);
               }
             } else {
