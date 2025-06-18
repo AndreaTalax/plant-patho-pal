@@ -134,6 +134,8 @@ export const ExpertRealTimeChat: React.FC = () => {
   const handleDeleteConversation = async (conversationId: string) => {
     try {
       setDeletingConversation(conversationId);
+      console.log('🗑️ Starting conversation deletion for ID:', conversationId);
+      
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         toast.error('Sessione scaduta');
@@ -147,6 +149,8 @@ export const ExpertRealTimeChat: React.FC = () => {
         },
       });
 
+      console.log('🔄 Delete conversation response:', response);
+
       if (response.error) {
         throw new Error(response.error.message || 'Errore durante l\'eliminazione');
       }
@@ -156,11 +160,16 @@ export const ExpertRealTimeChat: React.FC = () => {
         setSelectedConversationId(null);
       }
 
-      // Ricarica la lista delle conversazioni
+      // Rimuovi immediatamente la conversazione dalla lista locale
+      setConversations(prev => prev.filter(conv => conv.id !== conversationId));
+
+      // Ricarica la lista delle conversazioni per sincronizzare
       await loadConversations();
+      
       toast.success('Conversazione eliminata con successo');
+      console.log('✅ Conversation deleted successfully');
     } catch (error: any) {
-      console.error('Error deleting conversation:', error);
+      console.error('❌ Error deleting conversation:', error);
       toast.error(error.message || 'Errore durante l\'eliminazione della conversazione');
     } finally {
       setDeletingConversation(null);
@@ -186,8 +195,32 @@ export const ExpertRealTimeChat: React.FC = () => {
   useEffect(() => {
     if (userProfile?.id === MARCO_NIGRO_ID) {
       loadConversations();
+      
+      // Setup real-time subscription for conversation changes
+      const conversationsChannel = supabase
+        .channel('expert-conversations-realtime')
+        .on('postgres_changes', 
+          { event: '*', schema: 'public', table: 'conversations' },
+          (payload) => {
+            console.log('🔄 Conversation change detected:', payload);
+            if (payload.eventType === 'DELETE') {
+              // Remove deleted conversation immediately
+              setConversations(prev => prev.filter(conv => conv.id !== payload.old?.id));
+              if (selectedConversationId === payload.old?.id) {
+                setSelectedConversationId(null);
+              }
+            } else {
+              loadConversations();
+            }
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(conversationsChannel);
+      };
     }
-  }, [userProfile]);
+  }, [userProfile, selectedConversationId]);
 
   if (userProfile?.id !== MARCO_NIGRO_ID) {
     return (

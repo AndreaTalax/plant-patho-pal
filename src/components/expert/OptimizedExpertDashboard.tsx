@@ -212,6 +212,8 @@ const OptimizedExpertDashboard = () => {
   const handleDeleteConversation = async (conversationId: string) => {
     try {
       setDeletingConversation(conversationId);
+      console.log('🗑️ Starting conversation deletion for ID:', conversationId);
+      
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         toast.error('Sessione scaduta');
@@ -225,6 +227,8 @@ const OptimizedExpertDashboard = () => {
         },
       });
 
+      console.log('🔄 Delete conversation response:', response);
+
       if (response.error) {
         throw new Error(response.error.message || 'Errore durante l\'eliminazione');
       }
@@ -234,10 +238,16 @@ const OptimizedExpertDashboard = () => {
         setSelectedConversation(null);
       }
 
+      // Rimuovi immediatamente la conversazione dalla lista locale
+      setConversations(prev => prev.filter(conv => conv.id !== conversationId));
+      
+      // Ricarica i dati per assicurarsi che siano sincronizzati
       await loadExpertData();
+      
       toast.success('Conversazione eliminata con successo');
+      console.log('✅ Conversation deleted successfully');
     } catch (error: any) {
-      console.error('Error deleting conversation:', error);
+      console.error('❌ Error deleting conversation:', error);
       toast.error(error.message || 'Errore durante l\'eliminazione della conversazione');
     } finally {
       setDeletingConversation(null);
