@@ -2,7 +2,7 @@
 import { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Send, Loader2, Image, X, Mic, Smile } from 'lucide-react';
+import { Send, Loader2, Image, X, Smile } from 'lucide-react';
 import { sendMessage } from './chatService';
 import { MessageService } from '@/services/chat/messageService';
 import { toast } from 'sonner';
@@ -45,10 +45,7 @@ const MessageInput = ({
   const [showEmoji, setShowEmoji] = useState(false);
   const emojiBtnRef = useRef<HTMLButtonElement>(null);
 
-  // AUDIO: stato solo per abilitare/disabilitare il bottone
-  const [isSendingAudio, setIsSendingAudio] = useState(false);
-
-  const isSending = externalIsSending || internalIsSending || uploadingImage || isSendingAudio;
+  const isSending = externalIsSending || internalIsSending || uploadingImage;
 
   const handleImageSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -77,16 +74,13 @@ const MessageInput = ({
     }
   };
 
-  // AUDIO: nuovo handler separato
+  // AUDIO: handler per il fallback
   const handleSendAudio = async (audioBlob: Blob) => {
     if (!audioBlob) return;
-    setIsSendingAudio(true);
     try {
-      // Copia/usa la stessa logica che avevi in sendAudioMessage per upload su supabase e notifica
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         toast.error('User non autenticato');
-        setIsSendingAudio(false);
         return;
       }
       const fileName = `audio_${Date.now()}.webm`;
@@ -98,23 +92,18 @@ const MessageInput = ({
         .from('plant-images')
         .getPublicUrl(`${user.id}/${fileName}`);
       if (pubUrl?.publicUrl && onSendMessage) {
-        await onSendMessage(`[AUDIO] ${pubUrl.publicUrl}`);
+        await onSendMessage(`🎵 Messaggio vocale: ${pubUrl.publicUrl}`);
         toast.success('Messaggio vocale inviato!');
       }
     } catch (e) {
       toast.error('Errore invio audio');
     }
-    setIsSendingAudio(false);
   };
 
-  /**
-   * Sends a message with optional image attachment
-   */
   const handleSend = async () => {
     if ((!message.trim() && !selectedImage) || isSending) return;
     let imageUrl: string | null = null;
     try {
-      // Upload image if selected
       if (selectedImage) {
         setUploadingImage(true);
         const { data: { user } } = await supabase.auth.getUser();
@@ -127,7 +116,6 @@ const MessageInput = ({
         console.log('✅ Image uploaded successfully:', imageUrl);
       }
       
-      // Se fornita una funzione di invio esterna, usala (per hook realtime)
       if (onSendMessage) {
         if (imageUrl && message.trim()) {
           await onSendMessage(message.trim());
@@ -196,13 +184,11 @@ const MessageInput = ({
     }
   };
 
-  // EMOJI HANDLER
   const handleSelectEmoji = (emoji: any) => {
     setMessage(prev => prev + (emoji.native ?? emoji.shortcodes ?? ''));
     setShowEmoji(false);
   };
 
-  // Render persistent variant
   if (variant === 'persistent') {
     return (
       <div className="fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm border-t border-gray-200 p-4">
@@ -299,8 +285,14 @@ const MessageInput = ({
           </div>
         )}
 
-        {/* AUDIO RECORDER */}
-        <AudioRecorder onSendAudio={handleSendAudio} disabled={isSending || disabledInput} />
+        {/* AUDIO RECORDER con parametri conversazione */}
+        <AudioRecorder 
+          onSendAudio={handleSendAudio} 
+          disabled={isSending || disabledInput}
+          conversationId={conversationId}
+          senderId={senderId}
+          recipientId={recipientId}
+        />
 
         <div className="flex gap-2 sm:gap-4 items-end">
           <div className="flex-1">
@@ -351,7 +343,6 @@ const MessageInput = ({
             )}
           </Button>
         </div>
-        {/* EMOJI PICKER */}
         <EmojiPicker
           open={showEmoji}
           onSelect={handleSelectEmoji}

@@ -3,13 +3,23 @@ import React, { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Send, X, Mic, Square } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from '@/integrations/supabase/client';
 
 interface AudioRecorderProps {
   onSendAudio: (audioBlob: Blob) => Promise<void>;
   disabled: boolean;
+  conversationId?: string;
+  senderId?: string;
+  recipientId?: string;
 }
 
-const AudioRecorder: React.FC<AudioRecorderProps> = ({ onSendAudio, disabled }) => {
+const AudioRecorder: React.FC<AudioRecorderProps> = ({ 
+  onSendAudio, 
+  disabled, 
+  conversationId, 
+  senderId, 
+  recipientId 
+}) => {
   const [isRecording, setIsRecording] = useState(false);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [audioURL, setAudioURL] = useState<string | null>(null);
@@ -77,7 +87,7 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({ onSendAudio, disabled }) 
         stopRecording();
       };
 
-      mediaRecorder.start(100); // Chunk ogni 100ms
+      mediaRecorder.start(100);
       console.log('✅ Registrazione avviata');
       toast.success('Registrazione avviata');
       
@@ -118,10 +128,40 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({ onSendAudio, disabled }) 
     setIsProcessing(true);
     
     try {
-      await onSendAudio(audioBlob);
-      console.log('✅ Audio inviato con successo');
-      resetAudio();
-      toast.success('Messaggio vocale inviato!');
+      // Se abbiamo i parametri della conversazione, usa la edge function
+      if (conversationId && senderId && recipientId) {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          throw new Error('Sessione non valida');
+        }
+
+        const formData = new FormData();
+        formData.append('conversationId', conversationId);
+        formData.append('senderId', senderId);
+        formData.append('recipientId', recipientId);
+        formData.append('audio', audioBlob, 'voice-message.webm');
+
+        const { data, error } = await supabase.functions.invoke('process-audio', {
+          body: formData,
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+        });
+
+        if (error || !data?.success) {
+          throw new Error(error?.message || 'Errore invio audio');
+        }
+
+        console.log('✅ Audio inviato via edge function');
+        resetAudio();
+        toast.success('Messaggio vocale inviato!');
+      } else {
+        // Fallback al metodo originale
+        await onSendAudio(audioBlob);
+        console.log('✅ Audio inviato con successo');
+        resetAudio();
+        toast.success('Messaggio vocale inviato!');
+      }
     } catch (error) {
       console.error('❌ Errore invio audio:', error);
       toast.error('Errore nell\'invio del messaggio vocale');
@@ -130,7 +170,6 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({ onSendAudio, disabled }) 
     }
   };
 
-  // Cleanup URL on unmount
   React.useEffect(() => {
     return () => {
       if (audioURL) {
