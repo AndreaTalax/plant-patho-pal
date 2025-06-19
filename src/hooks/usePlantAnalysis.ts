@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { performEnhancedPlantAnalysis, type EnhancedAnalysisResult } from '@/utils/plant-analysis/enhancedPlantAnalysis';
+import { performEnhancedPlantAnalysis, type PlantAnalysisResult } from '@/utils/plant-analysis/enhancedPlantAnalysis';
 import { toast } from 'sonner';
 import type { PlantInfo } from '@/components/diagnose/types';
 import type { AnalysisDetails, DiagnosedDisease } from '@/components/diagnose/types';
@@ -24,7 +24,7 @@ export const usePlantAnalysis = () => {
       setAnalysisProgress(10);
       
       // Usa il nuovo sistema di analisi rigoroso
-      const analysisResult: EnhancedAnalysisResult = await performEnhancedPlantAnalysis(imageFile, plantInfo);
+      const analysisResult: PlantAnalysisResult = await performEnhancedPlantAnalysis(imageFile, plantInfo);
       
       setAnalysisProgress(90);
       
@@ -48,8 +48,8 @@ export const usePlantAnalysis = () => {
           'La pianta appare in buona salute secondo l\'analisi specializzata' :
           'Sono stati rilevati possibili problemi di salute',
         causes: analysisResult.isHealthy ? 'N/A - Pianta sana' : 'Vedere malattie specifiche rilevate',
-        symptoms: analysisResult.diseases?.map(d => d.name) || ['Nessun sintomo specifico'],
-        treatments: analysisResult.diseases?.map(d => d.treatment) || analysisResult.recommendations || [],
+        symptoms: analysisResult.diseases?.map(d => d) || ['Nessun sintomo specifico'],
+        treatments: analysisResult.recommendations || [],
         confidence: analysisResult.confidence || 0,
         healthy: analysisResult.isHealthy || false,
         products: [], // Da implementare se necessario
