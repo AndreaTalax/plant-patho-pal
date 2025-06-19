@@ -2,62 +2,98 @@
 import { useState, useCallback, useEffect } from 'react';
 import { ConversationService } from '@/services/chat/conversationService';
 import { MessageService } from '@/services/chat/messageService';
-import { useRealtimeChat } from './useRealtimeChat';
 import { MARCO_NIGRO_ID } from '@/components/phytopathologist';
 import { DatabaseMessage } from '@/services/chat/types';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 export const useUserChatRealtime = (userId: string) => {
   const [activeChat, setActiveChat] = useState<'expert' | null>(null);
   const [messages, setMessages] = useState<DatabaseMessage[]>([]);
   const [isSending, setIsSending] = useState(false);
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
+  const [isConnected, setIsConnected] = useState(false);
 
-  // Setup real-time chat
-  const { isConnected, sendMessage } = useRealtimeChat({
-    conversationId: currentConversationId || undefined,
-    userId,
-    onNewMessage: (message) => {
-      console.log('📨 New message received:', message);
-      setMessages(prev => {
-        const exists = prev.some(msg => msg.id === message.id);
-        if (exists) return prev;
-        return [...prev, message].sort((a, b) => 
-          new Date(a.sent_at).getTime() - new Date(b.sent_at).getTime()
-        );
-      });
-    }
-  });
-
-  // Load messages when conversation changes
+  // Simplified message loading
   const loadMessages = useCallback(async (conversationId: string) => {
     if (!conversationId) return;
     
     try {
       console.log('📚 Loading messages for conversation:', conversationId);
       
-      const response = await fetch('/api/get-conversation', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${(await import('@/integrations/supabase/client')).supabase.auth.getSession().then(s => s.data.session?.access_token)}`
-        },
-        body: JSON.stringify({ conversationId })
-      });
+      const { data: messagesData, error } = await supabase
+        .from('messages')
+        .select('*')
+        .eq('conversation_id', conversationId)
+        .order('sent_at', { ascending: true });
 
-      if (response.ok) {
-        const data = await response.json();
-        if (data.messages) {
-          console.log('✅ Messages loaded:', data.messages.length);
-          setMessages(data.messages);
-        }
-      } else {
-        console.error('❌ Failed to load messages:', response.statusText);
+      if (error) {
+        console.error('❌ Error loading messages:', error);
+        return;
       }
+
+      console.log('✅ Messages loaded:', messagesData?.length || 0);
+      setMessages(messagesData || []);
+      
     } catch (error) {
       console.error('❌ Error loading messages:', error);
     }
   }, []);
+
+  // Setup real-time subscription - simplified version
+  useEffect(() => {
+    if (!currentConversationId || !userId) return;
+
+    console.log('🔄 Setting up real-time subscription for:', currentConversationId);
+    
+    const channelName = `conversation_${currentConversationId}`;
+    const channel = supabase.channel(channelName);
+
+    channel
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages',
+          filter: `conversation_id=eq.${currentConversationId}`
+        },
+        (payload) => {
+          try {
+            console.log('📨 New message received:', payload.new);
+            const newMessage = payload.new as DatabaseMessage;
+            
+            setMessages(prev => {
+              const exists = prev.some(msg => msg.id === newMessage.id);
+              if (exists) return prev;
+              return [...prev, newMessage].sort((a, b) => 
+                new Date(a.sent_at).getTime() - new Date(b.sent_at).getTime()
+              );
+            });
+            
+            // Show toast for messages from expert
+            if (newMessage.sender_id !== userId) {
+              toast.success('Nuovo messaggio ricevuto!', {
+                description: newMessage.content?.slice(0, 50) + (newMessage.content && newMessage.content.length > 50 ? '...' : ''),
+                duration: 4000,
+              });
+            }
+          } catch (error) {
+            console.error('❌ Error handling new message:', error);
+          }
+        }
+      )
+      .subscribe((status) => {
+        console.log('🔗 Subscription status:', status);
+        setIsConnected(status === 'SUBSCRIBED');
+      });
+
+    return () => {
+      console.log('🔌 Cleaning up subscription');
+      supabase.removeChannel(channel);
+      setIsConnected(false);
+    };
+  }, [currentConversationId, userId]);
 
   const startChatWithExpert = useCallback(async () => {
     if (!userId) {
@@ -99,8 +135,18 @@ export const useUserChatRealtime = (userId: string) => {
       setIsSending(true);
       console.log('📤 Sending message:', { conversationId: currentConversationId, userId, messageText });
       
-      await sendMessage(MARCO_NIGRO_ID, messageText.trim());
-      console.log('✅ Message sent successfully');
+      // Use MessageService to send the message
+      const success = await MessageService.sendMessage(
+        currentConversationId,
+        userId,
+        messageText.trim()
+      );
+      
+      if (success) {
+        console.log('✅ Message sent successfully');
+      } else {
+        throw new Error('Failed to send message');
+      }
       
     } catch (error) {
       console.error('❌ Error sending message:', error);
@@ -108,7 +154,7 @@ export const useUserChatRealtime = (userId: string) => {
     } finally {
       setIsSending(false);
     }
-  }, [currentConversationId, userId, sendMessage]);
+  }, [currentConversationId, userId]);
 
   // Clean up when component unmounts or user changes
   useEffect(() => {
@@ -116,6 +162,7 @@ export const useUserChatRealtime = (userId: string) => {
       setMessages([]);
       setCurrentConversationId(null);
       setActiveChat(null);
+      setIsConnected(false);
     };
   }, [userId]);
 

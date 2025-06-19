@@ -41,13 +41,6 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
     }
   }, [currentConversationId]);
 
-  const handleConnectionError = () => {
-    toast.error('Connessione persa', {
-      description: 'Tentativo di riconnessione in corso...',
-      duration: 3000
-    });
-  };
-
   const formatMessagesForDisplay = (dbMessages: DatabaseMessage[]): Message[] => {
     return dbMessages.map(msg => ({
       id: msg.id,
