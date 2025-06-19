@@ -104,7 +104,6 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
       <div className="flex-1 overflow-hidden">
         <MessageList 
           messages={formatMessagesForDisplay(messages)}
-          currentUserId={userId}
           isLoading={false}
         />
       </div>
