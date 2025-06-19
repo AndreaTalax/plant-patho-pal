@@ -1,8 +1,10 @@
+
 import { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Send, Loader2, Image, X, Mic, Smile } from 'lucide-react';
 import { sendMessage } from './chatService';
+import { MessageService } from '@/services/chat/messageService';
 import { toast } from 'sonner';
 import { uploadPlantImage } from '@/utils/imageStorage';
 import { supabase } from '@/integrations/supabase/client';
@@ -124,13 +126,18 @@ const MessageInput = ({
         imageUrl = await uploadPlantImage(selectedImage, user.id);
         console.log('✅ Image uploaded successfully:', imageUrl);
       }
+      
       // Se fornita una funzione di invio esterna, usala (per hook realtime)
       if (onSendMessage) {
         if (imageUrl && message.trim()) {
           await onSendMessage(message.trim());
-          await sendImageMessage(imageUrl, conversationId!, senderId!, recipientId!);
+          if (conversationId && senderId && recipientId) {
+            await MessageService.sendImageMessage(conversationId, senderId, imageUrl);
+          }
         } else if (imageUrl) {
-          await sendImageMessage(imageUrl, conversationId!, senderId!, recipientId!);
+          if (conversationId && senderId && recipientId) {
+            await MessageService.sendImageMessage(conversationId, senderId, imageUrl);
+          }
         } else {
           await onSendMessage(message.trim());
         }
@@ -138,11 +145,14 @@ const MessageInput = ({
         removeSelectedImage();
         return;
       }
+
       if (!conversationId || !senderId || !recipientId) {
         toast.error('Errore: parametri mancanti');
         return;
       }
+
       setInternalIsSending(true);
+      
       if (message.trim()) {
         const result = await sendMessage(
           conversationId,
@@ -154,9 +164,14 @@ const MessageInput = ({
           throw new Error('Failed to send text message');
         }
       }
+      
       if (imageUrl) {
-        await sendImageMessage(imageUrl, conversationId, senderId, recipientId);
+        const success = await MessageService.sendImageMessage(conversationId, senderId, imageUrl);
+        if (!success) {
+          throw new Error('Failed to send image message');
+        }
       }
+      
       setMessage('');
       removeSelectedImage();
       onMessageSent?.();
@@ -171,34 +186,6 @@ const MessageInput = ({
     } finally {
       setInternalIsSending(false);
       setUploadingImage(false);
-    }
-  };
-
-  const sendImageMessage = async (imageUrl: string, conversationId: string, senderId: string, recipientId: string) => {
-    try {
-      console.log('📸 Sending image message with URL:', imageUrl);
-      const imageMessage = `📸 Immagine allegata`;
-      const { error } = await supabase
-        .from('messages')
-        .insert({
-          conversation_id: conversationId,
-          sender_id: senderId,
-          recipient_id: recipientId,
-          content: imageMessage,
-          text: imageMessage,
-          image_url: imageUrl,
-          metadata: {
-            type: 'user_image',
-            imageUrl: imageUrl
-          }
-        });
-      if (error) {
-        console.error('❌ Error sending image message:', error);
-        throw new Error(`Failed to send image: ${error.message}`);
-      }
-      console.log('✅ Image message sent successfully');
-    } catch (err: any) {
-      throw err;
     }
   };
 
