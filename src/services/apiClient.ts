@@ -1,3 +1,4 @@
+
 // Client-side API service for interacting with backend endpoints
 class ApiClient {
   private baseUrl: string;
@@ -10,16 +11,6 @@ class ApiClient {
 
   /**
    * Makes an HTTP request to the specified endpoint with given options.
-   * @example
-   * makeRequest('/data', { method: 'GET' })
-   * returns a parsed JSON response from the endpoint.
-   * @param {string} endpoint - The endpoint path to append to the base API URL.
-   * @param {RequestInit} options - Options for configuring the HTTP request, including method, headers, and body.
-   * @returns {Promise<any>} Resolves with the parsed JSON data from the HTTP response.
-   * @description
-   *   - Automatically appends 'Content-Type' as 'application/json' to headers.
-   *   - Throws an error if the response is not OK, providing detailed status information.
-   *   - Catches and rethrows errors, logging them with endpoint context.
    */
   private async makeRequest(endpoint: string, options: RequestInit = {}) {
     const url = `${this.baseUrl}${endpoint}`;
@@ -66,12 +57,38 @@ class ApiClient {
     return this.makeRequest(`/api-router/plants/analyze?userId=${encodeURIComponent(userId)}`);
   }
 
+  // Plant Diagnosis APIs
+  async createDiagnosis(plantData: any) {
+    return this.makeRequest('/api-router/plants/diagnose', {
+      method: 'POST',
+      body: JSON.stringify(plantData),
+    });
+  }
+
+  async updateDiagnosis(diagnosisId: string, updateData: any) {
+    return this.makeRequest('/api-router/plants/diagnose', {
+      method: 'PUT',
+      body: JSON.stringify({ diagnosisId, ...updateData }),
+    });
+  }
+
+  async deleteDiagnosis(diagnosisId: string) {
+    return this.makeRequest('/api-router/plants/diagnose', {
+      method: 'DELETE',
+      body: JSON.stringify({ diagnosisId }),
+    });
+  }
+
   // Conversations APIs
   async getConversations(userId: string, expertId?: string) {
     const params = new URLSearchParams({ userId });
     if (expertId) params.append('expertId', expertId);
     
     return this.makeRequest(`/api-router/conversations?${params.toString()}`);
+  }
+
+  async getConversation(conversationId: string) {
+    return this.makeRequest(`/api-router/conversations/${encodeURIComponent(conversationId)}`);
   }
 
   async createConversation(userId: string, expertId: string, title?: string) {
@@ -81,15 +98,68 @@ class ApiClient {
     });
   }
 
+  async updateConversation(conversationId: string, updateData: any) {
+    return this.makeRequest('/api-router/conversations', {
+      method: 'PUT',
+      body: JSON.stringify({ conversationId, ...updateData }),
+    });
+  }
+
+  async deleteConversation(conversationId: string) {
+    return this.makeRequest('/api-router/conversations', {
+      method: 'DELETE',
+      body: JSON.stringify({ conversationId }),
+    });
+  }
+
   // Messages APIs
   async getMessages(conversationId: string) {
     return this.makeRequest(`/api-router/messages?conversationId=${encodeURIComponent(conversationId)}`);
+  }
+
+  async getMessage(messageId: string) {
+    return this.makeRequest(`/api-router/messages/${encodeURIComponent(messageId)}`);
   }
 
   async sendMessage(conversationId: string, senderId: string, recipientId: string, text: string, products?: any[]) {
     return this.makeRequest('/api-router/messages', {
       method: 'POST',
       body: JSON.stringify({ conversationId, senderId, recipientId, text, products }),
+    });
+  }
+
+  async sendAudioMessage(conversationId: string, senderId: string, recipientId: string, audioBlob: Blob) {
+    const formData = new FormData();
+    formData.append('conversationId', conversationId);
+    formData.append('senderId', senderId);
+    formData.append('recipientId', recipientId);
+    formData.append('audio', audioBlob, 'voice-message.webm');
+    
+    return this.makeRequest('/api-router/messages/audio', {
+      method: 'POST',
+      body: formData,
+      headers: {}, // Remove Content-Type to let browser set it for FormData
+    });
+  }
+
+  async updateMessage(messageId: string, updateData: any) {
+    return this.makeRequest('/api-router/messages', {
+      method: 'PUT',
+      body: JSON.stringify({ messageId, ...updateData }),
+    });
+  }
+
+  async deleteMessage(messageId: string) {
+    return this.makeRequest('/api-router/messages', {
+      method: 'DELETE',
+      body: JSON.stringify({ messageId }),
+    });
+  }
+
+  async markMessageAsRead(messageId: string) {
+    return this.makeRequest('/api-router/messages/read', {
+      method: 'PUT',
+      body: JSON.stringify({ messageId }),
     });
   }
 
@@ -101,6 +171,10 @@ class ApiClient {
     });
     
     return this.makeRequest(`/api-router/consultations?${params.toString()}`);
+  }
+
+  async getConsultation(consultationId: string) {
+    return this.makeRequest(`/api-router/consultations/${encodeURIComponent(consultationId)}`);
   }
 
   async createConsultation(userId: string, plantInfo: any, symptoms: string, imageUrl?: string) {
@@ -117,6 +191,13 @@ class ApiClient {
     });
   }
 
+  async deleteConsultation(consultationId: string) {
+    return this.makeRequest('/api-router/consultations', {
+      method: 'DELETE',
+      body: JSON.stringify({ consultationId }),
+    });
+  }
+
   // Profiles APIs
   async getProfile(userId: string) {
     return this.makeRequest(`/api-router/profiles?userId=${encodeURIComponent(userId)}`);
@@ -129,12 +210,23 @@ class ApiClient {
     });
   }
 
+  async deleteProfile(userId: string) {
+    return this.makeRequest('/api-router/profiles', {
+      method: 'DELETE',
+      body: JSON.stringify({ userId }),
+    });
+  }
+
   // Notifications APIs
   async getNotifications(userId: string, unreadOnly = false) {
     const params = new URLSearchParams({ userId });
     if (unreadOnly) params.append('unreadOnly', 'true');
     
     return this.makeRequest(`/api-router/notifications?${params.toString()}`);
+  }
+
+  async getNotification(notificationId: string) {
+    return this.makeRequest(`/api-router/notifications/${encodeURIComponent(notificationId)}`);
   }
 
   async createNotification(userId: string, title: string, message: string, type?: string, data?: any) {
@@ -144,10 +236,31 @@ class ApiClient {
     });
   }
 
-  async markNotificationAsRead(notificationId: string, read = true) {
+  async updateNotification(notificationId: string, updateData: any) {
     return this.makeRequest('/api-router/notifications', {
       method: 'PUT',
+      body: JSON.stringify({ notificationId, ...updateData }),
+    });
+  }
+
+  async deleteNotification(notificationId: string) {
+    return this.makeRequest('/api-router/notifications', {
+      method: 'DELETE',
+      body: JSON.stringify({ notificationId }),
+    });
+  }
+
+  async markNotificationAsRead(notificationId: string, read = true) {
+    return this.makeRequest('/api-router/notifications/read', {
+      method: 'PUT',
       body: JSON.stringify({ notificationId, read }),
+    });
+  }
+
+  async markAllNotificationsAsRead(userId: string) {
+    return this.makeRequest('/api-router/notifications/read-all', {
+      method: 'PUT',
+      body: JSON.stringify({ userId }),
     });
   }
 
@@ -157,13 +270,27 @@ class ApiClient {
   }
 
   async getDiagnosis(diagnosisId: string) {
-    return this.makeRequest(`/api-router/diagnoses?diagnosisId=${encodeURIComponent(diagnosisId)}`);
+    return this.makeRequest(`/api-router/diagnoses/${encodeURIComponent(diagnosisId)}`);
   }
 
   async saveDiagnosis(userId: string, plantType: string, plantVariety: string, symptoms: string, imageUrl: string, diagnosisResult: any) {
     return this.makeRequest('/api-router/diagnoses', {
       method: 'POST',
       body: JSON.stringify({ userId, plantType, plantVariety, symptoms, imageUrl, diagnosisResult }),
+    });
+  }
+
+  async updateDiagnosisStatus(diagnosisId: string, status: string) {
+    return this.makeRequest('/api-router/diagnoses/status', {
+      method: 'PUT',
+      body: JSON.stringify({ diagnosisId, status }),
+    });
+  }
+
+  async deleteDiagnosisRecord(diagnosisId: string) {
+    return this.makeRequest('/api-router/diagnoses', {
+      method: 'DELETE',
+      body: JSON.stringify({ diagnosisId }),
     });
   }
 
@@ -174,6 +301,31 @@ class ApiClient {
     if (search) params.append('search', search);
     
     return this.makeRequest(`/api-router/products?${params.toString()}`);
+  }
+
+  async getProduct(productId: string) {
+    return this.makeRequest(`/api-router/products/${encodeURIComponent(productId)}`);
+  }
+
+  async createProduct(productData: any) {
+    return this.makeRequest('/api-router/products', {
+      method: 'POST',
+      body: JSON.stringify(productData),
+    });
+  }
+
+  async updateProduct(productId: string, updateData: any) {
+    return this.makeRequest('/api-router/products', {
+      method: 'PUT',
+      body: JSON.stringify({ productId, ...updateData }),
+    });
+  }
+
+  async deleteProduct(productId: string) {
+    return this.makeRequest('/api-router/products', {
+      method: 'DELETE',
+      body: JSON.stringify({ productId }),
+    });
   }
 
   // Orders APIs (Stripe)
@@ -195,6 +347,17 @@ class ApiClient {
     return this.makeRequest(`/api-router/orders?userId=${encodeURIComponent(userId)}`);
   }
 
+  async getOrder(orderId: string) {
+    return this.makeRequest(`/api-router/orders/${encodeURIComponent(orderId)}`);
+  }
+
+  async updateOrderStatus(orderId: string, status: string) {
+    return this.makeRequest('/api-router/orders/status', {
+      method: 'PUT',
+      body: JSON.stringify({ orderId, status }),
+    });
+  }
+
   // Library Articles APIs
   async getLibraryArticles(category?: string, search?: string) {
     const params = new URLSearchParams();
@@ -208,6 +371,82 @@ class ApiClient {
     return this.makeRequest(`/api-router/library/articles/${encodeURIComponent(articleId)}`);
   }
 
+  async createLibraryArticle(articleData: any) {
+    return this.makeRequest('/api-router/library/articles', {
+      method: 'POST',
+      body: JSON.stringify(articleData),
+    });
+  }
+
+  async updateLibraryArticle(articleId: string, updateData: any) {
+    return this.makeRequest('/api-router/library/articles', {
+      method: 'PUT',
+      body: JSON.stringify({ articleId, ...updateData }),
+    });
+  }
+
+  async deleteLibraryArticle(articleId: string) {
+    return this.makeRequest('/api-router/library/articles', {
+      method: 'DELETE',
+      body: JSON.stringify({ articleId }),
+    });
+  }
+
+  // User Session APIs
+  async createUserSession(userId: string, sessionData: any) {
+    return this.makeRequest('/api-router/sessions', {
+      method: 'POST',
+      body: JSON.stringify({ userId, ...sessionData }),
+    });
+  }
+
+  async getUserSessions(userId: string) {
+    return this.makeRequest(`/api-router/sessions?userId=${encodeURIComponent(userId)}`);
+  }
+
+  async updateUserSession(sessionId: string, updateData: any) {
+    return this.makeRequest('/api-router/sessions', {
+      method: 'PUT',
+      body: JSON.stringify({ sessionId, ...updateData }),
+    });
+  }
+
+  async deleteUserSession(sessionId: string) {
+    return this.makeRequest('/api-router/sessions', {
+      method: 'DELETE',
+      body: JSON.stringify({ sessionId }),
+    });
+  }
+
+  // Subscription APIs
+  async getSubscriptions(userId?: string) {
+    const params = new URLSearchParams();
+    if (userId) params.append('userId', userId);
+    
+    return this.makeRequest(`/api-router/subscriptions?${params.toString()}`);
+  }
+
+  async createSubscription(subscriptionData: any) {
+    return this.makeRequest('/api-router/subscriptions', {
+      method: 'POST',
+      body: JSON.stringify(subscriptionData),
+    });
+  }
+
+  async updateSubscription(subscriptionId: string, updateData: any) {
+    return this.makeRequest('/api-router/subscriptions', {
+      method: 'PUT',
+      body: JSON.stringify({ subscriptionId, ...updateData }),
+    });
+  }
+
+  async cancelSubscription(subscriptionId: string) {
+    return this.makeRequest('/api-router/subscriptions/cancel', {
+      method: 'PUT',
+      body: JSON.stringify({ subscriptionId }),
+    });
+  }
+
   // Avatar Upload API
   async uploadAvatar(file: File) {
     const formData = new FormData();
@@ -218,6 +457,62 @@ class ApiClient {
       body: formData,
       headers: {}, // Remove Content-Type to let browser set it for FormData
     });
+  }
+
+  // File Upload APIs
+  async uploadFile(file: File, category?: string) {
+    const formData = new FormData();
+    formData.append('file', file);
+    if (category) formData.append('category', category);
+    
+    return this.makeRequest('/api-router/upload', {
+      method: 'POST',
+      body: formData,
+      headers: {}, // Remove Content-Type to let browser set it for FormData
+    });
+  }
+
+  async deleteFile(fileUrl: string) {
+    return this.makeRequest('/api-router/upload', {
+      method: 'DELETE',
+      body: JSON.stringify({ fileUrl }),
+    });
+  }
+
+  // Health Check API
+  async healthCheck() {
+    return this.makeRequest('/api-router/health');
+  }
+
+  // Search APIs
+  async searchAll(query: string, filters?: any) {
+    const params = new URLSearchParams({ query });
+    if (filters) {
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value) params.append(key, String(value));
+      });
+    }
+    
+    return this.makeRequest(`/api-router/search?${params.toString()}`);
+  }
+
+  // Analytics APIs
+  async trackEvent(eventName: string, eventData: any, userId?: string) {
+    return this.makeRequest('/api-router/analytics/track', {
+      method: 'POST',
+      body: JSON.stringify({ eventName, eventData, userId }),
+    });
+  }
+
+  async getAnalytics(userId?: string, dateRange?: { start: string; end: string }) {
+    const params = new URLSearchParams();
+    if (userId) params.append('userId', userId);
+    if (dateRange) {
+      params.append('start', dateRange.start);
+      params.append('end', dateRange.end);
+    }
+    
+    return this.makeRequest(`/api-router/analytics?${params.toString()}`);
   }
 }
 
