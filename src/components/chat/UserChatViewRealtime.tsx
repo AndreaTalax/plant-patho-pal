@@ -5,6 +5,7 @@ import MessageList from './MessageList';
 import MessageInput from './MessageInput';
 import { ChatInitializer } from './user/ChatInitializer';
 import { DatabaseMessage } from '@/services/chat/types';
+import { Message } from './types';
 import { toast } from 'sonner';
 
 interface UserChatViewRealtimeProps {
@@ -47,17 +48,16 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
     });
   };
 
-  const formatMessagesForDisplay = (dbMessages: DatabaseMessage[]) => {
+  const formatMessagesForDisplay = (dbMessages: DatabaseMessage[]): Message[] => {
     return dbMessages.map(msg => ({
       id: msg.id,
-      sender: msg.sender_id === userId ? 'user' : 'expert',
+      sender: msg.sender_id === userId ? 'user' as const : 'expert' as const,
       text: msg.content || msg.text || '',
       time: new Date(msg.sent_at).toLocaleTimeString([], { 
         hour: '2-digit', 
         minute: '2-digit' 
       }),
-      imageUrl: msg.image_url || undefined,
-      metadata: msg.metadata
+      image_url: msg.image_url || undefined
     }));
   };
 
