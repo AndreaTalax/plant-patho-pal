@@ -1,115 +1,80 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { MARCO_NIGRO_ID } from '@/components/phytopathologist';
-import { toast } from 'sonner';
-import { ConsultationDataBuilder } from './consultationDataBuilder';
 import { MessageService } from './messageService';
 
 /**
- * Formatta i dati user e pianta come un testo leggibile per la chat.
+ * Formatta i dati di consultazione come messaggio leggibile per la chat
  */
-function formatConsultationChatMessage(plantData: any, userProfile: any) {
-  // Dati utente - sempre presenti e dettagliati
+function formatConsultationMessage(plantData: any, userProfile: any) {
   const firstName = userProfile?.firstName || "Non specificato";
   const lastName = userProfile?.lastName || "Non specificato";
   const email = userProfile?.email || "Non specificato";
   const birthDate = userProfile?.birthDate || "Non specificata";
   const birthPlace = userProfile?.birthPlace || "Non specificato";
 
-  // Dati pianta
   const plantName = plantData?.plantName || 'Specie da identificare';
   const environment = plantData?.environment || 'Da specificare';
   const sunExposure = plantData?.sunExposure || 'Da specificare';
   const wateringFrequency = plantData?.wateringFrequency || 'Da specificare';
   const symptoms = plantData?.symptoms || 'Da descrivere durante la consulenza';
 
-  // Componi messaggio strutturato con dati completi
   return [
-    "👤 **Dati personali del paziente:**",
+    "👤 **DATI PERSONALI DEL PAZIENTE:**",
     `• Nome completo: ${firstName} ${lastName}`,
     `• Email: ${email}`,
     `• Data di nascita: ${birthDate}`,
     `• Luogo di nascita: ${birthPlace}`,
     "",
-    "🌱 **Informazioni pianta in consulenza:**",
+    "🌱 **INFORMAZIONI PIANTA IN CONSULENZA:**",
     `• Nome/Tipo: ${plantName}`,
     `• Ambiente coltivazione: ${environment}`,
     `• Esposizione luce solare: ${sunExposure}`,
     `• Frequenza irrigazione: ${wateringFrequency}`,
     `• Sintomi osservati: ${symptoms}`,
     "",
-    "📋 **Note per l'esperto:**",
+    "📋 **NOTE PER L'ESPERTO:**",
     "Tutti i dati del paziente e della pianta sono stati inviati automaticamente.",
-    "Rispondere con diagnosi dettagliata e consigli di trattamento."
+    "Procedere con diagnosi e consigli di trattamento."
   ].join('\n');
-}
-
-interface PlantData {
-  symptoms?: string;
-  wateringFrequency?: string;
-  sunExposure?: string;
-  environment?: string;
-  plantName?: string;
-  imageUrl?: string;
-  aiDiagnosis?: any;
-  useAI?: boolean;
-  sendToExpert?: boolean;
-}
-
-interface UserProfile {
-  firstName?: string;
-  lastName?: string;
-  email?: string;
-  birthDate?: string;
-  birthPlace?: string;
 }
 
 export class ConsultationDataService {
   /**
-   * Invia automaticamente i dati completi di consultazione (utente + pianta) nella chat
+   * Invia automaticamente i dati completi di consultazione nella chat
    */
   static async sendInitialConsultationData(
     conversationId: string,
-    plantData: PlantData,
-    userProfile: UserProfile,
+    plantData: any,
+    userProfile: any,
     fromAIDiagnosis: boolean = false
   ): Promise<boolean> {
     try {
-      console.log('📤 Starting complete consultation data send...', {
+      console.log('📤 INVIO DATI CONSULTAZIONE - START:', {
         conversationId,
-        hasImage: !!plantData.imageUrl,
-        plantName: plantData.plantName,
-        userEmail: userProfile.email,
-        fromAIDiagnosis
+        userProfile: userProfile?.email,
+        plantData: plantData?.plantName,
+        hasImage: !!plantData?.imageUrl
       });
 
-      // Ottieni l'ID utente corrente
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        console.error('❌ User not authenticated');
+        console.error('❌ User non autenticato');
         return false;
       }
 
-      // Validazione dati utente - assicurati che siano sempre presenti
-      if (!userProfile.email && !userProfile.firstName) {
-        console.error('❌ Missing essential user data');
-        return false;
+      // Controlla se i dati sono già stati inviati
+      const alreadySent = await this.isConsultationDataSent(conversationId);
+      if (alreadySent) {
+        console.log('✅ Dati già inviati, skip');
+        return true;
       }
 
-      // Costruisci messaggio principale con dati utente COMPLETI
-      const mainMessage = formatConsultationChatMessage(plantData, userProfile);
-
-      console.log('📝 Sending complete consultation message with user data:', {
-        userDataIncluded: {
-          name: `${userProfile.firstName} ${userProfile.lastName}`,
-          email: userProfile.email,
-          birthInfo: `${userProfile.birthDate} - ${userProfile.birthPlace}`
-        },
-        messageLength: mainMessage.length
-      });
-
-      // Invia il messaggio principale con dati utente e pianta
-      const mainMessageSent = await MessageService.sendMessage(
+      // 1. INVIA MESSAGGIO PRINCIPALE con dati utente e pianta
+      const mainMessage = formatConsultationMessage(plantData, userProfile);
+      
+      console.log('📝 Invio messaggio principale con dati completi...');
+      const mainSuccess = await MessageService.sendMessage(
         conversationId,
         user.id,
         mainMessage,
@@ -118,52 +83,41 @@ export class ConsultationDataService {
           autoSent: true,
           fromAIDiagnosis,
           consultationType: fromAIDiagnosis ? 'ai_diagnosis_review' : 'direct_consultation',
-          userData: {
-            firstName: userProfile.firstName,
-            lastName: userProfile.lastName,
-            email: userProfile.email,
-            birthDate: userProfile.birthDate,
-            birthPlace: userProfile.birthPlace
-          },
-          plantData: {
-            plantName: plantData.plantName,
-            environment: plantData.environment,
-            symptoms: plantData.symptoms
-          }
+          userData: userProfile,
+          plantData: plantData
         }
       );
 
-      if (!mainMessageSent) {
-        console.error('❌ Error sending main consultation message');
+      if (!mainSuccess) {
+        console.error('❌ Errore invio messaggio principale');
         return false;
       }
 
-      // Invia l'immagine come messaggio separato se disponibile
-      if (plantData.imageUrl) {
-        console.log('📸 Sending plant image as separate message...');
+      // 2. INVIA IMMAGINE come messaggio separato se disponibile
+      if (plantData?.imageUrl) {
+        console.log('📸 Invio immagine della pianta...');
         
-        const imageCaptionMessage = '📸 Foto della pianta in consulenza:';
+        // Prima invia un messaggio che descrive l'immagine
         await MessageService.sendMessage(
           conversationId,
           user.id,
-          imageCaptionMessage,
+          '📸 **FOTO DELLA PIANTA IN CONSULENZA:**',
           {
             type: 'image_caption',
             autoSent: true,
-            isPlantImage: true,
-            timestamp: new Date().toISOString()
+            isPlantImage: true
           }
         );
         
-        // Invio dell'immagine vera e propria
+        // Poi invia l'immagine vera e propria
         await MessageService.sendImageMessage(conversationId, user.id, plantData.imageUrl);
       }
 
-      console.log('✅ Complete consultation data (user + plant) sent successfully');
+      console.log('✅ INVIO DATI CONSULTAZIONE - COMPLETATO');
       return true;
 
     } catch (error) {
-      console.error('❌ Error sending complete consultation data:', error);
+      console.error('❌ ERRORE INVIO DATI CONSULTAZIONE:', error);
       return false;
     }
   }
