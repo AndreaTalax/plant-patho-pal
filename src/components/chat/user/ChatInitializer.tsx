@@ -56,35 +56,30 @@ export const ChatInitializer: React.FC<ChatInitializerProps> = ({
 
   useEffect(() => {
     const sendInitialData = async () => {
-      // Condizioni per l'invio dei dati
+      // Condizioni per l'invio dei dati - FORZIAMO L'INVIO AUTOMATICO
       if (
         !activeChat ||
         activeChat !== 'expert' ||
         !currentConversationId ||
-        !userProfile ||
-        autoDataSent
+        !userProfile
       ) {
         console.log('[CHAT-INIT 🚫] Condizioni non soddisfatte:', {
           activeChat,
           currentConversationId: !!currentConversationId,
-          userProfile: !!userProfile,
-          autoDataSent
+          userProfile: !!userProfile
         });
         return;
       }
 
+      // Se i dati sono già stati inviati, non inviarli di nuovo
+      if (autoDataSent) {
+        console.log('[CHAT-INIT ✅] Dati già inviati, skip');
+        return;
+      }
+
       try {
-        console.log('[CHAT-INIT ✉️] Controllo invio dati automatico...');
+        console.log('[CHAT-INIT ✉️] Avvio invio dati automatico...');
         
-        // Verifica se i dati sono già stati inviati
-        const alreadySent = await ConsultationDataService.isConsultationDataSent(currentConversationId);
-
-        if (alreadySent) {
-          console.log('[CHAT-INIT ✅] Dati già inviati, nessuna azione necessaria');
-          setAutoDataSent(true);
-          return;
-        }
-
         // Assicurati che i dati utente siano completi nel contesto
         const userData = await ensureUserDataInContext();
         
@@ -138,6 +133,7 @@ export const ChatInitializer: React.FC<ChatInitializerProps> = ({
             duration: 5000,
           });
         } else {
+          console.warn('[CHAT-INIT ⚠️] Invio dati automatico fallito, ma non bloccante');
           toast({
             title: 'Attenzione: dati automatici non inviati completamente',
             description: 'Alcuni dati potrebbero non essere stati inviati, riprova tra poco',
@@ -147,7 +143,6 @@ export const ChatInitializer: React.FC<ChatInitializerProps> = ({
         }
 
       } catch (error) {
-        setAutoDataSent(false);
         console.error('[CHAT-INIT ❌]', error);
         toast({
           title: 'Errore nell\'invio automatico dei dati',
@@ -164,7 +159,8 @@ export const ChatInitializer: React.FC<ChatInitializerProps> = ({
       currentConversationId &&
       userProfile
     ) {
-      const timer = setTimeout(sendInitialData, 1500);
+      console.log('[CHAT-INIT 🚀] Avviando timer per invio automatico dati...');
+      const timer = setTimeout(sendInitialData, 2000); // Aumentato a 2 secondi
       return () => clearTimeout(timer);
     }
   }, [

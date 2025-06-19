@@ -48,17 +48,41 @@ serve(async (req) => {
       throw new Error("Missing required fields: conversationId, recipientId, text");
     }
 
-    // Verify user has access to this conversation
-    const { data: conversation, error: conversationError } = await supabaseClient
+    // Verify user has access to this conversation OR create one if it doesn't exist
+    let { data: conversation, error: conversationError } = await supabaseClient
       .from('conversations')
       .select('*')
       .eq('id', conversationId)
       .or(`user_id.eq.${user.id},expert_id.eq.${user.id}`)
-      .single();
+      .maybeSingle();
 
-    if (conversationError || !conversation) {
-      console.error("❌ Conversation access error:", conversationError);
-      throw new Error("Conversation not found or access denied");
+    if (conversationError && conversationError.code !== 'PGRST116') {
+      console.error("❌ Conversation query error:", conversationError);
+      throw new Error("Error checking conversation access");
+    }
+
+    // If conversation doesn't exist, create it
+    if (!conversation) {
+      console.log("🆕 Creating new conversation as it doesn't exist");
+      const { data: newConversation, error: createError } = await supabaseClient
+        .from('conversations')
+        .insert({
+          id: conversationId,
+          user_id: user.id === MARCO_NIGRO_ID ? recipientId : user.id,
+          expert_id: MARCO_NIGRO_ID,
+          status: 'active',
+          title: 'Consulenza esperto'
+        })
+        .select()
+        .single();
+
+      if (createError) {
+        console.error("❌ Error creating conversation:", createError);
+        throw new Error("Failed to create conversation");
+      }
+      
+      conversation = newConversation;
+      console.log("✅ New conversation created:", conversation.id);
     }
 
     console.log("✅ Conversation access verified");
