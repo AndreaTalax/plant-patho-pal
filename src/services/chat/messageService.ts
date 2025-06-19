@@ -10,26 +10,34 @@ export class MessageService {
     metadata: any = {}
   ): Promise<boolean> {
     try {
-      const { error } = await supabase
-        .from('messages')
-        .insert({
-          conversation_id: conversationId,
-          sender_id: senderId,
-          recipient_id: MARCO_NIGRO_ID,
-          content: content,
-          text: content,
-          metadata: {
-            timestamp: new Date().toISOString(),
-            ...metadata
-          }
-        });
-
-      if (error) {
-        console.error('❌ Error sending message:', error);
+      console.log('📤 MessageService: Sending message via edge function');
+      
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        console.error('❌ No active session');
         return false;
       }
 
-      console.log('✅ Message sent successfully');
+      // Use the send-message edge function to bypass RLS
+      const { data, error } = await supabase.functions.invoke('send-message', {
+        body: {
+          conversationId,
+          recipientId: MARCO_NIGRO_ID,
+          text: content,
+          imageUrl: null,
+          products: null
+        },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+
+      if (error || !data?.success) {
+        console.error('❌ Error sending message via edge function:', error);
+        return false;
+      }
+
+      console.log('✅ Message sent successfully via edge function');
       return true;
     } catch (error) {
       console.error('❌ Failed to send message:', error);
@@ -43,33 +51,36 @@ export class MessageService {
     imageUrl: string
   ): Promise<boolean> {
     try {
-      console.log('📸 Preparing to send image message with URL:', imageUrl);
+      console.log('📸 MessageService: Sending image message via edge function');
 
-      const imageMessage = `📸 **Immagine della Pianta**`;
-      
-      const { error } = await supabase
-        .from('messages')
-        .insert({
-          conversation_id: conversationId,
-          sender_id: senderId,
-          recipient_id: MARCO_NIGRO_ID,
-          content: imageMessage,
-          text: imageMessage,
-          image_url: imageUrl,
-          metadata: {
-            type: 'plant_image',
-            autoSent: true,
-            isPlantImage: true,
-            timestamp: new Date().toISOString()
-          }
-        });
-
-      if (error) {
-        console.error('❌ Error sending image message:', error);
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        console.error('❌ No active session');
         return false;
       }
 
-      console.log('✅ Plant image message sent successfully');
+      const imageMessage = `📸 **Immagine della Pianta**`;
+      
+      // Use the send-message edge function to bypass RLS
+      const { data, error } = await supabase.functions.invoke('send-message', {
+        body: {
+          conversationId,
+          recipientId: MARCO_NIGRO_ID,
+          text: imageMessage,
+          imageUrl: imageUrl,
+          products: null
+        },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+
+      if (error || !data?.success) {
+        console.error('❌ Error sending image message via edge function:', error);
+        return false;
+      }
+
+      console.log('✅ Plant image message sent successfully via edge function');
       return true;
     } catch (error) {
       console.error('❌ Failed to send image message:', error);

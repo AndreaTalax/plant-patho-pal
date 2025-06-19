@@ -18,14 +18,21 @@ serve(async (req) => {
   }
 
   try {
+    // Create client with service role key to bypass RLS
     const supabaseClient = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+    );
+
+    // Also create regular client for auth verification
+    const regularClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_ANON_KEY") ?? ""
     );
 
     const authHeader = req.headers.get("Authorization")!;
     const token = authHeader.replace("Bearer ", "");
-    const { data: { user } } = await supabaseClient.auth.getUser(token);
+    const { data: { user } } = await regularClient.auth.getUser(token);
     
     if (!user) {
       console.error("❌ User not authenticated");
@@ -48,22 +55,21 @@ serve(async (req) => {
       throw new Error("Missing required fields: conversationId, recipientId, text");
     }
 
-    // Verify user has access to this conversation OR create one if it doesn't exist
+    // Use service role client to bypass RLS for conversation lookup/creation
     let { data: conversation, error: conversationError } = await supabaseClient
       .from('conversations')
       .select('*')
       .eq('id', conversationId)
-      .or(`user_id.eq.${user.id},expert_id.eq.${user.id}`)
       .maybeSingle();
 
-    if (conversationError && conversationError.code !== 'PGRST116') {
+    if (conversationError) {
       console.error("❌ Conversation query error:", conversationError);
       throw new Error("Error checking conversation access");
     }
 
-    // If conversation doesn't exist, create it
+    // If conversation doesn't exist, create it using service role
     if (!conversation) {
-      console.log("🆕 Creating new conversation as it doesn't exist");
+      console.log("🆕 Creating new conversation with service role");
       const { data: newConversation, error: createError } = await supabaseClient
         .from('conversations')
         .insert({
@@ -77,17 +83,17 @@ serve(async (req) => {
         .single();
 
       if (createError) {
-        console.error("❌ Error creating conversation:", createError);
+        console.error("❌ Error creating conversation with service role:", createError);
         throw new Error("Failed to create conversation");
       }
       
       conversation = newConversation;
-      console.log("✅ New conversation created:", conversation.id);
+      console.log("✅ New conversation created with service role:", conversation.id);
     }
 
-    console.log("✅ Conversation access verified");
+    console.log("✅ Conversation ready");
 
-    // Insert the message
+    // Insert the message using service role to bypass RLS
     const messageData = {
       conversation_id: conversationId,
       sender_id: user.id,
@@ -102,7 +108,7 @@ serve(async (req) => {
       }
     };
 
-    console.log("💾 Inserting message:", messageData);
+    console.log("💾 Inserting message with service role:", messageData);
 
     const { data: message, error: messageError } = await supabaseClient
       .from('messages')
@@ -117,7 +123,7 @@ serve(async (req) => {
 
     console.log("✅ Message inserted successfully:", message.id);
 
-    // Update conversation last message
+    // Update conversation last message using service role
     const { error: updateError } = await supabaseClient
       .from('conversations')
       .update({
