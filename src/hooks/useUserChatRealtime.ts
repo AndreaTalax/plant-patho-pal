@@ -14,7 +14,7 @@ export const useUserChatRealtime = (userId: string) => {
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
   const [isConnected, setIsConnected] = useState(false);
 
-  // Caricamento messaggi ottimizzato
+  // Caricamento messaggi ottimizzato con migliore gestione errori
   const loadMessages = useCallback(async (conversationId: string) => {
     if (!conversationId) return;
     
@@ -29,6 +29,7 @@ export const useUserChatRealtime = (userId: string) => {
 
       if (error) {
         console.error('❌ Errore caricamento messaggi:', error);
+        toast.error('Errore nel caricamento dei messaggi');
         return;
       }
 
@@ -37,10 +38,11 @@ export const useUserChatRealtime = (userId: string) => {
       
     } catch (error) {
       console.error('❌ Errore caricamento messaggi:', error);
+      toast.error('Errore nel caricamento dei messaggi');
     }
   }, []);
 
-  // Setup real-time subscription ottimizzato
+  // Setup real-time subscription con gestione errori migliorata
   useEffect(() => {
     if (!currentConversationId || !userId) return;
 
@@ -86,6 +88,11 @@ export const useUserChatRealtime = (userId: string) => {
       .subscribe((status) => {
         console.log('🔗 Stato subscription:', status);
         setIsConnected(status === 'SUBSCRIBED');
+        
+        if (status === 'CHANNEL_ERROR') {
+          console.error('❌ Errore connessione real-time');
+          toast.error('Errore di connessione real-time');
+        }
       });
 
     return () => {
@@ -105,15 +112,23 @@ export const useUserChatRealtime = (userId: string) => {
       console.log('🚀 Avvio chat veloce con esperto per utente:', userId);
       setActiveChat('expert');
       
-      // Trova o crea conversazione in modo ottimizzato
-      const conversation = await ConversationService.findOrCreateConversation(userId);
+      // Trova o crea conversazione con migliore gestione errori
+      let conversation;
+      try {
+        conversation = await ConversationService.findOrCreateConversation(userId);
+      } catch (error) {
+        console.error('❌ Errore nel servizio conversazione:', error);
+        toast.error('Errore nella creazione della conversazione');
+        setActiveChat(null);
+        return;
+      }
       
       if (conversation) {
         console.log('✅ Conversazione pronta:', conversation.id);
         setCurrentConversationId(conversation.id);
         
-        // Carica messaggi in parallelo
-        loadMessages(conversation.id);
+        // Carica messaggi
+        await loadMessages(conversation.id);
         
         toast.success('Chat avviata!', {
           description: 'Connessione con Marco Nigro stabilita',
@@ -149,6 +164,10 @@ export const useUserChatRealtime = (userId: string) => {
       
       if (success) {
         console.log('✅ Messaggio inviato con successo');
+        // Ricarica i messaggi dopo un breve delay
+        setTimeout(() => {
+          loadMessages(currentConversationId);
+        }, 500);
       } else {
         throw new Error('Errore invio messaggio');
       }
@@ -159,7 +178,7 @@ export const useUserChatRealtime = (userId: string) => {
     } finally {
       setIsSending(false);
     }
-  }, [currentConversationId, userId]);
+  }, [currentConversationId, userId, loadMessages]);
 
   // Pulizia al cambio utente
   useEffect(() => {
