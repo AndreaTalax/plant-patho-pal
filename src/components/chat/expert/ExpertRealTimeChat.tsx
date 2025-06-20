@@ -22,6 +22,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import { ConversationService } from '@/services/chat/conversationService';
 
 interface ConversationListItem {
   id: string;

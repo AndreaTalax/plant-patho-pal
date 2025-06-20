@@ -24,6 +24,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import ConsultationCard from './ConsultationCard';
 import ConversationCard from './ConversationCard';
+import { ConversationService } from '@/services/chat/conversationService';
 
 interface Consultation {
   id: string;
