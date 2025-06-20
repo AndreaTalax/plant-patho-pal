@@ -129,55 +129,47 @@ export const ExpertRealTimeChat: React.FC = () => {
     }
   };
 
-  // Funzione per eliminare conversazione
+  // Funzione per eliminare conversazione CON ELIMINAZIONE FORZATA
   const handleDeleteConversation = async (conversationId: string) => {
     try {
       setDeletingConversation(conversationId);
-      console.log('🗑️ Starting conversation deletion for ID:', conversationId);
+      console.log('🗑️ ExpertRealTimeChat: Inizio eliminazione FORZATA:', conversationId);
       
-      // First, immediately remove the conversation from local state for instant UI feedback
+      // RIMUOVI IMMEDIATAMENTE dalla UI
       setConversations(prevConversations => 
         prevConversations.filter(conv => conv.id !== conversationId)
       );
       
-      // If the conversation being deleted is currently selected, deselect it
+      // Se la conversazione eliminata era selezionata, deseleziona
       if (selectedConversationId === conversationId) {
         console.log('🔄 Deselecting deleted conversation');
         setSelectedConversationId(null);
       }
       
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        toast.error('Sessione scaduta');
-        // Restore conversation if API call couldn't be made
+      // Usa il servizio per l'eliminazione forzata
+      const success = await ConversationService.deleteConversation(conversationId);
+
+      if (success) {
+        console.log('✅ ExpertRealTimeChat: Conversazione eliminata con successo');
+        toast.success('Conversazione eliminata con successo');
+        
+        // Forza refresh dopo breve delay
+        setTimeout(() => {
+          loadConversations();
+        }, 1000);
+      } else {
+        console.error('❌ ExpertRealTimeChat: Fallimento eliminazione');
+        toast.error('Errore durante l\'eliminazione della conversazione');
+        
+        // Ripristina la lista in caso di errore
         await loadConversations();
-        return;
       }
-
-      const response = await supabase.functions.invoke('delete-conversation', {
-        body: { conversationId },
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      });
-
-      console.log('🔄 Delete conversation response:', response);
-
-      if (response.error) {
-        throw new Error(response.error.message || 'Errore durante l\'eliminazione');
-      }
-
-      toast.success('Conversazione eliminata con successo');
-      console.log('✅ Conversation deleted successfully');
-      
-      // Force refresh data after successful deletion
-      setTimeout(() => loadConversations(), 500);
 
     } catch (error: any) {
-      console.error('❌ Error deleting conversation:', error);
+      console.error('❌ ExpertRealTimeChat: Errore eliminazione conversazione:', error);
       toast.error(error.message || 'Errore durante l\'eliminazione della conversazione');
       
-      // Restore state by reloading data if deletion failed
+      // Ripristina la lista in caso di errore
       await loadConversations();
     } finally {
       setDeletingConversation(null);

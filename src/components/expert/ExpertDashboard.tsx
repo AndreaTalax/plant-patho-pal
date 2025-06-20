@@ -233,34 +233,45 @@ const ExpertDashboard = () => {
   const handleDeleteConversation = async (conversationId: string) => {
     try {
       setDeletingConsultation(conversationId);
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        toast.error('Sessione scaduta');
-        return;
-      }
-
-      const response = await supabase.functions.invoke('delete-conversation', {
-        body: { conversationId },
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      });
-
-      if (response.error) {
-        throw new Error(response.error.message || 'Errore durante l\'eliminazione');
-      }
-
-      await loadExpertData();
       
-      // Se la conversazione eliminata era quella selezionata, deseleziona
+      console.log('🗑️ Dashboard: Inizio eliminazione FORZATA conversazione', conversationId);
+      
+      // RIMUOVI IMMEDIATAMENTE dalla UI per feedback istantaneo
+      setConversations(prevConversations => 
+        prevConversations.filter(conv => conv.id !== conversationId)
+      );
+      
+      // Se è la conversazione selezionata, deseleziona
       if (selectedConversation?.id === conversationId) {
         setSelectedConversation(null);
       }
       
-      toast.success('Conversazione eliminata con successo');
+      // Usa il metodo forzato del ConversationService
+      const success = await ConversationService.deleteConversation(conversationId);
+      
+      if (success) {
+        console.log('✅ Dashboard: Conversazione eliminata con successo');
+        toast.success('Conversazione eliminata con successo');
+        
+        // Forza un refresh completo dopo 500ms
+        setTimeout(async () => {
+          console.log('🔄 Dashboard: Refresh forzato post-eliminazione');
+          await loadExpertData(true);
+        }, 500);
+        
+      } else {
+        console.error('❌ Dashboard: Fallimento eliminazione, ripristino UI');
+        // Se fallisce, ricarica tutto
+        await loadExpertData();
+        toast.error('Errore durante l\'eliminazione della conversazione');
+      }
+      
     } catch (error: any) {
-      console.error('Error deleting conversation:', error);
+      console.error('❌ Dashboard: Errore eliminazione conversazione', error);
       toast.error(error.message || 'Errore durante l\'eliminazione della conversazione');
+      
+      // Ricarica in caso di errore
+      await loadExpertData();
     } finally {
       setDeletingConsultation(null);
     }
