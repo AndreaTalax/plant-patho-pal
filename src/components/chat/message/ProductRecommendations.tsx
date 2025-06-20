@@ -1,10 +1,5 @@
 
-interface Product {
-  name: string;
-  description?: string;
-  price?: string;
-  image?: string;
-}
+import { Product } from '../types';
 
 interface ProductRecommendationsProps {
   products: Product[];
@@ -36,7 +31,7 @@ export const ProductRecommendations = ({ products }: ProductRecommendationsProps
                   </p>
                 )}
                 {product.price && (
-                  <p className="text-sm font-bold mt-1">€{product.price}</p>
+                  <p className="text-sm font-bold mt-1">€{product.price.toFixed(2)}</p>
                 )}
               </div>
             </div>
