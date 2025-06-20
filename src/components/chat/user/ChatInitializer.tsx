@@ -20,31 +20,38 @@ export const ChatInitializer: React.FC<ChatInitializerProps> = ({
 }) => {
   const { plantInfo } = usePlantInfo();
   const { userProfile } = useAuth();
-  const [forceAttempts, setForceAttempts] = useState(0);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
     const sendInitialData = async () => {
-      // Condizioni per l'invio dei dati - SEMPRE quando c'è una chat attiva
+      // Condizioni per l'invio dei dati - ottimizzate
       if (
         !activeChat ||
         activeChat !== 'expert' ||
         !currentConversationId ||
-        !userProfile
+        !userProfile ||
+        autoDataSent ||
+        isProcessing
       ) {
-        console.log('[CHAT-INIT] ❌ Condizioni base non soddisfatte');
         return;
       }
 
-      // Se dati già inviati e non dobbiamo forzare, skip
-      if (autoDataSent && forceAttempts === 0) {
-        console.log('[CHAT-INIT] ✅ Dati già inviati');
-        return;
-      }
+      setIsProcessing(true);
 
       try {
-        console.log('[CHAT-INIT] 🚀 FORZA invio automatico dati di consultazione...');
+        console.log('[CHAT-INIT] 🚀 Invio rapido dati di consultazione...');
         
-        // Prepara SEMPRE i dati utente completi
+        // Verifica veloce se i dati sono già stati inviati
+        const alreadySent = await ConsultationDataService.isConsultationDataSent(currentConversationId);
+        
+        if (alreadySent) {
+          console.log('[CHAT-INIT] ✅ Dati già presenti, skip invio');
+          setAutoDataSent(true);
+          setIsProcessing(false);
+          return;
+        }
+
+        // Prepara i dati utente
         const userData = {
           firstName: userProfile.first_name || userProfile.firstName || 'Non specificato',
           lastName: userProfile.last_name || userProfile.lastName || 'Non specificato',
@@ -53,7 +60,7 @@ export const ChatInitializer: React.FC<ChatInitializerProps> = ({
           birthPlace: userProfile.birth_place || userProfile.birthPlace || 'Non specificato'
         };
 
-        // Prepara SEMPRE i dati della pianta (anche se parziali)
+        // Prepara i dati della pianta
         const plantData = {
           symptoms: plantInfo?.symptoms || 'Da descrivere durante la consulenza',
           wateringFrequency: plantInfo?.wateringFrequency || 'Da specificare',
@@ -66,17 +73,9 @@ export const ChatInitializer: React.FC<ChatInitializerProps> = ({
           sendToExpert: plantInfo?.sendToExpert || false
         };
 
-        console.log('[CHAT-INIT] 📤 FORZA invio dati completi:', { userData, plantData, forceAttempts });
+        console.log('[CHAT-INIT] 📤 Invio dati ottimizzato...');
 
-        // Verifica se i dati sono già stati inviati (solo se non stiamo forzando)
-        if (forceAttempts === 0) {
-          const alreadySent = await ConsultationDataService.isConsultationDataSent(currentConversationId);
-          if (alreadySent) {
-            console.log('[CHAT-INIT] ⚠️ Dati già presenti, ma forzeremo comunque l\'invio');
-          }
-        }
-
-        // FORZA l'invio automatico dei dati completi SEMPRE
+        // Invio ottimizzato dei dati
         const success = await ConsultationDataService.sendInitialConsultationData(
           currentConversationId,
           plantData,
@@ -86,47 +85,28 @@ export const ChatInitializer: React.FC<ChatInitializerProps> = ({
 
         if (success) {
           setAutoDataSent(true);
-          setForceAttempts(0); // Reset tentativi
-          toast.success('✅ Dati personali e della pianta inviati automaticamente!', {
-            description: `Marco Nigro ha ricevuto: dati personali completi${plantData.imageUrl ? ', informazioni pianta e foto' : ' e informazioni pianta'}`,
-            duration: 6000,
+          toast.success('✅ Dati inviati automaticamente!', {
+            description: `Marco Nigro ha ricevuto i tuoi dati${plantData.imageUrl ? ' e la foto' : ''}`,
+            duration: 4000,
           });
-          console.log('[CHAT-INIT] ✅ SUCCESSO: Dati inviati con successo');
+          console.log('[CHAT-INIT] ✅ Invio completato con successo');
         } else {
-          console.error('[CHAT-INIT] ❌ ERRORE: Invio fallito');
-          
-          // Retry automatico fino a 2 volte
-          if (forceAttempts < 2) {
-            setTimeout(() => {
-              console.log('[CHAT-INIT] 🔄 Tentativo automatico di retry...');
-              setForceAttempts(prev => prev + 1);
-            }, 3000);
-          } else {
-            toast.error('❌ Errore nell\'invio automatico dei dati dopo 3 tentativi');
-            setForceAttempts(0);
-          }
+          console.error('[CHAT-INIT] ❌ Invio fallito');
+          toast.error('❌ Errore nell\'invio automatico dei dati');
         }
 
       } catch (error) {
-        console.error('[CHAT-INIT] ❌ EXCEPTION:', error);
-        
-        // Retry automatico su eccezione
-        if (forceAttempts < 2) {
-          setTimeout(() => {
-            console.log('[CHAT-INIT] 🔄 Retry dopo eccezione...');
-            setForceAttempts(prev => prev + 1);
-          }, 3000);
-        } else {
-          toast.error('❌ Errore nell\'invio automatico dei dati');
-          setForceAttempts(0);
-        }
+        console.error('[CHAT-INIT] ❌ ERRORE:', error);
+        toast.error('❌ Errore nell\'invio automatico dei dati');
+      } finally {
+        setIsProcessing(false);
       }
     };
 
-    // Avvia l'invio con un breve delay per permettere il caricamento
-    if (activeChat === 'expert' && currentConversationId && userProfile) {
-      console.log('[CHAT-INIT] 🕐 Programmazione invio automatico forzato...');
-      const timer = setTimeout(sendInitialData, 2000); // Delay più lungo per sicurezza
+    // Avvia l'invio immediato se necessario
+    if (activeChat === 'expert' && currentConversationId && userProfile && !autoDataSent && !isProcessing) {
+      console.log('[CHAT-INIT] 🕐 Avvio invio automatico immediato...');
+      const timer = setTimeout(sendInitialData, 500); // Ridotto a 500ms
       return () => clearTimeout(timer);
     }
   }, [
@@ -136,7 +116,7 @@ export const ChatInitializer: React.FC<ChatInitializerProps> = ({
     autoDataSent,
     setAutoDataSent,
     plantInfo,
-    forceAttempts
+    isProcessing
   ]);
 
   return null; // Componente solo logico

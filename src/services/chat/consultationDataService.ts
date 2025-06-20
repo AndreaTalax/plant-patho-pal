@@ -41,7 +41,7 @@ function formatConsultationMessage(plantData: any, userProfile: any) {
 
 export class ConsultationDataService {
   /**
-   * Invia automaticamente i dati completi di consultazione nella chat
+   * Invia automaticamente i dati completi di consultazione nella chat - VERSIONE OTTIMIZZATA
    */
   static async sendInitialConsultationData(
     conversationId: string,
@@ -50,7 +50,7 @@ export class ConsultationDataService {
     fromAIDiagnosis: boolean = false
   ): Promise<boolean> {
     try {
-      console.log('📤 INVIO DATI CONSULTAZIONE - FORZA START:', {
+      console.log('📤 INVIO DATI CONSULTAZIONE - INIZIO OTTIMIZZATO:', {
         conversationId,
         userProfile: userProfile?.email,
         plantData: plantData?.plantName,
@@ -64,86 +64,71 @@ export class ConsultationDataService {
         return false;
       }
 
-      // NON controllare se già inviati - FORZA l'invio sempre
-      console.log('🔄 FORZA invio senza controlli precedenti');
-
-      // 1. INVIA MESSAGGIO PRINCIPALE con dati utente e pianta
-      const mainMessage = formatConsultationMessage(plantData, userProfile);
-      
-      console.log('📝 FORZA invio messaggio principale con dati completi...');
-      
-      // Usa la send-message edge function per bypassare RLS
+      // Ottieni la sessione una sola volta
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         console.error('❌ No active session');
         return false;
       }
 
-      const { data, error } = await supabase.functions.invoke('send-message', {
-        body: {
-          conversationId,
-          recipientId: MARCO_NIGRO_ID,
-          text: mainMessage,
-          imageUrl: null,
-          products: null
-        },
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
+      // Prepara tutti i messaggi da inviare
+      const messages = [];
+      
+      // 1. Messaggio principale con dati
+      const mainMessage = formatConsultationMessage(plantData, userProfile);
+      messages.push({
+        conversationId,
+        recipientId: MARCO_NIGRO_ID,
+        text: mainMessage,
+        imageUrl: null,
+        products: null
       });
 
-      if (error || !data?.success) {
-        console.error('❌ Error sending consultation data via edge function:', error);
+      // 2. Se c'è un'immagine, aggiungi i messaggi dell'immagine
+      if (plantData?.imageUrl) {
+        messages.push({
+          conversationId,
+          recipientId: MARCO_NIGRO_ID,
+          text: '📸 **FOTO DELLA PIANTA IN CONSULENZA:**',
+          imageUrl: null,
+          products: null
+        });
+        
+        messages.push({
+          conversationId,
+          recipientId: MARCO_NIGRO_ID,
+          text: '📸 Immagine della pianta',
+          imageUrl: plantData.imageUrl,
+          products: null
+        });
+      }
+
+      // Invia tutti i messaggi in parallelo per velocizzare
+      console.log('📝 Invio messaggi in parallelo...');
+      
+      const sendPromises = messages.map(message => 
+        supabase.functions.invoke('send-message', {
+          body: message,
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+        })
+      );
+
+      const results = await Promise.allSettled(sendPromises);
+      
+      // Controlla se tutti i messaggi sono stati inviati con successo
+      const allSuccessful = results.every(result => 
+        result.status === 'fulfilled' && result.value?.data?.success
+      );
+
+      if (allSuccessful) {
+        console.log('✅ INVIO DATI CONSULTAZIONE - COMPLETATO CON SUCCESSO');
+        return true;
+      } else {
+        console.error('❌ Alcuni messaggi non sono stati inviati correttamente');
         return false;
       }
-
-      console.log('✅ Consultation data sent successfully via edge function');
-
-      // 2. INVIA IMMAGINE come messaggio separato se disponibile
-      if (plantData?.imageUrl) {
-        console.log('📸 FORZA invio immagine della pianta...');
-        
-        // Prima invia un messaggio che descrive l'immagine
-        const { data: captionData, error: captionError } = await supabase.functions.invoke('send-message', {
-          body: {
-            conversationId,
-            recipientId: MARCO_NIGRO_ID,
-            text: '📸 **FOTO DELLA PIANTA IN CONSULENZA:**',
-            imageUrl: null,
-            products: null
-          },
-          headers: {
-            Authorization: `Bearer ${session.access_token}`,
-          },
-        });
-
-        if (captionError) {
-          console.error('⚠️ Warning: Could not send image caption');
-        }
-        
-        // Poi invia l'immagine vera e propria
-        const { data: imageData, error: imageError } = await supabase.functions.invoke('send-message', {
-          body: {
-            conversationId,
-            recipientId: MARCO_NIGRO_ID,
-            text: '📸 Immagine della pianta',
-            imageUrl: plantData.imageUrl,
-            products: null
-          },
-          headers: {
-            Authorization: `Bearer ${session.access_token}`,
-          },
-        });
-
-        if (imageError) {
-          console.error('⚠️ Warning: Could not send plant image');
-        } else {
-          console.log('✅ Plant image sent successfully');
-        }
-      }
-
-      console.log('✅ INVIO DATI CONSULTAZIONE - COMPLETATO CON SUCCESSO');
-      return true;
 
     } catch (error) {
       console.error('❌ ERRORE CRITICO INVIO DATI CONSULTAZIONE:', error);
@@ -153,24 +138,25 @@ export class ConsultationDataService {
 
   static async isConsultationDataSent(conversationId: string): Promise<boolean> {
     try {
-      console.log('🔍 Checking if consultation data already sent for conversation:', conversationId);
+      console.log('🔍 Verifica rapida dati consultazione per:', conversationId);
       
       const { data: messages, error } = await supabase
         .from('messages')
-        .select('metadata, content')
+        .select('id')
         .eq('conversation_id', conversationId)
-        .ilike('content', '%DATI PERSONALI DEL PAZIENTE%');
+        .ilike('content', '%DATI PERSONALI DEL PAZIENTE%')
+        .limit(1);
 
       if (error) {
-        console.error('❌ Error checking consultation data:', error);
+        console.error('❌ Errore verifica dati consultazione:', error);
         return false;
       }
 
       const hasConsultationData = messages && messages.length > 0;
-      console.log('🔍 Consultation data already sent:', hasConsultationData);
+      console.log('🔍 Dati consultazione già inviati:', hasConsultationData);
       return hasConsultationData;
     } catch (error) {
-      console.error('❌ Error checking consultation data status:', error);
+      console.error('❌ Errore verifica stato dati consultazione:', error);
       return false;
     }
   }
