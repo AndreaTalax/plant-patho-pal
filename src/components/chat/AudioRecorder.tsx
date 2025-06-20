@@ -1,7 +1,7 @@
 
 import React, { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Send, X, Mic, Square } from "lucide-react";
+import { Send, X, Mic, Square, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from '@/integrations/supabase/client';
 
@@ -24,9 +24,38 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [audioURL, setAudioURL] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [permissionDenied, setPermissionDenied] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
+
+  const checkMicrophonePermission = async () => {
+    try {
+      const result = await navigator.permissions.query({ name: 'microphone' as PermissionName });
+      if (result.state === 'denied') {
+        setPermissionDenied(true);
+        return false;
+      }
+      return true;
+    } catch (error) {
+      console.warn('⚠️ Impossibile verificare permessi microfono:', error);
+      return true; // Procedi comunque con il tentativo
+    }
+  };
+
+  const requestMicrophonePermission = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach(track => track.stop()); // Ferma immediatamente
+      setPermissionDenied(false);
+      return true;
+    } catch (error) {
+      console.error('❌ Permesso microfono negato:', error);
+      setPermissionDenied(true);
+      toast.error('Permesso microfono negato. Abilita l\'accesso al microfono nelle impostazioni del browser.');
+      return false;
+    }
+  };
 
   const startRecording = async () => {
     if (!navigator.mediaDevices?.getUserMedia) {
@@ -34,9 +63,17 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({
       return;
     }
 
+    // Verifica permessi prima di procedere
+    const hasPermission = await checkMicrophonePermission();
+    if (!hasPermission) {
+      const granted = await requestMicrophonePermission();
+      if (!granted) return;
+    }
+
     try {
-      console.log('🎤 Avvio registrazione audio...');
+      console.log('🎤 Avvio registrazione audio ottimizzata...');
       setIsRecording(true);
+      setPermissionDenied(false);
       
       const stream = await navigator.mediaDevices.getUserMedia({ 
         audio: {
@@ -59,24 +96,19 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({
 
       mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
-          console.log('📦 Chunk audio ricevuto:', event.data.size, 'bytes');
           audioChunksRef.current.push(event.data);
         }
       };
 
       mediaRecorder.onstop = () => {
-        console.log('🔴 Registrazione terminata, creazione blob...');
+        console.log('🔴 Registrazione terminata');
         const blob = new Blob(audioChunksRef.current, { type: 'audio/webm;codecs=opus' });
-        console.log('✅ Blob creato:', blob.size, 'bytes');
         setAudioBlob(blob);
         setAudioURL(URL.createObjectURL(blob));
         
         // Cleanup stream
         if (streamRef.current) {
-          streamRef.current.getTracks().forEach(track => {
-            track.stop();
-            console.log('🛑 Track audio fermato');
-          });
+          streamRef.current.getTracks().forEach(track => track.stop());
           streamRef.current = null;
         }
       };
@@ -89,12 +121,18 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({
 
       mediaRecorder.start(100);
       console.log('✅ Registrazione avviata');
-      toast.success('Registrazione avviata');
+      toast.success('🎤 Registrazione avviata');
       
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Errore accesso microfono:', error);
       setIsRecording(false);
-      toast.error("Errore nell'accedere al microfono. Controlla i permessi.");
+      
+      if (error.name === 'NotAllowedError') {
+        setPermissionDenied(true);
+        toast.error('Permesso microfono negato. Clicca sull\'icona del microfono nella barra dell\'indirizzo per abilitarlo.');
+      } else {
+        toast.error("Errore nell'accedere al microfono. Verifica le impostazioni del browser.");
+      }
     }
   };
 
@@ -124,11 +162,10 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({
   const handleSendAudio = async () => {
     if (!audioBlob) return;
     
-    console.log('📤 Invio audio...', audioBlob.size, 'bytes');
+    console.log('📤 Invio audio veloce...', audioBlob.size, 'bytes');
     setIsProcessing(true);
     
     try {
-      // Se abbiamo i parametri della conversazione, usa la edge function
       if (conversationId && senderId && recipientId) {
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) {
@@ -152,15 +189,13 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({
           throw new Error(error?.message || 'Errore invio audio');
         }
 
-        console.log('✅ Audio inviato via edge function');
-        resetAudio();
-        toast.success('Messaggio vocale inviato!');
-      } else {
-        // Fallback al metodo originale
-        await onSendAudio(audioBlob);
         console.log('✅ Audio inviato con successo');
         resetAudio();
-        toast.success('Messaggio vocale inviato!');
+        toast.success('🎵 Messaggio vocale inviato!');
+      } else {
+        await onSendAudio(audioBlob);
+        resetAudio();
+        toast.success('🎵 Messaggio vocale inviato!');
       }
     } catch (error) {
       console.error('❌ Errore invio audio:', error);
@@ -177,6 +212,27 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({
       }
     };
   }, [audioURL]);
+
+  if (permissionDenied) {
+    return (
+      <div className="mb-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+        <div className="flex items-center gap-2 text-yellow-700">
+          <AlertCircle className="h-4 w-4" />
+          <span className="text-sm font-medium">Permesso microfono richiesto</span>
+        </div>
+        <p className="text-xs text-yellow-600 mt-1">
+          Per registrare messaggi vocali, abilita l'accesso al microfono nelle impostazioni del browser.
+        </p>
+        <Button 
+          onClick={requestMicrophonePermission}
+          size="sm"
+          className="mt-2 bg-yellow-600 hover:bg-yellow-700"
+        >
+          Richiedi Permesso
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="mb-2">

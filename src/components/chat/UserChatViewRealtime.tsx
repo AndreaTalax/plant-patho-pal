@@ -4,9 +4,11 @@ import { useUserChatRealtime } from '@/hooks/useUserChatRealtime';
 import MessageList from './MessageList';
 import MessageInput from './MessageInput';
 import { ChatInitializer } from './user/ChatInitializer';
+import { UserDataDisplay } from './user/UserDataDisplay';
 import { DatabaseMessage } from '@/services/chat/types';
 import { Message } from './types';
-import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
+import { ChevronDown, ChevronUp, Eye, EyeOff } from 'lucide-react';
 
 interface UserChatViewRealtimeProps {
   userId: string;
@@ -14,6 +16,7 @@ interface UserChatViewRealtimeProps {
 
 export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ userId }) => {
   const [autoDataSent, setAutoDataSent] = useState(false);
+  const [showUserData, setShowUserData] = useState(false);
   
   const {
     activeChat,
@@ -40,6 +43,16 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
       setAutoDataSent(false);
     }
   }, [currentConversationId]);
+
+  // Show user data automatically when data is sent
+  useEffect(() => {
+    if (autoDataSent) {
+      setShowUserData(true);
+      // Auto-hide after 10 seconds
+      const timer = setTimeout(() => setShowUserData(false), 10000);
+      return () => clearTimeout(timer);
+    }
+  }, [autoDataSent]);
 
   const formatMessagesForDisplay = (dbMessages: DatabaseMessage[]): Message[] => {
     return dbMessages.map(msg => ({
@@ -84,14 +97,28 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
               Fitopatologo - {isConnected ? 'Online' : 'Connessione...'}
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`} />
-            <span className="text-xs text-gray-500">
-              {isConnected ? 'Real-Time' : 'Disconnesso'}
-            </span>
+          <div className="flex items-center gap-3">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowUserData(!showUserData)}
+              className="flex items-center gap-2"
+            >
+              {showUserData ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              {showUserData ? 'Nascondi Dati' : 'Mostra Dati'}
+            </Button>
+            <div className="flex items-center gap-2">
+              <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`} />
+              <span className="text-xs text-gray-500">
+                {isConnected ? 'Real-Time' : 'Disconnesso'}
+              </span>
+            </div>
           </div>
         </div>
       </div>
+
+      {/* Visualizzazione Dati Utente/Pianta */}
+      <UserDataDisplay isVisible={showUserData} />
 
       {/* Lista Messaggi */}
       <div className="flex-1 overflow-hidden">

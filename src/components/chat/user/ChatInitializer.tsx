@@ -23,8 +23,8 @@ export const ChatInitializer: React.FC<ChatInitializerProps> = ({
   const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
-    const sendInitialData = async () => {
-      // Condizioni per l'invio dei dati - ottimizzate
+    const sendInitialDataFast = async () => {
+      // Condizioni ottimizzate per velocità
       if (
         !activeChat ||
         activeChat !== 'expert' ||
@@ -39,19 +39,22 @@ export const ChatInitializer: React.FC<ChatInitializerProps> = ({
       setIsProcessing(true);
 
       try {
-        console.log('[CHAT-INIT] 🚀 Invio rapido dati di consultazione...');
+        console.log('[CHAT-INIT] ⚡ Invio ULTRA-rapido dati...');
         
-        // Verifica veloce se i dati sono già stati inviati
-        const alreadySent = await ConsultationDataService.isConsultationDataSent(currentConversationId);
+        // Verifica super-veloce se già inviati (ridotto timeout)
+        const alreadySent = await Promise.race([
+          ConsultationDataService.isConsultationDataSent(currentConversationId),
+          new Promise(resolve => setTimeout(() => resolve(false), 800)) // Max 800ms
+        ]);
         
         if (alreadySent) {
-          console.log('[CHAT-INIT] ✅ Dati già presenti, skip invio');
+          console.log('[CHAT-INIT] ✅ Skip - Dati già presenti');
           setAutoDataSent(true);
           setIsProcessing(false);
           return;
         }
 
-        // Prepara i dati utente
+        // Preparazione dati ultra-veloce
         const userData = {
           firstName: userProfile.first_name || userProfile.firstName || 'Non specificato',
           lastName: userProfile.last_name || userProfile.lastName || 'Non specificato',
@@ -60,7 +63,6 @@ export const ChatInitializer: React.FC<ChatInitializerProps> = ({
           birthPlace: userProfile.birth_place || userProfile.birthPlace || 'Non specificato'
         };
 
-        // Prepara i dati della pianta
         const plantData = {
           symptoms: plantInfo?.symptoms || 'Da descrivere durante la consulenza',
           wateringFrequency: plantInfo?.wateringFrequency || 'Da specificare',
@@ -73,41 +75,47 @@ export const ChatInitializer: React.FC<ChatInitializerProps> = ({
           sendToExpert: plantInfo?.sendToExpert || false
         };
 
-        console.log('[CHAT-INIT] 📤 Invio dati ottimizzato...');
+        console.log('[CHAT-INIT] ⚡ Invio parallelo ULTRA-ottimizzato...');
 
-        // Invio ottimizzato dei dati
-        const success = await ConsultationDataService.sendInitialConsultationData(
+        // Invio ULTRA-ottimizzato (timeout ridotto)
+        const sendPromise = ConsultationDataService.sendInitialConsultationData(
           currentConversationId,
           plantData,
           userData,
           plantInfo?.useAI || false
         );
 
+        const success = await Promise.race([
+          sendPromise,
+          new Promise((resolve) => setTimeout(() => resolve(false), 3000)) // Max 3s
+        ]);
+
         if (success) {
           setAutoDataSent(true);
-          toast.success('✅ Dati inviati automaticamente!', {
-            description: `Marco Nigro ha ricevuto i tuoi dati${plantData.imageUrl ? ' e la foto' : ''}`,
-            duration: 4000,
+          toast.success('⚡ Dati inviati!', {
+            description: `Dati ${plantData.imageUrl ? 'e foto ' : ''}inviati a Marco Nigro`,
+            duration: 2000, // Ridotto
           });
-          console.log('[CHAT-INIT] ✅ Invio completato con successo');
+          console.log('[CHAT-INIT] ⚡ Invio ULTRA-veloce completato');
         } else {
-          console.error('[CHAT-INIT] ❌ Invio fallito');
-          toast.error('❌ Errore nell\'invio automatico dei dati');
+          console.warn('[CHAT-INIT] ⚠️ Invio timeout o fallito');
+          // Non mostrare errore per non bloccare l'utente
         }
 
       } catch (error) {
         console.error('[CHAT-INIT] ❌ ERRORE:', error);
-        toast.error('❌ Errore nell\'invio automatico dei dati');
+        // Errore silenzioso per non bloccare la chat
       } finally {
         setIsProcessing(false);
       }
     };
 
-    // Avvia l'invio immediato se necessario
+    // Avvio IMMEDIATO se tutte le condizioni sono OK
     if (activeChat === 'expert' && currentConversationId && userProfile && !autoDataSent && !isProcessing) {
-      console.log('[CHAT-INIT] 🕐 Avvio invio automatico immediato...');
-      const timer = setTimeout(sendInitialData, 500); // Ridotto a 500ms
-      return () => clearTimeout(timer);
+      console.log('[CHAT-INIT] ⚡ Avvio IMMEDIATO invio automatico...');
+      // Ridotto a 100ms per massima velocità
+      const ultraFastTimer = setTimeout(sendInitialDataFast, 100);
+      return () => clearTimeout(ultraFastTimer);
     }
   }, [
     activeChat,

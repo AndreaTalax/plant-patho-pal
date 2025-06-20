@@ -3,7 +3,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { useState } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { User, Bot, Volume2 } from 'lucide-react';
+import { User, Bot, Volume2, Download, ExternalLink } from 'lucide-react';
 import { Message } from './types';
 
 interface ChatMessageProps {
@@ -15,6 +15,7 @@ interface ChatMessageProps {
 
 const ChatMessage = ({ message, isExpertView = false, userAvatar, userName }: ChatMessageProps) => {
   const [imageError, setImageError] = useState(false);
+  const [imageLoading, setImageLoading] = useState(true);
   const isUser = message.sender === 'user';
   const isExpert = message.sender === 'expert';
 
@@ -23,10 +24,9 @@ const ChatMessage = ({ message, isExpertView = false, userAvatar, userName }: Ch
     sender: message.sender,
     text: message.text?.substring(0, 50),
     hasImage: !!message.image_url,
+    imageUrl: message.image_url,
     hasProducts: !!message.products,
-    isExpertView,
-    userAvatar,
-    userName
+    isExpertView
   });
 
   const getMessageAlignment = () => {
@@ -85,33 +85,64 @@ const ChatMessage = ({ message, isExpertView = false, userAvatar, userName }: Ch
     );
   };
 
-  // Verifica se il messaggio è audio
+  // Verifica se il messaggio è audio migliorata
   const isAudioMessage = message.text?.includes('🎵 Messaggio vocale') || 
                          message.text === '🎵 Messaggio vocale' ||
                          (message.image_url && (
                            message.image_url.includes('audio_') || 
                            message.image_url.includes('.webm') ||
                            message.image_url.includes('.mp3') ||
-                           message.image_url.includes('.wav')
+                           message.image_url.includes('.wav') ||
+                           message.image_url.includes('.m4a')
                          ));
+
+  const handleImageLoad = () => {
+    setImageLoading(false);
+    setImageError(false);
+  };
+
+  const handleImageError = () => {
+    setImageLoading(false);
+    setImageError(true);
+    console.error('❌ Errore caricamento immagine:', message.image_url);
+  };
+
+  const openImageInNewTab = () => {
+    if (message.image_url) {
+      window.open(message.image_url, '_blank');
+    }
+  };
 
   const renderMessageContent = () => {
     if (isAudioMessage && message.image_url) {
       return (
-        <div className="space-y-2">
-          <div className="flex items-center gap-2 text-sm">
+        <div className="space-y-3">
+          <div className="flex items-center gap-2 text-sm font-medium">
             <Volume2 className="h-4 w-4" />
             <span>Messaggio vocale</span>
           </div>
-          <audio 
-            controls 
-            className="w-full max-w-xs h-10"
-            preload="metadata"
-          >
-            <source src={message.image_url} type="audio/webm" />
-            <source src={message.image_url} type="audio/mpeg" />
-            Il tuo browser non supporta l'audio.
-          </audio>
+          <div className="bg-white/20 backdrop-blur-sm rounded-lg p-3 border border-white/30">
+            <audio 
+              controls 
+              className="w-full max-w-xs h-10"
+              preload="metadata"
+              controlsList="nodownload"
+            >
+              <source src={message.image_url} type="audio/webm" />
+              <source src={message.image_url} type="audio/mpeg" />
+              <source src={message.image_url} type="audio/wav" />
+              Il tuo browser non supporta l'audio.
+            </audio>
+            <div className="flex items-center gap-2 mt-2">
+              <button
+                onClick={() => window.open(message.image_url, '_blank')}
+                className="text-xs opacity-70 hover:opacity-100 flex items-center gap-1"
+              >
+                <Download className="h-3 w-3" />
+                Scarica
+              </button>
+            </div>
+          </div>
         </div>
       );
     }
@@ -125,26 +156,44 @@ const ChatMessage = ({ message, isExpertView = false, userAvatar, userName }: Ch
         )}
         
         {message.image_url && !isAudioMessage && (
-          <div className="mt-2">
+          <div className="mt-3">
+            {imageLoading && (
+              <div className="max-w-xs h-48 bg-gray-200 rounded-lg animate-pulse flex items-center justify-center">
+                <div className="text-gray-500 text-sm">Caricamento immagine...</div>
+              </div>
+            )}
+            
             {!imageError ? (
-              <img
-                src={message.image_url}
-                alt="Immagine condivisa"
-                className="max-w-xs rounded-lg shadow-sm cursor-pointer hover:shadow-md transition-shadow"
-                onError={() => setImageError(true)}
-                onClick={() => window.open(message.image_url, '_blank')}
-              />
+              <div className="relative group">
+                <img
+                  src={message.image_url}
+                  alt="Immagine condivisa"
+                  className={`max-w-xs rounded-lg shadow-md cursor-pointer hover:shadow-lg transition-all duration-200 ${imageLoading ? 'hidden' : 'block'}`}
+                  onLoad={handleImageLoad}
+                  onError={handleImageError}
+                  onClick={openImageInNewTab}
+                />
+                <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-lg flex items-center justify-center">
+                  <ExternalLink className="h-6 w-6 text-white" />
+                </div>
+              </div>
             ) : (
-              <div className="max-w-xs p-4 border-2 border-dashed border-gray-300 rounded-lg text-center text-gray-500">
-                <p className="text-sm">Impossibile caricare l'immagine</p>
-                <a 
-                  href={message.image_url} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="text-blue-500 hover:underline text-xs"
-                >
-                  Apri in una nuova scheda
-                </a>
+              <div className="max-w-xs p-4 border-2 border-dashed border-gray-300 rounded-lg text-center">
+                <div className="text-gray-500 mb-2">
+                  <span className="text-sm">Impossibile caricare l'immagine</span>
+                </div>
+                <div className="space-y-2">
+                  <button
+                    onClick={openImageInNewTab}
+                    className="text-blue-500 hover:underline text-xs flex items-center gap-1 mx-auto"
+                  >
+                    <ExternalLink className="h-3 w-3" />
+                    Apri in una nuova scheda
+                  </button>
+                  <div className="text-xs text-gray-400 break-all">
+                    {message.image_url?.substring(0, 50)}...
+                  </div>
+                </div>
               </div>
             )}
           </div>
