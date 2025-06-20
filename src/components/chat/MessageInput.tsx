@@ -1,4 +1,3 @@
-
 import { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -119,12 +118,12 @@ const MessageInput = ({
       if (onSendMessage) {
         if (imageUrl && message.trim()) {
           await onSendMessage(message.trim());
-          if (conversationId && senderId && recipientId) {
-            await MessageService.sendImageMessage(conversationId, senderId, imageUrl);
+          if (conversationId && senderId) {
+            await MessageService.sendMessage(conversationId, senderId, '📸 Immagine allegata', imageUrl);
           }
         } else if (imageUrl) {
-          if (conversationId && senderId && recipientId) {
-            await MessageService.sendImageMessage(conversationId, senderId, imageUrl);
+          if (conversationId && senderId) {
+            await MessageService.sendMessage(conversationId, senderId, '📸 Immagine allegata', imageUrl);
           }
         } else {
           await onSendMessage(message.trim());
@@ -154,7 +153,7 @@ const MessageInput = ({
       }
       
       if (imageUrl) {
-        const success = await MessageService.sendImageMessage(conversationId, senderId, imageUrl);
+        const success = await MessageService.sendMessage(conversationId, senderId, '📸 Immagine allegata', imageUrl);
         if (!success) {
           throw new Error('Failed to send image message');
         }

@@ -63,6 +63,17 @@ export class MessageService {
   }
 
   /**
+   * Invia un messaggio con immagine
+   */
+  static async sendImageMessage(
+    conversationId: string,
+    senderId: string,
+    imageUrl: string
+  ) {
+    return this.sendMessage(conversationId, senderId, '📸 Immagine allegata', imageUrl);
+  }
+
+  /**
    * Carica messaggi di una conversazione
    */
   static async loadMessages(conversationId: string) {
@@ -103,10 +114,10 @@ export class MessageService {
 
       const { error } = await supabase
         .from('messages')
-        .update({ read_at: new Date().toISOString() })
+        .update({ read: true })
         .eq('conversation_id', conversationId)
         .neq('sender_id', userId)
-        .is('read_at', null);
+        .eq('read', false);
 
       if (error) {
         console.error('❌ MessageService: Errore marcatura messaggi letti', error);
