@@ -1,123 +1,123 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { MARCO_NIGRO_ID } from '@/components/phytopathologist';
+import { toast } from 'sonner';
 
 export class MessageService {
+  /**
+   * Invia un messaggio
+   */
   static async sendMessage(
-    conversationId: string,
-    senderId: string,
+    conversationId: string, 
+    senderId: string, 
     content: string,
-    metadata: any = {}
-  ): Promise<boolean> {
+    imageUrl?: string,
+    products?: any[]
+  ) {
     try {
-      console.log('📤 MessageService: Sending message via edge function');
-      
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        console.error('❌ No active session');
-        return false;
+      console.log('📤 MessageService: Invio messaggio', {
+        conversationId,
+        senderId,
+        contentLength: content?.length || 0,
+        hasImage: !!imageUrl,
+        hasProducts: !!products
+      });
+
+      // Verifica sessione
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !session) {
+        console.error('❌ MessageService: Sessione non valida', sessionError);
+        throw new Error('Sessione scaduta');
       }
 
-      // Use the send-message edge function to bypass RLS
+      if (!conversationId || !senderId || !content?.trim()) {
+        throw new Error('Dati messaggio incompleti');
+      }
+
+      // Determina il recipientId
+      const recipientId = senderId === MARCO_NIGRO_ID ? null : MARCO_NIGRO_ID;
+
       const { data, error } = await supabase.functions.invoke('send-message', {
         body: {
           conversationId,
-          recipientId: MARCO_NIGRO_ID,
-          text: content,
-          imageUrl: null,
-          products: null
-        },
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
+          recipientId,
+          text: content.trim(),
+          imageUrl,
+          products
+        }
       });
-
-      if (error || !data?.success) {
-        console.error('❌ Error sending message via edge function:', error);
-        return false;
-      }
-
-      console.log('✅ Message sent successfully via edge function');
-      return true;
-    } catch (error) {
-      console.error('❌ Failed to send message:', error);
-      return false;
-    }
-  }
-
-  static async sendImageMessage(
-    conversationId: string,
-    senderId: string,
-    imageUrl: string
-  ): Promise<boolean> {
-    try {
-      console.log('📸 MessageService: Sending image message via edge function');
-
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        console.error('❌ No active session');
-        return false;
-      }
-
-      const imageMessage = `📸 **Immagine della Pianta**`;
-      
-      // Use the send-message edge function to bypass RLS
-      const { data, error } = await supabase.functions.invoke('send-message', {
-        body: {
-          conversationId,
-          recipientId: MARCO_NIGRO_ID,
-          text: imageMessage,
-          imageUrl: imageUrl,
-          products: null
-        },
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      });
-
-      if (error || !data?.success) {
-        console.error('❌ Error sending image message via edge function:', error);
-        return false;
-      }
-
-      console.log('✅ Plant image message sent successfully via edge function');
-      return true;
-    } catch (error) {
-      console.error('❌ Failed to send image message:', error);
-      return false;
-    }
-  }
-
-  static async checkConsultationDataSent(conversationId: string): Promise<boolean> {
-    try {
-      console.log('🔍 Checking if consultation data already sent for conversation:', conversationId);
-      
-      const { data: messages, error } = await supabase
-        .from('messages')
-        .select('metadata, content')
-        .eq('conversation_id', conversationId)
-        .not('metadata', 'is', null);
 
       if (error) {
-        console.error('❌ Error checking consultation data:', error);
+        console.error('❌ MessageService: Errore funzione send-message', error);
+        throw new Error(error.message || 'Errore invio messaggio');
+      }
+
+      console.log('✅ MessageService: Messaggio inviato', data);
+      return true;
+
+    } catch (error: any) {
+      console.error('❌ MessageService: Errore invio messaggio', error);
+      toast.error(error.message || 'Errore invio messaggio');
+      return false;
+    }
+  }
+
+  /**
+   * Carica messaggi di una conversazione
+   */
+  static async loadMessages(conversationId: string) {
+    try {
+      console.log('📚 MessageService: Carico messaggi', conversationId);
+
+      if (!conversationId) {
+        return [];
+      }
+
+      const { data: messages, error } = await supabase
+        .from('messages')
+        .select('*')
+        .eq('conversation_id', conversationId)
+        .order('sent_at', { ascending: true });
+
+      if (error) {
+        console.error('❌ MessageService: Errore caricamento messaggi', error);
+        throw error;
+      }
+
+      console.log('✅ MessageService: Messaggi caricati', messages?.length || 0);
+      return messages || [];
+
+    } catch (error: any) {
+      console.error('❌ MessageService: Errore caricamento messaggi', error);
+      toast.error('Errore caricamento messaggi');
+      return [];
+    }
+  }
+
+  /**
+   * Segna messaggi come letti
+   */
+  static async markMessagesAsRead(conversationId: string, userId: string) {
+    try {
+      console.log('👁️ MessageService: Marco messaggi come letti', { conversationId, userId });
+
+      const { error } = await supabase
+        .from('messages')
+        .update({ read_at: new Date().toISOString() })
+        .eq('conversation_id', conversationId)
+        .neq('sender_id', userId)
+        .is('read_at', null);
+
+      if (error) {
+        console.error('❌ MessageService: Errore marcatura messaggi letti', error);
         return false;
       }
 
-      if (!messages || messages.length === 0) {
-        console.log('📭 No messages with metadata found');
-        return false;
-      }
+      console.log('✅ MessageService: Messaggi marcati come letti');
+      return true;
 
-      const hasConsultationData = messages.some((msg: any) => 
-        msg.metadata && 
-        (msg.metadata.type === 'consultation_data' || 
-         msg.metadata.autoSent === true)
-      );
-
-      console.log('🔍 Consultation data already sent:', hasConsultationData);
-      return hasConsultationData;
-    } catch (error) {
-      console.error('❌ Error checking consultation data status:', error);
+    } catch (error: any) {
+      console.error('❌ MessageService: Errore marcatura messaggi', error);
       return false;
     }
   }

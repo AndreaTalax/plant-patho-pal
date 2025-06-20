@@ -1,143 +1,171 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
 import { MARCO_NIGRO_ID } from '@/components/phytopathologist';
+import { toast } from 'sonner';
 
 export class ConversationService {
   /**
-  * Creates a new conversation with an expert or returns an existing conversation ID.
-  */
-  static async createConversationWithExpert(userId: string, title?: string): Promise<string | null> {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user || user.id !== userId) {
-        console.error('❌ Authentication failed');
-        toast.error('Errore di autenticazione');
-        return null;
-      }
-
-      // Check if conversation already exists
-      const { data: existingConversations, error: searchError } = await supabase
-        .from('conversations')
-        .select('id')
-        .eq('user_id', userId)
-        .eq('expert_id', MARCO_NIGRO_ID);
-
-      if (searchError) {
-        console.error('Error searching conversations:', searchError);
-        toast.error('Errore nella ricerca delle conversazioni');
-        return null;
-      }
-
-      if (existingConversations && existingConversations.length > 0) {
-        console.log('✅ Found existing conversation:', existingConversations[0].id);
-        return existingConversations[0].id;
-      }
-
-      // Create new conversation
-      console.log('🆕 Creating new conversation for user:', userId);
-      const { data, error } = await supabase
-        .from('conversations')
-        .insert({
-          user_id: userId,
-          expert_id: MARCO_NIGRO_ID,
-          title: title || 'Consulenza esperto',
-          status: 'active',
-          last_message_text: null,
-          last_message_at: new Date().toISOString()
-        })
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Error creating conversation:', error);
-        toast.error('Errore nella creazione della conversazione');
-        return null;
-      }
-
-      console.log('✅ New conversation created:', data.id);
-      return data.id;
-
-    } catch (error) {
-      console.error('Error in createConversationWithExpert:', error);
-      toast.error('Errore nella creazione della conversazione');
-      return null;
-    }
-  }
-
-  /**
-   * Finds or creates a conversation for a given user and expert.
+   * Trova o crea una conversazione tra utente e esperto
    */
-  static async findOrCreateConversation(userId: string) {
+  static async findOrCreateConversation(userId: string, expertId: string = MARCO_NIGRO_ID) {
     try {
-      console.log('🔍 Finding or creating conversation for user:', userId);
+      console.log('🔍 ConversationService: Cerco conversazione esistente', { userId, expertId });
       
-      // Check if conversation already exists
-      const { data: existingConversations, error: searchError } = await supabase
+      // Verifica sessione
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !session) {
+        console.error('❌ ConversationService: Sessione non valida', sessionError);
+        throw new Error('Sessione scaduta');
+      }
+
+      // Prima cerca conversazione esistente
+      const { data: existingConversation, error: findError } = await supabase
         .from('conversations')
         .select('*')
         .eq('user_id', userId)
-        .eq('expert_id', MARCO_NIGRO_ID);
+        .eq('expert_id', expertId)
+        .eq('status', 'active')
+        .maybeSingle();
 
-      if (searchError) {
-        console.error('Error searching conversations:', searchError);
-        return null;
+      if (findError) {
+        console.error('❌ ConversationService: Errore ricerca conversazione', findError);
+        throw new Error(`Errore ricerca conversazione: ${findError.message}`);
       }
 
-      if (existingConversations && existingConversations.length > 0) {
-        console.log('✅ Found existing conversation:', existingConversations[0]);
-        return existingConversations[0];
+      if (existingConversation) {
+        console.log('✅ ConversationService: Conversazione trovata', existingConversation.id);
+        return existingConversation;
       }
 
-      // Create new conversation
-      console.log('🆕 Creating new conversation...');
-      const { data, error } = await supabase
+      // Crea nuova conversazione
+      console.log('🆕 ConversationService: Creo nuova conversazione');
+      const { data: newConversation, error: createError } = await supabase
         .from('conversations')
         .insert({
           user_id: userId,
-          expert_id: MARCO_NIGRO_ID,
+          expert_id: expertId,
           title: 'Consulenza esperto',
           status: 'active',
-          last_message_text: null,
-          last_message_at: new Date().toISOString()
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
         })
         .select()
         .single();
 
-      if (error) {
-        console.error('Error creating conversation:', error);
-        return null;
+      if (createError) {
+        console.error('❌ ConversationService: Errore creazione conversazione', createError);
+        throw new Error(`Errore creazione conversazione: ${createError.message}`);
       }
 
-      console.log('✅ New conversation created:', data);
-      return data;
-    } catch (error) {
-      console.error('Error in findOrCreateConversation:', error);
+      console.log('✅ ConversationService: Conversazione creata', newConversation.id);
+      return newConversation;
+
+    } catch (error: any) {
+      console.error('❌ ConversationService: Errore generale', error);
+      toast.error(error.message || 'Errore nel servizio conversazione');
       return null;
     }
   }
 
   /**
-  * Updates the status of a conversation in the database.
-  */
-  static async updateConversationStatus(conversationId: string, status: string): Promise<boolean> {
+   * Carica conversazioni per l'esperto
+   */
+  static async loadExpertConversations(expertId: string = MARCO_NIGRO_ID) {
     try {
+      console.log('📚 ConversationService: Carico conversazioni esperto', expertId);
+
+      const { data: conversations, error } = await supabase
+        .from('conversations')
+        .select(`
+          *,
+          user_profile:profiles!conversations_user_id_fkey(
+            id,
+            first_name,
+            last_name,
+            email,
+            is_online,
+            last_seen_at
+          )
+        `)
+        .eq('expert_id', expertId)
+        .eq('status', 'active')
+        .order('updated_at', { ascending: false });
+
+      if (error) {
+        console.error('❌ ConversationService: Errore caricamento conversazioni', error);
+        throw error;
+      }
+
+      console.log('✅ ConversationService: Conversazioni caricate', conversations?.length || 0);
+      return conversations || [];
+
+    } catch (error: any) {
+      console.error('❌ ConversationService: Errore caricamento conversazioni', error);
+      toast.error('Errore nel caricamento delle conversazioni');
+      return [];
+    }
+  }
+
+  /**
+   * Elimina una conversazione
+   */
+  static async deleteConversation(conversationId: string) {
+    try {
+      console.log('🗑️ ConversationService: Elimino conversazione', conversationId);
+
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error('Sessione scaduta');
+      }
+
+      const { error } = await supabase.functions.invoke('delete-conversation', {
+        body: { conversationId },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+
+      if (error) {
+        console.error('❌ ConversationService: Errore eliminazione', error);
+        throw new Error(error.message || 'Errore eliminazione conversazione');
+      }
+
+      console.log('✅ ConversationService: Conversazione eliminata');
+      return true;
+
+    } catch (error: any) {
+      console.error('❌ ConversationService: Errore eliminazione conversazione', error);
+      toast.error(error.message || 'Errore eliminazione conversazione');
+      return false;
+    }
+  }
+
+  /**
+   * Aggiorna stato conversazione
+   */
+  static async updateConversationStatus(conversationId: string, status: string) {
+    try {
+      console.log('🔄 ConversationService: Aggiorno stato conversazione', { conversationId, status });
+
       const { error } = await supabase
         .from('conversations')
         .update({ 
-          status,
-          updated_at: new Date().toISOString()
+          status, 
+          updated_at: new Date().toISOString() 
         })
         .eq('id', conversationId);
 
       if (error) {
-        console.error('Error updating conversation status:', error);
-        return false;
+        console.error('❌ ConversationService: Errore aggiornamento stato', error);
+        throw error;
       }
 
+      console.log('✅ ConversationService: Stato aggiornato');
       return true;
-    } catch (error) {
-      console.error('Error in updateConversationStatus:', error);
+
+    } catch (error: any) {
+      console.error('❌ ConversationService: Errore aggiornamento stato', error);
+      toast.error('Errore aggiornamento stato conversazione');
       return false;
     }
   }

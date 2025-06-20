@@ -14,25 +14,14 @@ export const useUserChatRealtime = (userId: string) => {
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
   const [isConnected, setIsConnected] = useState(false);
 
-  // Caricamento messaggi ottimizzato con migliore gestione errori
+  // Caricamento messaggi con gestione errori migliorata
   const loadMessages = useCallback(async (conversationId: string) => {
     if (!conversationId) return;
     
     try {
       console.log('📚 Caricamento messaggi per conversazione:', conversationId);
       
-      const { data: messagesData, error } = await supabase
-        .from('messages')
-        .select('*')
-        .eq('conversation_id', conversationId)
-        .order('sent_at', { ascending: true });
-
-      if (error) {
-        console.error('❌ Errore caricamento messaggi:', error);
-        toast.error('Errore nel caricamento dei messaggi');
-        return;
-      }
-
+      const messagesData = await MessageService.loadMessages(conversationId);
       console.log('✅ Messaggi caricati:', messagesData?.length || 0);
       setMessages(messagesData || []);
       
@@ -42,7 +31,7 @@ export const useUserChatRealtime = (userId: string) => {
     }
   }, []);
 
-  // Setup real-time subscription con gestione errori migliorata
+  // Setup real-time subscription
   useEffect(() => {
     if (!currentConversationId || !userId) return;
 
@@ -109,19 +98,11 @@ export const useUserChatRealtime = (userId: string) => {
     }
 
     try {
-      console.log('🚀 Avvio chat veloce con esperto per utente:', userId);
+      console.log('🚀 Avvio chat con esperto per utente:', userId);
       setActiveChat('expert');
       
-      // Trova o crea conversazione con migliore gestione errori
-      let conversation;
-      try {
-        conversation = await ConversationService.findOrCreateConversation(userId);
-      } catch (error) {
-        console.error('❌ Errore nel servizio conversazione:', error);
-        toast.error('Errore nella creazione della conversazione');
-        setActiveChat(null);
-        return;
-      }
+      // Usa il nuovo servizio
+      const conversation = await ConversationService.findOrCreateConversation(userId);
       
       if (conversation) {
         console.log('✅ Conversazione pronta:', conversation.id);
