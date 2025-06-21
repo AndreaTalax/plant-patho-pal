@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -338,12 +338,13 @@ const ExpertDashboard = () => {
     loadExpertData(true);
   };
 
+  // Stabilizza la funzione handleCloseChat con useCallback
+  const handleCloseChat = useCallback(() => {
+    setSelectedConversation(null);
+  }, []);
+
   const handleOpenChat = (conversation: ConversationSummary) => {
     setSelectedConversation(conversation);
-  };
-
-  const handleCloseChat = () => {
-    setSelectedConversation(null);
   };
 
   if (loading) {

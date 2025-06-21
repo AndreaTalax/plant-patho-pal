@@ -135,7 +135,7 @@ const ExpertChatDetailView = ({ conversation, onBack }: {
     return () => {
       isMounted = false;
     };
-  }, [conversation?.id, onBack]); // Aggiungo onBack alle dipendenze
+  }, [conversation?.id]); // Rimosso onBack dalle dipendenze per evitare il loop
 
   const handleSendMessage = async () => {
     if (!newMessage.trim() || sending) return;
