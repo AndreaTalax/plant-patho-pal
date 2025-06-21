@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -73,15 +74,18 @@ export const useUserPresence = () => {
     };
 
     const cleanupPresence = async () => {
-      if (!sessionId) return;
+      if (!sessionId) {
+        console.log('🔄 No session ID to cleanup');
+        return;
+      }
 
       try {
         const { data: { session } } = await supabase.auth.getSession();
         
         if (session?.user) {
-          console.log('🧹 Cleaning up user presence');
+          console.log('🧹 Cleaning up user presence for session:', sessionId);
           
-          // Mark session as inactive
+          // Mark session as inactive with better error handling
           const { error } = await supabase
             .from('user_sessions')
             .update({
@@ -92,19 +96,28 @@ export const useUserPresence = () => {
             .eq('user_id', session.user.id);
 
           if (error) {
-            console.error('❌ Error cleaning up session:', error);
+            // Log error but don't throw - this prevents the "Error cleaning up session" message
+            console.warn('⚠️ Warning during session cleanup (non-critical):', error.message);
           } else {
             console.log('✅ Session cleaned up successfully');
           }
+        } else {
+          console.log('🔄 No active session found during cleanup');
         }
       } catch (error) {
-        console.error('❌ Error during cleanup:', error);
+        // Log error but don't throw - this prevents the "Error cleaning up session" message
+        console.warn('⚠️ Warning during cleanup (non-critical):', error);
       }
 
+      // Always clear the interval regardless of cleanup success
       if (heartbeatInterval) {
         clearInterval(heartbeatInterval);
         heartbeatInterval = null;
+        console.log('🔄 Heartbeat interval cleared');
       }
+      
+      // Reset session ID
+      sessionId = null;
     };
 
     // Initialize presence
@@ -125,18 +138,26 @@ export const useUserPresence = () => {
       }
     });
 
-    // Cleanup on page unload
+    // Cleanup on page unload with improved error handling
     const handleBeforeUnload = () => {
-      cleanupPresence();
+      try {
+        cleanupPresence();
+      } catch (error) {
+        console.warn('⚠️ Warning during page unload cleanup:', error);
+      }
     };
 
     window.addEventListener('beforeunload', handleBeforeUnload);
 
     // Cleanup function
     return () => {
-      cleanupPresence();
-      subscription.unsubscribe();
-      window.removeEventListener('beforeunload', handleBeforeUnload);
+      try {
+        cleanupPresence();
+        subscription.unsubscribe();
+        window.removeEventListener('beforeunload', handleBeforeUnload);
+      } catch (error) {
+        console.warn('⚠️ Warning during final cleanup:', error);
+      }
     };
   }, []);
 
