@@ -64,7 +64,7 @@ const ExpertDashboard = () => {
   const [deletingConsultation, setDeletingConsultation] = useState<string | null>(null);
   const [selectedConversation, setSelectedConversation] = useState<ConversationSummary | null>(null);
 
-  const loadExpertData = async (showRefreshing = false) => {
+  const loadExpertData = useCallback(async (showRefreshing = false) => {
     if (showRefreshing) setRefreshing(true);
     
     try {
@@ -173,7 +173,7 @@ const ExpertDashboard = () => {
       setLoading(false);
       if (showRefreshing) setRefreshing(false);
     }
-  };
+  }, []); // Empty dependency array since function doesn't depend on props or state
 
   useEffect(() => {
     loadExpertData();
@@ -209,9 +209,9 @@ const ExpertDashboard = () => {
       supabase.removeChannel(conversationsChannel);
       supabase.removeChannel(consultationsChannel);
     };
-  }, []);
+  }, [loadExpertData]); // Only depend on the memoized loadExpertData function
 
-  const updateConsultationStatus = async (consultationId: string, newStatus: string) => {
+  const updateConsultationStatus = useCallback(async (consultationId: string, newStatus: string) => {
     try {
       const { error } = await supabase
         .from('expert_consultations')
@@ -229,9 +229,9 @@ const ExpertDashboard = () => {
       console.error('Error updating consultation status:', error);
       toast.error('Errore nell\'aggiornamento dello stato');
     }
-  };
+  }, [loadExpertData]);
 
-  const handleDeleteConversation = async (conversationId: string) => {
+  const handleDeleteConversation = useCallback(async (conversationId: string) => {
     try {
       setDeletingConsultation(conversationId);
       
@@ -276,9 +276,9 @@ const ExpertDashboard = () => {
     } finally {
       setDeletingConsultation(null);
     }
-  };
+  }, [selectedConversation?.id, loadExpertData]);
 
-  const handleDeleteConsultation = async (consultationId: string) => {
+  const handleDeleteConsultation = useCallback(async (consultationId: string) => {
     try {
       setDeletingConsultation(consultationId);
       const { data: { session } } = await supabase.auth.getSession();
@@ -306,7 +306,7 @@ const ExpertDashboard = () => {
     } finally {
       setDeletingConsultation(null);
     }
-  };
+  }, [loadExpertData]);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -334,18 +334,18 @@ const ExpertDashboard = () => {
     return userProfile.email || 'Utente sconosciuto';
   };
 
-  const handleRefresh = () => {
+  const handleRefresh = useCallback(() => {
     loadExpertData(true);
-  };
+  }, [loadExpertData]);
 
   // Stabilizza la funzione handleCloseChat con useCallback
   const handleCloseChat = useCallback(() => {
     setSelectedConversation(null);
   }, []);
 
-  const handleOpenChat = (conversation: ConversationSummary) => {
+  const handleOpenChat = useCallback((conversation: ConversationSummary) => {
     setSelectedConversation(conversation);
-  };
+  }, []);
 
   if (loading) {
     return (

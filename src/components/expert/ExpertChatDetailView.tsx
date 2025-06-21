@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { DatabaseMessage } from "@/services/chat/types";
 import { Button } from "@/components/ui/button";
@@ -27,14 +27,14 @@ const ExpertChatDetailView = ({ conversation, onBack }: {
   const { isConnected, sendMessage } = useRealtimeChat({
     conversationId: conversation?.id,
     userId: MARCO_NIGRO_ID,
-    onNewMessage: (message) => {
+    onNewMessage: useCallback((message) => {
       setMessages(prev => {
         // Avoid duplicates
         const exists = prev.some(msg => msg.id === message.id);
         if (exists) return prev;
         return [...prev, message];
       });
-    }
+    }, [])
   });
 
   // Carica messaggi della conversazione
@@ -135,9 +135,9 @@ const ExpertChatDetailView = ({ conversation, onBack }: {
     return () => {
       isMounted = false;
     };
-  }, [conversation?.id]); // Rimosso onBack dalle dipendenze per evitare il loop
+  }, [conversation?.id]); // Only depend on conversation.id
 
-  const handleSendMessage = async () => {
+  const handleSendMessage = useCallback(async () => {
     if (!newMessage.trim() || sending) return;
 
     try {
@@ -151,22 +151,22 @@ const ExpertChatDetailView = ({ conversation, onBack }: {
     } finally {
       setSending(false);
     }
-  };
+  }, [newMessage, sending, sendMessage, conversation.user_id]);
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
+  const handleKeyPress = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage();
     }
-  };
+  }, [handleSendMessage]);
 
-  const handleRetry = () => {
+  const handleRetry = useCallback(() => {
     console.log('🔄 Retry button clicked - reloading messages...');
     // Forza il reload resettando lo stato e richiamando useEffect
     setLoading(true);
     setError(null);
     // useEffect si riattiva automaticamente quando cambia lo stato
-  };
+  }, []);
 
   // Se non abbiamo un ID conversazione valido
   if (!conversation?.id) {

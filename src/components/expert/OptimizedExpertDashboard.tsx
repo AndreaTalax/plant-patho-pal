@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { MessageSquare, Clock, AlertCircle, Loader2 } from 'lucide-react';
@@ -47,7 +47,7 @@ const OptimizedExpertDashboard = () => {
   const [deletingConversation, setDeletingConversation] = useState<string | null>(null);
 
   // Load data more efficiently with better error handling
-  const loadExpertData = async () => {
+  const loadExpertData = useCallback(async () => {
     try {
       console.log('🔄 Loading expert dashboard data...');
       
@@ -131,7 +131,7 @@ const OptimizedExpertDashboard = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []); // Empty dependency array
 
   useEffect(() => {
     loadExpertData();
@@ -173,7 +173,7 @@ const OptimizedExpertDashboard = () => {
       supabase.removeChannel(conversationsChannel);
       supabase.removeChannel(consultationsChannel);
     };
-  }, [selectedConversation?.id]);
+  }, [loadExpertData]); // Only depend on memoized loadExpertData
 
   const getInitials = (firstName?: string, lastName?: string) => {
     if (!firstName && !lastName) return 'U';
@@ -201,15 +201,15 @@ const OptimizedExpertDashboard = () => {
     }
   };
 
-  const handleOpenChat = (conversation: ConversationSummary) => {
+  const handleOpenChat = useCallback((conversation: ConversationSummary) => {
     setSelectedConversation(conversation);
-  };
+  }, []);
 
-  const handleCloseChat = () => {
+  const handleCloseChat = useCallback(() => {
     setSelectedConversation(null);
-  };
+  }, []);
 
-  const handleDeleteConversation = async (conversationId: string) => {
+  const handleDeleteConversation = useCallback(async (conversationId: string) => {
     try {
       setDeletingConversation(conversationId);
       console.log('🗑️ Starting conversation deletion for ID:', conversationId);
@@ -255,7 +255,7 @@ const OptimizedExpertDashboard = () => {
     } finally {
       setDeletingConversation(null);
     }
-  };
+  }, [selectedConversation?.id, loadExpertData]);
 
   if (loading) {
     return (
