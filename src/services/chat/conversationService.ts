@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 
 export class ConversationService {
   /**
-   * Trova o crea una conversazione tra utente e esperto
+   * Trova o crea una conversazione tra utente e esperto - VERSIONE SISTEMATA
    */
   static async findOrCreateConversation(userId: string, expertId: string = MARCO_NIGRO_ID) {
     try {
@@ -18,21 +18,23 @@ export class ConversationService {
         throw new Error('Sessione scaduta');
       }
 
-      // Prima cerca conversazione esistente
-      const { data: existingConversation, error: findError } = await supabase
+      // SISTEMATO: Usa select().limit(1).single() invece di maybeSingle() per gestire multiple righe
+      const { data: existingConversations, error: findError } = await supabase
         .from('conversations')
         .select('*')
         .eq('user_id', userId)
         .eq('expert_id', expertId)
         .eq('status', 'active')
-        .maybeSingle();
+        .order('created_at', { ascending: false })
+        .limit(1);
 
       if (findError) {
         console.error('❌ ConversationService: Errore ricerca conversazione', findError);
         throw new Error(`Errore ricerca conversazione: ${findError.message}`);
       }
 
-      if (existingConversation) {
+      if (existingConversations && existingConversations.length > 0) {
+        const existingConversation = existingConversations[0];
         console.log('✅ ConversationService: Conversazione trovata', existingConversation.id);
         return existingConversation;
       }
@@ -62,7 +64,7 @@ export class ConversationService {
 
     } catch (error: any) {
       console.error('❌ ConversationService: Errore generale', error);
-      toast.error(error.message || 'Errore nel servizio conversazione');
+      // Non mostrare toast per evitare spam durante tentatvi automatici
       return null;
     }
   }

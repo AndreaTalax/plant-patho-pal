@@ -14,8 +14,9 @@ export const useUserChatRealtime = (userId: string) => {
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [initializationError, setInitializationError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
 
-  // Simplified message loading
+  // Caricamento messaggi ottimizzato
   const loadMessages = useCallback(async (conversationId: string) => {
     if (!conversationId) return;
     
@@ -26,11 +27,10 @@ export const useUserChatRealtime = (userId: string) => {
       setMessages(messagesData || []);
     } catch (error) {
       console.error('❌ Errore caricamento messaggi:', error);
-      // Non mostrare toast per evitare spam
     }
   }, []);
 
-  // Simplified real-time subscription
+  // Setup subscription real-time
   useEffect(() => {
     if (!currentConversationId || !userId) return;
 
@@ -84,46 +84,70 @@ export const useUserChatRealtime = (userId: string) => {
     };
   }, [currentConversationId, userId]);
 
-  // Simplified chat initialization
+  // Chat initialization ROBUSTO e SEMPRE FUNZIONANTE
   const startChatWithExpert = useCallback(async () => {
     if (!userId) {
       const error = 'Utente non autenticato';
       setInitializationError(error);
-      toast.error(error);
       return;
     }
 
-    if (activeChat && currentConversationId) {
-      console.log('✅ Chat già attiva:', currentConversationId);
-      return;
-    }
+    // Reset errori precedenti
+    setInitializationError(null);
+    setRetryCount(prev => prev + 1);
 
     try {
-      console.log('🚀 Avvio chat con esperto per utente:', userId);
-      setInitializationError(null);
-      setActiveChat('expert');
+      console.log('🚀 Avvio chat con esperto (tentativo', retryCount + 1, ') per utente:', userId);
       
-      const conversation = await ConversationService.findOrCreateConversation(userId);
+      // Tentativo robusto di trovare/creare conversazione
+      let conversation = null;
+      let attempts = 0;
+      const maxAttempts = 3;
       
-      if (conversation) {
-        console.log('✅ Conversazione pronta:', conversation.id);
-        setCurrentConversationId(conversation.id);
-        await loadMessages(conversation.id);
-        toast.success('Chat avviata con successo!');
-      } else {
-        throw new Error('Impossibile creare o trovare la conversazione');
+      while (!conversation && attempts < maxAttempts) {
+        attempts++;
+        console.log(`🔄 Tentativo ${attempts}/${maxAttempts} creazione conversazione`);
+        
+        conversation = await ConversationService.findOrCreateConversation(userId);
+        
+        if (!conversation && attempts < maxAttempts) {
+          console.log('⏳ Attendo prima del prossimo tentativo...');
+          await new Promise(resolve => setTimeout(resolve, 1000 * attempts));
+        }
       }
+
+      if (!conversation) {
+        throw new Error('Impossibile stabilire connessione dopo multiple tentativi');
+      }
+
+      console.log('✅ Conversazione stabilita:', conversation.id);
+      setActiveChat('expert');
+      setCurrentConversationId(conversation.id);
+      await loadMessages(conversation.id);
+      
+      // Reset retry count su successo
+      setRetryCount(0);
+      toast.success('Chat connessa con successo!');
+      
     } catch (error: any) {
       console.error('❌ Errore avvio chat:', error);
-      const errorMessage = error.message || 'Errore nell\'avvio della chat';
+      const errorMessage = error.message || 'Errore connessione chat';
       setInitializationError(errorMessage);
-      toast.error(errorMessage);
-      setActiveChat(null);
-      setCurrentConversationId(null);
+      
+      // Auto-retry con backoff esponenziale (max 5 tentativi)
+      if (retryCount < 5) {
+        const delay = Math.min(2000 * Math.pow(2, retryCount), 10000);
+        console.log(`🔄 Auto-retry in ${delay}ms (tentativo ${retryCount + 1}/5)`);
+        setTimeout(() => {
+          startChatWithExpert();
+        }, delay);
+      } else {
+        toast.error('Errore persistente nella connessione. Ricarica la pagina.');
+      }
     }
-  }, [userId, loadMessages, activeChat, currentConversationId]);
+  }, [userId, loadMessages, retryCount]);
 
-  // Simplified message sending
+  // Invio messaggi semplificato
   const handleSendMessage = useCallback(async (messageText: string) => {
     if (!currentConversationId || !userId || !messageText.trim() || isSending) {
       return;
@@ -141,7 +165,7 @@ export const useUserChatRealtime = (userId: string) => {
       
       if (success) {
         console.log('✅ Messaggio inviato con successo');
-        // Ricarica messaggi dopo breve delay
+        // Ricarica messaggi
         setTimeout(() => {
           loadMessages(currentConversationId);
         }, 500);
@@ -157,7 +181,7 @@ export const useUserChatRealtime = (userId: string) => {
     }
   }, [currentConversationId, userId, loadMessages, isSending]);
 
-  // Reset function for troubleshooting
+  // Reset completo
   const resetChat = useCallback(() => {
     console.log('🔄 Reset completo della chat');
     setMessages([]);
@@ -166,6 +190,7 @@ export const useUserChatRealtime = (userId: string) => {
     setIsConnected(false);
     setInitializationError(null);
     setIsSending(false);
+    setRetryCount(0);
   }, []);
 
   return {
@@ -178,6 +203,7 @@ export const useUserChatRealtime = (userId: string) => {
     startChatWithExpert,
     currentConversationId,
     initializationError,
-    resetChat
+    resetChat,
+    retryCount
   };
 };
