@@ -235,44 +235,38 @@ const ExpertDashboard = () => {
     try {
       setDeletingConsultation(conversationId);
       
-      console.log('🗑️ Dashboard: Inizio eliminazione FORZATA conversazione', conversationId);
+      console.log('🗑️ Dashboard: Eliminazione conversazione', conversationId);
       
-      // RIMUOVI IMMEDIATAMENTE dalla UI per feedback istantaneo
-      setConversations(prevConversations => 
-        prevConversations.filter(conv => conv.id !== conversationId)
-      );
-      
-      // Se è la conversazione selezionata, deseleziona
+      // Se è la conversazione selezionata, deseleziona immediatamente
       if (selectedConversation?.id === conversationId) {
         setSelectedConversation(null);
       }
       
-      // Usa il metodo forzato del ConversationService
+      // Usa il ConversationService per eliminare
       const success = await ConversationService.deleteConversation(conversationId);
       
       if (success) {
         console.log('✅ Dashboard: Conversazione eliminata con successo');
         toast.success('Conversazione eliminata con successo');
         
-        // Forza un refresh completo dopo 500ms
-        setTimeout(async () => {
-          console.log('🔄 Dashboard: Refresh forzato post-eliminazione');
-          await loadExpertData(true);
-        }, 500);
+        // Rimuovi immediatamente dalla UI per feedback veloce
+        setConversations(prevConversations => 
+          prevConversations.filter(conv => conv.id !== conversationId)
+        );
+        
+        // Forza un refresh dopo 1 secondo per essere sicuri
+        setTimeout(() => {
+          loadExpertData();
+        }, 1000);
         
       } else {
-        console.error('❌ Dashboard: Fallimento eliminazione, ripristino UI');
-        // Se fallisce, ricarica tutto
-        await loadExpertData();
+        console.error('❌ Dashboard: Fallimento eliminazione');
         toast.error('Errore durante l\'eliminazione della conversazione');
       }
       
     } catch (error: any) {
       console.error('❌ Dashboard: Errore eliminazione conversazione', error);
       toast.error(error.message || 'Errore durante l\'eliminazione della conversazione');
-      
-      // Ricarica in caso di errore
-      await loadExpertData();
     } finally {
       setDeletingConsultation(null);
     }
@@ -359,7 +353,7 @@ const ExpertDashboard = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 px-4 max-w-full overflow-hidden">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900">Dashboard Esperto</h1>
         <div className="flex items-center gap-4">
@@ -424,7 +418,7 @@ const ExpertDashboard = () => {
                 </CardContent>
               </Card>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-3 max-w-full overflow-hidden">
                 {conversations.map((conversation) => (
                   <ConversationCard
                     key={conversation.id}

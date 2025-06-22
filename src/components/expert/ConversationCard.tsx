@@ -38,11 +38,11 @@ export default function ConversationCard({
   const isUserOnline = conversation.user_profile?.is_online || false;
 
   return (
-    <Card>
+    <Card className="w-full">
       <CardContent className="p-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="relative">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0 flex-1">
+            <div className="relative flex-shrink-0">
               <Avatar className="h-10 w-10">
                 <AvatarFallback>
                   {getInitials(conversation.user_profile?.first_name, conversation.user_profile?.last_name)}
@@ -55,12 +55,12 @@ export default function ConversationCard({
                 />
               </div>
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <div className="font-medium">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2 mb-1">
+                <div className="font-medium text-sm truncate">
                   {getUserDisplayName(conversation.user_profile)}
                 </div>
-                <span className={`text-xs px-2 py-1 rounded-full ${
+                <span className={`text-xs px-2 py-1 rounded-full whitespace-nowrap ${
                   isUserOnline 
                     ? 'bg-green-100 text-green-700' 
                     : 'bg-gray-100 text-gray-500'
@@ -68,14 +68,10 @@ export default function ConversationCard({
                   {isUserOnline ? 'Online' : 'Offline'}
                 </span>
               </div>
-              <div className="text-sm text-gray-500 truncate max-w-xs">
+              <div className="text-sm text-gray-500 truncate">
                 {conversation.last_message_text || 'Nessun messaggio'}
               </div>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="text-right">
-              <div className="text-sm text-gray-500">
+              <div className="text-xs text-gray-400 mt-1">
                 {conversation.last_message_timestamp && 
                   formatDistanceToNow(new Date(conversation.last_message_timestamp), {
                     addSuffix: true,
@@ -83,50 +79,51 @@ export default function ConversationCard({
                   })
                 }
               </div>
-              <div className="flex gap-2 mt-2">
+            </div>
+          </div>
+          
+          <div className="flex flex-col gap-2 flex-shrink-0">
+            <Button 
+              size="sm" 
+              variant="outline" 
+              className="gap-1 whitespace-nowrap"
+              onClick={() => handleOpenChat(conversation)}
+            >
+              <MessageSquare className="h-4 w-4" />
+              Apri Chat
+            </Button>
+            
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
                 <Button 
                   size="sm" 
                   variant="outline" 
-                  className="gap-1"
-                  onClick={() => handleOpenChat(conversation)}
+                  className="text-red-500 hover:text-red-700 border-red-200 hover:border-red-300"
+                  disabled={deletingConversation === conversation.id}
                 >
-                  <MessageSquare className="h-4 w-4" />
-                  Apri Chat
+                  <Trash2 className="h-4 w-4" />
                 </Button>
-                
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button 
-                      size="sm" 
-                      variant="outline" 
-                      className="text-red-500 hover:text-red-700 border-red-200 hover:border-red-300"
-                      disabled={deletingConversation === conversation.id}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Elimina Conversazione</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        Sei sicuro di voler eliminare questa conversazione con {getUserDisplayName(conversation.user_profile)}? 
-                        Questa azione eliminerà anche tutti i messaggi associati e non può essere annullata.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Annulla</AlertDialogCancel>
-                      <AlertDialogAction
-                        onClick={() => onDeleteConversation(conversation.id)}
-                        className="bg-red-600 hover:bg-red-700"
-                        disabled={deletingConversation === conversation.id}
-                      >
-                        {deletingConversation === conversation.id ? 'Eliminazione...' : 'Elimina'}
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              </div>
-            </div>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Elimina Conversazione</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Sei sicuro di voler eliminare questa conversazione con {getUserDisplayName(conversation.user_profile)}? 
+                    Questa azione eliminerà anche tutti i messaggi associati e non può essere annullata.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Annulla</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={() => onDeleteConversation(conversation.id)}
+                    className="bg-red-600 hover:bg-red-700"
+                    disabled={deletingConversation === conversation.id}
+                  >
+                    {deletingConversation === conversation.id ? 'Eliminazione...' : 'Elimina'}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
         </div>
       </CardContent>

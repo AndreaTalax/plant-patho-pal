@@ -107,67 +107,36 @@ export class ConversationService {
   }
 
   /**
-   * Elimina una conversazione - VERSIONE FORZATA
+   * Elimina una conversazione - VERSIONE MIGLIORATA
    */
   static async deleteConversation(conversationId: string) {
     try {
-      console.log('🗑️ ConversationService: FORZO eliminazione conversazione', conversationId);
+      console.log('🗑️ ConversationService: Elimino conversazione', conversationId);
 
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         throw new Error('Sessione scaduta');
       }
 
-      // PRIMA: Elimina direttamente dal database senza aspettare la funzione edge
-      console.log('🔥 ConversationService: Eliminazione DIRETTA dal database');
-      
-      // Elimina prima i messaggi
-      const { error: messagesError } = await supabase
-        .from('messages')
-        .delete()
-        .eq('conversation_id', conversationId);
+      // Usa solo la funzione edge che è più affidabile
+      console.log('🔄 ConversationService: Chiamo funzione delete-conversation');
+      const { data, error } = await supabase.functions.invoke('delete-conversation', {
+        body: { conversationId },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
 
-      if (messagesError) {
-        console.error('❌ ConversationService: Errore eliminazione messaggi diretta', messagesError);
-      } else {
-        console.log('✅ ConversationService: Messaggi eliminati direttamente');
+      if (error) {
+        console.error('❌ ConversationService: Errore funzione edge', error);
+        throw new Error(error.message || 'Errore eliminazione conversazione');
       }
 
-      // Poi elimina la conversazione
-      const { error: conversationError } = await supabase
-        .from('conversations')
-        .delete()
-        .eq('id', conversationId);
-
-      if (conversationError) {
-        console.error('❌ ConversationService: Errore eliminazione conversazione diretta', conversationError);
-        
-        // Se fallisce l'eliminazione diretta, prova con la funzione edge
-        console.log('🔄 ConversationService: Fallback alla funzione edge');
-        const { error: edgeError } = await supabase.functions.invoke('delete-conversation', {
-          body: { conversationId },
-          headers: {
-            Authorization: `Bearer ${session.access_token}`,
-          },
-        });
-
-        if (edgeError) {
-          console.error('❌ ConversationService: Errore anche con funzione edge', edgeError);
-          throw new Error(edgeError.message || 'Errore eliminazione conversazione');
-        }
-      }
-
-      console.log('✅ ConversationService: Conversazione ELIMINATA FORZATAMENTE');
-      
-      // Forza il refresh del browser per assicurare che la UI si aggiorni
-      setTimeout(() => {
-        window.location.reload();
-      }, 1000);
-      
+      console.log('✅ ConversationService: Conversazione eliminata con successo', data);
       return true;
 
     } catch (error: any) {
-      console.error('❌ ConversationService: Errore eliminazione FORZATA', error);
+      console.error('❌ ConversationService: Errore eliminazione', error);
       toast.error(error.message || 'Errore eliminazione conversazione');
       return false;
     }
@@ -200,35 +169,6 @@ export class ConversationService {
       console.error('❌ ConversationService: Errore aggiornamento stato', error);
       toast.error('Errore aggiornamento stato conversazione');
       return false;
-    }
-  }
-
-  /**
-   * Forza refresh completo delle conversazioni
-   */
-  static async forceRefreshConversations() {
-    try {
-      console.log('🔄 ConversationService: REFRESH FORZATO conversazioni');
-      
-      // Invalida cache del browser
-      const timestamp = Date.now();
-      const { data, error } = await supabase
-        .from('conversations')
-        .select('*')
-        .eq('expert_id', MARCO_NIGRO_ID)
-        .order('updated_at', { ascending: false });
-
-      if (error) {
-        console.error('❌ ConversationService: Errore refresh forzato', error);
-        return [];
-      }
-
-      console.log('✅ ConversationService: Refresh forzato completato', data?.length || 0);
-      return data || [];
-
-    } catch (error: any) {
-      console.error('❌ ConversationService: Errore refresh forzato', error);
-      return [];
     }
   }
 }
