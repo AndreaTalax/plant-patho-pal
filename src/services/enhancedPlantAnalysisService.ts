@@ -1,3 +1,4 @@
+
 import { PlantIdService, EPPOService, MockPlantService, type PlantIdentificationResult, type DiseaseDetectionResult } from './aiProviders';
 import { PlexiAIService } from './aiProviders/PlexiAIService';
 import { PlantIDService } from './aiProviders/PlantIDService';
@@ -297,7 +298,7 @@ export class EnhancedPlantAnalysisService {
     if (multiAIResults.plexi?.healthAnalysis?.issues) {
       multiAIResults.plexi.healthAnalysis.issues.forEach((issue: any) => {
         diseases.push({
-          name: issue.type,
+          disease: issue.type,
           confidence: issue.severity,
           severity: issue.severity > 70 ? 'high' : issue.severity > 40 ? 'medium' : 'low',
           symptoms: [issue.description],
@@ -310,7 +311,7 @@ export class EnhancedPlantAnalysisService {
     if (multiAIResults.eppo?.pests?.length > 0) {
       multiAIResults.eppo.pests.forEach((pest: any) => {
         diseases.push({
-          name: pest.preferredName,
+          disease: pest.preferredName,
           confidence: 80, // EPPO è affidabile
           severity: 'medium',
           symptoms: ['Parassita identificato nel database EPPO'],
@@ -323,7 +324,7 @@ export class EnhancedPlantAnalysisService {
     if (multiAIResults.eppo?.diseases?.length > 0) {
       multiAIResults.eppo.diseases.forEach((disease: any) => {
         diseases.push({
-          name: disease.preferredName,
+          disease: disease.preferredName,
           confidence: 85, // EPPO è molto affidabile per malattie
           severity: 'medium',
           symptoms: disease.symptoms || ['Malattia identificata nel database EPPO'],
