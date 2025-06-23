@@ -31,7 +31,7 @@ const DiagnoseTab = () => {
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [autoSentToExpert, setAutoSentToExpert] = useState(false);
+  const [dataSentToExpert, setDataSentToExpert] = useState(false); // Cambiato da autoSentToExpert
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -92,15 +92,19 @@ const DiagnoseTab = () => {
 
   // Send data to expert with automatic sync
   const sendDataToExpert = useCallback(async (includeAnalysis: boolean = false) => {
-    if (!userProfile?.id || !uploadedImage) {
-      console.error('Dati mancanti per invio all\'esperto');
+    if (!userProfile?.id || !uploadedImage || dataSentToExpert) {
+      console.log('❌ Condizioni non soddisfatte per invio esperto:', { 
+        userProfile: !!userProfile?.id, 
+        uploadedImage: !!uploadedImage, 
+        dataSentToExpert 
+      });
       return false;
     }
 
     try {
-      console.log('📨 Invio automatico dati all\'esperto...');
+      console.log('📨 Invio dati all\'esperto...');
       
-      // Prima sincronizza i dati usando PlantDataSyncService
+      // Sincronizza i dati usando PlantDataSyncService
       const synced = await PlantDataSyncService.syncPlantDataToChat(
         userProfile.id,
         plantInfo,
@@ -109,7 +113,7 @@ const DiagnoseTab = () => {
 
       if (synced) {
         console.log('✅ Dati sincronizzati con successo alla chat');
-        setAutoSentToExpert(true);
+        setDataSentToExpert(true);
         
         // Se c'è un'analisi AI, invia anche quella
         if (includeAnalysis && analysisResult) {
@@ -135,8 +139,8 @@ const DiagnoseTab = () => {
           );
         }
 
-        toast.success('Dati inviati automaticamente all\'esperto!', {
-          description: 'Marco Nigro riceverà tutte le informazioni e risponderà al più presto.'
+        toast.success('Dati inviati all\'esperto!', {
+          description: 'Marco Nigro riceverà tutte le informazioni nella chat.'
         });
         return true;
       }
@@ -144,10 +148,10 @@ const DiagnoseTab = () => {
       return false;
     } catch (error) {
       console.error('❌ Errore invio dati all\'esperto:', error);
-      toast.error('Errore nell\'invio automatico all\'esperto');
+      toast.error('Errore nell\'invio all\'esperto');
       return false;
     }
-  }, [userProfile, uploadedImage, plantInfo, analysisResult]);
+  }, [userProfile, uploadedImage, plantInfo, analysisResult, dataSentToExpert]);
 
   // AI diagnosis selection
   const handleSelectAI = useCallback(async () => {
@@ -177,7 +181,7 @@ const DiagnoseTab = () => {
       });
   }, [uploadedImage, hasAIAccess]);
 
-  // Expert consultation selection - with automatic data sending
+  // Expert consultation selection - MODIFICATO: non invia automaticamente
   const handleSelectExpert = useCallback(async () => {
     console.log('🩺 Selezione consulenza esperto...');
     
@@ -189,7 +193,7 @@ const DiagnoseTab = () => {
     };
     setPlantInfo(updatedPlantInfo);
     
-    // Send data automatically to expert
+    // Invia dati solo ora, quando l'utente sceglie esplicitamente
     const sent = await sendDataToExpert(false);
     
     if (sent) {
@@ -201,7 +205,7 @@ const DiagnoseTab = () => {
       }, 2000);
       
       toast.success('Reindirizzamento alla chat con l\'esperto...', {
-        description: 'Tutte le informazioni sono state inviate automaticamente'
+        description: 'Tutte le informazioni sono state inviate'
       });
     }
   }, [sendDataToExpert, setPlantInfo, plantInfo]);
@@ -214,7 +218,7 @@ const DiagnoseTab = () => {
     }
 
     setIsAnalyzing(true);
-    setAutoSentToExpert(false);
+    setDataSentToExpert(false);
 
     try {
       console.log('🔍 Avvio analisi pianta...');
@@ -248,9 +252,10 @@ const DiagnoseTab = () => {
       
       setCurrentStage('result');
 
-      // Send automatically to expert with AI results
-      console.log('📨 Invio automatico diagnosi AI all\'esperto...');
-      await sendDataToExpert(true);
+      // NON inviare automaticamente - l'utente deve scegliere
+      toast.success('Analisi completata!', {
+        description: 'Puoi ora consultare i risultati o inviarli all\'esperto.'
+      });
 
     } catch (error) {
       console.error('❌ Analisi fallita:', error);
@@ -259,14 +264,14 @@ const DiagnoseTab = () => {
     } finally {
       setIsAnalyzing(false);
     }
-  }, [userProfile, plantInfo, sendDataToExpert, setPlantInfo]);
+  }, [userProfile, plantInfo, setPlantInfo]);
 
   // Reset to start new analysis
   const handleNewAnalysis = useCallback(() => {
     setCurrentStage('info');
     setUploadedImage(null);
     setAnalysisResult(null);
-    setAutoSentToExpert(false);
+    setDataSentToExpert(false);
     setPlantInfo({
       isIndoor: true,
       wateringFrequency: '',
@@ -420,7 +425,7 @@ const DiagnoseTab = () => {
         );
 
       case 'result':
-        // Show expert consultation result with automatic data sending confirmation
+        // Show expert consultation result
         if (plantInfo.sendToExpert && !plantInfo.useAI) {
           return (
             <div className="space-y-6">
@@ -440,7 +445,7 @@ const DiagnoseTab = () => {
                   </h3>
                   
                   <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                    <h4 className="font-medium text-green-800 mb-2">📋 Dati inviati automaticamente:</h4>
+                    <h4 className="font-medium text-green-800 mb-2">📋 Dati inviati:</h4>
                     <ul className="text-sm text-green-700 space-y-1 text-left">
                       <li>✅ Informazioni della pianta (ambiente, irrigazione, luce)</li>
                       <li>✅ Descrizione dettagliata dei sintomi</li>
@@ -481,30 +486,59 @@ const DiagnoseTab = () => {
           );
         }
         
-        // Regular AI diagnosis result
+        // AI diagnosis result with option to send to expert
         return (
           <div className="space-y-6">
-            {autoSentToExpert && (
-              <Card className="p-4 bg-green-50/80 backdrop-blur-sm border-green-200">
-                <div className="flex items-center space-x-3">
-                  <CheckCircle className="h-5 w-5 text-green-600" />
-                  <span className="text-green-800 font-medium">
-                    Diagnosi inviata automaticamente all'esperto Marco Nigro!
-                  </span>
-                </div>
-                <p className="text-sm text-green-700 mt-1 ml-8">
-                  Riceverai una conferma professionale nella chat
-                </p>
-              </Card>
-            )}
-
             {analysisResult && uploadedImage && (
-              <PlantAnalysisResultComponent
-                analysisResult={analysisResult}
-                imageUrl={uploadedImage}
-                onNewAnalysis={handleNewAnalysis}
-                autoSentToExpert={autoSentToExpert}
-              />
+              <>
+                <PlantAnalysisResultComponent
+                  analysisResult={analysisResult}
+                  imageUrl={uploadedImage}
+                  onNewAnalysis={handleNewAnalysis}
+                  autoSentToExpert={dataSentToExpert}
+                />
+                
+                {/* Pulsante per inviare all'esperto DOPO la diagnosi AI */}
+                {!dataSentToExpert && (
+                  <Card className="p-4 bg-blue-50/80 backdrop-blur-sm border-blue-200">
+                    <div className="text-center space-y-3">
+                      <h4 className="font-medium text-blue-800">
+                        💡 Vuoi una seconda opinione?
+                      </h4>
+                      <p className="text-sm text-blue-700">
+                        Invia i risultati dell'analisi AI a Marco Nigro per una conferma professionale
+                      </p>
+                      <Button
+                        onClick={() => sendDataToExpert(true)}
+                        className="bg-blue-600 hover:bg-blue-700 text-white"
+                      >
+                        Invia all'esperto per conferma
+                      </Button>
+                    </div>
+                  </Card>
+                )}
+                
+                {dataSentToExpert && (
+                  <Card className="p-4 bg-green-50/80 backdrop-blur-sm border-green-200">
+                    <div className="flex items-center space-x-3">
+                      <CheckCircle className="h-5 w-5 text-green-600" />
+                      <span className="text-green-800 font-medium">
+                        Diagnosi inviata all'esperto Marco Nigro!
+                      </span>
+                    </div>
+                    <div className="mt-2">
+                      <Button
+                        onClick={handleNavigateToChat}
+                        variant="outline"
+                        size="sm"
+                        className="text-green-700 border-green-300"
+                      >
+                        Vai alla chat
+                      </Button>
+                    </div>
+                  </Card>
+                )}
+              </>
             )}
           </div>
         );

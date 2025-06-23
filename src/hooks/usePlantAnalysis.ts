@@ -20,7 +20,7 @@ export const usePlantAnalysis = () => {
     setAnalysisDetails(null);
 
     try {
-      console.log('🔍 Avvio analisi rigorosa dell\'immagine...');
+      console.log('🔍 Avvio analisi rigorosa dell\'immagine con percentuali...');
       setAnalysisProgress(10);
       
       // Usa il nuovo sistema di analisi rigoroso
@@ -40,21 +40,23 @@ export const usePlantAnalysis = () => {
         return;
       }
       
-      // Converti risultato nel formato atteso dall'UI
+      // Converti risultato nel formato atteso dall'UI con percentuali corrette
+      const confidencePercent = analysisResult.confidence || 75;
+      
       const diseaseInfo: DiagnosedDisease = {
         id: `diagnosis-${Date.now()}`,
         name: analysisResult.plantName || 'Pianta identificata',
         description: analysisResult.isHealthy ? 
-          'La pianta appare in buona salute secondo l\'analisi specializzata' :
-          'Sono stati rilevati possibili problemi di salute',
+          `La pianta appare in buona salute secondo l'analisi specializzata (${confidencePercent}% confidenza)` :
+          `Sono stati rilevati possibili problemi di salute (${confidencePercent}% confidenza)`,
         causes: analysisResult.isHealthy ? 'N/A - Pianta sana' : 'Vedere malattie specifiche rilevate',
-        symptoms: analysisResult.diseases?.map(d => d) || ['Nessun sintomo specifico'],
+        symptoms: analysisResult.diseases?.map(d => `${d.name} (${d.probability}%)`) || ['Nessun sintomo specifico'],
         treatments: analysisResult.recommendations || [],
-        confidence: analysisResult.confidence || 0,
+        confidence: confidencePercent,
         healthy: analysisResult.isHealthy || false,
         products: [], // Da implementare se necessario
-        recommendExpertConsultation: (analysisResult.confidence || 0) < 0.7,
-        disclaimer: (analysisResult.confidence || 0) < 0.7 ? 
+        recommendExpertConsultation: confidencePercent < 70,
+        disclaimer: confidencePercent < 70 ? 
           'Confidenza moderata. Consultazione esperta raccomandata per conferma.' : undefined
       };
       
@@ -66,10 +68,10 @@ export const usePlantAnalysis = () => {
           isHealthy: analysisResult.isHealthy || false,
           isValidPlantImage: true,
           primaryService: analysisResult.analysisDetails?.source || 'Enhanced Analysis',
-          agreementScore: analysisResult.confidence || 0,
+          agreementScore: confidencePercent / 100,
           huggingFaceResult: {
             label: analysisResult.plantName || 'Pianta',
-            score: analysisResult.confidence || 0
+            score: confidencePercent / 100
           },
           dataSource: 'Real Plant APIs'
         },
@@ -84,29 +86,29 @@ export const usePlantAnalysis = () => {
             name: '',
             infoComplete: false
           },
-          accuracyGuarantee: (analysisResult.confidence || 0) >= 0.8 ? "80%+" : 
-                           (analysisResult.confidence || 0) >= 0.6 ? "60%+" : "40%+"
+          accuracyGuarantee: confidencePercent >= 80 ? "80%+" : 
+                           confidencePercent >= 60 ? "60%+" : "40%+"
         },
         identifiedFeatures: [
           analysisResult.plantName || 'Pianta non identificata',
-          `Confidenza: ${Math.round((analysisResult.confidence || 0) * 100)}%`,
+          `Confidenza: ${confidencePercent}%`,
           analysisResult.isHealthy ? 'Pianta sana' : 'Problemi rilevati',
-          'Analisi con API specializzate'
+          'Analisi con API specializzate',
+          ...(analysisResult.diseases || []).map(d => `${d.name}: ${d.probability}% probabilità`)
         ],
         sistemaDigitaleFoglia: false,
-        analysisTechnology: 'Plant.id Professional API'
+        analysisTechnology: 'Enhanced Plant Analysis API'
       };
       
       setDiagnosedDisease(diseaseInfo);
-      setDiagnosisResult(`${analysisResult.plantName} identificata con ${Math.round((analysisResult.confidence || 0) * 100)}% di confidenza`);
+      setDiagnosisResult(`${analysisResult.plantName} identificata con ${confidencePercent}% di confidenza`);
       setAnalysisDetails(detailedAnalysis);
       setAnalysisProgress(100);
       
-      // Feedback finale
-      const confidencePercent = Math.round((analysisResult.confidence || 0) * 100);
-      if ((analysisResult.confidence || 0) >= 0.8) {
+      // Feedback finale con percentuali
+      if (confidencePercent >= 80) {
         toast.success(`✅ Analisi completata con alta precisione (${confidencePercent}%)!`);
-      } else if ((analysisResult.confidence || 0) >= 0.6) {
+      } else if (confidencePercent >= 60) {
         toast.success(`✅ Analisi completata (${confidencePercent}%). Consulenza esperta raccomandata per maggiore certezza.`);
       } else {
         toast.warning(`⚠️ Analisi completata ma con confidenza moderata (${confidencePercent}%). Consulenza esperta fortemente raccomandata.`);

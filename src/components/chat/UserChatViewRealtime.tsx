@@ -2,9 +2,9 @@
 import React, { useState, useEffect } from 'react';
 import { useUserChatRealtime } from '@/hooks/useUserChatRealtime';
 import MessageList from './MessageList';
-import MessageInput from './MessageInput';
 import { ChatInitializer } from './user/ChatInitializer';
-import { UserDataDisplay } from './user/UserDataDisplay';
+import { ComprehensiveDataDisplay } from './user/ComprehensiveDataDisplay';
+import { MessageBoard } from './user/MessageBoard';
 import { DatabaseMessage } from '@/services/chat/types';
 import { Message } from './types';
 import { Button } from '@/components/ui/button';
@@ -17,7 +17,7 @@ interface UserChatViewRealtimeProps {
 
 export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ userId }) => {
   const [autoDataSent, setAutoDataSent] = useState(false);
-  const [showUserData, setShowUserData] = useState(false);
+  const [showComprehensiveData, setShowComprehensiveData] = useState(false);
   
   const {
     activeChat,
@@ -47,12 +47,10 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
     }
   }, [currentConversationId]);
 
-  // Show user data automatically when data is sent
+  // Show comprehensive data automatically when data is sent
   useEffect(() => {
     if (autoDataSent) {
-      setShowUserData(true);
-      const timer = setTimeout(() => setShowUserData(false), 10000);
-      return () => clearTimeout(timer);
+      setShowComprehensiveData(true);
     }
   }, [autoDataSent]);
 
@@ -145,8 +143,8 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
   }
 
   return (
-    <div className="flex flex-col h-full">
-      {/* Inizializzatore automatico dati */}
+    <div className="flex flex-col h-full bg-gray-50">
+      {/* Inizializzatore automatico dati - RIMOSSO l'invio automatico */}
       <ChatInitializer
         activeChat={activeChat}
         currentConversationId={currentConversationId}
@@ -155,23 +153,27 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
       />
       
       {/* Header Chat */}
-      <div className="bg-white border-b border-gray-200 p-4">
+      <div className="bg-white border-b border-gray-200 p-4 shadow-sm">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="font-semibold text-lg">Chat con Marco Nigro</h3>
-            <p className="text-sm text-gray-500">
-              Fitopatologo - {isConnected ? 'Online' : 'Connessione...'}
+            <h3 className="font-semibold text-lg text-gray-900">💬 Chat con Marco Nigro</h3>
+            <p className="text-sm text-gray-600 flex items-center">
+              Fitopatologo Professionista
+              <span className={`ml-2 w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}></span>
+              <span className="ml-1 text-xs">
+                {isConnected ? 'Online' : 'Connessione...'}
+              </span>
             </p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setShowUserData(!showUserData)}
+              onClick={() => setShowComprehensiveData(!showComprehensiveData)}
               className="flex items-center gap-2"
             >
-              {showUserData ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              {showUserData ? 'Nascondi Dati' : 'Mostra Dati'}
+              {showComprehensiveData ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              {showComprehensiveData ? 'Nascondi Dati' : 'Mostra Dati'}
             </Button>
             <Button
               variant="ghost"
@@ -182,42 +184,36 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
               <RefreshCw className="h-4 w-4" />
               Reset
             </Button>
-            <div className="flex items-center gap-2">
-              <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`} />
-              <span className="text-xs text-gray-500">
-                {isConnected ? 'Real-Time' : 'Disconnesso'}
-              </span>
-            </div>
           </div>
         </div>
       </div>
 
-      {/* Visualizzazione Dati Utente/Pianta */}
-      <UserDataDisplay isVisible={showUserData} />
+      {/* Visualizzazione Comprensiva Dati */}
+      <ComprehensiveDataDisplay
+        isVisible={showComprehensiveData}
+        onToggle={() => setShowComprehensiveData(!showComprehensiveData)}
+      />
 
       {/* Lista Messaggi */}
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 overflow-hidden bg-white">
         <MessageList 
           messages={formatMessagesForDisplay(messages)}
         />
       </div>
 
-      {/* Input Messaggi */}
-      <MessageInput
-        conversationId={currentConversationId}
-        senderId={userId}
-        recipientId="07c7fe19-33c3-4782-b9a0-4e87c8aa7044" // Marco Nigro ID
+      {/* Message Board per scrivere */}
+      <MessageBoard
         onSendMessage={handleSendMessage}
         isSending={isSending}
-        disabledInput={!isConnected}
-        variant="default"
+        isConnected={isConnected}
+        disabled={!isConnected}
       />
 
       {/* Connection Error Handler */}
       {!isConnected && activeChat && (
-        <div className="bg-red-50 border-t border-red-200 p-2 text-center">
-          <p className="text-sm text-red-600">
-            Connessione persa - Tentativo di riconnessione...
+        <div className="bg-red-50 border-t border-red-200 p-3 text-center">
+          <p className="text-sm text-red-600 font-medium">
+            🔌 Connessione persa - Tentativo di riconnessione automatica...
           </p>
           <Button
             onClick={() => {
@@ -226,7 +222,7 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
             }}
             variant="ghost"
             size="sm"
-            className="mt-1"
+            className="mt-2 text-red-700 hover:bg-red-100"
           >
             Forza riconnessione
           </Button>
