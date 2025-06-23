@@ -1,6 +1,5 @@
 
 import { PlantIdService, EPPOService, MockPlantService, type PlantIdentificationResult, type DiseaseDetectionResult } from './aiProviders';
-import { RougenAIService } from './aiProviders/RougenAIService';
 import { PlantDiseasesAIService } from './aiProviders/PlantDiseasesAIService';
 import { PlexiAIService } from './aiProviders/PlexiAIService';
 import { PlantIDService } from './aiProviders/PlantIDService';
@@ -8,6 +7,7 @@ import { PlantDetectionService } from './plantDetectionService';
 import { ImageProcessingService, type ProcessedImage } from './imageProcessingService';
 import { CacheService } from './cacheService';
 import { EppoService, type EppoSearchResult } from './eppoService';
+import { eppoApiService } from '@/utils/eppoApiService';
 import { toast } from "@/components/ui/sonner";
 import { type CombinedAnalysisResult } from '@/types/analysis';
 
@@ -27,12 +27,15 @@ export interface EnhancedAnalysisResult extends CombinedAnalysisResult {
     message: string;
   };
   multiAIResults?: {
-    rougen?: any;
     plantDiseasesAI?: any;
     plexi?: any;
     plantID?: any;
+    eppo?: any;
   };
   consensus?: {
+    mostLikelyPlant: any;
+    mostLikelyDisease?: any;
+    overallConfidence: number;
     finalConfidence: number;
     agreementScore: number;
     bestProvider: string;
@@ -64,7 +67,13 @@ export class EnhancedPlantAnalysisService {
         return {
           plantIdentification: [],
           diseaseDetection: [],
-          consensus: { overallConfidence: plantDetection.confidence },
+          consensus: { 
+            mostLikelyPlant: null,
+            overallConfidence: plantDetection.confidence,
+            finalConfidence: plantDetection.confidence,
+            agreementScore: 0,
+            bestProvider: 'plant-detection'
+          },
           plantDetection,
           analysisMetadata: {
             timestamp: new Date().toISOString(),
@@ -98,8 +107,12 @@ export class EnhancedPlantAnalysisService {
         plantIdentification: this.formatPlantIdentifications(multiAIResults),
         diseaseDetection: this.formatDiseaseDetections(multiAIResults),
         consensus: {
-          ...consensus,
-          overallConfidence: consensus.finalConfidence
+          mostLikelyPlant: consensus.mostLikelyPlant,
+          mostLikelyDisease: consensus.mostLikelyDisease,
+          overallConfidence: consensus.finalConfidence,
+          finalConfidence: consensus.finalConfidence,
+          agreementScore: consensus.agreementScore,
+          bestProvider: consensus.bestProvider
         },
         plantDetection,
         multiAIResults,
@@ -133,22 +146,22 @@ export class EnhancedPlantAnalysisService {
     
     // Esegui analisi in parallelo per migliori performance
     const promises = [
-      RougenAIService.identifyPlant(imageBase64).then(r => ({ rougen: r })).catch(() => ({ rougen: null })),
       PlantDiseasesAIService.detectDiseases(imageBase64).then(r => ({ plantDiseasesAI: r })).catch(() => ({ plantDiseasesAI: null })),
       PlexiAIService.analyzeComprehensive(imageBase64).then(r => ({ plexi: r })).catch(() => ({ plexi: null })),
-      PlantIDService.identifyPlant(imageBase64).then(r => ({ plantID: r })).catch(() => ({ plantID: null }))
+      PlantIDService.identifyPlant(imageBase64).then(r => ({ plantID: r })).catch(() => ({ plantID: null })),
+      this.searchEppoDatabase(imageBase64).then(r => ({ eppo: r })).catch(() => ({ eppo: null }))
     ];
     
-    updateProgress('analysis', 35, 'RougenAI in elaborazione...');
+    updateProgress('analysis', 35, 'PlantDiseasesAI in elaborazione...');
     await new Promise(resolve => setTimeout(resolve, 300));
     
-    updateProgress('analysis', 45, 'PlantDiseasesAI in elaborazione...');
+    updateProgress('analysis', 45, 'PlexiAI in elaborazione...');
     await new Promise(resolve => setTimeout(resolve, 300));
     
-    updateProgress('analysis', 55, 'PlexiAI in elaborazione...');
+    updateProgress('analysis', 55, 'Plant.ID in elaborazione...');
     await new Promise(resolve => setTimeout(resolve, 300));
     
-    updateProgress('analysis', 65, 'Plant.ID in elaborazione...');
+    updateProgress('analysis', 65, 'Database EPPO in elaborazione...');
     await new Promise(resolve => setTimeout(resolve, 300));
     
     const resolvedResults = await Promise.allSettled(promises);
@@ -165,28 +178,46 @@ export class EnhancedPlantAnalysisService {
     return results;
   }
   
+  private static async searchEppoDatabase(imageBase64: string) {
+    try {
+      // Prima identifica la pianta con Plant.ID per ottenere il nome
+      const plantID = await PlantIDService.identifyPlant(imageBase64);
+      if (plantID.plantName && plantID.plantName !== 'Pianta non identificata') {
+        // Cerca nel database EPPO usando il nome della pianta
+        const eppoResults = await eppoApiService.searchPests(plantID.plantName);
+        const eppoPlants = await eppoApiService.searchPlants(plantID.plantName);
+        const eppoDiseases = await eppoApiService.searchDiseases(plantID.plantName);
+        
+        return {
+          pests: eppoResults,
+          plants: eppoPlants,
+          diseases: eppoDiseases,
+          searchTerm: plantID.plantName
+        };
+      }
+      return null;
+    } catch (error) {
+      console.warn('EPPO database search failed:', error);
+      return null;
+    }
+  }
+  
   private static calculateAdvancedConsensus(multiAIResults: any) {
     const confidences: number[] = [];
     const providers: string[] = [];
     let bestProvider = 'unknown';
     let maxConfidence = 0;
+    let mostLikelyPlant: any = null;
+    let mostLikelyDisease: any = null;
     
     // Estrai confidenze da tutti i provider
-    if (multiAIResults.rougen?.confidence) {
-      confidences.push(multiAIResults.rougen.confidence);
-      providers.push('RougenAI');
-      if (multiAIResults.rougen.confidence > maxConfidence) {
-        maxConfidence = multiAIResults.rougen.confidence;
-        bestProvider = 'RougenAI';
-      }
-    }
-    
     if (multiAIResults.plantID?.confidence) {
       confidences.push(multiAIResults.plantID.confidence);
       providers.push('Plant.ID');
       if (multiAIResults.plantID.confidence > maxConfidence) {
         maxConfidence = multiAIResults.plantID.confidence;
         bestProvider = 'Plant.ID';
+        mostLikelyPlant = multiAIResults.plantID;
       }
     }
     
@@ -196,6 +227,22 @@ export class EnhancedPlantAnalysisService {
       if (multiAIResults.plexi.plantIdentification.confidence > maxConfidence) {
         maxConfidence = multiAIResults.plexi.plantIdentification.confidence;
         bestProvider = 'PlexiAI';
+        mostLikelyPlant = multiAIResults.plexi.plantIdentification;
+      }
+    }
+    
+    // Considera anche i dati EPPO per malattie
+    if (multiAIResults.eppo?.diseases?.length > 0) {
+      providers.push('EPPO Database');
+      mostLikelyDisease = multiAIResults.eppo.diseases[0];
+    }
+    
+    if (multiAIResults.plantDiseasesAI?.length > 0) {
+      const diseaseConfidence = multiAIResults.plantDiseasesAI[0].confidence;
+      confidences.push(diseaseConfidence);
+      providers.push('PlantDiseasesAI');
+      if (!mostLikelyDisease || diseaseConfidence > 50) {
+        mostLikelyDisease = multiAIResults.plantDiseasesAI[0];
       }
     }
     
@@ -214,23 +261,14 @@ export class EnhancedPlantAnalysisService {
       agreementScore,
       bestProvider,
       providersCount: providers.length,
-      providersUsed: providers
+      providersUsed: providers,
+      mostLikelyPlant,
+      mostLikelyDisease
     };
   }
   
   private static formatPlantIdentifications(multiAIResults: any): PlantIdentificationResult[] {
     const identifications: PlantIdentificationResult[] = [];
-    
-    if (multiAIResults.rougen) {
-      identifications.push({
-        plantName: multiAIResults.rougen.plantName,
-        scientificName: multiAIResults.rougen.scientificName,
-        confidence: multiAIResults.rougen.confidence,
-        habitat: 'Da determinare',
-        careInstructions: multiAIResults.rougen.characteristics || [],
-        provider: 'rougen'
-      });
-    }
     
     if (multiAIResults.plantID) {
       identifications.push({
@@ -239,7 +277,7 @@ export class EnhancedPlantAnalysisService {
         confidence: multiAIResults.plantID.confidence,
         habitat: 'Da determinare',
         careInstructions: multiAIResults.plantID.commonNames || [],
-        provider: 'plant-id'
+        provider: 'plantid'
       });
     }
     
@@ -250,7 +288,19 @@ export class EnhancedPlantAnalysisService {
         confidence: multiAIResults.plexi.plantIdentification.confidence,
         habitat: 'Da determinare',
         careInstructions: multiAIResults.plexi.recommendations || [],
-        provider: 'plexi'
+        provider: 'plantnet'
+      });
+    }
+    
+    if (multiAIResults.eppo?.plants?.length > 0) {
+      const eppoPlant = multiAIResults.eppo.plants[0];
+      identifications.push({
+        plantName: eppoPlant.preferredName,
+        scientificName: eppoPlant.scientificName || eppoPlant.preferredName,
+        confidence: 85, // EPPO è molto affidabile
+        habitat: 'Database EPPO',
+        careInstructions: eppoPlant.otherNames || [],
+        provider: 'eppo'
       });
     }
     
@@ -263,12 +313,12 @@ export class EnhancedPlantAnalysisService {
     if (multiAIResults.plantDiseasesAI) {
       multiAIResults.plantDiseasesAI.forEach((disease: any) => {
         diseases.push({
-          diseaseName: disease.diseaseName,
+          name: disease.diseaseName,
           confidence: disease.confidence,
           severity: disease.severity,
           symptoms: disease.symptoms,
           treatment: disease.treatment,
-          provider: 'plant-diseases-ai'
+          provider: 'plantnet'
         });
       });
     }
@@ -276,12 +326,38 @@ export class EnhancedPlantAnalysisService {
     if (multiAIResults.plexi?.healthAnalysis?.issues) {
       multiAIResults.plexi.healthAnalysis.issues.forEach((issue: any) => {
         diseases.push({
-          diseaseName: issue.type,
+          name: issue.type,
           confidence: issue.severity,
           severity: issue.severity > 70 ? 'high' : issue.severity > 40 ? 'medium' : 'low',
           symptoms: [issue.description],
           treatment: ['Consulta esperto'],
-          provider: 'plexi'
+          provider: 'plantnet'
+        });
+      });
+    }
+    
+    if (multiAIResults.eppo?.pests?.length > 0) {
+      multiAIResults.eppo.pests.forEach((pest: any) => {
+        diseases.push({
+          name: pest.preferredName,
+          confidence: 80, // EPPO è affidabile
+          severity: 'medium',
+          symptoms: ['Parassita identificato nel database EPPO'],
+          treatment: ['Consulta database EPPO per trattamenti specifici'],
+          provider: 'eppo'
+        });
+      });
+    }
+    
+    if (multiAIResults.eppo?.diseases?.length > 0) {
+      multiAIResults.eppo.diseases.forEach((disease: any) => {
+        diseases.push({
+          name: disease.preferredName,
+          confidence: 85, // EPPO è molto affidabile per malattie
+          severity: 'medium',
+          symptoms: disease.symptoms || ['Malattia identificata nel database EPPO'],
+          treatment: ['Consulta database EPPO per trattamenti specifici'],
+          provider: 'eppo'
         });
       });
     }
