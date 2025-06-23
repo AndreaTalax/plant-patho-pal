@@ -1,6 +1,5 @@
 
 import { PlantIdService, EPPOService, MockPlantService, type PlantIdentificationResult, type DiseaseDetectionResult } from './aiProviders';
-import { PlantDiseasesAIService } from './aiProviders/PlantDiseasesAIService';
 import { PlexiAIService } from './aiProviders/PlexiAIService';
 import { PlantIDService } from './aiProviders/PlantIDService';
 import { PlantDetectionService } from './plantDetectionService';
@@ -27,12 +26,11 @@ export interface EnhancedAnalysisResult extends CombinedAnalysisResult {
     message: string;
   };
   multiAIResults?: {
-    plantDiseasesAI?: any;
     plexi?: any;
     plantID?: any;
     eppo?: any;
   };
-  consensus?: {
+  consensus: {
     mostLikelyPlant: any;
     mostLikelyDisease?: any;
     overallConfidence: number;
@@ -146,14 +144,10 @@ export class EnhancedPlantAnalysisService {
     
     // Esegui analisi in parallelo per migliori performance
     const promises = [
-      PlantDiseasesAIService.detectDiseases(imageBase64).then(r => ({ plantDiseasesAI: r })).catch(() => ({ plantDiseasesAI: null })),
       PlexiAIService.analyzeComprehensive(imageBase64).then(r => ({ plexi: r })).catch(() => ({ plexi: null })),
       PlantIDService.identifyPlant(imageBase64).then(r => ({ plantID: r })).catch(() => ({ plantID: null })),
       this.searchEppoDatabase(imageBase64).then(r => ({ eppo: r })).catch(() => ({ eppo: null }))
     ];
-    
-    updateProgress('analysis', 35, 'PlantDiseasesAI in elaborazione...');
-    await new Promise(resolve => setTimeout(resolve, 300));
     
     updateProgress('analysis', 45, 'PlexiAI in elaborazione...');
     await new Promise(resolve => setTimeout(resolve, 300));
@@ -237,15 +231,6 @@ export class EnhancedPlantAnalysisService {
       mostLikelyDisease = multiAIResults.eppo.diseases[0];
     }
     
-    if (multiAIResults.plantDiseasesAI?.length > 0) {
-      const diseaseConfidence = multiAIResults.plantDiseasesAI[0].confidence;
-      confidences.push(diseaseConfidence);
-      providers.push('PlantDiseasesAI');
-      if (!mostLikelyDisease || diseaseConfidence > 50) {
-        mostLikelyDisease = multiAIResults.plantDiseasesAI[0];
-      }
-    }
-    
     // Calcola consensus finale
     const avgConfidence = confidences.length > 0 ? 
       Math.round(confidences.reduce((a, b) => a + b, 0) / confidences.length) : 50;
@@ -310,23 +295,10 @@ export class EnhancedPlantAnalysisService {
   private static formatDiseaseDetections(multiAIResults: any): DiseaseDetectionResult[] {
     const diseases: DiseaseDetectionResult[] = [];
     
-    if (multiAIResults.plantDiseasesAI) {
-      multiAIResults.plantDiseasesAI.forEach((disease: any) => {
-        diseases.push({
-          name: disease.diseaseName,
-          confidence: disease.confidence,
-          severity: disease.severity,
-          symptoms: disease.symptoms,
-          treatment: disease.treatment,
-          provider: 'plantnet'
-        });
-      });
-    }
-    
     if (multiAIResults.plexi?.healthAnalysis?.issues) {
       multiAIResults.plexi.healthAnalysis.issues.forEach((issue: any) => {
         diseases.push({
-          name: issue.type,
+          diseaseName: issue.type,
           confidence: issue.severity,
           severity: issue.severity > 70 ? 'high' : issue.severity > 40 ? 'medium' : 'low',
           symptoms: [issue.description],
@@ -339,7 +311,7 @@ export class EnhancedPlantAnalysisService {
     if (multiAIResults.eppo?.pests?.length > 0) {
       multiAIResults.eppo.pests.forEach((pest: any) => {
         diseases.push({
-          name: pest.preferredName,
+          diseaseName: pest.preferredName,
           confidence: 80, // EPPO è affidabile
           severity: 'medium',
           symptoms: ['Parassita identificato nel database EPPO'],
@@ -352,7 +324,7 @@ export class EnhancedPlantAnalysisService {
     if (multiAIResults.eppo?.diseases?.length > 0) {
       multiAIResults.eppo.diseases.forEach((disease: any) => {
         diseases.push({
-          name: disease.preferredName,
+          diseaseName: disease.preferredName,
           confidence: 85, // EPPO è molto affidabile per malattie
           severity: 'medium',
           symptoms: disease.symptoms || ['Malattia identificata nel database EPPO'],
