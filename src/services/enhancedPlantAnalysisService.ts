@@ -1,4 +1,3 @@
-
 import { PlantIdService, EPPOService, MockPlantService, type PlantIdentificationResult, type DiseaseDetectionResult } from './aiProviders';
 import { PlexiAIService } from './aiProviders/PlexiAIService';
 import { PlantIDService } from './aiProviders/PlantIDService';
@@ -302,7 +301,7 @@ export class EnhancedPlantAnalysisService {
           confidence: issue.severity,
           severity: issue.severity > 70 ? 'high' : issue.severity > 40 ? 'medium' : 'low',
           symptoms: [issue.description],
-          treatment: ['Consulta esperto'],
+          treatments: ['Consulta esperto'],
           provider: 'plantnet'
         });
       });
@@ -315,7 +314,7 @@ export class EnhancedPlantAnalysisService {
           confidence: 80, // EPPO è affidabile
           severity: 'medium',
           symptoms: ['Parassita identificato nel database EPPO'],
-          treatment: ['Consulta database EPPO per trattamenti specifici'],
+          treatments: ['Consulta database EPPO per trattamenti specifici'],
           provider: 'eppo'
         });
       });
@@ -328,7 +327,7 @@ export class EnhancedPlantAnalysisService {
           confidence: 85, // EPPO è molto affidabile per malattie
           severity: 'medium',
           symptoms: disease.symptoms || ['Malattia identificata nel database EPPO'],
-          treatment: ['Consulta database EPPO per trattamenti specifici'],
+          treatments: ['Consulta database EPPO per trattamenti specifici'],
           provider: 'eppo'
         });
       });
