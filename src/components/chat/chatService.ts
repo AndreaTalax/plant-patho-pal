@@ -25,18 +25,18 @@ export const loadMessages = async (conversationId: string): Promise<DatabaseMess
 
     console.log('📚 Loading messages for conversation:', conversationId);
     
-    // Add request timeout
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 8000);
+    // Add request timeout using Promise.race
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error('Request timeout')), 8000);
+    });
     
-    const { data, error } = await supabase
+    const queryPromise = supabase
       .from('messages')
       .select('*')
       .eq('conversation_id', conversationId)
-      .order('sent_at', { ascending: true })
-      .abortSignal(controller.signal);
+      .order('sent_at', { ascending: true });
 
-    clearTimeout(timeoutId);
+    const { data, error } = await Promise.race([queryPromise, timeoutPromise]);
 
     if (error) {
       console.error('❌ Error loading messages:', error);
@@ -46,7 +46,7 @@ export const loadMessages = async (conversationId: string): Promise<DatabaseMess
     console.log('✅ Messages loaded successfully:', data?.length || 0);
     return data || [];
   } catch (error) {
-    if (error.name === 'AbortError') {
+    if (error.message === 'Request timeout') {
       console.error('❌ Request timeout loading messages');
       throw new Error('Request timeout');
     }
@@ -100,11 +100,12 @@ export const sendMessage = async (
       throw new Error('User not authenticated');
     }
 
-    // Add request timeout
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    // Add request timeout using Promise.race
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error('Request timeout')), 10000);
+    });
 
-    const { data, error } = await supabase.functions.invoke('send-message', {
+    const functionPromise = supabase.functions.invoke('send-message', {
       body: {
         conversationId,
         recipientId,
@@ -114,7 +115,7 @@ export const sendMessage = async (
       }
     });
 
-    clearTimeout(timeoutId);
+    const { data, error } = await Promise.race([functionPromise, timeoutPromise]);
 
     if (error) {
       console.error('❌ Error from send-message function:', error);
@@ -124,7 +125,7 @@ export const sendMessage = async (
     console.log('✅ Message sent successfully:', data);
     return true;
   } catch (error) {
-    if (error.name === 'AbortError') {
+    if (error.message === 'Request timeout') {
       console.error('❌ Request timeout sending message');
       throw new Error('Request timeout');
     }
@@ -143,20 +144,20 @@ export const loadConversations = async (expertId: string): Promise<DatabaseConve
 
     console.log('📚 Loading conversations for expert:', expertId);
     
-    // Add request timeout
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    // Add request timeout using Promise.race
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error('Request timeout')), 10000);
+    });
     
     // Get conversations
-    const { data: conversationsData, error: conversationsError } = await supabase
+    const queryPromise = supabase
       .from('conversations')
       .select('*')
       .eq('expert_id', expertId)
       .eq('status', 'active')
-      .order('updated_at', { ascending: false })
-      .abortSignal(controller.signal);
+      .order('updated_at', { ascending: false });
 
-    clearTimeout(timeoutId);
+    const { data: conversationsData, error: conversationsError } = await Promise.race([queryPromise, timeoutPromise]);
 
     if (conversationsError) {
       console.error('❌ Error loading conversations:', conversationsError);
@@ -178,11 +179,17 @@ export const loadConversations = async (expertId: string): Promise<DatabaseConve
         }
 
         try {
-          const { data: userProfile, error: profileError } = await supabase
+          const profileTimeoutPromise = new Promise<never>((_, reject) => {
+            setTimeout(() => reject(new Error('Profile timeout')), 5000);
+          });
+
+          const profileQueryPromise = supabase
             .from('profiles')
             .select('id, username, first_name, last_name, is_online, last_seen_at')
             .eq('id', conversation.user_id)
             .single();
+
+          const { data: userProfile, error: profileError } = await Promise.race([profileQueryPromise, profileTimeoutPromise]);
 
           if (profileError) {
             console.error('⚠️ Error loading user profile:', profileError);
@@ -211,7 +218,7 @@ export const loadConversations = async (expertId: string): Promise<DatabaseConve
 
     return conversationsWithProfiles;
   } catch (error) {
-    if (error.name === 'AbortError') {
+    if (error.message === 'Request timeout') {
       console.error('❌ Request timeout loading conversations');
       throw new Error('Request timeout');
     }
@@ -232,21 +239,21 @@ export const findOrCreateConversation = async (userId: string, expertId?: string
 
     console.log('🔍 Finding or creating conversation:', { userId, expertId: targetExpertId });
 
-    // Add request timeout
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 8000);
+    // Add request timeout using Promise.race
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error('Request timeout')), 8000);
+    });
 
     // First, try to find existing conversation
-    const { data: existing, error: findError } = await supabase
+    const findQueryPromise = supabase
       .from('conversations')
       .select('*')
       .eq('user_id', userId)
       .eq('expert_id', targetExpertId)
       .eq('status', 'active')
-      .single()
-      .abortSignal(controller.signal);
+      .single();
 
-    clearTimeout(timeoutId);
+    const { data: existing, error: findError } = await Promise.race([findQueryPromise, timeoutPromise]);
 
     if (findError && findError.code !== 'PGRST116') {
       console.error('❌ Error finding conversation:', findError);
@@ -259,10 +266,11 @@ export const findOrCreateConversation = async (userId: string, expertId?: string
     }
 
     // Create new conversation with timeout
-    const createController = new AbortController();
-    const createTimeoutId = setTimeout(() => createController.abort(), 8000);
+    const createTimeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error('Request timeout')), 8000);
+    });
 
-    const { data: newConversation, error: createError } = await supabase
+    const createQueryPromise = supabase
       .from('conversations')
       .insert({
         user_id: userId,
@@ -271,10 +279,9 @@ export const findOrCreateConversation = async (userId: string, expertId?: string
         status: 'active'
       })
       .select()
-      .single()
-      .abortSignal(createController.signal);
+      .single();
 
-    clearTimeout(createTimeoutId);
+    const { data: newConversation, error: createError } = await Promise.race([createQueryPromise, createTimeoutPromise]);
 
     if (createError) {
       console.error('❌ Error creating conversation:', createError);
@@ -284,7 +291,7 @@ export const findOrCreateConversation = async (userId: string, expertId?: string
     console.log('✅ Created new conversation:', newConversation.id);
     return newConversation;
   } catch (error) {
-    if (error.name === 'AbortError') {
+    if (error.message === 'Request timeout') {
       console.error('❌ Request timeout in findOrCreateConversation');
       throw new Error('Request timeout');
     }
@@ -304,17 +311,17 @@ export const updateConversationStatus = async (conversationId: string, status: s
 
     console.log('🔄 Updating conversation status:', { conversationId, status });
 
-    // Add request timeout
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000);
+    // Add request timeout using Promise.race
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error('Request timeout')), 5000);
+    });
 
-    const { error } = await supabase
+    const updateQueryPromise = supabase
       .from('conversations')
       .update({ status, updated_at: new Date().toISOString() })
-      .eq('id', conversationId)
-      .abortSignal(controller.signal);
+      .eq('id', conversationId);
 
-    clearTimeout(timeoutId);
+    const { error } = await Promise.race([updateQueryPromise, timeoutPromise]);
 
     if (error) {
       console.error('❌ Error updating conversation status:', error);
@@ -324,7 +331,7 @@ export const updateConversationStatus = async (conversationId: string, status: s
     console.log('✅ Conversation status updated successfully');
     return true;
   } catch (error) {
-    if (error.name === 'AbortError') {
+    if (error.message === 'Request timeout') {
       console.error('❌ Request timeout updating conversation status');
     } else {
       console.error('❌ Error in updateConversationStatus:', error);
