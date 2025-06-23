@@ -1,5 +1,3 @@
-
-
 import { PlantIdService, EPPOService, MockPlantService, type PlantIdentificationResult, type DiseaseDetectionResult } from './aiProviders';
 import { PlexiAIService } from './aiProviders/PlexiAIService';
 import { PlantIDService } from './aiProviders/PlantIDService';
@@ -343,4 +341,3 @@ export class EnhancedPlantAnalysisService {
     return undefined;
   }
 }
-
