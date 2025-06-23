@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
 import { supabase, EXPERT_ID } from '@/integrations/supabase/client';
 import { Message, DatabaseConversation } from '../types';
@@ -20,11 +20,49 @@ export const useUserChatRealtime = (userId: string) => {
   const [connectionRetries, setConnectionRetries] = useState(0);
   const [lastMessageLoad, setLastMessageLoad] = useState<Date | null>(null);
   
-  // Funzione per caricare i messaggi esistenti con retry
+  // Add refs to prevent multiple simultaneous operations
+  const initializingRef = useRef(false);
+  const loadingMessagesRef = useRef(false);
+  const connectionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Rate limiting for API calls
+  const rateLimitRef = useRef<Map<string, number>>(new Map());
+  
+  const canMakeRequest = (key: string, minInterval: number = 2000) => {
+    const now = Date.now();
+    const lastRequest = rateLimitRef.current.get(key) || 0;
+    if (now - lastRequest < minInterval) {
+      console.log(`⏳ Rate limiting ${key}, waiting...`);
+      return false;
+    }
+    rateLimitRef.current.set(key, now);
+    return true;
+  };
+  
+  // Funzione per caricare i messaggi esistenti con rate limiting
   const loadExistingMessages = async (conversationId: string, retryCount = 0) => {
+    if (loadingMessagesRef.current) {
+      console.log('📚 Already loading messages, skipping...');
+      return false;
+    }
+    
+    if (!canMakeRequest(`load-messages-${conversationId}`, 1000)) {
+      return false;
+    }
+    
+    loadingMessagesRef.current = true;
+    
     try {
       console.log('📚 Loading existing messages for conversation:', conversationId, 'retry:', retryCount);
-      const messagesData = await loadMessages(conversationId);
+      
+      // Add timeout to prevent hanging requests
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Request timeout')), 10000);
+      });
+      
+      const messagesPromise = loadMessages(conversationId);
+      const messagesData = await Promise.race([messagesPromise, timeoutPromise]) as any;
+      
       console.log('📬 Raw messages loaded:', messagesData);
       
       if (messagesData && messagesData.length > 0) {
@@ -53,12 +91,13 @@ export const useUserChatRealtime = (userId: string) => {
     } catch (error) {
       console.error('❌ Error loading existing messages:', error);
       
-      // Retry logic
-      if (retryCount < 3) {
-        console.log('🔄 Retrying message load in 2s...');
+      // Exponential backoff for retries
+      if (retryCount < 2) {
+        const delay = Math.pow(2, retryCount) * 2000;
+        console.log(`🔄 Retrying message load in ${delay}ms...`);
         setTimeout(() => {
           loadExistingMessages(conversationId, retryCount + 1);
-        }, 2000);
+        }, delay);
         return false;
       }
       
@@ -71,11 +110,17 @@ export const useUserChatRealtime = (userId: string) => {
       }]);
       setLastMessageLoad(new Date());
       return false;
+    } finally {
+      loadingMessagesRef.current = false;
     }
   };
 
-  // Funzione per verificare se una conversazione esiste realmente
+  // Funzione per verificare se una conversazione esiste con rate limiting
   const verifyConversationExists = async (conversationId: string) => {
+    if (!canMakeRequest(`verify-conversation-${conversationId}`, 5000)) {
+      return true; // Assume it exists if we can't check due to rate limiting
+    }
+    
     try {
       const { data, error } = await supabase
         .from('conversations')
@@ -96,16 +141,40 @@ export const useUserChatRealtime = (userId: string) => {
     }
   };
 
-  // Inizializzazione della chat expert con controllo migliore
+  // Inizializzazione della chat expert con rate limiting e debouncing
   useEffect(() => {
-    if (!userId || isInitialized) return;
+    if (!userId || isInitialized || initializingRef.current) return;
     
     const initializeExpertChat = async () => {
+      if (initializingRef.current) {
+        console.log('🔄 Already initializing, skipping...');
+        return;
+      }
+      
+      if (!canMakeRequest(`init-chat-${userId}`, 3000)) {
+        console.log('⏳ Rate limiting initialization, will retry...');
+        return;
+      }
+      
+      initializingRef.current = true;
+      
       try {
         console.log("🔄 Initializing expert chat for user:", userId);
         setConnectionRetries(0);
         
-        // Cerca conversazione esistente
+        // Clear any existing timeout
+        if (connectionTimeoutRef.current) {
+          clearTimeout(connectionTimeoutRef.current);
+        }
+        
+        // Set a timeout for the entire initialization
+        const initTimeout = setTimeout(() => {
+          console.error('⏰ Initialization timeout');
+          initializingRef.current = false;
+          setConnectionRetries(prev => prev + 1);
+        }, 15000);
+        
+        // Cerca conversazione esistente con timeout
         const { data: conversationList, error } = await supabase
           .from('conversations')
           .select('*')
@@ -113,6 +182,8 @@ export const useUserChatRealtime = (userId: string) => {
           .eq('expert_id', EXPERT_ID)
           .order('created_at', { ascending: false })
           .limit(1);
+
+        clearTimeout(initTimeout);
 
         if (error) {
           console.error("❌ Error fetching conversation:", error);
@@ -145,29 +216,10 @@ export const useUserChatRealtime = (userId: string) => {
           console.log("✅ Found existing conversation:", conversation.id);
         }
         
-        // Verifica che la conversazione esista realmente
-        const exists = await verifyConversationExists(conversation.id);
-        if (!exists) {
-          console.log("⚠️ Conversation doesn't exist, creating new one...");
-          const { data: newConversation, error: createError } = await supabase
-            .from('conversations')
-            .insert({
-              user_id: userId,
-              expert_id: EXPERT_ID,
-              title: 'Consulenza esperto',
-              status: 'active'
-            })
-            .select()
-            .single();
-
-          if (createError) throw createError;
-          conversation = newConversation;
-        }
-        
         setCurrentDbConversation(conversation);
         setActiveChat('expert');
         
-        // Carica i messaggi esistenti
+        // Carica i messaggi esistenti con rate limiting
         await loadExistingMessages(conversation.id);
         
         setIsInitialized(true);
@@ -176,15 +228,24 @@ export const useUserChatRealtime = (userId: string) => {
         
       } catch (error) {
         console.error("❌ Error initializing expert chat:", error);
-        setConnectionRetries(prev => prev + 1);
-        
+        setConnectionRetries(prev => {
+          const newRetries = prev + 1;
+          if (newRetries < 3) {
+            // Exponential backoff
+            const delay = Math.pow(2, newRetries) * 3000;
+            console.log(`🔄 Retrying initialization in ${delay}ms...`);
+            setTimeout(() => {
+              initializingRef.current = false;
+              setIsInitialized(false);
+            }, delay);
+          } else {
+            toast.error("Errore nell'inizializzazione della chat. Ricarica la pagina.");
+          }
+          return newRetries;
+        });
+      } finally {
         if (connectionRetries < 3) {
-          console.log('🔄 Retrying initialization in 3s...');
-          setTimeout(() => {
-            setIsInitialized(false);
-          }, 3000);
-        } else {
-          toast.error("Errore nell'inizializzazione della chat. Ricarica la pagina.");
+          initializingRef.current = false;
         }
       }
     };
@@ -192,13 +253,13 @@ export const useUserChatRealtime = (userId: string) => {
     initializeExpertChat();
   }, [userId, isInitialized, connectionRetries]);
 
-  // Setup real-time subscription con gestione errori migliorata
+  // Setup real-time subscription con connection pooling
   useEffect(() => {
     if (!currentDbConversation?.id || !isInitialized) return;
     
     console.log('🔄 Setting up realtime subscription for conversation:', currentDbConversation.id);
     
-    // Cleanup subscription precedente se esiste
+    // Cleanup subscription precedente
     if (subscription) {
       try {
         subscription.unsubscribe();
@@ -208,12 +269,16 @@ export const useUserChatRealtime = (userId: string) => {
       }
     }
     
+    // Rate limit subscription setup
+    if (!canMakeRequest(`setup-subscription-${currentDbConversation.id}`, 5000)) {
+      console.log('⏳ Rate limiting subscription setup');
+      return;
+    }
+    
     const messagesSubscription = supabase
-      .channel(`messages-channel-${currentDbConversation.id}-${Math.random()}`, {
+      .channel(`messages-channel-${currentDbConversation.id}-${Date.now()}`, {
         config: {
-          presence: {
-            key: userId,
-          },
+          presence: { key: userId },
           broadcast: { self: false },
           private: false
         },
@@ -252,9 +317,7 @@ export const useUserChatRealtime = (userId: string) => {
               });
               
               console.log('✅ Adding new message to UI:', formattedMessage.id);
-              const newMessages = [...withoutTemp, formattedMessage];
-              console.log('📋 Updated messages array:', newMessages);
-              return newMessages;
+              return [...withoutTemp, formattedMessage];
             });
             
             if (formattedMessage.sender === 'expert' && 
@@ -279,7 +342,6 @@ export const useUserChatRealtime = (userId: string) => {
         } else if (status === 'CHANNEL_ERROR') {
           console.error('❌ Realtime connection failed:', err);
           setIsConnected(false);
-          setConnectionRetries(prev => prev + 1);
         } else if (status === 'TIMED_OUT') {
           console.error('⏰ Realtime connection timed out');
           setIsConnected(false);
@@ -302,15 +364,17 @@ export const useUserChatRealtime = (userId: string) => {
     };
   }, [currentDbConversation?.id, userId, isInitialized]);
 
-  // Periodic message refresh se la connessione real-time fallisce
+  // Fallback polling ridotto con rate limiting
   useEffect(() => {
     if (!isConnected && currentDbConversation?.id && isInitialized) {
       console.log('🔄 Setting up fallback message polling...');
       
       const interval = setInterval(async () => {
-        console.log('🔄 Polling for new messages (fallback)...');
-        await loadExistingMessages(currentDbConversation.id);
-      }, 10000); // ogni 10 secondi
+        if (canMakeRequest(`fallback-poll-${currentDbConversation.id}`, 15000)) {
+          console.log('🔄 Polling for new messages (fallback)...');
+          await loadExistingMessages(currentDbConversation.id);
+        }
+      }, 20000); // Reduced frequency
       
       return () => clearInterval(interval);
     }
@@ -332,6 +396,12 @@ export const useUserChatRealtime = (userId: string) => {
       return;
     }
 
+    // Rate limit message sending
+    if (!canMakeRequest(`send-message-${currentDbConversation.id}`, 1000)) {
+      toast.warning("Invia i messaggi più lentamente");
+      return;
+    }
+
     console.log('📤 Starting to send message:', { text, imageUrl });
     setIsSending(true);
 
@@ -345,11 +415,7 @@ export const useUserChatRealtime = (userId: string) => {
     };
     
     console.log('⌛ Adding temporary message:', tempMessage.id);
-    setMessages(prev => {
-      const newMessages = [...prev, tempMessage];
-      console.log('📋 Messages with temp message:', newMessages);
-      return newMessages;
-    });
+    setMessages(prev => [...prev, tempMessage]);
 
     try {
       console.log('🚀 Sending to backend...');
@@ -372,11 +438,13 @@ export const useUserChatRealtime = (userId: string) => {
 
       console.log('✅ Message sent successfully');
 
-      // Ricarica i messaggi dopo l'invio per assicurarsi che tutto sia sincronizzato
+      // Reduced reload frequency
       setTimeout(() => {
-        console.log('🔄 Reloading messages after send...');
-        loadExistingMessages(currentDbConversation.id);
-      }, 1500);
+        if (canMakeRequest(`reload-after-send-${currentDbConversation.id}`, 3000)) {
+          console.log('🔄 Reloading messages after send...');
+          loadExistingMessages(currentDbConversation.id);
+        }
+      }, 2000);
 
     } catch (error) {
       console.error('❌ Error sending message:', error);
@@ -389,14 +457,28 @@ export const useUserChatRealtime = (userId: string) => {
 
   const startChatWithExpert = async () => {
     console.log('🎯 startChatWithExpert called - current state:', { activeChat, isInitialized });
-    if (!activeChat && !isInitialized) {
+    if (!activeChat && !isInitialized && !initializingRef.current) {
       setIsInitialized(false); // Force re-initialization
     }
   };
 
-  // Funzione per forzare il refresh completo
+  // Funzione per forzare il refresh completo con rate limiting
   const forceRefresh = async () => {
+    if (!canMakeRequest('force-refresh', 10000)) {
+      toast.warning("Aspetta prima di aggiornare di nuovo");
+      return;
+    }
+    
     console.log('🔄 Force refresh triggered');
+    
+    // Cleanup all state
+    initializingRef.current = false;
+    loadingMessagesRef.current = false;
+    if (connectionTimeoutRef.current) {
+      clearTimeout(connectionTimeoutRef.current);
+    }
+    rateLimitRef.current.clear();
+    
     setIsInitialized(false);
     setMessages([]);
     setIsConnected(false);
@@ -404,10 +486,10 @@ export const useUserChatRealtime = (userId: string) => {
     setActiveChat(null);
     setConnectionRetries(0);
     
-    // Restart initialization dopo un breve delay
+    // Restart initialization after delay
     setTimeout(() => {
-      console.log('🔄 Restarting initialization...');
-    }, 1000);
+      console.log('🔄 Restarting initialization after force refresh...');
+    }, 2000);
   };
 
   // Cleanup on unmount
@@ -421,24 +503,11 @@ export const useUserChatRealtime = (userId: string) => {
           console.warn('⚠️ Error during final cleanup:', error);
         }
       }
+      if (connectionTimeoutRef.current) {
+        clearTimeout(connectionTimeoutRef.current);
+      }
     };
   }, [subscription]);
-
-  // Debug log dello stato
-  useEffect(() => {
-    console.log('📊 useUserChatRealtime - Stato corrente:', {
-      userId,
-      activeChat,
-      messagesCount: messages.length,
-      currentConversationId: currentDbConversation?.id,
-      isConnected,
-      isSending,
-      isInitialized,
-      connectionRetries,
-      lastMessageLoad: lastMessageLoad?.toISOString(),
-      messages
-    });
-  }, [userId, activeChat, messages, currentDbConversation, isConnected, isSending, isInitialized, connectionRetries, lastMessageLoad]);
 
   return {
     activeChat,

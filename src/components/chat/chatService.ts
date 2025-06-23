@@ -2,15 +2,41 @@
 import { supabase } from '@/integrations/supabase/client';
 import { Message, DatabaseMessage, DatabaseConversation } from './types';
 
+// Rate limiting map
+const rateLimitMap = new Map<string, number>();
+
+const canMakeRequest = (key: string, minInterval: number = 1000) => {
+  const now = Date.now();
+  const lastRequest = rateLimitMap.get(key) || 0;
+  if (now - lastRequest < minInterval) {
+    console.log(`⏳ Rate limiting ${key}, skipping request`);
+    return false;
+  }
+  rateLimitMap.set(key, now);
+  return true;
+};
+
 export const loadMessages = async (conversationId: string): Promise<DatabaseMessage[]> => {
   try {
+    // Rate limit message loading
+    if (!canMakeRequest(`load-messages-${conversationId}`, 2000)) {
+      throw new Error('Rate limited - too many requests');
+    }
+
     console.log('📚 Loading messages for conversation:', conversationId);
+    
+    // Add request timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
     
     const { data, error } = await supabase
       .from('messages')
       .select('*')
       .eq('conversation_id', conversationId)
-      .order('sent_at', { ascending: true });
+      .order('sent_at', { ascending: true })
+      .abortSignal(controller.signal);
+
+    clearTimeout(timeoutId);
 
     if (error) {
       console.error('❌ Error loading messages:', error);
@@ -20,6 +46,10 @@ export const loadMessages = async (conversationId: string): Promise<DatabaseMess
     console.log('✅ Messages loaded successfully:', data?.length || 0);
     return data || [];
   } catch (error) {
+    if (error.name === 'AbortError') {
+      console.error('❌ Request timeout loading messages');
+      throw new Error('Request timeout');
+    }
     console.error('❌ Error in loadMessages:', error);
     throw error;
   }
@@ -49,6 +79,11 @@ export const sendMessage = async (
   products?: any
 ): Promise<boolean> => {
   try {
+    // Rate limit message sending
+    if (!canMakeRequest(`send-message-${conversationId}`, 1000)) {
+      throw new Error('Rate limited - sending too fast');
+    }
+
     console.log('📤 Sending message via Supabase function:', {
       conversationId,
       senderId,
@@ -65,6 +100,10 @@ export const sendMessage = async (
       throw new Error('User not authenticated');
     }
 
+    // Add request timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+
     const { data, error } = await supabase.functions.invoke('send-message', {
       body: {
         conversationId,
@@ -75,6 +114,8 @@ export const sendMessage = async (
       }
     });
 
+    clearTimeout(timeoutId);
+
     if (error) {
       console.error('❌ Error from send-message function:', error);
       throw error;
@@ -83,15 +124,28 @@ export const sendMessage = async (
     console.log('✅ Message sent successfully:', data);
     return true;
   } catch (error) {
+    if (error.name === 'AbortError') {
+      console.error('❌ Request timeout sending message');
+      throw new Error('Request timeout');
+    }
     console.error('❌ Error in sendMessage:', error);
     throw error;
   }
 };
 
-// Load conversations for expert view with user presence
+// Load conversations for expert view with rate limiting
 export const loadConversations = async (expertId: string): Promise<DatabaseConversation[]> => {
   try {
+    // Rate limit conversation loading
+    if (!canMakeRequest(`load-conversations-${expertId}`, 3000)) {
+      throw new Error('Rate limited - too many requests');
+    }
+
     console.log('📚 Loading conversations for expert:', expertId);
+    
+    // Add request timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
     
     // Get conversations
     const { data: conversationsData, error: conversationsError } = await supabase
@@ -99,7 +153,10 @@ export const loadConversations = async (expertId: string): Promise<DatabaseConve
       .select('*')
       .eq('expert_id', expertId)
       .eq('status', 'active')
-      .order('updated_at', { ascending: false });
+      .order('updated_at', { ascending: false })
+      .abortSignal(controller.signal);
+
+    clearTimeout(timeoutId);
 
     if (conversationsError) {
       console.error('❌ Error loading conversations:', conversationsError);
@@ -108,17 +165,11 @@ export const loadConversations = async (expertId: string): Promise<DatabaseConve
 
     console.log('✅ Conversations loaded successfully:', conversationsData?.length || 0);
 
-    // Get user profiles with online status
+    // Load user profiles with rate limiting
     const conversationsWithProfiles = await Promise.all(
       (conversationsData || []).map(async (conversation) => {
-        const { data: userProfile, error: profileError } = await supabase
-          .from('profiles')
-          .select('id, username, first_name, last_name, is_online, last_seen_at')
-          .eq('id', conversation.user_id)
-          .single();
-
-        if (profileError) {
-          console.error('⚠️ Error loading user profile:', profileError);
+        // Rate limit profile loading
+        if (!canMakeRequest(`load-profile-${conversation.user_id}`, 5000)) {
           return {
             ...conversation,
             user: undefined,
@@ -126,26 +177,64 @@ export const loadConversations = async (expertId: string): Promise<DatabaseConve
           };
         }
 
-        return {
-          ...conversation,
-          user: userProfile,
-          user_profile: userProfile
-        };
+        try {
+          const { data: userProfile, error: profileError } = await supabase
+            .from('profiles')
+            .select('id, username, first_name, last_name, is_online, last_seen_at')
+            .eq('id', conversation.user_id)
+            .single();
+
+          if (profileError) {
+            console.error('⚠️ Error loading user profile:', profileError);
+            return {
+              ...conversation,
+              user: undefined,
+              user_profile: null
+            };
+          }
+
+          return {
+            ...conversation,
+            user: userProfile,
+            user_profile: userProfile
+          };
+        } catch (error) {
+          console.error('⚠️ Error in profile loading:', error);
+          return {
+            ...conversation,
+            user: undefined,
+            user_profile: null
+          };
+        }
       })
     );
 
     return conversationsWithProfiles;
   } catch (error) {
+    if (error.name === 'AbortError') {
+      console.error('❌ Request timeout loading conversations');
+      throw new Error('Request timeout');
+    }
     console.error('❌ Error in loadConversations:', error);
     throw error;
   }
 };
 
-// Find or create conversation for user
+// Find or create conversation for user with rate limiting
 export const findOrCreateConversation = async (userId: string, expertId?: string): Promise<DatabaseConversation | null> => {
   try {
     const targetExpertId = expertId || (await import('@/integrations/supabase/client')).EXPERT_ID;
+    
+    // Rate limit conversation operations
+    if (!canMakeRequest(`find-create-conversation-${userId}`, 3000)) {
+      throw new Error('Rate limited - too many requests');
+    }
+
     console.log('🔍 Finding or creating conversation:', { userId, expertId: targetExpertId });
+
+    // Add request timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
 
     // First, try to find existing conversation
     const { data: existing, error: findError } = await supabase
@@ -154,7 +243,10 @@ export const findOrCreateConversation = async (userId: string, expertId?: string
       .eq('user_id', userId)
       .eq('expert_id', targetExpertId)
       .eq('status', 'active')
-      .single();
+      .single()
+      .abortSignal(controller.signal);
+
+    clearTimeout(timeoutId);
 
     if (findError && findError.code !== 'PGRST116') {
       console.error('❌ Error finding conversation:', findError);
@@ -166,7 +258,10 @@ export const findOrCreateConversation = async (userId: string, expertId?: string
       return existing;
     }
 
-    // Create new conversation
+    // Create new conversation with timeout
+    const createController = new AbortController();
+    const createTimeoutId = setTimeout(() => createController.abort(), 8000);
+
     const { data: newConversation, error: createError } = await supabase
       .from('conversations')
       .insert({
@@ -176,7 +271,10 @@ export const findOrCreateConversation = async (userId: string, expertId?: string
         status: 'active'
       })
       .select()
-      .single();
+      .single()
+      .abortSignal(createController.signal);
+
+    clearTimeout(createTimeoutId);
 
     if (createError) {
       console.error('❌ Error creating conversation:', createError);
@@ -186,20 +284,37 @@ export const findOrCreateConversation = async (userId: string, expertId?: string
     console.log('✅ Created new conversation:', newConversation.id);
     return newConversation;
   } catch (error) {
+    if (error.name === 'AbortError') {
+      console.error('❌ Request timeout in findOrCreateConversation');
+      throw new Error('Request timeout');
+    }
     console.error('❌ Error in findOrCreateConversation:', error);
     return null;
   }
 };
 
-// Update conversation status
+// Update conversation status with rate limiting
 export const updateConversationStatus = async (conversationId: string, status: string): Promise<boolean> => {
   try {
+    // Rate limit status updates
+    if (!canMakeRequest(`update-status-${conversationId}`, 2000)) {
+      console.log('⏳ Rate limiting status update');
+      return false;
+    }
+
     console.log('🔄 Updating conversation status:', { conversationId, status });
+
+    // Add request timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
 
     const { error } = await supabase
       .from('conversations')
       .update({ status, updated_at: new Date().toISOString() })
-      .eq('id', conversationId);
+      .eq('id', conversationId)
+      .abortSignal(controller.signal);
+
+    clearTimeout(timeoutId);
 
     if (error) {
       console.error('❌ Error updating conversation status:', error);
@@ -209,7 +324,11 @@ export const updateConversationStatus = async (conversationId: string, status: s
     console.log('✅ Conversation status updated successfully');
     return true;
   } catch (error) {
-    console.error('❌ Error in updateConversationStatus:', error);
+    if (error.name === 'AbortError') {
+      console.error('❌ Request timeout updating conversation status');
+    } else {
+      console.error('❌ Error in updateConversationStatus:', error);
+    }
     return false;
   }
 };
