@@ -40,8 +40,8 @@ export const usePlantAnalysis = () => {
         return;
       }
       
-      // Converti risultato nel formato atteso dall'UI con percentuali corrette
-      const confidencePercent = analysisResult.confidence || 75;
+      // Assicura che la confidenza sia sempre un numero valido
+      const confidencePercent = Math.max(Math.round(analysisResult.confidence || 75), 1);
       
       const diseaseInfo: DiagnosedDisease = {
         id: `diagnosis-${Date.now()}`,
@@ -50,7 +50,10 @@ export const usePlantAnalysis = () => {
           `La pianta appare in buona salute secondo l'analisi specializzata (${confidencePercent}% confidenza)` :
           `Sono stati rilevati possibili problemi di salute (${confidencePercent}% confidenza)`,
         causes: analysisResult.isHealthy ? 'N/A - Pianta sana' : 'Vedere malattie specifiche rilevate',
-        symptoms: analysisResult.diseases?.map(d => `${d.name} (${d.probability}%)`) || ['Nessun sintomo specifico'],
+        symptoms: analysisResult.diseases?.map(d => {
+          const probability = Math.max(Math.round(d.probability || 60), 1);
+          return `${d.name} (${probability}%)`;
+        }) || ['Nessun sintomo specifico'],
         treatments: analysisResult.recommendations || [],
         confidence: confidencePercent,
         healthy: analysisResult.isHealthy || false,
@@ -94,7 +97,10 @@ export const usePlantAnalysis = () => {
           `Confidenza: ${confidencePercent}%`,
           analysisResult.isHealthy ? 'Pianta sana' : 'Problemi rilevati',
           'Analisi con API specializzate',
-          ...(analysisResult.diseases || []).map(d => `${d.name}: ${d.probability}% probabilità`)
+          ...(analysisResult.diseases || []).map(d => {
+            const probability = Math.max(Math.round(d.probability || 60), 1);
+            return `${d.name}: ${probability}% probabilità`;
+          })
         ],
         sistemaDigitaleFoglia: false,
         analysisTechnology: 'Enhanced Plant Analysis API'

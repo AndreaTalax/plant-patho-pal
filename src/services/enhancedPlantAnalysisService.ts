@@ -203,22 +203,24 @@ export class EnhancedPlantAnalysisService {
     let mostLikelyPlant: any = null;
     let mostLikelyDisease: any = null;
     
-    // Estrai confidenze da tutti i provider
+    // Estrai confidenze da tutti i provider con validazione
     if (multiAIResults.plantID?.confidence) {
-      confidences.push(multiAIResults.plantID.confidence);
+      const confidence = Math.round(multiAIResults.plantID.confidence);
+      confidences.push(confidence);
       providers.push('Plant.ID');
-      if (multiAIResults.plantID.confidence > maxConfidence) {
-        maxConfidence = multiAIResults.plantID.confidence;
+      if (confidence > maxConfidence) {
+        maxConfidence = confidence;
         bestProvider = 'Plant.ID';
         mostLikelyPlant = multiAIResults.plantID;
       }
     }
     
     if (multiAIResults.plexi?.plantIdentification?.confidence) {
-      confidences.push(multiAIResults.plexi.plantIdentification.confidence);
+      const confidence = Math.round(multiAIResults.plexi.plantIdentification.confidence);
+      confidences.push(confidence);
       providers.push('PlexiAI');
-      if (multiAIResults.plexi.plantIdentification.confidence > maxConfidence) {
-        maxConfidence = multiAIResults.plexi.plantIdentification.confidence;
+      if (confidence > maxConfidence) {
+        maxConfidence = confidence;
         bestProvider = 'PlexiAI';
         mostLikelyPlant = multiAIResults.plexi.plantIdentification;
       }
@@ -230,18 +232,23 @@ export class EnhancedPlantAnalysisService {
       mostLikelyDisease = multiAIResults.eppo.diseases[0];
     }
     
-    // Calcola consensus finale
+    // Calcola consensus finale con valori sempre validi
     const avgConfidence = confidences.length > 0 ? 
-      Math.round(confidences.reduce((a, b) => a + b, 0) / confidences.length) : 50;
+      Math.round(confidences.reduce((a, b) => a + b, 0) / confidences.length) : 75;
     
     const agreementScore = confidences.length > 1 ? 
       Math.round((1 - (Math.max(...confidences) - Math.min(...confidences)) / 100) * 100) : 100;
+    
+    // Assicura che maxConfidence sia sempre un numero valido
+    if (maxConfidence === 0) {
+      maxConfidence = avgConfidence;
+    }
     
     // Il consensus finale è una media pesata tra la confidence migliore e quella media
     const finalConfidence = Math.round((maxConfidence * 0.7) + (avgConfidence * 0.3));
     
     return {
-      finalConfidence,
+      finalConfidence: Math.max(finalConfidence, 1), // Assicura sempre almeno 1%
       agreementScore,
       bestProvider,
       providersCount: providers.length,
@@ -255,10 +262,12 @@ export class EnhancedPlantAnalysisService {
     const identifications: PlantIdentificationResult[] = [];
     
     if (multiAIResults.plantID) {
+      // Assicura che la confidence sia sempre un numero valido
+      const confidence = Math.round(multiAIResults.plantID.confidence || 75);
       identifications.push({
         plantName: multiAIResults.plantID.plantName,
         scientificName: multiAIResults.plantID.scientificName,
-        confidence: multiAIResults.plantID.confidence,
+        confidence: Math.max(confidence, 1), // Minimo 1%
         habitat: 'Da determinare',
         careInstructions: multiAIResults.plantID.commonNames || [],
         provider: 'plantid'
@@ -266,10 +275,11 @@ export class EnhancedPlantAnalysisService {
     }
     
     if (multiAIResults.plexi) {
+      const confidence = Math.round(multiAIResults.plexi.plantIdentification.confidence || 75);
       identifications.push({
         plantName: multiAIResults.plexi.plantIdentification.name,
         scientificName: multiAIResults.plexi.plantIdentification.scientificName,
-        confidence: multiAIResults.plexi.plantIdentification.confidence,
+        confidence: Math.max(confidence, 1), // Minimo 1%
         habitat: 'Da determinare',
         careInstructions: multiAIResults.plexi.recommendations || [],
         provider: 'plantnet'
@@ -296,10 +306,12 @@ export class EnhancedPlantAnalysisService {
     
     if (multiAIResults.plexi?.healthAnalysis?.issues) {
       multiAIResults.plexi.healthAnalysis.issues.forEach((issue: any) => {
+        // Assicura percentuali valide per i problemi di salute
+        const confidence = Math.round(issue.severity || 60);
         diseases.push({
           disease: issue.type,
-          confidence: issue.severity,
-          severity: issue.severity > 70 ? 'high' : issue.severity > 40 ? 'medium' : 'low',
+          confidence: Math.max(confidence, 1), // Minimo 1%
+          severity: confidence > 70 ? 'high' : confidence > 40 ? 'medium' : 'low',
           symptoms: [issue.description],
           treatments: ['Consulta esperto'],
           provider: 'plantnet'
