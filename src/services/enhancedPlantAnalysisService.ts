@@ -1,4 +1,10 @@
+
 import { PlantIdService, EPPOService, MockPlantService, type PlantIdentificationResult, type DiseaseDetectionResult } from './aiProviders';
+import { RougenAIService } from './aiProviders/RougenAIService';
+import { PlantDiseasesAIService } from './aiProviders/PlantDiseasesAIService';
+import { PlexiAIService } from './aiProviders/PlexiAIService';
+import { PlantIDService } from './aiProviders/PlantIDService';
+import { PlantDetectionService } from './plantDetectionService';
 import { ImageProcessingService, type ProcessedImage } from './imageProcessingService';
 import { CacheService } from './cacheService';
 import { EppoService, type EppoSearchResult } from './eppoService';
@@ -14,33 +20,30 @@ export interface AnalysisProgress {
 }
 
 export interface EnhancedAnalysisResult extends CombinedAnalysisResult {
-  eppoData?: {
-    plantMatch?: EppoSearchResult;
-    diseaseMatches?: EppoSearchResult[];
-    recommendations?: {
-      diseases: EppoSearchResult[];
-      pests: EppoSearchResult[];
-      careAdvice: string[];
-    };
+  plantDetection?: {
+    isPlant: boolean;
+    confidence: number;
+    detectedElements: string[];
+    message: string;
   };
-  userSymptoms?: any;
-  userProfile?: any;
-  analysisMetadata?: {
-    timestamp: string;
-    totalProcessingTime: number;
-    aiProvidersUsed: string[];
-    confidenceScore: number;
+  multiAIResults?: {
+    rougen?: any;
+    plantDiseasesAI?: any;
+    plexi?: any;
+    plantID?: any;
+  };
+  consensus?: {
+    finalConfidence: number;
+    agreementScore: number;
+    bestProvider: string;
   };
 }
 
 export class EnhancedPlantAnalysisService {
-  private static readonly MAX_RETRIES = 3;
-  private static readonly RETRY_DELAY = 1000;
-  
   static async analyzeImage(
     imageBase64: string, 
     onProgress?: (progress: AnalysisProgress) => void
-  ): Promise<CombinedAnalysisResult> {
+  ): Promise<EnhancedAnalysisResult> {
     
     const startTime = Date.now();
     const updateProgress = (step: string, progress: number, message: string) => {
@@ -48,307 +51,246 @@ export class EnhancedPlantAnalysisService {
     };
     
     try {
-      updateProgress('preprocessing', 10, 'Elaborazione immagine in corso...');
+      // Fase 1: Verifica se è una pianta
+      updateProgress('detection', 10, 'Verifico se l\'immagine contiene una pianta...');
       
-      const processedImage = await this.withRetry(
-        () => ImageProcessingService.processImage(imageBase64),
-        'Errore durante l\'elaborazione dell\'immagine'
-      );
+      const plantDetection = await PlantDetectionService.detectPlantInImage(imageBase64);
       
-      const cacheKey = CacheService.generateImageHash(processedImage.processedImage);
-      const cachedResult = await CacheService.get<CombinedAnalysisResult>(cacheKey);
-      
-      if (cachedResult) {
-        updateProgress('complete', 100, 'Risultati recuperati dalla cache');
-        toast.success('Risultati recuperati dalla cache locale');
+      if (!plantDetection.isPlant || plantDetection.confidence < 30) {
+        toast.error('Nessuna pianta rilevata nell\'immagine', {
+          description: `Confidenza: ${plantDetection.confidence}% - ${plantDetection.message}`
+        });
+        
         return {
-          ...cachedResult,
+          plantIdentification: [],
+          diseaseDetection: [],
+          consensus: { overallConfidence: plantDetection.confidence },
+          plantDetection,
           analysisMetadata: {
-            ...cachedResult.analysisMetadata,
             timestamp: new Date().toISOString(),
-            totalProcessingTime: 0,
-            aiProvidersUsed: ['cache'],
-            confidenceScore: cachedResult.consensus.overallConfidence
+            totalProcessingTime: Date.now() - startTime,
+            aiProvidersUsed: ['plant-detection'],
+            confidenceScore: plantDetection.confidence
           }
         };
       }
       
-      updateProgress('analysis', 25, 'Invio alle AI per l\'analisi...');
+      updateProgress('preprocessing', 20, 'Elaborazione immagine in corso...');
       
-      const results = await this.performParallelAnalysis(
-        processedImage.processedImage, 
-        updateProgress
-      );
-
-      // --- INIZIO INTEGRAZIONE CONSULTAZIONE EPPO DATABASE ---
-      updateProgress('eppo', 75, 'Consultazione database EPPO...');
-      let eppoExtraData = undefined;
-      try {
-        // Estraggo sintomi dalle malattie trovate dalle AI
-        const allSymptoms = results.diseases.flatMap(d => d.symptoms).filter(Boolean);
-        const mainSymptoms = allSymptoms.length > 0 ? allSymptoms.join(', ') : null;
-        // Faccio la chiamata alla funzione edge eppo-api, se ci sono sintomi
-        if (mainSymptoms) {
-          // Usa direttamente supabase importato, non createClient
-          const { supabase } = await import("@/integrations/supabase/client");
-          const { data, error } = await supabase.functions.invoke('eppo-api', {
-            body: {
-              endpoint: 'pests',
-              userInput: mainSymptoms,
-              query: ''
-            }
-          });
-          if (!error && data?.data) {
-            eppoExtraData = data.data;
-          }
-        }
-      } catch (eppoError) {
-        // in caso di errore proseguo comunque con la diagnosi AI
-        eppoExtraData = undefined;
-      }
-      // --- FINE INTEGRAZIONE EPPO ---
+      // Fase 2: Analisi parallela con tutti i provider AI
+      updateProgress('analysis', 30, 'Invio a provider AI specializzati...');
       
-      updateProgress('consensus', 85, 'Elaborazione consensus...');
+      const multiAIResults = await this.performMultiAIAnalysis(imageBase64, updateProgress);
       
-      const consensus = this.calculateEnhancedConsensus(results, undefined);
+      // Fase 3: Calcolo del consenso
+      updateProgress('consensus', 80, 'Elaborazione consensus finale...');
+      
+      const consensus = this.calculateAdvancedConsensus(multiAIResults);
+      
+      // Fase 4: Integrazione EPPO se necessario
+      updateProgress('eppo', 90, 'Verifica database EPPO...');
+      
+      const eppoData = await this.checkEppoDatabase(consensus);
+      
       const totalProcessingTime = Date.now() - startTime;
-      const aiProvidersUsed = this.getUsedProviders(results);
       
-      // Mappa i dati EPPO nella chiave formalmente esistente del tipo CombinedAnalysisResult
-      // Qui puoi scegliere la chiave più appropriata; uso diseaseMatches se sono sintomi malattia
-      let eppoData;
-      if (eppoExtraData) {
-        eppoData = { diseaseMatches: eppoExtraData };
-      }
-
-      const finalResult: CombinedAnalysisResult = {
-        plantIdentification: results.identifications,
-        diseaseDetection: results.diseases,
-        consensus,
-        eppoData, // ora coerente con CombinedAnalysisResult
+      const finalResult: EnhancedAnalysisResult = {
+        plantIdentification: this.formatPlantIdentifications(multiAIResults),
+        diseaseDetection: this.formatDiseaseDetections(multiAIResults),
+        consensus: {
+          ...consensus,
+          overallConfidence: consensus.finalConfidence
+        },
+        plantDetection,
+        multiAIResults,
+        eppoData,
         analysisMetadata: {
           timestamp: new Date().toISOString(),
           totalProcessingTime,
-          aiProvidersUsed,
-          confidenceScore: consensus.overallConfidence
+          aiProvidersUsed: Object.keys(multiAIResults).filter(k => multiAIResults[k]),
+          confidenceScore: consensus.finalConfidence
         }
       };
       
-      await CacheService.set(cacheKey, finalResult);
       updateProgress('complete', 100, 'Analisi completata con successo');
+      
+      // Mostra risultato all'utente
+      toast.success(`Analisi completata!`, {
+        description: `${consensus.bestProvider} - Confidenza: ${consensus.finalConfidence}%`
+      });
+      
       return finalResult;
+      
     } catch (error) {
       console.error('Enhanced analysis error:', error);
-      toast.error('Errore durante l\'analisi. Utilizzo dati di fallback.');
-      
-      return this.generateFallbackResult();
+      toast.error('Errore durante l\'analisi');
+      throw error;
     }
   }
   
-  private static getUsedProviders(results: { identifications: PlantIdentificationResult[]; diseases: DiseaseDetectionResult[] }): string[] {
-    const providers = new Set<string>();
+  private static async performMultiAIAnalysis(imageBase64: string, updateProgress: Function) {
+    const results: any = {};
     
-    results.identifications.forEach(id => providers.add(id.provider));
-    results.diseases.forEach(disease => providers.add(disease.provider));
-    
-    return Array.from(providers);
-  }
-  
-  private static async enhanceWithEppoData(
-    results: { identifications: PlantIdentificationResult[]; diseases: DiseaseDetectionResult[] },
-    updateProgress: (step: string, progress: number, message: string) => void
-  ) {
-    try {
-      const topPlant = results.identifications[0];
-      if (!topPlant) return undefined;
-      
-      updateProgress('eppo', 76, 'Ricerca pianta nel database EPPO...');
-      
-      const plantIdentification = await EppoService.identifyPlant(topPlant.plantName);
-      
-      updateProgress('eppo', 78, 'Ricerca malattie correlate...');
-      
-      const diseaseSymptoms = results.diseases.flatMap(d => d.symptoms);
-      const diseaseMatches = await EppoService.searchDiseasesBySymptoms(diseaseSymptoms);
-      
-      updateProgress('eppo', 80, 'Generazione raccomandazioni...');
-      
-      const recommendations = await EppoService.getPlantRecommendations(topPlant.plantName);
-      
-      return {
-        plantMatch: plantIdentification.plant,
-        diseaseMatches,
-        recommendations
-      };
-    } catch (error) {
-      console.warn('EPPO enhancement failed:', error);
-      return undefined;
-    }
-  }
-  
-  private static calculateEnhancedConsensus(
-    results: { identifications: PlantIdentificationResult[]; diseases: DiseaseDetectionResult[] },
-    eppoData?: any
-  ) {
-    const mostLikelyPlant = results.identifications.reduce((prev, current) => 
-      current.confidence > prev.confidence ? current : prev
-    );
-    
-    if (eppoData?.plantMatch) {
-      mostLikelyPlant.confidence = Math.min(95, mostLikelyPlant.confidence + 10);
-      mostLikelyPlant.scientificName = eppoData.plantMatch.fullname || mostLikelyPlant.scientificName;
-    }
-    
-    const mostLikelyDisease = results.diseases.length > 0 
-      ? results.diseases.reduce((prev, current) => 
-          current.confidence > prev.confidence ? current : prev
-        )
-      : undefined;
-    
-    if (mostLikelyDisease && eppoData?.diseaseMatches?.length > 0) {
-      mostLikelyDisease.confidence = Math.min(90, mostLikelyDisease.confidence + 5);
-    }
-    
-    const avgPlantConfidence = results.identifications.reduce((sum, item) => 
-      sum + item.confidence, 0) / results.identifications.length;
-    
-    const avgDiseaseConfidence = results.diseases.length > 0 
-      ? results.diseases.reduce((sum, item) => sum + item.confidence, 0) / results.diseases.length
-      : 0;
-    
-    const overallConfidence = (avgPlantConfidence + avgDiseaseConfidence) / 2;
-    
-    return {
-      mostLikelyPlant,
-      mostLikelyDisease,
-      overallConfidence: Math.round(overallConfidence)
-    };
-  }
-  
-  private static async performParallelAnalysis(
-    imageData: string, 
-    updateProgress: (step: string, progress: number, message: string) => void
-  ) {
-    const identifications: PlantIdentificationResult[] = [];
-    const diseases: DiseaseDetectionResult[] = [];
-    
+    // Esegui analisi in parallelo per migliori performance
     const promises = [
-      this.safeAPICall(
-        () => PlantIdService.identifyPlant(imageData),
-        'Plant.ID'
-      ),
-      this.safeAPICall(
-        () => EPPOService.identifyPlant(imageData),
-        'EPPO'
-      ),
-      this.safeAPICall(
-        () => MockPlantService.identifyPlant(imageData),
-        'Mock Service'
-      )
+      RougenAIService.identifyPlant(imageBase64).then(r => ({ rougen: r })).catch(() => ({ rougen: null })),
+      PlantDiseasesAIService.detectDiseases(imageBase64).then(r => ({ plantDiseasesAI: r })).catch(() => ({ plantDiseasesAI: null })),
+      PlexiAIService.analyzeComprehensive(imageBase64).then(r => ({ plexi: r })).catch(() => ({ plexi: null })),
+      PlantIDService.identifyPlant(imageBase64).then(r => ({ plantID: r })).catch(() => ({ plantID: null }))
     ];
     
-    updateProgress('analysis', 30, 'Plant.ID in elaborazione...');
+    updateProgress('analysis', 35, 'RougenAI in elaborazione...');
     await new Promise(resolve => setTimeout(resolve, 300));
     
-    updateProgress('analysis', 50, 'EPPO in elaborazione...');
+    updateProgress('analysis', 45, 'PlantDiseasesAI in elaborazione...');
     await new Promise(resolve => setTimeout(resolve, 300));
     
-    updateProgress('analysis', 70, 'Mock Service in elaborazione...');
+    updateProgress('analysis', 55, 'PlexiAI in elaborazione...');
+    await new Promise(resolve => setTimeout(resolve, 300));
     
-    const results = await Promise.allSettled(promises);
+    updateProgress('analysis', 65, 'Plant.ID in elaborazione...');
+    await new Promise(resolve => setTimeout(resolve, 300));
     
-    results.forEach((result, index) => {
-      if (result.status === 'fulfilled' && result.value) {
-        identifications.push(result.value as PlantIdentificationResult);
+    const resolvedResults = await Promise.allSettled(promises);
+    
+    // Combina tutti i risultati
+    resolvedResults.forEach(result => {
+      if (result.status === 'fulfilled') {
+        Object.assign(results, result.value);
       }
     });
     
-    return { identifications, diseases };
+    updateProgress('analysis', 75, 'Tutti i provider AI completati');
+    
+    return results;
   }
   
-  private static async safeAPICall<T>(
-    apiCall: () => Promise<T>,
-    providerName: string
-  ): Promise<T | null> {
-    try {
-      return await this.withRetry(apiCall, `Errore ${providerName}`);
-    } catch (error) {
-      console.warn(`${providerName} failed:`, error);
-      toast.warning(`${providerName} non disponibile, continuando con altri provider`);
-      return null;
-    }
-  }
-  
-  private static async withRetry<T>(
-    fn: () => Promise<T>, 
-    errorMessage: string
-  ): Promise<T> {
-    for (let attempt = 1; attempt <= this.MAX_RETRIES; attempt++) {
-      try {
-        return await fn();
-      } catch (error) {
-        if (attempt === this.MAX_RETRIES) {
-          throw new Error(`${errorMessage} dopo ${this.MAX_RETRIES} tentativi`);
-        }
-        await new Promise(resolve => setTimeout(resolve, this.RETRY_DELAY * attempt));
+  private static calculateAdvancedConsensus(multiAIResults: any) {
+    const confidences: number[] = [];
+    const providers: string[] = [];
+    let bestProvider = 'unknown';
+    let maxConfidence = 0;
+    
+    // Estrai confidenze da tutti i provider
+    if (multiAIResults.rougen?.confidence) {
+      confidences.push(multiAIResults.rougen.confidence);
+      providers.push('RougenAI');
+      if (multiAIResults.rougen.confidence > maxConfidence) {
+        maxConfidence = multiAIResults.rougen.confidence;
+        bestProvider = 'RougenAI';
       }
     }
-    throw new Error(errorMessage);
-  }
-  
-  private static generateFallbackResult(): CombinedAnalysisResult {
-    const fallbackPlant: PlantIdentificationResult = {
-      plantName: 'Pianta da identificare',
-      scientificName: 'Identificationis pendente',
-      confidence: 75,
-      habitat: 'Ambiente da determinare in base alle caratteristiche della pianta',
-      careInstructions: [
-        'Mantenere il terreno umido ma ben drenato',
-        'Fornire luce adeguata secondo le esigenze della specie',
-        'Controllare regolarmente per segni di malattie o parassiti'
-      ],
-      provider: 'plantnet'
-    };
+    
+    if (multiAIResults.plantID?.confidence) {
+      confidences.push(multiAIResults.plantID.confidence);
+      providers.push('Plant.ID');
+      if (multiAIResults.plantID.confidence > maxConfidence) {
+        maxConfidence = multiAIResults.plantID.confidence;
+        bestProvider = 'Plant.ID';
+      }
+    }
+    
+    if (multiAIResults.plexi?.plantIdentification?.confidence) {
+      confidences.push(multiAIResults.plexi.plantIdentification.confidence);
+      providers.push('PlexiAI');
+      if (multiAIResults.plexi.plantIdentification.confidence > maxConfidence) {
+        maxConfidence = multiAIResults.plexi.plantIdentification.confidence;
+        bestProvider = 'PlexiAI';
+      }
+    }
+    
+    // Calcola consensus finale
+    const avgConfidence = confidences.length > 0 ? 
+      Math.round(confidences.reduce((a, b) => a + b, 0) / confidences.length) : 50;
+    
+    const agreementScore = confidences.length > 1 ? 
+      Math.round((1 - (Math.max(...confidences) - Math.min(...confidences)) / 100) * 100) : 100;
+    
+    // Il consensus finale è una media pesata tra la confidence migliore e quella media
+    const finalConfidence = Math.round((maxConfidence * 0.7) + (avgConfidence * 0.3));
     
     return {
-      plantIdentification: [fallbackPlant],
-      diseaseDetection: [],
-      consensus: {
-        mostLikelyPlant: fallbackPlant,
-        overallConfidence: 75
-      },
-      analysisMetadata: {
-        timestamp: new Date().toISOString(),
-        totalProcessingTime: 0,
-        aiProvidersUsed: ['fallback'],
-        confidenceScore: 75
-      }
+      finalConfidence,
+      agreementScore,
+      bestProvider,
+      providersCount: providers.length,
+      providersUsed: providers
     };
   }
-
-  static async saveAnalysisToHistory(result: CombinedAnalysisResult): Promise<boolean> {
-    try {
-      const savedAnalyses = JSON.parse(localStorage.getItem('plant_analyses_history') || '[]');
-      
-      const analysisRecord = {
-        id: `analysis_${Date.now()}`,
-        result,
-        timestamp: Date.now(),
-        saved: true
-      };
-      
-      savedAnalyses.unshift(analysisRecord);
-      
-      if (savedAnalyses.length > 100) {
-        savedAnalyses.splice(100);
-      }
-      
-      localStorage.setItem('plant_analyses_history', JSON.stringify(savedAnalyses));
-      
-      return true;
-    } catch (error) {
-      console.error('Error saving analysis to history:', error);
-      return false;
+  
+  private static formatPlantIdentifications(multiAIResults: any): PlantIdentificationResult[] {
+    const identifications: PlantIdentificationResult[] = [];
+    
+    if (multiAIResults.rougen) {
+      identifications.push({
+        plantName: multiAIResults.rougen.plantName,
+        scientificName: multiAIResults.rougen.scientificName,
+        confidence: multiAIResults.rougen.confidence,
+        habitat: 'Da determinare',
+        careInstructions: multiAIResults.rougen.characteristics || [],
+        provider: 'rougen'
+      });
     }
+    
+    if (multiAIResults.plantID) {
+      identifications.push({
+        plantName: multiAIResults.plantID.plantName,
+        scientificName: multiAIResults.plantID.scientificName,
+        confidence: multiAIResults.plantID.confidence,
+        habitat: 'Da determinare',
+        careInstructions: multiAIResults.plantID.commonNames || [],
+        provider: 'plant-id'
+      });
+    }
+    
+    if (multiAIResults.plexi) {
+      identifications.push({
+        plantName: multiAIResults.plexi.plantIdentification.name,
+        scientificName: multiAIResults.plexi.plantIdentification.scientificName,
+        confidence: multiAIResults.plexi.plantIdentification.confidence,
+        habitat: 'Da determinare',
+        careInstructions: multiAIResults.plexi.recommendations || [],
+        provider: 'plexi'
+      });
+    }
+    
+    return identifications.sort((a, b) => b.confidence - a.confidence);
+  }
+  
+  private static formatDiseaseDetections(multiAIResults: any): DiseaseDetectionResult[] {
+    const diseases: DiseaseDetectionResult[] = [];
+    
+    if (multiAIResults.plantDiseasesAI) {
+      multiAIResults.plantDiseasesAI.forEach((disease: any) => {
+        diseases.push({
+          diseaseName: disease.diseaseName,
+          confidence: disease.confidence,
+          severity: disease.severity,
+          symptoms: disease.symptoms,
+          treatment: disease.treatment,
+          provider: 'plant-diseases-ai'
+        });
+      });
+    }
+    
+    if (multiAIResults.plexi?.healthAnalysis?.issues) {
+      multiAIResults.plexi.healthAnalysis.issues.forEach((issue: any) => {
+        diseases.push({
+          diseaseName: issue.type,
+          confidence: issue.severity,
+          severity: issue.severity > 70 ? 'high' : issue.severity > 40 ? 'medium' : 'low',
+          symptoms: [issue.description],
+          treatment: ['Consulta esperto'],
+          provider: 'plexi'
+        });
+      });
+    }
+    
+    return diseases.sort((a, b) => b.confidence - a.confidence);
+  }
+  
+  private static async checkEppoDatabase(consensus: any) {
+    // Implementazione semplificata per ora
+    return undefined;
   }
 }
