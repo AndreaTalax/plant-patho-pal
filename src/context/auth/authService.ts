@@ -279,10 +279,27 @@ export const updateUserPassword = async (password: string) => {
 
 export const signOutUser = async () => {
   try {
-    await supabase.auth.signOut();
+    console.log('🔓 Effettuando logout...');
+    
+    // Effettua il logout da Supabase
+    const { error } = await supabase.auth.signOut();
+    
+    if (error) {
+      console.error('❌ Errore durante il logout:', error);
+      throw error;
+    }
+    
+    console.log('✅ Logout completato con successo');
     toast.success('Logout effettuato con successo!');
+    
+    // Pulisci eventuali dati locali residui
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('supabase.auth.token');
+      sessionStorage.clear();
+    }
+    
   } catch (error: any) {
-    console.error('Logout error:', error?.message || error);
+    console.error('❌ Errore durante il logout:', error?.message || error);
     toast.error('Errore durante il logout');
     throw error;
   }

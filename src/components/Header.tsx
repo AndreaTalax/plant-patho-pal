@@ -1,182 +1,173 @@
 
-import { useState, useEffect } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import React, { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
-import { useTheme } from '@/context/ThemeContext';
-import { Menu, X, Leaf, LogOut } from 'lucide-react';
-import { useIsMobile } from '@/hooks/use-mobile';
 import { 
-  Drawer,
-  DrawerClose,
-  DrawerContent,
-  DrawerTrigger,
-} from '@/components/ui/drawer';
+  Menu, 
+  X, 
+  User, 
+  LogOut,
+  Leaf,
+  MessageSquare,
+  BookOpen,
+  ShoppingCart,
+  Home,
+  Info,
+  Briefcase,
+  Phone
+} from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 
-/**
- * This function defines the Header component which manages navigation and authentication UI.
- * @example
- * Header()
- * Returns a header JSX element with navigation links and authentication buttons.
- * @returns {JSX.Element} A header element that includes navigation items, and authentication controls for both desktop and mobile views.
- * @description
- *   - Implements a scroll effect to alter the header's appearance.
- *   - Contains both desktop and mobile versions of navigation using conditional rendering.
- *   - Manages navigation state and executes appropriate actions on user authentication state change.
- *   - Utilizes hooks like useState, useAuth, and useNavigate for state and authentication management.
- */
 const Header = () => {
-  const [scrolled, setScrolled] = useState(false);
-  const { isAuthenticated, logout } = useAuth();
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { isAuthenticated, userProfile, logout } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
-  const { t } = useTheme();
-  const isMobile = useIsMobile();
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  
-  useEffect(() => {
-    const handleScroll = () => {
-      setScrolled(window.scrollY > 10);
-    };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
-  const navItems = [
-    { title: "home", path: "/" },
-    { title: "aboutUs", path: "/about" },
-    { title: "services", path: "/services" },
-    { title: "contact", path: "/contact" },
-  ];
-  
-  const handleNavigation = (path: string) => {
-    setIsDrawerOpen(false);
-    navigate(path);
-  };
 
   const handleLogout = async () => {
-    await logout();
-    navigate('/login');
+    try {
+      await logout();
+      toast.success('Logout effettuato con successo!');
+      navigate('/');
+      setIsMenuOpen(false);
+    } catch (error) {
+      console.error('Errore durante il logout:', error);
+      toast.error('Errore durante il logout');
+    }
   };
 
+  const handleLogin = () => {
+    navigate('/auth');
+    setIsMenuOpen(false);
+  };
+
+  const toggleMenu = () => {
+    setIsMenuOpen(!isMenuOpen);
+  };
+
+  const menuItems = [
+    { name: 'Home', icon: Home, path: '/' },
+    { name: 'About Us', icon: Info, path: '/about' },
+    { name: 'Services', icon: Briefcase, path: '/services' },
+    { name: 'Contact', icon: Phone, path: '/contact' },
+  ];
+
   return (
-    <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-      scrolled ? 'bg-white/90 shadow-md backdrop-blur-md' : 'bg-gradient-to-b from-drplant-blue/20 to-transparent'
-    }`}>
-      <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-        <Link to="/" className="flex items-center space-x-2">
-          <img 
-            src="/lovable-uploads/1cb629ef-f7f2-4b66-a48a-5f22564bb3fa.png" 
-            alt="DR PLANT Logo" 
-            className="h-14 md:h-16"
-          />
-          <div className="hidden md:flex flex-col">
-            <span className="font-bold text-drplant-blue text-xl">DR PLANT</span>
-          </div>
-        </Link>
-        
-        {/* Desktop navigation */}
-        <nav className="hidden md:flex space-x-6">
-          {navItems.map((item) => (
-            <Link 
-              key={item.title}
-              to={item.path}
-              className={`font-medium hover:text-drplant-blue-dark transition-colors ${
-                location.pathname === item.path ? 'text-drplant-blue-dark' : 'text-drplant-blue'
-              }`}
-            >
-              {t(item.title)}
-            </Link>
-          ))}
-        </nav>
+    <header className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-200/50 shadow-sm">
+      <div className="container mx-auto px-4">
+        <div className="flex items-center justify-between h-16">
+          {/* Logo */}
+          <Link to="/" className="flex items-center space-x-2 font-bold text-xl text-drplant-green">
+            <Leaf className="h-8 w-8" />
+            <span className="bg-gradient-to-r from-drplant-green to-drplant-blue bg-clip-text text-transparent">
+              Plant Patho Pal
+            </span>
+          </Link>
 
-        {/* Desktop auth buttons */}
-        <div className="hidden md:flex items-center space-x-2">
-          {isAuthenticated ? (
-            <Button 
-              variant="outline"
-              onClick={handleLogout}
-              className="flex items-center gap-2"
-            >
-              <LogOut className="h-4 w-4" />
-              Logout
-            </Button>
-          ) : (
-            <Button 
-              className="bg-drplant-blue hover:bg-drplant-blue-dark"
-              onClick={() => navigate('/login')}
-            >
-              {t("login")}
-            </Button>
-          )}
-        </div>
+          {/* Desktop Navigation */}
+          <nav className="hidden md:flex items-center space-x-6">
+            {menuItems.map((item) => (
+              <Link
+                key={item.name}
+                to={item.path}
+                className="flex items-center space-x-1 text-gray-600 hover:text-drplant-green transition-colors duration-200"
+              >
+                <item.icon className="h-4 w-4" />
+                <span>{item.name}</span>
+              </Link>
+            ))}
+          </nav>
 
-        {/* Mobile navigation */}
-        {isMobile && (
-          <Drawer open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
-            <DrawerTrigger asChild>
-              <Button variant="ghost" size="icon" className="md:hidden">
-                <Menu className="h-6 w-6 text-drplant-blue" />
-                <span className="sr-only">Toggle menu</span>
+          {/* User Actions */}
+          <div className="hidden md:flex items-center space-x-4">
+            {isAuthenticated ? (
+              <div className="flex items-center space-x-3">
+                <div className="flex items-center space-x-2 text-gray-700">
+                  <User className="h-5 w-5" />
+                  <span className="text-sm font-medium">
+                    {userProfile?.first_name || userProfile?.firstName || 'Utente'}
+                  </span>
+                </div>
+                <Button
+                  onClick={handleLogout}
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center space-x-2 border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400"
+                >
+                  <LogOut className="h-4 w-4" />
+                  <span>Logout</span>
+                </Button>
+              </div>
+            ) : (
+              <Button
+                onClick={handleLogin}
+                className="bg-drplant-green hover:bg-drplant-green/90 text-white"
+              >
+                Accedi
               </Button>
-            </DrawerTrigger>
-            <DrawerContent className="px-4 py-6 h-[60vh] flex flex-col">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-lg font-semibold text-drplant-blue flex items-center gap-2">
-                  <Leaf className="h-5 w-5 text-drplant-green" />
-                  <span>{t("menu")}</span>
-                </h2>
-                <DrawerClose asChild>
-                  <Button variant="ghost" size="icon">
-                    <X className="h-5 w-5" />
-                    <span className="sr-only">Close menu</span>
-                  </Button>
-                </DrawerClose>
-              </div>
-              <div className="flex flex-col space-y-4">
-                {navItems.map((item) => (
-                  <Button 
-                    key={item.title}
-                    variant="ghost" 
-                    className={`justify-start text-lg font-medium ${
-                      location.pathname === item.path ? 'text-drplant-blue-dark' : 'text-drplant-blue'
-                    }`}
-                    onClick={() => handleNavigation(item.path)}
-                  >
-                    {t(item.title)}
-                  </Button>
-                ))}
-              </div>
+            )}
+          </div>
+
+          {/* Mobile Menu Button */}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={toggleMenu}
+            className="md:hidden"
+          >
+            {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+          </Button>
+        </div>
+      </div>
+
+      {/* Mobile Menu */}
+      {isMenuOpen && (
+        <div className="md:hidden bg-white border-t border-gray-200 shadow-lg">
+          <div className="container mx-auto px-4 py-4">
+            <nav className="flex flex-col space-y-4">
+              {menuItems.map((item) => (
+                <Link
+                  key={item.name}
+                  to={item.path}
+                  onClick={() => setIsMenuOpen(false)}
+                  className="flex items-center space-x-3 text-gray-600 hover:text-drplant-green transition-colors duration-200 py-2"
+                >
+                  <item.icon className="h-5 w-5" />
+                  <span>{item.name}</span>
+                </Link>
+              ))}
               
-              <div className="mt-auto pt-4 border-t border-gray-100">
+              <div className="border-t border-gray-200 pt-4">
                 {isAuthenticated ? (
-                  <Button 
-                    variant="outline"
-                    className="w-full flex items-center gap-2"
-                    onClick={() => {
-                      setIsDrawerOpen(false);
-                      handleLogout();
-                    }}
-                  >
-                    <LogOut className="h-4 w-4" />
-                    Logout
-                  </Button>
+                  <div className="space-y-3">
+                    <div className="flex items-center space-x-3 text-gray-700 py-2">
+                      <User className="h-5 w-5" />
+                      <span className="font-medium">
+                        {userProfile?.first_name || userProfile?.firstName || 'Utente'}
+                      </span>
+                    </div>
+                    <Button
+                      onClick={handleLogout}
+                      variant="outline"
+                      className="w-full flex items-center justify-center space-x-2 border-red-300 text-red-600 hover:bg-red-50"
+                    >
+                      <LogOut className="h-4 w-4" />
+                      <span>Logout</span>
+                    </Button>
+                  </div>
                 ) : (
-                  <Button 
-                    className="w-full bg-drplant-blue hover:bg-drplant-blue-dark"
-                    onClick={() => {
-                      setIsDrawerOpen(false);
-                      navigate('/login');
-                    }}
+                  <Button
+                    onClick={handleLogin}
+                    className="w-full bg-drplant-green hover:bg-drplant-green/90 text-white"
                   >
-                    {t("login")}
+                    Accedi
                   </Button>
                 )}
               </div>
-            </DrawerContent>
-          </Drawer>
-        )}
-      </div>
+            </nav>
+          </div>
+        </div>
+      )}
     </header>
   );
 };
