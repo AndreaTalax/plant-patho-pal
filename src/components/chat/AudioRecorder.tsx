@@ -39,14 +39,14 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({
       return true;
     } catch (error) {
       console.warn('⚠️ Impossibile verificare permessi microfono:', error);
-      return true; // Procedi comunque con il tentativo
+      return true;
     }
   };
 
   const requestMicrophonePermission = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      stream.getTracks().forEach(track => track.stop()); // Ferma immediatamente
+      stream.getTracks().forEach(track => track.stop());
       setPermissionDenied(false);
       return true;
     } catch (error) {
@@ -63,7 +63,6 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({
       return;
     }
 
-    // Verifica permessi prima di procedere
     const hasPermission = await checkMicrophonePermission();
     if (!hasPermission) {
       const granted = await requestMicrophonePermission();
@@ -71,7 +70,7 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({
     }
 
     try {
-      console.log('🎤 Avvio registrazione audio ottimizzata...');
+      console.log('🎤 Avvio registrazione audio...');
       setIsRecording(true);
       setPermissionDenied(false);
       
@@ -106,7 +105,6 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({
         setAudioBlob(blob);
         setAudioURL(URL.createObjectURL(blob));
         
-        // Cleanup stream
         if (streamRef.current) {
           streamRef.current.getTracks().forEach(track => track.stop());
           streamRef.current = null;
@@ -162,7 +160,7 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({
   const handleSendAudio = async () => {
     if (!audioBlob) return;
     
-    console.log('📤 Invio audio veloce...', audioBlob.size, 'bytes');
+    console.log('📤 Invio audio...', audioBlob.size, 'bytes');
     setIsProcessing(true);
     
     try {
@@ -178,7 +176,7 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({
         formData.append('recipientId', recipientId);
         formData.append('audio', audioBlob, 'voice-message.webm');
 
-        const { data, error } = await supabase.functions.invoke('process-audio', {
+        const { data, error } = await supabase.functions.invoke('upload-audio', {
           body: formData,
           headers: {
             Authorization: `Bearer ${session.access_token}`,

@@ -9,7 +9,7 @@ interface MessageContentProps {
 }
 
 export const MessageContent = ({ message }: MessageContentProps) => {
-  // Verifica se il messaggio è audio migliorata
+  // Verifica se il messaggio è audio
   const isAudioMessage = message.text?.includes('🎵 Messaggio vocale') || 
                          message.text === '🎵 Messaggio vocale' ||
                          (message.image_url && (
@@ -17,7 +17,8 @@ export const MessageContent = ({ message }: MessageContentProps) => {
                            message.image_url.includes('.webm') ||
                            message.image_url.includes('.mp3') ||
                            message.image_url.includes('.wav') ||
-                           message.image_url.includes('.m4a')
+                           message.image_url.includes('.m4a') ||
+                           message.image_url.includes('audio-messages')
                          ));
 
   if (isAudioMessage && message.image_url) {
