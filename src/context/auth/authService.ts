@@ -2,6 +2,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { UserProfile } from './types';
 import { getWhitelistedEmails } from './utils';
+import { ConnectionService } from '@/services/ConnectionService';
 
 /**
  * Attempts to authenticate a user with given email and password and manages fallback authentication for whitelisted emails.
@@ -163,7 +164,7 @@ export const createOrUpdateProfile = async (userId: string, profileData: any) =>
  *   - Handles errors gracefully by logging them and returning null.
  */
 export const fetchUserProfile = async (userId: string): Promise<UserProfile | null> => {
-  try {
+  const operation = async () => {
     console.log('Fetching user profile for:', userId);
     const { data, error } = await supabase
       .from('profiles')
@@ -173,7 +174,7 @@ export const fetchUserProfile = async (userId: string): Promise<UserProfile | nu
 
     if (error) {
       console.error('Error fetching user profile:', error.message || error);
-      return null;
+      throw error;
     }
 
     if (data) {
@@ -198,6 +199,15 @@ export const fetchUserProfile = async (userId: string): Promise<UserProfile | nu
       await createOrUpdateProfile(userId, defaultProfile);
       return defaultProfile;
     }
+  };
+
+  try {
+    // Use ConnectionService for robust error handling
+    const result = await ConnectionService.withRetry(
+      operation,
+      'Fetch user profile'
+    );
+    return result;
   } catch (error: any) {
     console.error('Error fetching user profile:', error?.message || error);
     return null;
