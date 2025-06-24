@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 
 export class MessageService {
   /**
-   * Invia un messaggio
+   * Invia un messaggio usando la edge function
    */
   static async sendMessage(
     conversationId: string, 
@@ -37,23 +37,49 @@ export class MessageService {
       // Determina il recipientId
       const recipientId = senderId === MARCO_NIGRO_ID ? null : MARCO_NIGRO_ID;
 
-      const { data, error } = await supabase.functions.invoke('send-message', {
-        body: {
-          conversationId,
-          recipientId,
-          text: content.trim(),
-          imageUrl,
-          products
+      // Prova prima con la edge function
+      try {
+        const { data, error } = await supabase.functions.invoke('send-message', {
+          body: {
+            conversationId,
+            recipientId,
+            text: content.trim(),
+            imageUrl,
+            products
+          }
+        });
+
+        if (error) {
+          console.error('❌ MessageService: Errore funzione send-message', error);
+          throw new Error('Edge function error');
         }
-      });
 
-      if (error) {
-        console.error('❌ MessageService: Errore funzione send-message', error);
-        throw new Error(error.message || 'Errore invio messaggio');
+        console.log('✅ MessageService: Messaggio inviato via edge function', data);
+        return true;
+      } catch (edgeFunctionError) {
+        console.log('⚠️ Edge function non disponibile, uso inserimento diretto');
+        
+        // Fallback: inserimento diretto nel database
+        const { error: insertError } = await supabase
+          .from('messages')
+          .insert({
+            conversation_id: conversationId,
+            sender_id: senderId,
+            recipient_id: recipientId,
+            content: content.trim(),
+            text: content.trim(),
+            image_url: imageUrl,
+            sent_at: new Date().toISOString()
+          });
+
+        if (insertError) {
+          console.error('❌ MessageService: Errore inserimento diretto', insertError);
+          throw insertError;
+        }
+
+        console.log('✅ MessageService: Messaggio inviato via inserimento diretto');
+        return true;
       }
-
-      console.log('✅ MessageService: Messaggio inviato', data);
-      return true;
 
     } catch (error: any) {
       console.error('❌ MessageService: Errore invio messaggio', error);
@@ -74,55 +100,35 @@ export class MessageService {
   }
 
   /**
-   * Carica messaggi di una conversazione con timeout ridotto
+   * Carica messaggi direttamente dal database (senza edge function)
    */
   static async loadMessages(conversationId: string) {
     try {
-      console.log('📚 MessageService: Carico messaggi', conversationId);
+      console.log('📚 MessageService: Carico messaggi direttamente dal database', conversationId);
 
       if (!conversationId) {
         return [];
       }
 
-      // Timeout ridotto per evitare statement timeout
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 secondi invece di default
+      // Caricamento diretto dal database senza edge function
+      const { data: messages, error } = await supabase
+        .from('messages')
+        .select('*')
+        .eq('conversation_id', conversationId)
+        .order('sent_at', { ascending: true })
+        .limit(100);
 
-      try {
-        const { data: messages, error } = await supabase
-          .from('messages')
-          .select('*')
-          .eq('conversation_id', conversationId)
-          .order('sent_at', { ascending: true })
-          .limit(50) // Limita i risultati per velocizzare la query
-          .abortSignal(controller.signal);
-
-        clearTimeout(timeoutId);
-
-        if (error) {
-          console.error('❌ MessageService: Errore caricamento messaggi', error);
-          throw error;
-        }
-
-        console.log('✅ MessageService: Messaggi caricati', messages?.length || 0);
-        return messages || [];
-      } catch (abortError) {
-        clearTimeout(timeoutId);
-        if (abortError.name === 'AbortError') {
-          console.error('❌ MessageService: Timeout caricamento messaggi');
-          toast.error('Caricamento messaggi troppo lento, riprova');
-          return [];
-        }
-        throw abortError;
+      if (error) {
+        console.error('❌ MessageService: Errore caricamento messaggi', error);
+        throw error;
       }
+
+      console.log('✅ MessageService: Messaggi caricati direttamente', messages?.length || 0);
+      return messages || [];
 
     } catch (error: any) {
       console.error('❌ MessageService: Errore caricamento messaggi', error);
-      
-      // Non mostrare toast per timeout già gestiti
-      if (error.code !== '57014') {
-        toast.error('Errore caricamento messaggi');
-      }
+      toast.error('Errore caricamento messaggi');
       return [];
     }
   }

@@ -7,41 +7,26 @@ export class ChatMessageService {
     try {
       console.log('📚 Loading messages for conversation:', conversationId);
       
-      // Timeout ridotto e query ottimizzata
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 secondi
-
-      try {
-        const { data, error } = await supabase
-          .from('messages')
-          .select('*')
-          .eq('conversation_id', conversationId)
-          .order('sent_at', { ascending: true })
-          .limit(100) // Limita risultati
-          .abortSignal(controller.signal);
-
-        clearTimeout(timeoutId);
-
-        if (error) {
-          console.error('❌ Error loading messages:', error);
-          throw error;
-        }
-
-        console.log('✅ Messages loaded successfully:', data?.length || 0);
-        return data || [];
-      } catch (abortError) {
-        clearTimeout(timeoutId);
-        if (abortError.name === 'AbortError') {
-          console.error('❌ Request timeout loading messages');
-          throw new Error('Request timeout');
-        }
-        throw abortError;
+      if (!conversationId) {
+        return [];
       }
+
+      // Caricamento diretto dal database senza edge function
+      const { data, error } = await supabase
+        .from('messages')
+        .select('*')
+        .eq('conversation_id', conversationId)
+        .order('sent_at', { ascending: true })
+        .limit(100);
+
+      if (error) {
+        console.error('❌ Error loading messages:', error);
+        throw error;
+      }
+
+      console.log('✅ Messages loaded successfully:', data?.length || 0);
+      return data || [];
     } catch (error) {
-      if (error.message === 'Request timeout') {
-        console.error('❌ Request timeout loading messages');
-        throw new Error('Request timeout');
-      }
       console.error('❌ Error in loadMessages:', error);
       throw error;
     }
@@ -56,7 +41,7 @@ export class ChatMessageService {
     products?: any
   ): Promise<boolean> {
     try {
-      console.log('📤 Sending message via Supabase function:', {
+      console.log('📤 Sending message:', {
         conversationId,
         senderId,
         recipientId,
@@ -72,10 +57,7 @@ export class ChatMessageService {
         throw new Error('User not authenticated');
       }
 
-      // Timeout ridotto
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 secondi
-
+      // Prova prima con la edge function
       try {
         const { data, error } = await supabase.functions.invoke('send-message', {
           body: {
@@ -87,28 +69,37 @@ export class ChatMessageService {
           }
         });
 
-        clearTimeout(timeoutId);
-
         if (error) {
-          console.error('❌ Error from send-message function:', error);
-          throw error;
+          throw new Error('Edge function error');
         }
 
-        console.log('✅ Message sent successfully:', data);
+        console.log('✅ Message sent via edge function:', data);
         return true;
-      } catch (abortError) {
-        clearTimeout(timeoutId);
-        if (abortError.name === 'AbortError') {
-          console.error('❌ Request timeout sending message');
-          throw new Error('Request timeout');
+      } catch (edgeFunctionError) {
+        console.log('⚠️ Edge function not available, using direct insert');
+        
+        // Fallback: inserimento diretto
+        const { error: insertError } = await supabase
+          .from('messages')
+          .insert({
+            conversation_id: conversationId,
+            sender_id: senderId,
+            recipient_id: recipientId,
+            content: text,
+            text: text,
+            image_url: imageUrl,
+            sent_at: new Date().toISOString()
+          });
+
+        if (insertError) {
+          console.error('❌ Error in direct insert:', insertError);
+          throw insertError;
         }
-        throw abortError;
+
+        console.log('✅ Message sent via direct insert');
+        return true;
       }
     } catch (error) {
-      if (error.message === 'Request timeout') {
-        console.error('❌ Request timeout sending message');
-        throw new Error('Request timeout');
-      }
       console.error('❌ Error in sendMessage:', error);
       throw error;
     }
