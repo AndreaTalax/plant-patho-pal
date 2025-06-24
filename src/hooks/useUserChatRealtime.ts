@@ -1,11 +1,14 @@
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { ConversationService } from '@/services/chat/conversationService';
 import { MessageService } from '@/services/chat/messageService';
 import { MARCO_NIGRO_ID } from '@/components/phytopathologist';
 import { DatabaseMessage } from '@/services/chat/types';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+
+// Global request tracking to prevent duplicate requests
+const globalRequestTracker = new Map<string, Promise<any>>();
 
 export const useUserChatRealtime = (userId: string) => {
   const [activeChat, setActiveChat] = useState<'expert' | null>(null);
@@ -15,28 +18,65 @@ export const useUserChatRealtime = (userId: string) => {
   const [isConnected, setIsConnected] = useState(false);
   const [initializationError, setInitializationError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
+  
+  // Refs to prevent multiple operations
+  const isInitializingRef = useRef(false);
+  const subscriptionRef = useRef<any>(null);
 
-  // Caricamento messaggi ottimizzato
-  const loadMessages = useCallback(async (conversationId: string) => {
-    if (!conversationId) return;
+  // Deduplication helper
+  const withDeduplication = useCallback(async <T>(key: string, operation: () => Promise<T>): Promise<T | null> => {
+    if (globalRequestTracker.has(key)) {
+      console.log('🔄 Waiting for existing request:', key);
+      try {
+        return await globalRequestTracker.get(key);
+      } catch (error) {
+        console.error('❌ Existing request failed:', error);
+        globalRequestTracker.delete(key);
+        throw error;
+      }
+    }
+
+    const promise = operation();
+    globalRequestTracker.set(key, promise);
     
     try {
-      console.log('📚 Caricamento messaggi per conversazione:', conversationId);
-      const messagesData = await MessageService.loadMessages(conversationId);
-      console.log('✅ Messaggi caricati:', messagesData?.length || 0);
-      setMessages(messagesData || []);
+      const result = await promise;
+      globalRequestTracker.delete(key);
+      return result;
     } catch (error) {
-      console.error('❌ Errore caricamento messaggi:', error);
+      globalRequestTracker.delete(key);
+      throw error;
     }
   }, []);
 
-  // Setup subscription real-time
-  useEffect(() => {
-    if (!currentConversationId || !userId) return;
-
-    console.log('🔄 Setup subscription real-time per:', currentConversationId);
+  // Load messages with deduplication
+  const loadMessages = useCallback(async (conversationId: string) => {
+    if (!conversationId) return;
     
-    const channelName = `conversation_${currentConversationId}_${Date.now()}`;
+    const requestKey = `load-messages-${conversationId}`;
+    
+    try {
+      console.log('📚 Loading messages for conversation:', conversationId);
+      const messagesData = await withDeduplication(requestKey, () => 
+        MessageService.loadMessages(conversationId)
+      );
+      
+      if (messagesData) {
+        console.log('✅ Messages loaded:', messagesData.length);
+        setMessages(messagesData);
+      }
+    } catch (error) {
+      console.error('❌ Error loading messages:', error);
+    }
+  }, [withDeduplication]);
+
+  // Setup real-time subscription (single instance)
+  useEffect(() => {
+    if (!currentConversationId || !userId || subscriptionRef.current) return;
+
+    console.log('🔄 Setting up real-time subscription for:', currentConversationId);
+    
+    const channelName = `conversation_${currentConversationId}_${userId}`;
     const channel = supabase.channel(channelName);
 
     channel
@@ -50,140 +90,145 @@ export const useUserChatRealtime = (userId: string) => {
         },
         (payload) => {
           try {
-            console.log('📨 Nuovo messaggio ricevuto:', payload.new);
+            console.log('📨 New message received:', payload.new);
             const newMessage = payload.new as DatabaseMessage;
             
             setMessages(prev => {
               const exists = prev.some(msg => msg.id === newMessage.id);
               if (exists) return prev;
+              
               return [...prev, newMessage].sort((a, b) => 
                 new Date(a.sent_at).getTime() - new Date(b.sent_at).getTime()
               );
             });
             
-            // Toast solo per messaggi dall'esperto
             if (newMessage.sender_id !== userId) {
-              toast.success('Nuovo messaggio ricevuto!', {
-                duration: 3000,
-              });
+              toast.success('Nuovo messaggio ricevuto!');
             }
           } catch (error) {
-            console.error('❌ Errore gestione nuovo messaggio:', error);
+            console.error('❌ Error handling new message:', error);
           }
         }
       )
       .subscribe((status) => {
-        console.log('🔗 Stato subscription:', status);
+        console.log('🔗 Subscription status:', status);
         setIsConnected(status === 'SUBSCRIBED');
       });
 
+    subscriptionRef.current = channel;
+
     return () => {
-      console.log('🔌 Pulizia subscription');
-      supabase.removeChannel(channel);
+      console.log('🔌 Cleaning up subscription');
+      if (subscriptionRef.current) {
+        supabase.removeChannel(subscriptionRef.current);
+        subscriptionRef.current = null;
+      }
       setIsConnected(false);
     };
   }, [currentConversationId, userId]);
 
-  // Chat initialization ROBUSTO e SEMPRE FUNZIONANTE
+  // Chat initialization with proper deduplication
   const startChatWithExpert = useCallback(async () => {
-    if (!userId) {
-      const error = 'Utente non autenticato';
-      setInitializationError(error);
+    if (!userId || isInitializingRef.current) {
+      console.log('⚠️ Already initializing or no user ID');
       return;
     }
 
-    // Reset errori precedenti
+    const requestKey = `init-chat-${userId}`;
+    isInitializingRef.current = true;
     setInitializationError(null);
     setRetryCount(prev => prev + 1);
 
     try {
-      console.log('🚀 Avvio chat con esperto (tentativo', retryCount + 1, ') per utente:', userId);
+      console.log('🚀 Starting chat with expert (attempt', retryCount + 1, ')');
       
-      // Tentativo robusto di trovare/creare conversazione
-      let conversation = null;
-      let attempts = 0;
-      const maxAttempts = 3;
-      
-      while (!conversation && attempts < maxAttempts) {
-        attempts++;
-        console.log(`🔄 Tentativo ${attempts}/${maxAttempts} creazione conversazione`);
-        
-        conversation = await ConversationService.findOrCreateConversation(userId);
-        
-        if (!conversation && attempts < maxAttempts) {
-          console.log('⏳ Attendo prima del prossimo tentativo...');
-          await new Promise(resolve => setTimeout(resolve, 1000 * attempts));
-        }
-      }
+      const conversation = await withDeduplication(requestKey, () =>
+        ConversationService.findOrCreateConversation(userId)
+      );
 
       if (!conversation) {
-        throw new Error('Impossibile stabilire connessione dopo multiple tentativi');
+        throw new Error('Unable to establish conversation');
       }
 
-      console.log('✅ Conversazione stabilita:', conversation.id);
+      console.log('✅ Conversation established:', conversation.id);
       setActiveChat('expert');
       setCurrentConversationId(conversation.id);
       await loadMessages(conversation.id);
       
-      // Reset retry count su successo
       setRetryCount(0);
-      toast.success('Chat connessa con successo!');
+      toast.success('Chat connected successfully!');
       
     } catch (error: any) {
-      console.error('❌ Errore avvio chat:', error);
-      const errorMessage = error.message || 'Errore connessione chat';
+      console.error('❌ Error starting chat:', error);
+      const errorMessage = error.message || 'Connection error';
       setInitializationError(errorMessage);
       
-      // Auto-retry con backoff esponenziale (max 5 tentativi)
-      if (retryCount < 5) {
-        const delay = Math.min(2000 * Math.pow(2, retryCount), 10000);
-        console.log(`🔄 Auto-retry in ${delay}ms (tentativo ${retryCount + 1}/5)`);
+      // Auto-retry with exponential backoff (max 3 attempts)
+      if (retryCount < 3) {
+        const delay = Math.min(2000 * Math.pow(2, retryCount), 8000);
+        console.log(`🔄 Auto-retry in ${delay}ms (attempt ${retryCount + 1}/3)`);
         setTimeout(() => {
+          isInitializingRef.current = false;
           startChatWithExpert();
         }, delay);
       } else {
-        toast.error('Errore persistente nella connessione. Ricarica la pagina.');
+        toast.error('Persistent connection error. Please refresh the page.');
+        isInitializingRef.current = false;
+      }
+    } finally {
+      if (retryCount >= 3) {
+        isInitializingRef.current = false;
       }
     }
-  }, [userId, loadMessages, retryCount]);
+  }, [userId, loadMessages, retryCount, withDeduplication]);
 
-  // Invio messaggi semplificato
+  // Send message with deduplication
   const handleSendMessage = useCallback(async (messageText: string) => {
     if (!currentConversationId || !userId || !messageText.trim() || isSending) {
       return;
     }
 
+    const requestKey = `send-message-${currentConversationId}-${Date.now()}`;
+
     try {
       setIsSending(true);
-      console.log('📤 Invio messaggio:', { conversationId: currentConversationId, messageText });
+      console.log('📤 Sending message');
       
-      const success = await MessageService.sendMessage(
-        currentConversationId,
-        userId,
-        messageText.trim()
+      const success = await withDeduplication(requestKey, () =>
+        MessageService.sendMessage(currentConversationId, userId, messageText.trim())
       );
       
       if (success) {
-        console.log('✅ Messaggio inviato con successo');
-        // Ricarica messaggi
-        setTimeout(() => {
-          loadMessages(currentConversationId);
-        }, 500);
+        console.log('✅ Message sent successfully');
+        // Reload messages after a short delay
+        setTimeout(() => loadMessages(currentConversationId), 1000);
       } else {
-        throw new Error('Errore invio messaggio');
+        throw new Error('Failed to send message');
       }
       
     } catch (error: any) {
-      console.error('❌ Errore invio messaggio:', error);
-      toast.error('Errore nell\'invio del messaggio');
+      console.error('❌ Error sending message:', error);
+      toast.error('Error sending message');
     } finally {
       setIsSending(false);
     }
-  }, [currentConversationId, userId, loadMessages, isSending]);
+  }, [currentConversationId, userId, loadMessages, isSending, withDeduplication]);
 
-  // Reset completo
+  // Reset function
   const resetChat = useCallback(() => {
-    console.log('🔄 Reset completo della chat');
+    console.log('🔄 Resetting chat');
+    
+    // Clear all tracking
+    isInitializingRef.current = false;
+    globalRequestTracker.clear();
+    
+    // Clean up subscription
+    if (subscriptionRef.current) {
+      supabase.removeChannel(subscriptionRef.current);
+      subscriptionRef.current = null;
+    }
+    
+    // Reset state
     setMessages([]);
     setCurrentConversationId(null);
     setActiveChat(null);
@@ -191,6 +236,16 @@ export const useUserChatRealtime = (userId: string) => {
     setInitializationError(null);
     setIsSending(false);
     setRetryCount(0);
+  }, []);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (subscriptionRef.current) {
+        supabase.removeChannel(subscriptionRef.current);
+      }
+      globalRequestTracker.clear();
+    };
   }, []);
 
   return {
