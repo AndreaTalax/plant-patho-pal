@@ -2,34 +2,43 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Card } from '@/components/ui/card';
 import { 
   Send, 
   Paperclip, 
   Smile, 
-  Mic, 
-  MicOff,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  Image as ImageIcon
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { uploadPlantImage } from '@/utils/imageStorage';
+import { useAuth } from '@/context/AuthContext';
+import AudioRecorder from '@/components/chat/AudioRecorder';
 
 interface MessageBoardProps {
-  onSendMessage: (message: string) => Promise<void>;
+  onSendMessage: (message: string, imageUrl?: string) => Promise<void>;
   isSending: boolean;
   isConnected: boolean;
   disabled?: boolean;
+  conversationId?: string;
+  senderId?: string;
+  recipientId?: string;
 }
 
 export const MessageBoard: React.FC<MessageBoardProps> = ({
   onSendMessage,
   isSending,
   isConnected,
-  disabled = false
+  disabled = false,
+  conversationId,
+  senderId,
+  recipientId
 }) => {
   const [message, setMessage] = useState('');
-  const [isRecording, setIsRecording] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { userProfile } = useAuth();
 
   // Auto-resize textarea
   useEffect(() => {
@@ -63,18 +72,50 @@ export const MessageBoard: React.FC<MessageBoardProps> = ({
     }
   };
 
-  const handleVoiceRecord = () => {
-    if (isRecording) {
-      setIsRecording(false);
-      toast.info('Registrazione vocale terminata');
-    } else {
-      setIsRecording(true);
-      toast.info('Registrazione vocale avviata');
-      // TODO: Implementa registrazione vocale
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !userProfile?.id) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('Seleziona solo immagini');
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('L\'immagine deve essere inferiore a 10MB');
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      console.log('📤 Upload immagine in corso...');
+      const imageUrl = await uploadPlantImage(file, userProfile.id);
+      console.log('✅ Immagine caricata:', imageUrl);
+      
+      await onSendMessage('📸 Immagine allegata', imageUrl);
+      toast.success('Immagine inviata con successo!');
+    } catch (error) {
+      console.error('❌ Errore upload immagine:', error);
+      toast.error('Errore nel caricamento dell\'immagine');
+    } finally {
+      setIsUploading(false);
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     }
   };
 
-  const isDisabled = disabled || !isConnected || isSending;
+  const triggerFileUpload = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleAudioSend = async (audioBlob: Blob) => {
+    console.log('🎵 Gestione invio audio dal MessageBoard');
+    // L'AudioRecorder gestisce già l'upload tramite la funzione edge
+  };
+
+  const isDisabled = disabled || !isConnected || isSending || isUploading;
 
   return (
     <div className="bg-white border-t border-gray-200 shadow-lg">
@@ -91,7 +132,16 @@ export const MessageBoard: React.FC<MessageBoardProps> = ({
           </div>
         )}
 
-        {/* Message Input Area - SEMPRE VISIBILE */}
+        {/* Audio Recorder */}
+        <AudioRecorder 
+          onSendAudio={handleAudioSend}
+          disabled={isDisabled}
+          conversationId={conversationId}
+          senderId={senderId}
+          recipientId={recipientId}
+        />
+
+        {/* Message Input Area */}
         <div className="space-y-3">
           <div className="relative">
             <Textarea
@@ -128,42 +178,36 @@ export const MessageBoard: React.FC<MessageBoardProps> = ({
             </div>
           </div>
 
-          {/* Action Bar - SEMPRE VISIBILE */}
+          {/* Action Bar */}
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
-              {/* Attach File */}
+              {/* Attach Image */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleFileUpload}
+                className="hidden"
+              />
               <Button
                 variant="ghost"
                 size="sm"
                 disabled={isDisabled}
-                onClick={() => {
-                  toast.info('Allegati file - Coming soon!');
-                }}
+                onClick={triggerFileUpload}
                 className="flex items-center space-x-1 text-gray-600 hover:text-gray-800"
               >
-                <Paperclip className="h-4 w-4" />
-                <span className="text-xs">Allega</span>
-              </Button>
-
-              {/* Voice Record */}
-              <Button
-                variant="ghost"
-                size="sm"
-                disabled={isDisabled}
-                onClick={handleVoiceRecord}
-                className={`
-                  flex items-center space-x-1 hover:text-gray-800
-                  ${isRecording ? 'text-red-600' : 'text-gray-600'}
-                `}
-              >
-                {isRecording ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+                {isUploading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <ImageIcon className="h-4 w-4" />
+                )}
                 <span className="text-xs">
-                  {isRecording ? 'Stop' : 'Audio'}
+                  {isUploading ? 'Upload...' : 'Immagine'}
                 </span>
               </Button>
             </div>
 
-            {/* Send Button - SEMPRE PRESENTE E VISIBILE */}
+            {/* Send Button */}
             <Button
               onClick={handleSend}
               disabled={isDisabled || !message.trim()}
@@ -189,7 +233,7 @@ export const MessageBoard: React.FC<MessageBoardProps> = ({
             </Button>
           </div>
 
-          {/* Helper Text - SEMPRE VISIBILE */}
+          {/* Helper Text */}
           <div className="flex items-center justify-between text-xs text-gray-500">
             <span>Premi Invio per inviare, Shift+Invio per andare a capo</span>
             <span className={`

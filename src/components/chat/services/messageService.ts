@@ -1,38 +1,42 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { DatabaseMessage } from '../types';
-import { canMakeRequest } from '../utils/rateLimiter';
 
 export class ChatMessageService {
   static async loadMessages(conversationId: string): Promise<DatabaseMessage[]> {
     try {
-      // Rate limit message loading
-      if (!canMakeRequest(`load-messages-${conversationId}`, 2000)) {
-        throw new Error('Rate limited - too many requests');
-      }
-
       console.log('📚 Loading messages for conversation:', conversationId);
       
-      // Add request timeout using Promise.race
-      const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error('Request timeout')), 8000);
-      });
-      
-      const queryPromise = supabase
-        .from('messages')
-        .select('*')
-        .eq('conversation_id', conversationId)
-        .order('sent_at', { ascending: true });
+      // Timeout ridotto e query ottimizzata
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 secondi
 
-      const { data, error } = await Promise.race([queryPromise, timeoutPromise]);
+      try {
+        const { data, error } = await supabase
+          .from('messages')
+          .select('*')
+          .eq('conversation_id', conversationId)
+          .order('sent_at', { ascending: true })
+          .limit(100) // Limita risultati
+          .abortSignal(controller.signal);
 
-      if (error) {
-        console.error('❌ Error loading messages:', error);
-        throw error;
+        clearTimeout(timeoutId);
+
+        if (error) {
+          console.error('❌ Error loading messages:', error);
+          throw error;
+        }
+
+        console.log('✅ Messages loaded successfully:', data?.length || 0);
+        return data || [];
+      } catch (abortError) {
+        clearTimeout(timeoutId);
+        if (abortError.name === 'AbortError') {
+          console.error('❌ Request timeout loading messages');
+          throw new Error('Request timeout');
+        }
+        throw abortError;
       }
-
-      console.log('✅ Messages loaded successfully:', data?.length || 0);
-      return data || [];
     } catch (error) {
       if (error.message === 'Request timeout') {
         console.error('❌ Request timeout loading messages');
@@ -52,11 +56,6 @@ export class ChatMessageService {
     products?: any
   ): Promise<boolean> {
     try {
-      // Rate limit message sending
-      if (!canMakeRequest(`send-message-${conversationId}`, 1000)) {
-        throw new Error('Rate limited - sending too fast');
-      }
-
       console.log('📤 Sending message via Supabase function:', {
         conversationId,
         senderId,
@@ -73,30 +72,38 @@ export class ChatMessageService {
         throw new Error('User not authenticated');
       }
 
-      // Add request timeout using Promise.race
-      const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error('Request timeout')), 10000);
-      });
+      // Timeout ridotto
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 secondi
 
-      const functionPromise = supabase.functions.invoke('send-message', {
-        body: {
-          conversationId,
-          recipientId,
-          text,
-          imageUrl,
-          products
+      try {
+        const { data, error } = await supabase.functions.invoke('send-message', {
+          body: {
+            conversationId,
+            recipientId,
+            text,
+            imageUrl,
+            products
+          }
+        });
+
+        clearTimeout(timeoutId);
+
+        if (error) {
+          console.error('❌ Error from send-message function:', error);
+          throw error;
         }
-      });
 
-      const { data, error } = await Promise.race([functionPromise, timeoutPromise]);
-
-      if (error) {
-        console.error('❌ Error from send-message function:', error);
-        throw error;
+        console.log('✅ Message sent successfully:', data);
+        return true;
+      } catch (abortError) {
+        clearTimeout(timeoutId);
+        if (abortError.name === 'AbortError') {
+          console.error('❌ Request timeout sending message');
+          throw new Error('Request timeout');
+        }
+        throw abortError;
       }
-
-      console.log('✅ Message sent successfully:', data);
-      return true;
     } catch (error) {
       if (error.message === 'Request timeout') {
         console.error('❌ Request timeout sending message');

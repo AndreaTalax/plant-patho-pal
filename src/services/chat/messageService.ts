@@ -74,7 +74,7 @@ export class MessageService {
   }
 
   /**
-   * Carica messaggi di una conversazione
+   * Carica messaggi di una conversazione con timeout ridotto
    */
   static async loadMessages(conversationId: string) {
     try {
@@ -84,23 +84,45 @@ export class MessageService {
         return [];
       }
 
-      const { data: messages, error } = await supabase
-        .from('messages')
-        .select('*')
-        .eq('conversation_id', conversationId)
-        .order('sent_at', { ascending: true });
+      // Timeout ridotto per evitare statement timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 secondi invece di default
 
-      if (error) {
-        console.error('❌ MessageService: Errore caricamento messaggi', error);
-        throw error;
+      try {
+        const { data: messages, error } = await supabase
+          .from('messages')
+          .select('*')
+          .eq('conversation_id', conversationId)
+          .order('sent_at', { ascending: true })
+          .limit(50) // Limita i risultati per velocizzare la query
+          .abortSignal(controller.signal);
+
+        clearTimeout(timeoutId);
+
+        if (error) {
+          console.error('❌ MessageService: Errore caricamento messaggi', error);
+          throw error;
+        }
+
+        console.log('✅ MessageService: Messaggi caricati', messages?.length || 0);
+        return messages || [];
+      } catch (abortError) {
+        clearTimeout(timeoutId);
+        if (abortError.name === 'AbortError') {
+          console.error('❌ MessageService: Timeout caricamento messaggi');
+          toast.error('Caricamento messaggi troppo lento, riprova');
+          return [];
+        }
+        throw abortError;
       }
-
-      console.log('✅ MessageService: Messaggi caricati', messages?.length || 0);
-      return messages || [];
 
     } catch (error: any) {
       console.error('❌ MessageService: Errore caricamento messaggi', error);
-      toast.error('Errore caricamento messaggi');
+      
+      // Non mostrare toast per timeout già gestiti
+      if (error.code !== '57014') {
+        toast.error('Errore caricamento messaggi');
+      }
       return [];
     }
   }
