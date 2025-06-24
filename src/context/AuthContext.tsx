@@ -77,19 +77,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       async (event, session) => {
         if (!mounted) return;
         
-        console.log('🔄 Auth state changed:', event, session?.user?.email);
+        console.log('Auth state changed:', event, session?.user?.email);
         setSession(session);
         setUser(session?.user ?? null);
-        
-        // Gestione specifica per il logout
-        if (event === 'SIGNED_OUT') {
-          console.log('👋 Utente disconnesso, pulizia stato...');
-          setUserProfile(null);
-          if (mounted) {
-            setLoading(false);
-          }
-          return;
-        }
         
         if (session?.user) {
           // Carica SEMPRE i dati utente completi quando c'è una sessione
@@ -190,27 +180,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const logout = async () => {
-    try {
-      console.log('🔓 Avvio processo di logout...');
-      
-      // Pulisci lo stato locale prima del logout
-      setUser(null);
-      setSession(null);
-      setUserProfile(null);
-      
-      // Effettua il logout
-      await signOutUser();
-      
-      console.log('✅ Logout completato, stato pulito');
-      
-    } catch (error: any) {
-      console.error('❌ Errore durante il logout:', error);
-      // Anche in caso di errore, pulisci lo stato locale
-      setUser(null);
-      setSession(null);
-      setUserProfile(null);
-      throw error;
-    }
+    await signOutUser();
+    setUser(null);
+    setSession(null);
+    setUserProfile(null);
   };
 
   const register = async (email: string, password: string) => {
