@@ -21,7 +21,6 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
   
   const {
     activeChat,
-    setActiveChat,
     messages,
     isSending,
     isConnected,
@@ -32,10 +31,10 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
     resetChat
   } = useUserChatRealtime(userId);
 
-  // Auto-start chat with expert when component mounts
+  // Auto-start chat immediately when component mounts
   useEffect(() => {
     if (!activeChat && !initializationError) {
-      console.log('🚀 Auto-starting chat with expert...');
+      console.log('🚀 Avvio automatico chat con esperto...');
       startChatWithExpert();
     }
   }, [activeChat, startChatWithExpert, initializationError]);
@@ -67,7 +66,7 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
     }));
   };
 
-  // Error state
+  // Error state with quick recovery
   if (initializationError) {
     return (
       <div className="flex flex-col h-full">
@@ -75,46 +74,40 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
           <div className="flex items-center justify-between">
             <div>
               <h3 className="font-semibold text-lg">Chat con Marco Nigro</h3>
-              <p className="text-sm text-red-500">Errore di connessione</p>
+              <p className="text-sm text-red-500">Problema di connessione</p>
             </div>
             <Button
-              onClick={resetChat}
+              onClick={() => {
+                resetChat();
+                setTimeout(startChatWithExpert, 500);
+              }}
               variant="outline"
               size="sm"
               className="flex items-center gap-2"
             >
               <RefreshCw className="h-4 w-4" />
-              Riprova
+              Riconnetti
             </Button>
           </div>
         </div>
 
         <div className="flex-1 flex items-center justify-center p-4">
-          <Alert variant="destructive" className="max-w-md">
+          <Alert className="max-w-md">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription className="mt-2">
-              <p className="font-medium mb-2">Errore nell'avvio della chat</p>
-              <p className="text-sm mb-4">{initializationError}</p>
-              <div className="flex gap-2">
-                <Button
-                  onClick={() => {
-                    resetChat();
-                    startChatWithExpert();
-                  }}
-                  size="sm"
-                  variant="outline"
-                >
-                  <RefreshCw className="h-4 w-4 mr-2" />
-                  Riprova
-                </Button>
-                <Button
-                  onClick={resetChat}
-                  size="sm"
-                  variant="ghost"
-                >
-                  Reset completo
-                </Button>
-              </div>
+              <p className="font-medium mb-2">Connessione in corso...</p>
+              <p className="text-sm mb-4">Sto stabilendo la connessione con l'esperto</p>
+              <Button
+                onClick={() => {
+                  resetChat();
+                  setTimeout(startChatWithExpert, 500);
+                }}
+                size="sm"
+                className="w-full"
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Riprova ora
+              </Button>
             </AlertDescription>
           </Alert>
         </div>
@@ -122,21 +115,13 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
     );
   }
 
-  // Loading state
+  // Simplified loading state
   if (!activeChat) {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-drplant-green mx-auto mb-4"></div>
-          <p className="text-gray-600">Avvio chat con l'esperto...</p>
-          <Button
-            onClick={resetChat}
-            variant="ghost"
-            size="sm"
-            className="mt-2"
-          >
-            Annulla
-          </Button>
+          <p className="text-gray-600">Connessione alla chat...</p>
         </div>
       </div>
     );
@@ -144,7 +129,7 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
 
   return (
     <div className="flex flex-col h-full bg-gray-50">
-      {/* Inizializzatore automatico dati */}
+      {/* Auto data initializer */}
       <ChatInitializer
         activeChat={activeChat}
         currentConversationId={currentConversationId}
@@ -152,14 +137,14 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
         setAutoDataSent={setAutoDataSent}
       />
       
-      {/* Header Chat */}
+      {/* Simplified header */}
       <div className="bg-white border-b border-gray-200 p-4 shadow-sm flex-shrink-0">
         <div className="flex items-center justify-between">
           <div>
             <h3 className="font-semibold text-lg text-gray-900">💬 Chat con Marco Nigro</h3>
             <p className="text-sm text-gray-600 flex items-center">
               Fitopatologo Professionista
-              <span className={`ml-2 w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}></span>
+              <span className={`ml-2 w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-yellow-500'}`}></span>
               <span className="ml-1 text-xs">
                 {isConnected ? 'Online' : 'Connessione...'}
               </span>
@@ -173,22 +158,13 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
               className="flex items-center gap-2"
             >
               {showComprehensiveData ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              {showComprehensiveData ? 'Nascondi Dati' : 'Mostra Dati'}
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={resetChat}
-              className="flex items-center gap-2"
-            >
-              <RefreshCw className="h-4 w-4" />
-              Reset
+              Dati
             </Button>
           </div>
         </div>
       </div>
 
-      {/* Visualizzazione Comprensiva Dati */}
+      {/* Data display when needed */}
       {showComprehensiveData && (
         <div className="flex-shrink-0">
           <ComprehensiveDataDisplay
@@ -198,14 +174,14 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
         </div>
       )}
 
-      {/* Lista Messaggi - Area principale scrollabile */}
+      {/* Main chat area */}
       <div className="flex-1 overflow-hidden bg-white">
         <MessageList 
           messages={formatMessagesForDisplay(messages)}
         />
       </div>
 
-      {/* Message Board per scrivere - SEMPRE VISIBILE */}
+      {/* Message input - always visible */}
       <div className="flex-shrink-0">
         <MessageBoard
           onSendMessage={handleSendMessage}
@@ -214,26 +190,6 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
           disabled={!isConnected}
         />
       </div>
-
-      {/* Connection Error Handler */}
-      {!isConnected && activeChat && (
-        <div className="bg-red-50 border-t border-red-200 p-3 text-center flex-shrink-0">
-          <p className="text-sm text-red-600 font-medium">
-            🔌 Connessione persa - Tentativo di riconnessione automatica...
-          </p>
-          <Button
-            onClick={() => {
-              resetChat();
-              setTimeout(startChatWithExpert, 1000);
-            }}
-            variant="ghost"
-            size="sm"
-            className="mt-2 text-red-700 hover:bg-red-100"
-          >
-            Forza riconnessione
-          </Button>
-        </div>
-      )}
     </div>
   );
 };
