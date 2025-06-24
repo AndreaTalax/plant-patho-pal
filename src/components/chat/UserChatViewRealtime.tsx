@@ -144,7 +144,7 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
 
   return (
     <div className="flex flex-col h-full bg-gray-50">
-      {/* Inizializzatore automatico dati - RIMOSSO l'invio automatico */}
+      {/* Inizializzatore automatico dati */}
       <ChatInitializer
         activeChat={activeChat}
         currentConversationId={currentConversationId}
@@ -153,7 +153,7 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
       />
       
       {/* Header Chat */}
-      <div className="bg-white border-b border-gray-200 p-4 shadow-sm">
+      <div className="bg-white border-b border-gray-200 p-4 shadow-sm flex-shrink-0">
         <div className="flex items-center justify-between">
           <div>
             <h3 className="font-semibold text-lg text-gray-900">💬 Chat con Marco Nigro</h3>
@@ -189,29 +189,35 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
       </div>
 
       {/* Visualizzazione Comprensiva Dati */}
-      <ComprehensiveDataDisplay
-        isVisible={showComprehensiveData}
-        onToggle={() => setShowComprehensiveData(!showComprehensiveData)}
-      />
+      {showComprehensiveData && (
+        <div className="flex-shrink-0">
+          <ComprehensiveDataDisplay
+            isVisible={showComprehensiveData}
+            onToggle={() => setShowComprehensiveData(!showComprehensiveData)}
+          />
+        </div>
+      )}
 
-      {/* Lista Messaggi */}
+      {/* Lista Messaggi - Area principale scrollabile */}
       <div className="flex-1 overflow-hidden bg-white">
         <MessageList 
           messages={formatMessagesForDisplay(messages)}
         />
       </div>
 
-      {/* Message Board per scrivere */}
-      <MessageBoard
-        onSendMessage={handleSendMessage}
-        isSending={isSending}
-        isConnected={isConnected}
-        disabled={!isConnected}
-      />
+      {/* Message Board per scrivere - SEMPRE VISIBILE */}
+      <div className="flex-shrink-0">
+        <MessageBoard
+          onSendMessage={handleSendMessage}
+          isSending={isSending}
+          isConnected={isConnected}
+          disabled={!isConnected}
+        />
+      </div>
 
       {/* Connection Error Handler */}
       {!isConnected && activeChat && (
-        <div className="bg-red-50 border-t border-red-200 p-3 text-center">
+        <div className="bg-red-50 border-t border-red-200 p-3 text-center flex-shrink-0">
           <p className="text-sm text-red-600 font-medium">
             🔌 Connessione persa - Tentativo di riconnessione automatica...
           </p>

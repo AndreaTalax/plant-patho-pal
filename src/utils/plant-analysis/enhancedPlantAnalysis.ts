@@ -25,6 +25,28 @@ export interface PlantAnalysisResult {
   };
 }
 
+// Funzione di utilità per garantire percentuali valide
+const ensureValidPercentage = (value: any, fallback: number = 75): number => {
+  if (typeof value === 'number' && !isNaN(value) && isFinite(value)) {
+    if (value <= 1) {
+      return Math.max(Math.round(value * 100), 1);
+    }
+    return Math.max(Math.round(value), 1);
+  }
+  
+  if (typeof value === 'string') {
+    const parsed = parseFloat(value);
+    if (!isNaN(parsed) && isFinite(parsed)) {
+      if (parsed <= 1) {
+        return Math.max(Math.round(parsed * 100), 1);
+      }
+      return Math.max(Math.round(parsed), 1);
+    }
+  }
+  
+  return fallback;
+};
+
 /**
  * Esegue un'analisi migliorata delle piante con percentuali di confidenza accurate
  */
@@ -43,10 +65,26 @@ export const performEnhancedPlantAnalysis = async (
       };
     }
 
-    // Converti l'immagine in base64
+    // Prima verifica che l'immagine contenga una pianta
+    console.log("🔍 Verifica se l'immagine contiene una pianta...");
+    
     const base64Image = await fileToBase64(imageFile);
     
-    console.log("📤 Invio richiesta di analisi al server...");
+    // Verifica pianta usando il servizio di plant detection
+    const { PlantDetectionService } = await import('@/services/plantDetectionService');
+    const detectionResult = await PlantDetectionService.detectPlantInImage(base64Image);
+    
+    console.log("🌱 Risultato rilevamento pianta:", detectionResult);
+    
+    // Se non è rilevata una pianta con sufficiente confidenza, ferma l'analisi
+    if (!detectionResult.isPlant || detectionResult.confidence < 40) {
+      return {
+        success: false,
+        error: `L'immagine non sembra contenere una pianta. Confidenza rilevamento: ${detectionResult.confidence}%. ${detectionResult.message}`
+      };
+    }
+    
+    console.log("✅ Pianta rilevata, procedo con l'analisi diagnostica...");
     
     // Chiama la funzione edge per l'analisi
     const { data, error } = await supabase.functions.invoke('plant-diagnosis', {
@@ -54,7 +92,7 @@ export const performEnhancedPlantAnalysis = async (
         image: base64Image,
         plantInfo: plantInfo || {},
         analysisType: 'comprehensive',
-        returnProbabilities: true // Forza il ritorno delle percentuali
+        returnProbabilities: true
       }
     });
 
@@ -76,42 +114,16 @@ export const performEnhancedPlantAnalysis = async (
 
     console.log("✅ Analisi completata con successo:", data);
 
-    // Assicurati che ci siano sempre percentuali valide con validation
-    const rawConfidence = data.confidence;
-    let confidence: number;
-    
-    if (typeof rawConfidence === 'number' && !isNaN(rawConfidence)) {
-      confidence = Math.max(Math.round(rawConfidence * 100), 1);
-    } else if (typeof rawConfidence === 'string') {
-      const parsed = parseFloat(rawConfidence);
-      confidence = !isNaN(parsed) ? Math.max(Math.round(parsed * 100), 1) : 75;
-    } else {
-      confidence = 75; // Default fallback
-    }
-    
-    const rawDetectionAccuracy = data.detectionAccuracy;
-    let detectionAccuracy: number;
-    
-    if (typeof rawDetectionAccuracy === 'number' && !isNaN(rawDetectionAccuracy)) {
-      detectionAccuracy = Math.max(Math.round(rawDetectionAccuracy * 100), 1);
-    } else {
-      detectionAccuracy = confidence;
-    }
+    // Converti tutte le percentuali con validazione robusta
+    const confidence = ensureValidPercentage(data.confidence, 75);
+    const detectionAccuracy = ensureValidPercentage(data.detectionAccuracy || data.confidence, confidence);
     
     // Formatta le malattie con percentuali corrette e validate
     const formattedDiseases = (data.diseases || []).map((disease: any) => {
-      let probability: number;
-      
-      if (typeof disease.probability === 'number' && !isNaN(disease.probability)) {
-        probability = Math.max(Math.round(disease.probability * 100), 1);
-      } else if (typeof disease.confidence === 'number' && !isNaN(disease.confidence)) {
-        probability = Math.max(Math.round(disease.confidence * 100), 1);
-      } else if (typeof disease.probability === 'string') {
-        const parsed = parseFloat(disease.probability);
-        probability = !isNaN(parsed) ? Math.max(Math.round(parsed * 100), 1) : 60;
-      } else {
-        probability = 60; // Default fallback
-      }
+      const probability = ensureValidPercentage(
+        disease.probability || disease.confidence,
+        60
+      );
       
       return {
         name: disease.name || "Malattia non specificata",
@@ -123,7 +135,7 @@ export const performEnhancedPlantAnalysis = async (
 
     return {
       success: true,
-      plantName: data.plantName || "Pianta non identificata",
+      plantName: data.plantName || "Pianta identificata",
       scientificName: data.scientificName || "",
       confidence,
       isHealthy: data.isHealthy !== false,

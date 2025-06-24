@@ -5,6 +5,28 @@ import { toast } from 'sonner';
 import type { PlantInfo } from '@/components/diagnose/types';
 import type { AnalysisDetails, DiagnosedDisease } from '@/components/diagnose/types';
 
+// Funzione di utilità per garantire percentuali valide
+const ensureValidPercentage = (value: any, fallback: number = 75): number => {
+  if (typeof value === 'number' && !isNaN(value) && isFinite(value)) {
+    if (value <= 1) {
+      return Math.max(Math.round(value * 100), 1);
+    }
+    return Math.max(Math.round(value), 1);
+  }
+  
+  if (typeof value === 'string') {
+    const parsed = parseFloat(value);
+    if (!isNaN(parsed) && isFinite(parsed)) {
+      if (parsed <= 1) {
+        return Math.max(Math.round(parsed * 100), 1);
+      }
+      return Math.max(Math.round(parsed), 1);
+    }
+  }
+  
+  return fallback;
+};
+
 export const usePlantAnalysis = () => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [diagnosisResult, setDiagnosisResult] = useState<string | null>(null);
@@ -20,28 +42,28 @@ export const usePlantAnalysis = () => {
     setAnalysisDetails(null);
 
     try {
-      console.log('🔍 Avvio analisi rigorosa dell\'immagine con percentuali...');
+      console.log('🔍 Avvio analisi rigorosa dell\'immagine con percentuali validate...');
       setAnalysisProgress(10);
       
-      // Usa il nuovo sistema di analisi rigoroso
+      // Usa il sistema di analisi migliorato con validazione pianta
       const analysisResult: PlantAnalysisResult = await performEnhancedPlantAnalysis(imageFile, plantInfo);
       
       setAnalysisProgress(90);
       
       if (!analysisResult.success) {
-        // Mostra errore specifico
+        // Mostra errore specifico per non-piante o altri problemi
         toast.error('Analisi non riuscita', {
           description: analysisResult.error,
-          duration: 6000
+          duration: 8000
         });
         
-        setDiagnosisResult('Analisi non completata');
+        setDiagnosisResult('Analisi non completata - ' + analysisResult.error);
         setAnalysisProgress(0);
         return;
       }
       
-      // Assicura che la confidenza sia sempre un numero valido
-      const confidencePercent = Math.max(Math.round(analysisResult.confidence || 75), 1);
+      // Valida e converte la confidenza con robustezza
+      const confidencePercent = ensureValidPercentage(analysisResult.confidence, 75);
       
       const diseaseInfo: DiagnosedDisease = {
         id: `diagnosis-${Date.now()}`,
@@ -51,13 +73,13 @@ export const usePlantAnalysis = () => {
           `Sono stati rilevati possibili problemi di salute (${confidencePercent}% confidenza)`,
         causes: analysisResult.isHealthy ? 'N/A - Pianta sana' : 'Vedere malattie specifiche rilevate',
         symptoms: analysisResult.diseases?.map(d => {
-          const probability = Math.max(Math.round(d.probability || 60), 1);
+          const probability = ensureValidPercentage(d.probability, 60);
           return `${d.name} (${probability}%)`;
         }) || ['Nessun sintomo specifico'],
         treatments: analysisResult.recommendations || [],
         confidence: confidencePercent,
         healthy: analysisResult.isHealthy || false,
-        products: [], // Da implementare se necessario
+        products: [],
         recommendExpertConsultation: confidencePercent < 70,
         disclaimer: confidencePercent < 70 ? 
           'Confidenza moderata. Consultazione esperta raccomandata per conferma.' : undefined
@@ -96,14 +118,14 @@ export const usePlantAnalysis = () => {
           analysisResult.plantName || 'Pianta non identificata',
           `Confidenza: ${confidencePercent}%`,
           analysisResult.isHealthy ? 'Pianta sana' : 'Problemi rilevati',
-          'Analisi con API specializzate',
+          'Analisi con validazione pianta',
           ...(analysisResult.diseases || []).map(d => {
-            const probability = Math.max(Math.round(d.probability || 60), 1);
+            const probability = ensureValidPercentage(d.probability, 60);
             return `${d.name}: ${probability}% probabilità`;
           })
         ],
         sistemaDigitaleFoglia: false,
-        analysisTechnology: 'Enhanced Plant Analysis API'
+        analysisTechnology: 'Enhanced Plant Analysis with Validation'
       };
       
       setDiagnosedDisease(diseaseInfo);
@@ -111,7 +133,7 @@ export const usePlantAnalysis = () => {
       setAnalysisDetails(detailedAnalysis);
       setAnalysisProgress(100);
       
-      // Feedback finale con percentuali
+      // Feedback finale con percentuali validate
       if (confidencePercent >= 80) {
         toast.success(`✅ Analisi completata con alta precisione (${confidencePercent}%)!`);
       } else if (confidencePercent >= 60) {

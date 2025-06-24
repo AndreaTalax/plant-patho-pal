@@ -77,9 +77,9 @@ export const MessageBoard: React.FC<MessageBoardProps> = ({
   const isDisabled = disabled || !isConnected || isSending;
 
   return (
-    <Card className="border-t border-gray-200 rounded-t-none bg-white">
+    <div className="bg-white border-t border-gray-200 shadow-lg">
       <div className="p-4">
-        {/* Connection Status */}
+        {/* Connection Status - Sempre visibile quando disconnesso */}
         {!isConnected && (
           <div className="mb-3 p-2 bg-red-50 border border-red-200 rounded-lg">
             <div className="flex items-center space-x-2">
@@ -91,7 +91,7 @@ export const MessageBoard: React.FC<MessageBoardProps> = ({
           </div>
         )}
 
-        {/* Message Input Area */}
+        {/* Message Input Area - SEMPRE VISIBILE */}
         <div className="space-y-3">
           <div className="relative">
             <Textarea
@@ -106,8 +106,9 @@ export const MessageBoard: React.FC<MessageBoardProps> = ({
               }
               disabled={isDisabled}
               className={`
-                min-h-[60px] max-h-[200px] resize-none pr-12
-                ${isDisabled ? 'bg-gray-100 cursor-not-allowed' : ''}
+                min-h-[60px] max-h-[200px] resize-none pr-12 w-full
+                ${isDisabled ? 'bg-gray-100 cursor-not-allowed' : 'bg-white'}
+                border border-gray-300 rounded-lg p-3
               `}
             />
             
@@ -117,7 +118,6 @@ export const MessageBoard: React.FC<MessageBoardProps> = ({
                 variant="ghost"
                 size="sm"
                 onClick={() => {
-                  // TODO: Emoji picker
                   toast.info('Emoji picker - Coming soon!');
                 }}
                 disabled={isDisabled}
@@ -128,7 +128,7 @@ export const MessageBoard: React.FC<MessageBoardProps> = ({
             </div>
           </div>
 
-          {/* Action Bar */}
+          {/* Action Bar - SEMPRE VISIBILE */}
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
               {/* Attach File */}
@@ -137,7 +137,6 @@ export const MessageBoard: React.FC<MessageBoardProps> = ({
                 size="sm"
                 disabled={isDisabled}
                 onClick={() => {
-                  // TODO: File attachment
                   toast.info('Allegati file - Coming soon!');
                 }}
                 className="flex items-center space-x-1 text-gray-600 hover:text-gray-800"
@@ -164,15 +163,15 @@ export const MessageBoard: React.FC<MessageBoardProps> = ({
               </Button>
             </div>
 
-            {/* Send Button */}
+            {/* Send Button - SEMPRE PRESENTE E VISIBILE */}
             <Button
               onClick={handleSend}
               disabled={isDisabled || !message.trim()}
               className={`
-                flex items-center space-x-2 min-w-[80px]
+                flex items-center space-x-2 min-w-[100px] px-4 py-2
                 ${!message.trim() || isDisabled 
-                  ? 'bg-gray-300 cursor-not-allowed' 
-                  : 'bg-drplant-blue hover:bg-drplant-blue-dark'
+                  ? 'bg-gray-300 cursor-not-allowed hover:bg-gray-300' 
+                  : 'bg-blue-600 hover:bg-blue-700 text-white'
                 }
               `}
             >
@@ -190,10 +189,11 @@ export const MessageBoard: React.FC<MessageBoardProps> = ({
             </Button>
           </div>
 
-          {/* Helper Text */}
+          {/* Helper Text - SEMPRE VISIBILE */}
           <div className="flex items-center justify-between text-xs text-gray-500">
             <span>Premi Invio per inviare, Shift+Invio per andare a capo</span>
             <span className={`
+              font-medium
               ${isConnected ? 'text-green-600' : 'text-red-600'}
             `}>
               {isConnected ? '● Online' : '● Offline'}
@@ -201,6 +201,6 @@ export const MessageBoard: React.FC<MessageBoardProps> = ({
           </div>
         </div>
       </div>
-    </Card>
+    </div>
   );
 };
