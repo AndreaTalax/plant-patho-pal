@@ -2,7 +2,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { UserProfile } from './types';
 import { getWhitelistedEmails } from './utils';
-import { ConnectionService } from '@/services/ConnectionService';
+import { ConnectionService } from '@/services/chat/connectionService';
 
 /**
  * Attempts to authenticate a user with given email and password and manages fallback authentication for whitelisted emails.

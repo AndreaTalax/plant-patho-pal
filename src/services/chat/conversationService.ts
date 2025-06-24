@@ -71,4 +71,46 @@ export class ConversationService {
       'Get conversation'
     );
   }
+
+  static async deleteConversation(conversationId: string): Promise<boolean> {
+    const operation = async () => {
+      console.log('🗑️ ConversationService: Deleting conversation:', conversationId);
+      
+      // First delete all messages in the conversation
+      const { error: messagesError } = await supabase
+        .from('messages')
+        .delete()
+        .eq('conversation_id', conversationId);
+
+      if (messagesError) {
+        console.error('❌ Error deleting messages:', messagesError);
+        throw messagesError;
+      }
+
+      // Then delete the conversation
+      const { error: conversationError } = await supabase
+        .from('conversations')
+        .delete()
+        .eq('id', conversationId);
+
+      if (conversationError) {
+        console.error('❌ Error deleting conversation:', conversationError);
+        throw conversationError;
+      }
+
+      console.log('✅ ConversationService: Conversation deleted successfully');
+      return true;
+    };
+
+    try {
+      const result = await ConnectionService.withRetry(
+        operation,
+        'Delete conversation'
+      );
+      return result || false;
+    } catch (error: any) {
+      console.error('❌ ConversationService: Error deleting conversation:', error);
+      return false;
+    }
+  }
 }
