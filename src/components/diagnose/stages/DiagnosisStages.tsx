@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { usePlantInfo } from '@/context/PlantInfoContext';
 import PlantInfoForm from '../PlantInfoForm';
@@ -59,37 +58,14 @@ const DiagnosisStages: React.FC<DiagnosisStagesProps> = ({
   const navigate = useNavigate();
   const { userProfile } = useAuth();
 
-  // Navigazione alla chat - SENZA logica di invio
-  const handleNavigateToChat = () => {
-    console.log("🔄 Navigating to chat...");
-    
-    if (onChatWithExpert) {
-      onChatWithExpert();
-    } else {
-      // Navigate to homepage and switch to chat tab
-      navigate('/');
-      setTimeout(() => {
-        console.log("🔄 Triggering chat tab switch...");
-        const event = new CustomEvent('switchTab', { detail: 'chat' });
-        window.dispatchEvent(event);
-        
-        // Also refresh the chat to ensure latest data is shown
-        setTimeout(() => {
-          const refreshEvent = new CustomEvent('refreshChat');
-          window.dispatchEvent(refreshEvent);
-        }, 200);
-      }, 100);
-    }
-  };
-
-  // Funzione per invio completo all'esperto - CON TUTTA LA LOGICA E NAVIGAZIONE
-  const handleSendToExpertWithData = async () => {
+  // Enhanced function to handle expert consultation with automatic data sending
+  const handleExpertConsultation = async () => {
     if (!userProfile?.id) {
       toast.error('Devi essere autenticato per contattare l\'esperto');
       return;
     }
 
-    console.log("🩺 Invio completo dati all'esperto...");
+    console.log("🩺 Avvio consulenza esperto con invio automatico dati...");
     
     try {
       // First sync plant data using PlantDataSyncService
@@ -130,16 +106,36 @@ const DiagnosisStages: React.FC<DiagnosisStagesProps> = ({
           description: 'Marco Nigro riceverà tutte le informazioni'
         });
 
-        // Navigate to chat after confirmation
-        setTimeout(() => {
-          handleNavigateToChat();
-        }, 1500);
+        // Navigate to chat
+        handleNavigateToChat();
       } else {
         toast.error('Errore nell\'invio automatico dei dati');
       }
     } catch (error) {
       console.error('❌ Errore nella consulenza esperto:', error);
       toast.error('Errore nell\'invio dei dati all\'esperto');
+    }
+  };
+
+  const handleNavigateToChat = () => {
+    console.log("🔄 Navigating to chat with data sync...");
+    
+    if (onChatWithExpert) {
+      onChatWithExpert();
+    } else {
+      // Navigate to homepage and switch to chat tab
+      navigate('/');
+      setTimeout(() => {
+        console.log("🔄 Triggering chat tab switch...");
+        const event = new CustomEvent('switchTab', { detail: 'chat' });
+        window.dispatchEvent(event);
+        
+        // Also refresh the chat to ensure latest data is shown
+        setTimeout(() => {
+          const refreshEvent = new CustomEvent('refreshChat');
+          window.dispatchEvent(refreshEvent);
+        }, 200);
+      }, 100);
     }
   };
 
@@ -201,7 +197,7 @@ const DiagnosisStages: React.FC<DiagnosisStagesProps> = ({
   }
 
   if (stage === 'result') {
-    // Expert consultation result display
+    // Enhanced expert consultation result display with automatic data sending confirmation
     if (plantInfo.sendToExpert && !plantInfo.useAI) {
       return (
         <div className="space-y-4">
@@ -282,7 +278,7 @@ const DiagnosisStages: React.FC<DiagnosisStagesProps> = ({
       );
     }
     
-    // Regular AI diagnosis result - No separate Chat button
+    // Regular AI diagnosis result with enhanced expert chat integration
     return (
       <>
         <PlantInfoSummary 
@@ -296,8 +292,7 @@ const DiagnosisStages: React.FC<DiagnosisStagesProps> = ({
           analysisData={diagnosedDisease}
           isAnalyzing={isAnalyzing}
           onStartNewAnalysis={onStartNewAnalysis}
-          onChatWithExpert={handleNavigateToChat} // Solo navigazione
-          onSendToExpert={handleSendToExpertWithData} // Logica completa + navigazione
+          onChatWithExpert={handleExpertConsultation}
           analysisDetails={analysisDetails}
         />
       </>

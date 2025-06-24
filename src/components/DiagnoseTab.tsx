@@ -294,11 +294,6 @@ const DiagnoseTab = () => {
     }, 100);
   }, []);
 
-  // Handler for expert consultation with full data sending logic
-  const handleExpertConsultation = useCallback(async () => {
-    await sendDataToExpert(true);
-  }, [sendDataToExpert]);
-
   // Render based on current stage
   const renderCurrentStage = () => {
     switch (currentStage) {
@@ -501,8 +496,6 @@ const DiagnoseTab = () => {
                   imageUrl={uploadedImage}
                   onNewAnalysis={handleNewAnalysis}
                   autoSentToExpert={dataSentToExpert}
-                  plantInfo={plantInfo}
-                  onSendToExpert={handleExpertConsultation}
                 />
                 
                 {/* Pulsante per inviare all'esperto DOPO la diagnosi AI */}

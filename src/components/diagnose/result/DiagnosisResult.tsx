@@ -1,289 +1,290 @@
-import React, { useState } from 'react';
-import { Card } from '@/components/ui/card';
+import React from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { 
+  Loader2, 
   CheckCircle, 
   AlertTriangle, 
-  RefreshCw, 
-  Lightbulb,
-  Eye,
-  EyeOff,
-  ArrowRight
+  Repeat, 
+  MessageCircle,
+  Brain,
+  Camera,
+  Eye
 } from 'lucide-react';
-import { DiagnosedDisease, PlantInfo, AnalysisDetails } from '../types';
+import { DiagnosedDisease, AnalysisDetails, PlantInfo } from '../types';
+import EppoDataPanel from './EppoDataPanel';
 
 interface DiagnosisResultProps {
   imageSrc: string;
   plantInfo: PlantInfo;
-  analysisData: DiagnosedDisease | null;
+  analysisData: (DiagnosedDisease | null) & { meta?: any };
   isAnalyzing: boolean;
   onStartNewAnalysis: () => void;
   onChatWithExpert: () => void;
-  onSendToExpert?: () => void;
-  analysisDetails?: AnalysisDetails | null;
+  analysisDetails?: AnalysisDetails;
 }
 
-const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
+/**
+ * Displays diagnosis analysis results based on provided data.
+ * @example
+ * DiagnosisResult({
+ *   imageSrc: 'plantImage.jpg',
+ *   plantInfo: {...},
+ *   analysisData: {...},
+ *   isAnalyzing: true,
+ *   onStartNewAnalysis: () => {...},
+ *   onChatWithExpert: () => {...},
+ *   analysisDetails: {...}
+ * })
+ * Returns a JSX component displaying the diagnosis status and results.
+ * @param {Object} DiagnosisResultProps - Object containing the necessary properties for diagnosis results.
+ * @param {string} DiagnosisResultProps.imageSrc - Source URL for the image being analyzed.
+ * @param {Object} DiagnosisResultProps.plantInfo - Information about the plant.
+ * @param {Object} DiagnosisResultProps.analysisData - Data resulting from the plant analysis.
+ * @param {boolean} DiagnosisResultProps.isAnalyzing - Flag indicating if analysis is currently in progress.
+ * @param {Function} DiagnosisResultProps.onStartNewAnalysis - Function to initiate a new analysis.
+ * @param {Function} DiagnosisResultProps.onChatWithExpert - Function to contact an expert for further advice.
+ * @param {Object} DiagnosisResultProps.analysisDetails - Additional details from the AI analysis.
+ * @returns {JSX.Element} JSX component displaying the plant analysis status and results.
+ * @description
+ *   - Displays a loader and message during the plant analysis process.
+ *   - Provides visual feedback with icons and colors based on analysis confidence and health status.
+ *   - Offers actionable buttons for retrying analysis or consulting an expert.
+ *   - Includes specific sections like symptoms, treatments, and detailed AI analysis if data is available.
+ */
+const DiagnosisResult = ({
   imageSrc,
   plantInfo,
   analysisData,
   isAnalyzing,
   onStartNewAnalysis,
   onChatWithExpert,
-  onSendToExpert,
   analysisDetails
-}) => {
-  const [showDetails, setShowDetails] = useState(false);
-  const [expertDataSent, setExpertDataSent] = useState(false);
-
-  const handleSendToExpert = async () => {
-    if (onSendToExpert) {
-      await onSendToExpert();
-      setExpertDataSent(true);
-      
-      // Navigate to chat after sending data
-      setTimeout(() => {
-        onChatWithExpert();
-      }, 1500);
-    }
-  };
-
+}: DiagnosisResultProps) => {
   if (isAnalyzing) {
     return (
-      <Card className="p-8 bg-white/80 backdrop-blur-sm">
-        <div className="flex flex-col items-center space-y-6">
-          <div className="relative">
-            <div className="w-20 h-20 bg-gradient-to-r from-drplant-green to-drplant-blue rounded-full flex items-center justify-center animate-pulse">
-              <div className="w-10 h-10 border-4 border-white border-t-transparent rounded-full animate-spin"></div>
-            </div>
-          </div>
-          <div className="text-center">
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Analisi in corso...</h2>
-            <p className="text-gray-600">
-              Stiamo analizzando la tua pianta utilizzando AI avanzata
+      <Card className="w-full max-w-2xl mx-auto">
+        <CardContent className="p-8">
+          <div className="flex flex-col items-center space-y-4">
+            <Loader2 className="h-12 w-12 animate-spin text-drplant-blue" />
+            <h3 className="text-xl font-semibold">Analisi in corso...</h3>
+            <p className="text-gray-600 text-center">
+              Stiamo analizzando la tua pianta con l'intelligenza artificiale
             </p>
+            {imageSrc && (
+              <div className="w-64 h-64 rounded-lg overflow-hidden border">
+                <img 
+                  src={imageSrc} 
+                  alt="Pianta in analisi" 
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            )}
           </div>
-          {imageSrc && (
-            <div className="w-64 h-64 rounded-xl overflow-hidden border-2 border-drplant-green/20">
-              <img 
-                src={imageSrc} 
-                alt="Pianta in analisi" 
-                className="w-full h-full object-cover"
-              />
-            </div>
-          )}
-        </div>
+        </CardContent>
       </Card>
     );
   }
 
   if (!analysisData) {
     return (
-      <Card className="p-6 text-center">
-        <p className="text-gray-600">Nessun risultato di analisi disponibile</p>
-        <Button onClick={onStartNewAnalysis} className="mt-4">
-          Inizia nuova analisi
-        </Button>
+      <Card className="w-full max-w-2xl mx-auto">
+        <CardContent className="p-8">
+          <div className="flex flex-col items-center space-y-4">
+            <AlertTriangle className="h-12 w-12 text-yellow-500" />
+            <h3 className="text-xl font-semibold">Analisi non completata</h3>
+            <p className="text-gray-600 text-center">
+              Non siamo riusciti ad analizzare la tua pianta. Riprova o contatta un esperto.
+            </p>
+            <div className="flex gap-3">
+              <Button onClick={onStartNewAnalysis} variant="outline">
+                <Repeat className="mr-2 h-4 w-4" />
+                Riprova
+              </Button>
+              <Button onClick={onChatWithExpert} className="bg-drplant-blue hover:bg-drplant-blue-dark">
+                <MessageCircle className="mr-2 h-4 w-4" />
+                Chat con Esperto
+              </Button>
+            </div>
+          </div>
+        </CardContent>
       </Card>
     );
   }
 
-  const confidenceColor = analysisData.confidence >= 80 
-    ? 'text-green-600 bg-green-100' 
-    : analysisData.confidence >= 60 
-    ? 'text-yellow-600 bg-yellow-100' 
-    : 'text-red-600 bg-red-100';
+  const confidencePercentage = Math.round(analysisData.confidence * 100);
+  const isHighConfidence = analysisData.confidence >= 0.8;
+
+  // --- AGGIUNTA: Mostra percentuali AI, cromatica e aggregata ---
+  const meta = (analysisData as any)?.meta;
+  const aiConfidence = meta?.aiConfidence ?? undefined;
+  const greenConfidence = meta?.greenConfidence ?? undefined;
+  const presenceScore = meta?.presenceScore ?? undefined;
+  const plantAnalysisConfidence = meta?.plantAnalysisConfidence ?? undefined;
 
   return (
     <div className="space-y-6">
-      {/* Main Analysis Card */}
-      <Card className="overflow-hidden shadow-lg">
-        <div className="bg-gradient-to-r from-drplant-green to-drplant-blue p-6 text-white">
-          <div className="flex items-center gap-3 mb-4">
-            {analysisData.healthy ? (
-              <CheckCircle className="h-8 w-8" />
-            ) : (
-              <AlertTriangle className="h-8 w-8" />
-            )}
-            <div>
-              <h2 className="text-2xl font-bold">
-                {analysisData.name || 'Pianta Analizzata'}
-              </h2>
-              <p className="text-white/80">
-                Analisi completata con AI avanzata
-              </p>
-            </div>
-            <div className="ml-auto">
-              <Badge className={`text-white text-lg px-3 py-1 ${
-                analysisData.confidence >= 80 ? 'bg-green-500' :
-                analysisData.confidence >= 60 ? 'bg-yellow-500' : 'bg-red-500'
-              }`}>
-                {analysisData.confidence}% precisione
-              </Badge>
+      {/* Blocco sintesi presenza pianta */}
+      {(presenceScore || aiConfidence !== undefined || greenConfidence !== undefined) && (
+        <div className="max-w-2xl mx-auto my-2 px-2">
+          <div className="rounded-xl border border-green-200 bg-green-50 px-4 py-3 flex flex-col gap-2">
+            <span className="font-bold text-green-800 text-base tracking-tight">
+              Analisi presenza pianta nella foto
+            </span>
+            <div className="flex flex-col sm:flex-row sm:gap-6 gap-2">
+              <span className="text-sm">
+                <span className="font-medium">AI Confidenza:</span>{" "}
+                {aiConfidence !== undefined ? `${Math.round(aiConfidence * 100)}%` : "-"}
+              </span>
+              <span className="text-sm">
+                <span className="font-medium">Verde (analisi cromatica):</span>{" "}
+                {greenConfidence !== undefined ? `${Math.round(greenConfidence * 100)}%` : "-"}
+              </span>
+              <span className="text-sm">
+                <span className="font-medium">Score combinato:</span>{" "}
+                {presenceScore !== undefined ? `${presenceScore}%` : "-"}
+              </span>
             </div>
           </div>
         </div>
-
-        <div className="p-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Image Section */}
-            <div className="space-y-4">
-              {imageSrc && (
-                <div className="aspect-square rounded-xl overflow-hidden shadow-md">
-                  <img 
-                    src={imageSrc} 
-                    alt="Pianta analizzata" 
-                    className="w-full h-full object-cover"
-                  />
-                </div>
+      )}
+      {/* Blocco risultati classico */}
+      <Card className="w-full max-w-2xl mx-auto">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              {analysisData.healthy ? (
+                <CheckCircle className="h-6 w-6 text-green-600" />
+              ) : (
+                <AlertTriangle className="h-6 w-6 text-red-600" />
               )}
-            </div>
-
-            {/* Analysis Results */}
-            <div className="space-y-6">
-              {/* Health Status */}
-              <div className={`p-4 rounded-xl ${
-                analysisData.healthy 
-                  ? 'bg-green-50 border border-green-200' 
-                  : 'bg-orange-50 border border-orange-200'
-              }`}>
-                <h3 className="font-semibold mb-2 text-gray-900">
-                  {analysisData.healthy ? 'Pianta Sana' : 'Problemi Rilevati'}
-                </h3>
-                <p className="text-sm text-gray-700 mb-3">
-                  {analysisData.description}
-                </p>
-                {analysisData.disclaimer && (
-                  <p className="text-xs text-gray-600 italic">
-                    {analysisData.disclaimer}
-                  </p>
-                )}
-              </div>
-
-              {/* Symptoms */}
-              {analysisData.symptoms && analysisData.symptoms.length > 0 && (
-                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-                  <h3 className="font-semibold text-blue-800 mb-3">Sintomi Rilevati:</h3>
-                  <ul className="space-y-1">
-                    {analysisData.symptoms.map((symptom, index) => (
-                      <li key={index} className="text-sm text-blue-700 flex items-start">
-                        <span className="w-2 h-2 bg-blue-400 rounded-full mt-2 mr-3 flex-shrink-0"></span>
-                        {symptom}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {/* Treatments */}
-              {analysisData.treatments && analysisData.treatments.length > 0 && (
-                <div className="bg-green-50 border border-green-200 rounded-xl p-4">
-                  <h3 className="font-semibold text-green-800 mb-3">Raccomandazioni:</h3>
-                  <ul className="space-y-2">
-                    {analysisData.treatments.map((treatment, index) => (
-                      <li key={index} className="text-sm text-green-700 flex items-start">
-                        <span className="w-2 h-2 bg-green-400 rounded-full mt-2 mr-3 flex-shrink-0"></span>
-                        {treatment}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
+              {analysisData.name}
+            </CardTitle>
+            <Badge variant={isHighConfidence ? "default" : "secondary"}>
+              {confidencePercentage}% accuratezza
+            </Badge>
           </div>
-
-          {/* Analysis Details Toggle */}
-          {analysisDetails && (
-            <div className="mt-6 pt-6 border-t border-gray-200">
-              <Button
-                variant="ghost"
-                onClick={() => setShowDetails(!showDetails)}
-                className="flex items-center gap-2 text-gray-600 hover:text-gray-800"
-              >
-                {showDetails ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                {showDetails ? 'Nascondi dettagli tecnici' : 'Mostra dettagli tecnici'}
-              </Button>
-
-              {showDetails && (
-                <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <h4 className="font-medium text-gray-900 mb-2">Informazioni Pianta:</h4>
-                      <ul className="space-y-1 text-gray-600">
-                        <li>Nome: {analysisDetails.multiServiceInsights?.plantName || 'N/A'}</li>
-                        <li>Specie: {analysisDetails.multiServiceInsights?.plantSpecies || 'N/A'}</li>
-                        <li>Sana: {analysisDetails.multiServiceInsights?.isHealthy ? 'Sì' : 'No'}</li>
-                      </ul>
-                    </div>
-                    <div>
-                      <h4 className="font-medium text-gray-900 mb-2">Dettagli Analisi:</h4>
-                      <ul className="space-y-1 text-gray-600">
-                        <li>Servizio: {analysisDetails.multiServiceInsights?.primaryService || 'N/A'}</li>
-                        <li>Precisione: {analysisDetails.risultatiCompleti?.accuracyGuarantee || 'N/A'}</li>
-                        <li>Tecnologia: {analysisDetails.analysisTechnology || 'AI Avanzata'}</li>
-                      </ul>
-                    </div>
-                  </div>
-                </div>
-              )}
+          <CardDescription>
+            {analysisData.description}
+          </CardDescription>
+        </CardHeader>
+        
+        <CardContent className="space-y-4">
+          {/* Immagine */}
+          {imageSrc && (
+            <div className="aspect-square w-full max-w-sm mx-auto overflow-hidden rounded-xl border">
+              <img 
+                src={imageSrc} 
+                alt="Pianta analizzata" 
+                className="w-full h-full object-cover"
+              />
             </div>
           )}
-        </div>
+
+          {/* Disclaimer se accuratezza bassa */}
+          {analysisData.disclaimer && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5" />
+                <p className="text-sm text-yellow-800">{analysisData.disclaimer}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Sintomi */}
+          {analysisData.symptoms && analysisData.symptoms.length > 0 && (
+            <div>
+              <h4 className="font-semibold mb-2">Sintomi rilevati:</h4>
+              <ul className="list-disc list-inside space-y-1 text-sm text-gray-600">
+                {analysisData.symptoms.map((symptom, index) => (
+                  <li key={index}>{symptom}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Trattamenti */}
+          {analysisData.treatments && analysisData.treatments.length > 0 && (
+            <div>
+              <h4 className="font-semibold mb-2">
+                {analysisData.healthy ? 'Cure consigliate:' : 'Trattamenti suggeriti:'}
+              </h4>
+              <ul className="list-disc list-inside space-y-1 text-sm text-gray-600">
+                {analysisData.treatments.map((treatment, index) => (
+                  <li key={index}>{treatment}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Dettagli analisi */}
+          {analysisDetails && (
+            <div className="bg-gray-50 rounded-lg p-4">
+              <h4 className="font-semibold mb-2 flex items-center gap-2">
+                <Brain className="h-4 w-4" />
+                Dettagli analisi AI
+              </h4>
+              <div className="text-sm text-gray-600 space-y-1">
+                {analysisDetails.analysisTechnology && (
+                  <p><strong>Tecnologia:</strong> {analysisDetails.analysisTechnology}</p>
+                )}
+                {analysisDetails.multiServiceInsights?.plantPart && (
+                  <p><strong>Parte analizzata:</strong> {analysisDetails.multiServiceInsights.plantPart}</p>
+                )}
+                {analysisDetails.sistemaDigitaleFoglia && (
+                  <Badge variant="outline" className="mt-2">
+                    <Eye className="h-3 w-3 mr-1" />
+                    Sistema Digitale Foglia
+                  </Badge>
+                )}
+              </div>
+            </div>
+          )}
+        </CardContent>
       </Card>
 
-      {/* Action Buttons - Only one button now */}
-      <div className="grid grid-cols-1 gap-4">
-        <Button 
-          onClick={onStartNewAnalysis} 
-          variant="outline" 
-          className="h-14 text-base border-2 border-gray-300 hover:border-gray-400 hover:bg-gray-50"
-        >
-          <RefreshCw className="mr-3 h-5 w-5" />
-          Analizza Altra Pianta
-        </Button>
-      </div>
+      {/* SEZIONE: Diagnosi dal database EPPO */}
+      {analysisDetails?.eppoData?.diseaseMatches && Array.isArray(analysisDetails.eppoData.diseaseMatches) && analysisDetails.eppoData.diseaseMatches.length > 0 && (
+        <div className="w-full max-w-2xl mx-auto">
+          <EppoDataPanel
+            analysisDetails={analysisDetails}
+            userInput={
+              (analysisData.symptoms && analysisData.symptoms.length > 0)
+                ? analysisData.symptoms.join(', ')
+                : plantInfo.symptoms || ''
+            }
+            eppoData={analysisDetails.eppoData.diseaseMatches}
+          />
+        </div>
+      )}
 
-      {/* Expert Consultation Card - CON TUTTA LA LOGICA E NAVIGAZIONE */}
-      {!expertDataSent && onSendToExpert && (
-        <Card className="p-6 bg-blue-50/80 backdrop-blur-sm border-blue-200">
-          <div className="text-center space-y-4">
-            <div className="flex justify-center">
-              <Lightbulb className="h-12 w-12 text-blue-600" />
-            </div>
-            <h4 className="font-medium text-blue-800 text-xl">
-              💡 Vuoi una seconda opinione?
-            </h4>
-            <p className="text-blue-700 max-w-md mx-auto">
-              Invia i risultati dell'analisi AI a Marco Nigro per una conferma professionale e consigli personalizzati
-            </p>
-            <Button
-              onClick={handleSendToExpert}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 text-base"
+      {/* Azioni */}
+      <Card className="w-full max-w-2xl mx-auto">
+        <CardContent className="p-4">
+          <div className="flex flex-col sm:flex-row gap-3">
+            <Button 
+              onClick={onStartNewAnalysis} 
+              variant="outline" 
+              className="flex-1"
             >
-              Invia all'esperto per conferma
-              <ArrowRight className="ml-2 h-5 w-5" />
+              <Camera className="mr-2 h-4 w-4" />
+              Nuova Analisi
+            </Button>
+            
+            <Button 
+              onClick={onChatWithExpert} 
+              className="flex-1 bg-drplant-blue hover:bg-drplant-blue-dark"
+            >
+              <MessageCircle className="mr-2 h-4 w-4" />
+              {analysisData.recommendExpertConsultation ? 
+                'Consulta Esperto (Consigliato)' : 
+                'Chat con Esperto'
+              }
             </Button>
           </div>
-        </Card>
-      )}
-
-      {/* Confirmation Card */}
-      {expertDataSent && (
-        <Card className="p-4 bg-green-50/80 backdrop-blur-sm border-green-200">
-          <div className="flex items-center space-x-3">
-            <CheckCircle className="h-6 w-6 text-green-600" />
-            <div>
-              <span className="text-green-800 font-medium">
-                Analisi inviata all'esperto Marco Nigro!
-              </span>
-              <p className="text-green-700 text-sm">
-                Reindirizzamento alla chat in corso...
-              </p>
-            </div>
-          </div>
-        </Card>
-      )}
+        </CardContent>
+      </Card>
     </div>
   );
 };
