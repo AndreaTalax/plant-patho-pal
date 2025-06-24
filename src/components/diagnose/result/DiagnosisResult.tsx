@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,7 +6,6 @@ import {
   CheckCircle, 
   AlertTriangle, 
   RefreshCw, 
-  MessageSquare,
   Lightbulb,
   Eye,
   EyeOff,
@@ -43,6 +41,11 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
     if (onSendToExpert) {
       await onSendToExpert();
       setExpertDataSent(true);
+      
+      // Navigate to chat after sending data
+      setTimeout(() => {
+        onChatWithExpert();
+      }, 1500);
     }
   };
 
@@ -229,8 +232,8 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
         </div>
       </Card>
 
-      {/* Action Buttons */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      {/* Action Buttons - Only one button now */}
+      <div className="grid grid-cols-1 gap-4">
         <Button 
           onClick={onStartNewAnalysis} 
           variant="outline" 
@@ -239,18 +242,9 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
           <RefreshCw className="mr-3 h-5 w-5" />
           Analizza Altra Pianta
         </Button>
-        
-        {/* Chat with Expert button - SEMPLICE navigazione */}
-        <Button 
-          onClick={onChatWithExpert} 
-          className="h-14 text-base bg-drplant-blue hover:bg-drplant-blue/90 text-white shadow-lg"
-        >
-          <MessageSquare className="mr-3 h-5 w-5" />
-          Chat with Expert
-        </Button>
       </div>
 
-      {/* Expert Consultation Card - CON TUTTA LA LOGICA */}
+      {/* Expert Consultation Card - CON TUTTA LA LOGICA E NAVIGAZIONE */}
       {!expertDataSent && onSendToExpert && (
         <Card className="p-6 bg-blue-50/80 backdrop-blur-sm border-blue-200">
           <div className="text-center space-y-4">
@@ -284,19 +278,9 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
                 Analisi inviata all'esperto Marco Nigro!
               </span>
               <p className="text-green-700 text-sm">
-                Riceverai una risposta professionale nella chat
+                Reindirizzamento alla chat in corso...
               </p>
             </div>
-          </div>
-          <div className="mt-3">
-            <Button
-              onClick={onChatWithExpert}
-              variant="outline"
-              size="sm"
-              className="text-green-700 border-green-300 hover:bg-green-100"
-            >
-              Vai alla chat
-            </Button>
           </div>
         </Card>
       )}

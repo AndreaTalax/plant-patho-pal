@@ -59,7 +59,7 @@ const DiagnosisStages: React.FC<DiagnosisStagesProps> = ({
   const navigate = useNavigate();
   const { userProfile } = useAuth();
 
-  // Semplice navigazione alla chat - SENZA logica di invio
+  // Navigazione alla chat - SENZA logica di invio
   const handleNavigateToChat = () => {
     console.log("🔄 Navigating to chat...");
     
@@ -82,7 +82,7 @@ const DiagnosisStages: React.FC<DiagnosisStagesProps> = ({
     }
   };
 
-  // Funzione per invio completo all'esperto - CON TUTTA LA LOGICA
+  // Funzione per invio completo all'esperto - CON TUTTA LA LOGICA E NAVIGAZIONE
   const handleSendToExpertWithData = async () => {
     if (!userProfile?.id) {
       toast.error('Devi essere autenticato per contattare l\'esperto');
@@ -130,8 +130,10 @@ const DiagnosisStages: React.FC<DiagnosisStagesProps> = ({
           description: 'Marco Nigro riceverà tutte le informazioni'
         });
 
-        // Navigate to chat
-        handleNavigateToChat();
+        // Navigate to chat after confirmation
+        setTimeout(() => {
+          handleNavigateToChat();
+        }, 1500);
       } else {
         toast.error('Errore nell\'invio automatico dei dati');
       }
@@ -280,7 +282,7 @@ const DiagnosisStages: React.FC<DiagnosisStagesProps> = ({
       );
     }
     
-    // Regular AI diagnosis result - Chat with Expert button is NOW SIMPLE
+    // Regular AI diagnosis result - No separate Chat button
     return (
       <>
         <PlantInfoSummary 
@@ -294,8 +296,8 @@ const DiagnosisStages: React.FC<DiagnosisStagesProps> = ({
           analysisData={diagnosedDisease}
           isAnalyzing={isAnalyzing}
           onStartNewAnalysis={onStartNewAnalysis}
-          onChatWithExpert={handleNavigateToChat} // SEMPLICE navigazione
-          onSendToExpert={handleSendToExpertWithData} // LOGICA COMPLETA qui
+          onChatWithExpert={handleNavigateToChat} // Solo navigazione
+          onSendToExpert={handleSendToExpertWithData} // Logica completa + navigazione
           analysisDetails={analysisDetails}
         />
       </>
