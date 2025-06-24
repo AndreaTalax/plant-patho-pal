@@ -502,7 +502,7 @@ const DiagnoseTab = () => {
                   onNewAnalysis={handleNewAnalysis}
                   autoSentToExpert={dataSentToExpert}
                   plantInfo={plantInfo}
-                  onSendToExpert={handleExpertConsultation} // Fixed: now using the correct function
+                  onSendToExpert={handleExpertConsultation}
                 />
                 
                 {/* Pulsante per inviare all'esperto DOPO la diagnosi AI */}
