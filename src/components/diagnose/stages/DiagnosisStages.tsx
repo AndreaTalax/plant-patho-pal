@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { usePlantInfo } from '@/context/PlantInfoContext';
 import PlantInfoForm from '../PlantInfoForm';
@@ -58,14 +59,37 @@ const DiagnosisStages: React.FC<DiagnosisStagesProps> = ({
   const navigate = useNavigate();
   const { userProfile } = useAuth();
 
-  // Enhanced function to handle expert consultation with automatic data sending
-  const handleExpertConsultation = async () => {
+  // Semplice navigazione alla chat - SENZA logica di invio
+  const handleNavigateToChat = () => {
+    console.log("🔄 Navigating to chat...");
+    
+    if (onChatWithExpert) {
+      onChatWithExpert();
+    } else {
+      // Navigate to homepage and switch to chat tab
+      navigate('/');
+      setTimeout(() => {
+        console.log("🔄 Triggering chat tab switch...");
+        const event = new CustomEvent('switchTab', { detail: 'chat' });
+        window.dispatchEvent(event);
+        
+        // Also refresh the chat to ensure latest data is shown
+        setTimeout(() => {
+          const refreshEvent = new CustomEvent('refreshChat');
+          window.dispatchEvent(refreshEvent);
+        }, 200);
+      }, 100);
+    }
+  };
+
+  // Funzione per invio completo all'esperto - CON TUTTA LA LOGICA
+  const handleSendToExpertWithData = async () => {
     if (!userProfile?.id) {
       toast.error('Devi essere autenticato per contattare l\'esperto');
       return;
     }
 
-    console.log("🩺 Avvio consulenza esperto con invio automatico dati...");
+    console.log("🩺 Invio completo dati all'esperto...");
     
     try {
       // First sync plant data using PlantDataSyncService
@@ -114,28 +138,6 @@ const DiagnosisStages: React.FC<DiagnosisStagesProps> = ({
     } catch (error) {
       console.error('❌ Errore nella consulenza esperto:', error);
       toast.error('Errore nell\'invio dei dati all\'esperto');
-    }
-  };
-
-  const handleNavigateToChat = () => {
-    console.log("🔄 Navigating to chat with data sync...");
-    
-    if (onChatWithExpert) {
-      onChatWithExpert();
-    } else {
-      // Navigate to homepage and switch to chat tab
-      navigate('/');
-      setTimeout(() => {
-        console.log("🔄 Triggering chat tab switch...");
-        const event = new CustomEvent('switchTab', { detail: 'chat' });
-        window.dispatchEvent(event);
-        
-        // Also refresh the chat to ensure latest data is shown
-        setTimeout(() => {
-          const refreshEvent = new CustomEvent('refreshChat');
-          window.dispatchEvent(refreshEvent);
-        }, 200);
-      }, 100);
     }
   };
 
@@ -197,7 +199,7 @@ const DiagnosisStages: React.FC<DiagnosisStagesProps> = ({
   }
 
   if (stage === 'result') {
-    // Enhanced expert consultation result display with automatic data sending confirmation
+    // Expert consultation result display
     if (plantInfo.sendToExpert && !plantInfo.useAI) {
       return (
         <div className="space-y-4">
@@ -278,7 +280,7 @@ const DiagnosisStages: React.FC<DiagnosisStagesProps> = ({
       );
     }
     
-    // Regular AI diagnosis result with enhanced expert chat integration
+    // Regular AI diagnosis result - Chat with Expert button is NOW SIMPLE
     return (
       <>
         <PlantInfoSummary 
@@ -292,7 +294,8 @@ const DiagnosisStages: React.FC<DiagnosisStagesProps> = ({
           analysisData={diagnosedDisease}
           isAnalyzing={isAnalyzing}
           onStartNewAnalysis={onStartNewAnalysis}
-          onChatWithExpert={handleExpertConsultation}
+          onChatWithExpert={handleNavigateToChat} // SEMPLICE navigazione
+          onSendToExpert={handleSendToExpertWithData} // LOGICA COMPLETA qui
           analysisDetails={analysisDetails}
         />
       </>

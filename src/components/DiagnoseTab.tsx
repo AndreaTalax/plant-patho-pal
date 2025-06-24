@@ -496,6 +496,8 @@ const DiagnoseTab = () => {
                   imageUrl={uploadedImage}
                   onNewAnalysis={handleNewAnalysis}
                   autoSentToExpert={dataSentToExpert}
+                  plantInfo={plantInfo}
+                  onSendToExpert={handleExpertConsultation} // Funzione CON logica completa
                 />
                 
                 {/* Pulsante per inviare all'esperto DOPO la diagnosi AI */}

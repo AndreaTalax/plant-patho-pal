@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -14,44 +15,96 @@ import {
 } from 'lucide-react';
 import { PlantAnalysisResult } from '@/services/realPlantAnalysisService';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/context/AuthContext';
+import { PlantDataSyncService } from '@/services/chat/plantDataSyncService';
+import { AutoExpertNotificationService } from '@/components/chat/AutoExpertNotificationService';
+import { toast } from 'sonner';
 
 interface PlantAnalysisResultProps {
   analysisResult: PlantAnalysisResult;
   imageUrl: string;
   onNewAnalysis: () => void;
   autoSentToExpert?: boolean;
+  plantInfo?: any;
+  onSendToExpert?: () => void;
 }
 
-/**
- * Renders the plant analysis result and expert consultation status.
- * @example
- * renderPlantAnalysisResult({ analysisResult, imageUrl, onNewAnalysis, autoSentToExpert })
- * Returns a JSX element displaying the analysis details and expert chat option.
- * @param {object} analysisResult - The plant analysis result containing health status, diseases, and recommendations.
- * @param {string} imageUrl - The URL of the image used for plant analysis.
- * @param {function} onNewAnalysis - Function to initiate a new plant analysis.
- * @param {boolean} autoSentToExpert - Indicates if the diagnosis was automatically sent to an expert.
- * @returns {JSX.Element} A component displaying the analysis results, consultation status, and action buttons.
- * @description
- *   - Handles navigation to the chat tab and dispatches a custom event.
- *   - Determines and applies color coding based on confidence level.
- *   - Includes sections for health status, diseases detected, and expert recommendations.
- *   - Displays various actionable buttons for user interactions, such as initiating a new analysis or chatting with an expert.
- */
 const PlantAnalysisResultComponent: React.FC<PlantAnalysisResultProps> = ({
   analysisResult,
   imageUrl,
   onNewAnalysis,
-  autoSentToExpert = false
+  autoSentToExpert = false,
+  plantInfo,
+  onSendToExpert
 }) => {
   const navigate = useNavigate();
+  const { userProfile } = useAuth();
 
+  // Semplice navigazione alla chat - NESSUNA logica di invio dati
   const handleGoToChat = () => {
     navigate('/');
     setTimeout(() => {
       const event = new CustomEvent('switchTab', { detail: 'chat' });
       window.dispatchEvent(event);
     }, 100);
+  };
+
+  // Logica completa per invio all'esperto con tutti i dati
+  const handleSendToExpert = async () => {
+    if (!userProfile?.id) {
+      toast.error('Devi essere autenticato per contattare l\'esperto');
+      return;
+    }
+
+    try {
+      console.log('📨 Invio risultati analisi all\'esperto...');
+      
+      // Sincronizza i dati usando PlantDataSyncService
+      const synced = await PlantDataSyncService.syncPlantDataToChat(
+        userProfile.id,
+        plantInfo,
+        imageUrl
+      );
+
+      if (synced) {
+        console.log('✅ Dati sincronizzati con successo alla chat');
+        
+        // Invia anche i risultati dell'analisi AI
+        const diagnosisData = {
+          plantType: plantInfo?.name || 'Pianta non specificata',
+          plantVariety: plantInfo?.name,
+          symptoms: plantInfo?.symptoms || 'Nessun sintomo specificato',
+          imageUrl: imageUrl,
+          analysisResult: analysisResult,
+          confidence: analysisResult.confidence || 0,
+          isHealthy: analysisResult.isHealthy || false,
+          plantInfo: {
+            environment: plantInfo?.isIndoor ? 'Interno' : 'Esterno',
+            watering: plantInfo?.wateringFrequency,
+            lightExposure: plantInfo?.lightExposure,
+            symptoms: plantInfo?.symptoms
+          }
+        };
+
+        await AutoExpertNotificationService.sendDiagnosisToExpert(
+          userProfile.id,
+          diagnosisData
+        );
+
+        toast.success('Analisi inviata all\'esperto!', {
+          description: 'Marco Nigro riceverà tutti i risultati nella chat.'
+        });
+
+        if (onSendToExpert) {
+          onSendToExpert();
+        }
+      } else {
+        toast.error('Errore nell\'invio all\'esperto');
+      }
+    } catch (error) {
+      console.error('❌ Errore invio all\'esperto:', error);
+      toast.error('Errore nell\'invio all\'esperto');
+    }
   };
 
   const confidenceColor = analysisResult.confidence >= 0.8 
@@ -204,6 +257,7 @@ const PlantAnalysisResultComponent: React.FC<PlantAnalysisResultProps> = ({
             Analyze Another Plant
           </Button>
           
+          {/* Pulsante Chat semplice - SOLO navigazione */}
           <Button 
             onClick={handleGoToChat} 
             className="h-14 text-base bg-drplant-blue hover:bg-drplant-blue/90 text-white shadow-lg"
@@ -212,6 +266,38 @@ const PlantAnalysisResultComponent: React.FC<PlantAnalysisResultProps> = ({
             Chat with Expert
           </Button>
         </div>
+
+        {/* Sezione per seconda opinione - CON TUTTA LA LOGICA */}
+        {!autoSentToExpert && (
+          <Card className="p-6 bg-blue-50/80 backdrop-blur-sm border-blue-200">
+            <div className="text-center space-y-4">
+              <h4 className="font-medium text-blue-800 text-lg">
+                💡 Vuoi una seconda opinione?
+              </h4>
+              <p className="text-blue-700">
+                Invia i risultati dell'analisi AI a Marco Nigro per una conferma professionale
+              </p>
+              <Button
+                onClick={handleSendToExpert}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 text-base"
+              >
+                Invia all'esperto per conferma
+              </Button>
+            </div>
+          </Card>
+        )}
+
+        {/* Conferma invio */}
+        {autoSentToExpert && (
+          <Card className="p-4 bg-green-50/80 backdrop-blur-sm border-green-200">
+            <div className="flex items-center space-x-3">
+              <CheckCircle className="h-5 w-5 text-green-600" />
+              <span className="text-green-800 font-medium">
+                Analisi inviata all'esperto Marco Nigro!
+              </span>
+            </div>
+          </Card>
+        )}
 
         {/* API Sources Footer */}
         <Card className="p-6 bg-gray-50 border-dashed">
