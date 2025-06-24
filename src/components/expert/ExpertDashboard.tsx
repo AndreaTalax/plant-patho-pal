@@ -70,31 +70,15 @@ const ExpertDashboard = () => {
     try {
       console.log('🔄 Loading expert dashboard data...');
       
-      // Load conversations with user presence information
-      const { data: conversationsData, error: conversationsError } = await supabase
-        .from('conversations')
-        .select(`
-          id,
-          user_id,
-          last_message_text,
-          last_message_at,
-          status,
-          created_at,
-          updated_at
-        `)
-        .eq('expert_id', MARCO_NIGRO_ID)
-        .order('updated_at', { ascending: false })
-        .limit(50);
-
-      if (conversationsError) {
-        console.error('❌ Error loading conversations:', conversationsError);
-        toast.error('Errore nel caricamento delle conversazioni');
-      } else {
-        console.log('✅ Conversations loaded:', conversationsData?.length || 0);
+      // Load conversations with user presence information - usa il metodo ottimizzato
+      const conversationsData = await ConversationService.refreshConversations(MARCO_NIGRO_ID);
+      
+      if (conversationsData && conversationsData.length > 0) {
+        console.log('✅ Conversations loaded via service:', conversationsData.length);
         
         // Get user profiles with online status
         const conversationsWithProfiles = await Promise.all(
-          (conversationsData || []).slice(0, 20).map(async (conversation) => {
+          conversationsData.slice(0, 20).map(async (conversation) => {
             try {
               const { data: profile } = await supabase
                 .from('profiles')
@@ -125,6 +109,9 @@ const ExpertDashboard = () => {
         );
         
         setConversations(conversationsWithProfiles);
+      } else {
+        console.log('⚠️ No conversations found');
+        setConversations([]);
       }
 
       // Load consultations
@@ -178,15 +165,26 @@ const ExpertDashboard = () => {
   useEffect(() => {
     loadExpertData();
     
-    // Setup simplified real-time subscriptions
+    // Setup simplified real-time subscriptions con gestione eliminazioni
     const conversationsChannel = supabase
       .channel('expert-conversations-simple')
       .on('postgres_changes', 
         { event: '*', schema: 'public', table: 'conversations', filter: `expert_id=eq.${MARCO_NIGRO_ID}` },
         (payload) => {
           console.log('🔄 Conversation change detected:', payload);
-          if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
-            loadExpertData();
+          if (payload.eventType === 'DELETE') {
+            console.log('🗑️ Conversation deletion detected:', payload.old?.id);
+            // Remove deleted conversation immediately from UI
+            setConversations(prev => prev.filter(conv => conv.id !== payload.old?.id));
+            
+            // If currently selected conversation was deleted, deselect it
+            if (selectedConversation?.id === payload.old?.id) {
+              console.log('🔄 Deselecting deleted conversation');
+              setSelectedConversation(null);
+            }
+          } else {
+            // Per altri eventi, ricarica tutto
+            setTimeout(() => loadExpertData(), 500);
           }
         }
       )
@@ -209,7 +207,7 @@ const ExpertDashboard = () => {
       supabase.removeChannel(conversationsChannel);
       supabase.removeChannel(consultationsChannel);
     };
-  }, [loadExpertData]); // Only depend on the memoized loadExpertData function
+  }, [loadExpertData, selectedConversation?.id]); // Include selectedConversation.id in dependencies
 
   const updateConsultationStatus = useCallback(async (consultationId: string, newStatus: string) => {
     try {
@@ -242,6 +240,11 @@ const ExpertDashboard = () => {
         setSelectedConversation(null);
       }
       
+      // Rimuovi immediatamente dalla UI per feedback veloce
+      setConversations(prevConversations => 
+        prevConversations.filter(conv => conv.id !== conversationId)
+      );
+      
       // Usa il ConversationService per eliminare
       const success = await ConversationService.deleteConversation(conversationId);
       
@@ -249,24 +252,25 @@ const ExpertDashboard = () => {
         console.log('✅ Dashboard: Conversazione eliminata con successo');
         toast.success('Conversazione eliminata con successo');
         
-        // Rimuovi immediatamente dalla UI per feedback veloce
-        setConversations(prevConversations => 
-          prevConversations.filter(conv => conv.id !== conversationId)
-        );
-        
-        // Forza un refresh dopo 1 secondo per essere sicuri
+        // Forza un refresh completo dopo 1 secondo per essere sicuri
         setTimeout(() => {
           loadExpertData();
         }, 1000);
         
       } else {
-        console.error('❌ Dashboard: Fallimento eliminazione');
+        console.error('❌ Dashboard: Fallimento eliminazione, ripristino UI');
         toast.error('Errore durante l\'eliminazione della conversazione');
+        
+        // Ripristina la UI ricaricando i dati
+        await loadExpertData();
       }
       
     } catch (error: any) {
       console.error('❌ Dashboard: Errore eliminazione conversazione', error);
       toast.error(error.message || 'Errore durante l\'eliminazione della conversazione');
+      
+      // Ripristina la UI ricaricando i dati
+      await loadExpertData();
     } finally {
       setDeletingConsultation(null);
     }

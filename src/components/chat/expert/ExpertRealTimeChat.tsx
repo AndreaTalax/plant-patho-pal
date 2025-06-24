@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client'; 
@@ -46,27 +47,14 @@ export const ExpertRealTimeChat: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [deletingConversation, setDeletingConversation] = useState<string | null>(null);
 
-  // Load conversations list
+  // Load conversations list con metodo ottimizzato
   const loadConversations = async () => {
     try {
       setLoading(true);
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
+      console.log('🔄 ExpertRealTimeChat: Loading conversations...');
 
-      // Use safer query to get conversations
-      const { data: conversationList, error } = await supabase
-        .from('conversations')
-        .select(`
-          *,
-          profiles!conversations_user_id_fkey(id, first_name, last_name, avatar_url, is_online)
-        `)
-        .eq('expert_id', MARCO_NIGRO_ID)
-        .order('last_message_at', { ascending: false });
-
-      if (error) {
-        console.error('❌ Error loading conversations:', error);
-        return;
-      }
+      // Usa il servizio ottimizzato per caricare le conversazioni
+      const conversationList = await ConversationService.refreshConversations(MARCO_NIGRO_ID);
 
       if (!conversationList || conversationList.length === 0) {
         console.log('🟡 Nessuna conversazione trovata per questo esperto.');
@@ -108,12 +96,19 @@ export const ExpertRealTimeChat: React.FC = () => {
           }
         }
 
+        // Get user profile
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('id, first_name, last_name, avatar_url, is_online')
+          .eq('id', conv.user_id)
+          .single();
+
         return {
           ...conv,
           last_message_text: lastMessageText,
           last_message_at: lastMessageAt,
           unread_count,
-          user_profile: conv.profiles || { 
+          user_profile: profile || { 
             id: conv.user_id, 
             first_name: 'Utente', 
             last_name: 'Sconosciuto',
@@ -123,6 +118,7 @@ export const ExpertRealTimeChat: React.FC = () => {
       }));
       
       setConversations(conversationsWithLastMessage);
+      console.log('✅ ExpertRealTimeChat: Conversations loaded:', conversationsWithLastMessage.length);
     } catch (error) {
       console.error('❌ Error loading conversations:', error);
     } finally {
@@ -130,13 +126,13 @@ export const ExpertRealTimeChat: React.FC = () => {
     }
   };
 
-  // Funzione per eliminare conversazione CON ELIMINAZIONE FORZATA
+  // Funzione per eliminare conversazione CON ELIMINAZIONE OTTIMIZZATA
   const handleDeleteConversation = async (conversationId: string) => {
     try {
       setDeletingConversation(conversationId);
-      console.log('🗑️ ExpertRealTimeChat: Inizio eliminazione FORZATA:', conversationId);
+      console.log('🗑️ ExpertRealTimeChat: Inizio eliminazione OTTIMIZZATA:', conversationId);
       
-      // RIMUOVI IMMEDIATAMENTE dalla UI
+      // RIMUOVI IMMEDIATAMENTE dalla UI per feedback veloce
       setConversations(prevConversations => 
         prevConversations.filter(conv => conv.id !== conversationId)
       );
@@ -147,19 +143,20 @@ export const ExpertRealTimeChat: React.FC = () => {
         setSelectedConversationId(null);
       }
       
-      // Usa il servizio per l'eliminazione forzata
+      // Usa il ConversationService ottimizzato per l'eliminazione
       const success = await ConversationService.deleteConversation(conversationId);
 
       if (success) {
         console.log('✅ ExpertRealTimeChat: Conversazione eliminata con successo');
         toast.success('Conversazione eliminata con successo');
         
-        // Forza refresh dopo breve delay
+        // Non serve ricaricare tutto, l'UI è già aggiornata
+        // Ma forziamo un refresh leggero dopo 2 secondi per sicurezza
         setTimeout(() => {
           loadConversations();
-        }, 1000);
+        }, 2000);
       } else {
-        console.error('❌ ExpertRealTimeChat: Fallimento eliminazione');
+        console.error('❌ ExpertRealTimeChat: Fallimento eliminazione, ripristino UI');
         toast.error('Errore durante l\'eliminazione della conversazione');
         
         // Ripristina la lista in caso di errore
@@ -197,9 +194,9 @@ export const ExpertRealTimeChat: React.FC = () => {
     if (userProfile?.id === MARCO_NIGRO_ID) {
       loadConversations();
       
-      // Setup real-time subscription for conversation changes
+      // Setup real-time subscription for conversation changes con gestione ottimizzata
       const conversationsChannel = supabase
-        .channel('expert-conversations-realtime')
+        .channel('expert-conversations-realtime-optimized')
         .on('postgres_changes', 
           { event: '*', schema: 'public', table: 'conversations' },
           (payload) => {
@@ -215,7 +212,8 @@ export const ExpertRealTimeChat: React.FC = () => {
                 setSelectedConversationId(null);
               }
             } else {
-              loadConversations();
+              // Per altri eventi, ricarica con debounce
+              setTimeout(() => loadConversations(), 1000);
             }
           }
         )

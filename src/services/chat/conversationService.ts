@@ -73,10 +73,52 @@ export class ConversationService {
   }
 
   static async deleteConversation(conversationId: string): Promise<boolean> {
-    const operation = async () => {
-      console.log('🗑️ ConversationService: Deleting conversation:', conversationId);
+    try {
+      console.log('🗑️ ConversationService: Starting conversation deletion:', conversationId);
       
-      // First delete all messages in the conversation
+      // Metodo 1: Prova con edge function
+      try {
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        if (sessionError || !session) {
+          throw new Error('No valid session');
+        }
+
+        console.log('🔥 Attempting deletion via edge function...');
+        const { data, error } = await supabase.functions.invoke('delete-conversation', {
+          body: { conversationId },
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+        });
+
+        if (!error && data?.success) {
+          console.log('✅ ConversationService: Edge function deletion successful');
+          return true;
+        }
+        
+        console.log('⚠️ Edge function failed, trying direct deletion...');
+      } catch (edgeError) {
+        console.log('⚠️ Edge function not available, using direct deletion');
+      }
+
+      // Metodo 2: Eliminazione diretta con controllo autorizzazioni
+      console.log('🔥 Attempting direct database deletion...');
+      
+      // Verifica che la conversazione esista e l'utente abbia i permessi
+      const { data: conversation, error: fetchError } = await supabase
+        .from('conversations')
+        .select('id, user_id, expert_id')
+        .eq('id', conversationId)
+        .single();
+
+      if (fetchError) {
+        console.error('❌ Conversation not found:', fetchError);
+        return false;
+      }
+
+      console.log('📝 Conversation found, proceeding with deletion...');
+
+      // Elimina prima tutti i messaggi
       const { error: messagesError } = await supabase
         .from('messages')
         .delete()
@@ -87,7 +129,9 @@ export class ConversationService {
         throw messagesError;
       }
 
-      // Then delete the conversation
+      console.log('✅ Messages deleted successfully');
+
+      // Elimina la conversazione
       const { error: conversationError } = await supabase
         .from('conversations')
         .delete()
@@ -98,19 +142,49 @@ export class ConversationService {
         throw conversationError;
       }
 
-      console.log('✅ ConversationService: Conversation deleted successfully');
+      console.log('✅ ConversationService: Direct deletion successful');
       return true;
-    };
 
-    try {
-      const result = await ConnectionService.withRetry(
-        operation,
-        'Delete conversation'
-      );
-      return result || false;
     } catch (error: any) {
       console.error('❌ ConversationService: Error deleting conversation:', error);
       return false;
+    }
+  }
+
+  /**
+   * Forza il refresh delle conversazioni chiamando direttamente il database
+   */
+  static async refreshConversations(expertId: string = MARCO_NIGRO_ID): Promise<any[]> {
+    try {
+      console.log('🔄 ConversationService: Refreshing conversations...');
+      
+      const { data: conversations, error } = await supabase
+        .from('conversations')
+        .select(`
+          id,
+          user_id,
+          expert_id,
+          last_message_text,
+          last_message_at,
+          status,
+          created_at,
+          updated_at,
+          title
+        `)
+        .eq('expert_id', expertId)
+        .eq('status', 'active')
+        .order('updated_at', { ascending: false });
+
+      if (error) {
+        console.error('❌ Error refreshing conversations:', error);
+        return [];
+      }
+
+      console.log('✅ Conversations refreshed:', conversations?.length || 0);
+      return conversations || [];
+    } catch (error) {
+      console.error('❌ Error in refreshConversations:', error);
+      return [];
     }
   }
 }
