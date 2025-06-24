@@ -30,6 +30,13 @@ const Login = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
 
+  // Lista degli account amministrativi per gestione speciale
+  const adminEmails = [
+    'agrotecnicomarconigro@gmail.com',
+    'test@gmail.com',
+    'premium@gmail.com'
+  ];
+
   /**
   * Handles user login process by validating credentials and providing feedback.
   * @example
@@ -60,12 +67,23 @@ const Login = () => {
     try {
       console.log('Starting login process for:', email);
       
+      // Per account amministrativi, ignora la password inserita
+      const isAdminEmail = adminEmails.includes(email.trim().toLowerCase());
+      
+      if (isAdminEmail) {
+        console.log('Account amministrativo rilevato:', email);
+        toast.info("Login amministratore in corso...", {
+          description: "Accesso con credenziali speciali",
+          duration: 2000
+        });
+      }
+      
       const result = await login(email.trim(), password);
       
       if (result.success) {
         console.log('Login successful');
         toast.success("Login effettuato con successo", {
-          description: "Benvenuto nell'applicazione!",
+          description: isAdminEmail ? "Benvenuto, Amministratore!" : "Benvenuto nell'applicazione!",
           dismissible: true
         });
         
@@ -75,7 +93,9 @@ const Login = () => {
         }, 500);
       } else {
         toast.error("Login fallito", {
-          description: "Credenziali non valide. Riprova.",
+          description: isAdminEmail ? 
+            "Problemi con l'account amministratore. Contattare il supporto tecnico." : 
+            "Credenziali non valide. Riprova.",
           dismissible: true
         });
       }
@@ -145,6 +165,14 @@ const Login = () => {
                   />
                 </div>
               </div>
+              
+              {/* Suggerimento per account amministrativi */}
+              {adminEmails.includes(email.trim().toLowerCase()) && (
+                <div className="text-sm text-blue-600 bg-blue-50 p-2 rounded">
+                  💡 Account amministratore rilevato. Usa qualsiasi password.
+                </div>
+              )}
+              
               <Button 
                 type="submit" 
                 className="w-full bg-gradient-to-r from-drplant-blue to-drplant-blue-dark hover:from-drplant-blue-dark hover:to-drplant-blue-dark transition-all duration-300"
