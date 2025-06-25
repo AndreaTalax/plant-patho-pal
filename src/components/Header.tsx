@@ -7,7 +7,6 @@ import {
   X, 
   User, 
   LogOut,
-  Leaf,
   MessageSquare,
   BookOpen,
   ShoppingCart,
@@ -58,9 +57,13 @@ const Header = () => {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link to="/" className="flex items-center space-x-2 font-bold text-xl text-drplant-green">
-            <Leaf className="h-8 w-8" />
+            <img 
+              src="/lovable-uploads/61c78ca3-f749-41b5-8491-149df4cd44ec.png" 
+              alt="Dr.Plant Logo" 
+              className="h-8 w-auto"
+            />
             <span className="bg-gradient-to-r from-drplant-green to-drplant-blue bg-clip-text text-transparent">
-              Plant Patho Pal
+              Dr.Plant
             </span>
           </Link>
 
