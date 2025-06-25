@@ -33,10 +33,7 @@ const SignUp = () => {
         dismissible: true,
       });
 
-      // Dopo la registrazione, vai alla pagina di login dopo un breve delay
-      setTimeout(() => {
-        navigate("/login");
-      }, 3000);
+      // Non reindirizzare automaticamente al login, mostra la schermata di conferma email
       
     } catch (error: any) {
       console.error("Errore registrazione:", error);

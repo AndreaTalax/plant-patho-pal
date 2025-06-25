@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -27,7 +26,7 @@ import { useToast } from "@/hooks/use-toast";
 *   - Ensures smooth user interaction through dynamic tab content rendering.
 */
 const Index = () => {
-  const { isMasterAccount, isAuthenticated, loading } = useAuth();
+  const { isMasterAccount, isAuthenticated, isProfileComplete, loading } = useAuth();
   const { plantInfo } = usePlantInfo();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -42,6 +41,14 @@ const Index = () => {
       navigate('/auth');
     }
   }, [isAuthenticated, loading, navigate]);
+
+  // Reindirizza alla pagina di completamento profilo se il profilo non è completo
+  useEffect(() => {
+    if (!loading && isAuthenticated && !isProfileComplete && !isMasterAccount) {
+      console.log('📝 Profilo incompleto, reindirizzamento al completamento profilo...');
+      navigate('/complete-profile');
+    }
+  }, [isAuthenticated, isProfileComplete, isMasterAccount, loading, navigate]);
 
   // Calcola se i tab sono sbloccati solo dopo scelta AI o Esperto
   const canAccessTabs = plantInfo.infoComplete && (plantInfo.useAI || plantInfo.sendToExpert);
@@ -125,8 +132,8 @@ const Index = () => {
     );
   }
 
-  // Se non autenticato, non renderizzare nulla (il redirect è gestito nell'useEffect)
-  if (!isAuthenticated) {
+  // Se non autenticato o profilo incompleto, non renderizzare nulla (il redirect è gestito negli useEffect)
+  if (!isAuthenticated || (!isProfileComplete && !isMasterAccount)) {
     return null;
   }
 

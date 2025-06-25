@@ -28,19 +28,6 @@ const profileSchema = z.object({
 
 type ProfileFormValues = z.infer<typeof profileSchema>;
 
-/**
- * Renders a complete profile form and handles profile updating and navigation.
- * @example
- * onSubmit(profileValues)
- * // Navigates to the home page and displays success or error toast messages.
- * @param {ProfileFormValues} {values} - The form values containing user profile information.
- * @returns {JSX.Element} The rendered profile completion form component.
- * @description
- *   - Uses a form with controlled components to manage user inputs for profile fields.
- *   - Employs toast notifications for feedback on profile update success or failure.
- *   - Utilizes a loading state to indicate when profile data is being saved.
- *   - Redirects the user to the homepage upon successful profile update.
- */
 const CompleteProfile = () => {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
@@ -57,37 +44,22 @@ const CompleteProfile = () => {
     },
   });
 
-  /**
-   * Completes the user profile with given form values and updates the relevant fields.
-   * @example
-   * handleProfileUpdate(profileFormValues)
-   * undefined
-   * @param {ProfileFormValues} values - Object containing profile information such as firstName, lastName, birthDate, and birthPlace.
-   * @returns {void} Doesn't return any value.
-   * @description
-   *   - Updates profile fields directly and redirects to the home page upon success.
-   *   - Uses toast notifications to indicate success or error during profile update.
-   *   - Properly handles the mapping for birth date and place fields to match the expected UserProfile property names.
-   */
-  const onSubmit = (values: ProfileFormValues) => {
+  const onSubmit = async (values: ProfileFormValues) => {
     setIsLoading(true);
 
     try {
       // Update the profile fields directly
-      updateProfile("firstName", values.firstName);
-      updateProfile("lastName", values.lastName);
-      
-      // For birth date and place, we need to match the property names in the UserProfile type
-      // In this case, we need to use "birthDate" and "birthPlace" instead of "birth_date" and "birth_place"
-      updateProfile("birthDate", values.birthDate);  
-      updateProfile("birthPlace", values.birthPlace);
+      await updateProfile("firstName", values.firstName);
+      await updateProfile("lastName", values.lastName);
+      await updateProfile("birthDate", values.birthDate);  
+      await updateProfile("birthPlace", values.birthPlace);
       
       toast({
         title: "Profilo completato",
-        description: "Benvenuto su Plant Patho Pal!",
+        description: "Benvenuto su Dr.Plant!",
       });
       
-      // Redirect to home page
+      // Redirect to home page - il controllo isProfileComplete reindirizzerà alla diagnosi
       navigate("/");
     } catch (error) {
       toast({

@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User, Session } from '@supabase/supabase-js';
@@ -97,7 +96,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           // Carica SEMPRE i dati utente completi quando c'è una sessione
           setTimeout(async () => {
             if (!mounted) return;
-            await ensureCompleteUserData(session.user.id);
+            const profile = await ensureCompleteUserData(session.user.id);
             if (mounted) {
               setLoading(false);
             }
