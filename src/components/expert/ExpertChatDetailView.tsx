@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { DatabaseMessage } from "@/services/chat/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Loader2, Send, AlertCircle, RefreshCw } from "lucide-react";
+import { ArrowLeft, Loader2, Send, AlertCircle, RefreshCw, MessageCircleOff } from "lucide-react";
 import { toast } from "sonner";
 import { useRealtimeChat } from "@/hooks/useRealtimeChat";
 import { MARCO_NIGRO_ID } from "@/components/phytopathologist";
@@ -139,7 +139,13 @@ const ExpertChatDetailView = ({ conversation, onBack }: {
   }, [conversation?.id]);
 
   const handleSendMessage = useCallback(async () => {
-    if (!newMessage.trim() || sending) return;
+    // Blocca l'invio se la conversazione è eliminata
+    if (!newMessage.trim() || sending || conversationDeleted) {
+      if (conversationDeleted) {
+        toast.error("Impossibile inviare messaggi: conversazione eliminata");
+      }
+      return;
+    }
 
     try {
       setSending(true);
@@ -152,7 +158,7 @@ const ExpertChatDetailView = ({ conversation, onBack }: {
     } finally {
       setSending(false);
     }
-  }, [newMessage, sending, sendMessage, conversation.user_id]);
+  }, [newMessage, sending, sendMessage, conversation.user_id, conversationDeleted]);
 
   const handleKeyPress = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -207,14 +213,28 @@ const ExpertChatDetailView = ({ conversation, onBack }: {
               ? `${conversation.user_profile.first_name || ""} ${conversation.user_profile.last_name || ""}`.trim()
               : "Utente"}</h2>
             <div className="flex items-center gap-2 mt-1">
-              <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`} />
+              <div className={`w-2 h-2 rounded-full ${isConnected && !conversationDeleted ? 'bg-green-500' : 'bg-red-500'}`} />
               <span className="text-sm text-gray-500">
-                {isConnected ? 'Connesso' : 'Non connesso'}
+                {conversationDeleted ? 'Conversazione eliminata' : (isConnected ? 'Connesso' : 'Non connesso')}
               </span>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Messaggio di avviso per conversazione eliminata */}
+      {conversationDeleted && (
+        <Alert variant="destructive" className="mb-4">
+          <MessageCircleOff className="h-4 w-4" />
+          <AlertDescription>
+            <div className="font-medium">Conversazione eliminata</div>
+            <div className="text-sm mt-1">
+              Questa conversazione è stata eliminata e non è più disponibile per nuove interazioni. 
+              I messaggi precedenti potrebbero non essere più accessibili.
+            </div>
+          </AlertDescription>
+        </Alert>
+      )}
 
       {loading ? (
         <div className="flex justify-center items-center h-40">
@@ -273,31 +293,42 @@ const ExpertChatDetailView = ({ conversation, onBack }: {
                 )}
               </div>
             )) : (
-              <div className="text-center text-gray-400">Nessun messaggio</div>
+              <div className="text-center text-gray-400">
+                {conversationDeleted ? "Conversazione eliminata" : "Nessun messaggio"}
+              </div>
             )}
           </div>
 
-          {!conversationDeleted && (
-            <div className="flex gap-2">
-              <Input
-                value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-                onKeyPress={handleKeyPress}
-                placeholder="Scrivi un messaggio..."
-                disabled={sending || !isConnected}
-                className="flex-1"
-              />
-              <Button 
-                onClick={handleSendMessage}
-                disabled={!newMessage.trim() || sending || !isConnected}
-                size="icon"
-              >
-                {sending ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Send className="h-4 w-4" />
-                )}
-              </Button>
+          {/* Input dei messaggi - disabilitato se conversazione eliminata */}
+          <div className="flex gap-2">
+            <Input
+              value={newMessage}
+              onChange={(e) => setNewMessage(e.target.value)}
+              onKeyPress={handleKeyPress}
+              placeholder={conversationDeleted ? "Conversazione eliminata - impossibile inviare messaggi" : "Scrivi un messaggio..."}
+              disabled={sending || !isConnected || conversationDeleted}
+              className={`flex-1 ${conversationDeleted ? 'bg-red-50 border-red-200 text-red-600 placeholder-red-400' : ''}`}
+            />
+            <Button 
+              onClick={handleSendMessage}
+              disabled={!newMessage.trim() || sending || !isConnected || conversationDeleted}
+              size="icon"
+              className={conversationDeleted ? 'bg-gray-400 hover:bg-gray-400 cursor-not-allowed' : ''}
+            >
+              {sending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4" />
+              )}
+            </Button>
+          </div>
+
+          {/* Messaggio di stato per input disabilitato */}
+          {conversationDeleted && (
+            <div className="mt-2 text-center">
+              <span className="text-sm text-red-600 bg-red-50 px-3 py-1 rounded-full">
+                ⚠️ Impossibile inviare messaggi in una conversazione eliminata
+              </span>
             </div>
           )}
         </>

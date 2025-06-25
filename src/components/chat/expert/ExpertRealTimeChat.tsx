@@ -9,9 +9,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { MessageCircle, Users, Clock, Trash2, User } from 'lucide-react';
+import { MessageCircle, Users, Clock, Trash2, User, MessageCircleOff, AlertTriangle } from 'lucide-react';
 import { MARCO_NIGRO_ID } from '@/components/phytopathologist';
 import { toast } from 'sonner';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -46,6 +47,7 @@ export const ExpertRealTimeChat: React.FC = () => {
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [deletingConversation, setDeletingConversation] = useState<string | null>(null);
+  const [conversationDeleted, setConversationDeleted] = useState(false);
 
   // Load conversations list con metodo ottimizzato
   const loadConversations = async () => {
@@ -137,10 +139,11 @@ export const ExpertRealTimeChat: React.FC = () => {
         prevConversations.filter(conv => conv.id !== conversationId)
       );
       
-      // Se la conversazione eliminata era selezionata, deseleziona
+      // Se la conversazione eliminata era selezionata, deseleziona e marca come eliminata
       if (selectedConversationId === conversationId) {
-        console.log('🔄 Deselecting deleted conversation');
+        console.log('🔄 Deselecting deleted conversation and marking as deleted');
         setSelectedConversationId(null);
+        setConversationDeleted(true);
       }
       
       // Usa il ConversationService ottimizzato per l'eliminazione
@@ -161,6 +164,7 @@ export const ExpertRealTimeChat: React.FC = () => {
         
         // Ripristina la lista in caso di errore
         await loadConversations();
+        setConversationDeleted(false);
       }
 
     } catch (error: any) {
@@ -169,6 +173,7 @@ export const ExpertRealTimeChat: React.FC = () => {
       
       // Ripristina la lista in caso di errore
       await loadConversations();
+      setConversationDeleted(false);
     } finally {
       setDeletingConversation(null);
     }
@@ -206,10 +211,11 @@ export const ExpertRealTimeChat: React.FC = () => {
               // Remove deleted conversation immediately from UI
               setConversations(prev => prev.filter(conv => conv.id !== payload.old?.id));
               
-              // If currently selected conversation was deleted, deselect it
+              // If currently selected conversation was deleted, deselect it and mark as deleted
               if (selectedConversationId === payload.old?.id) {
-                console.log('🔄 Deselecting deleted conversation');
+                console.log('🔄 Deselecting deleted conversation and marking as deleted');
                 setSelectedConversationId(null);
+                setConversationDeleted(true);
               }
             } else {
               // Per altri eventi, ricarica con debounce
@@ -224,6 +230,13 @@ export const ExpertRealTimeChat: React.FC = () => {
       };
     }
   }, [userProfile, selectedConversationId]);
+
+  // Reset conversation deleted state when selecting a new conversation
+  useEffect(() => {
+    if (selectedConversationId) {
+      setConversationDeleted(false);
+    }
+  }, [selectedConversationId]);
 
   if (userProfile?.id !== MARCO_NIGRO_ID) {
     return (
@@ -361,7 +374,7 @@ export const ExpertRealTimeChat: React.FC = () => {
 
       {/* Chat Area */}
       <div className="flex-1 flex flex-col">
-        {selectedConversationId && selectedConversation ? (
+        {selectedConversationId && selectedConversation && !conversationDeleted ? (
           <RealTimeChatWrapper
             conversationId={selectedConversationId}
             userId={userProfile.id}
@@ -475,6 +488,41 @@ export const ExpertRealTimeChat: React.FC = () => {
               </>
             )}
           </RealTimeChatWrapper>
+        ) : conversationDeleted ? (
+          // Stato per conversazione eliminata
+          <div className="flex-1 flex items-center justify-center">
+            <Card className="w-96">
+              <CardHeader>
+                <CardTitle className="text-center flex items-center justify-center gap-2 text-red-600">
+                  <MessageCircleOff className="h-6 w-6" />
+                  Conversazione Eliminata
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Alert variant="destructive">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertDescription>
+                    <div className="font-medium mb-2">Conversazione non più disponibile</div>
+                    <div className="text-sm">
+                      Questa conversazione è stata eliminata e non è più accessibile. 
+                      Tutte le interazioni con questa conversazione sono state disabilitate.
+                    </div>
+                  </AlertDescription>
+                </Alert>
+                <div className="mt-4 text-center">
+                  <Button 
+                    onClick={() => {
+                      setSelectedConversationId(null);
+                      setConversationDeleted(false);
+                    }}
+                    variant="outline"
+                  >
+                    Seleziona un'altra conversazione
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         ) : (
           <div className="flex-1 flex items-center justify-center">
             <Card className="w-96">
