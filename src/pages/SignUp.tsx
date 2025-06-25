@@ -3,8 +3,10 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { SignUpForm, SignUpFormValues } from "@/components/signup/SignUpForm";
 import { AuthPageLayout } from "@/components/auth/AuthPageLayout";
+import { Link } from "react-router-dom";
 
 const SignUp = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -71,6 +73,25 @@ const SignUp = () => {
             <p className="text-sm text-gray-600 mt-1">
               Controlla nella cartella spam o nella posta indesiderata.
             </p>
+          </div>
+          <div className="mt-6 space-y-3">
+            <Link to="/login">
+              <Button className="w-full bg-drplant-green hover:bg-drplant-green/90 text-white">
+                Vai al Login
+              </Button>
+            </Link>
+            <Link to="/signup">
+              <Button 
+                variant="outline" 
+                className="w-full" 
+                onClick={() => {
+                  setEmailSent(false);
+                  setRegisteredEmail("");
+                }}
+              >
+                Registra un altro account
+              </Button>
+            </Link>
           </div>
         </Card>
       </div>
