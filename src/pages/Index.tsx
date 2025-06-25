@@ -1,5 +1,7 @@
+
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
+import { useNavigate } from "react-router-dom";
 import Header from "@/components/Header";
 import DiagnoseTab from "@/components/DiagnoseTab";
 import ChatTab from "@/components/ChatTab";
@@ -25,12 +27,21 @@ import { useToast } from "@/hooks/use-toast";
 *   - Ensures smooth user interaction through dynamic tab content rendering.
 */
 const Index = () => {
-  const { isMasterAccount } = useAuth();
+  const { isMasterAccount, isAuthenticated, loading } = useAuth();
   const { plantInfo } = usePlantInfo();
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   // Set default tab based on account type - master accounts start with expert tab
   const [activeTab, setActiveTab] = useState<string>(isMasterAccount ? "expert" : "diagnose");
+
+  // Reindirizza alla pagina di login se non autenticato
+  useEffect(() => {
+    if (!loading && !isAuthenticated) {
+      console.log('🔒 Utente non autenticato, reindirizzamento al login...');
+      navigate('/auth');
+    }
+  }, [isAuthenticated, loading, navigate]);
 
   // Calcola se i tab sono sbloccati solo dopo scelta AI o Esperto
   const canAccessTabs = plantInfo.infoComplete && (plantInfo.useAI || plantInfo.sendToExpert);
@@ -101,6 +112,23 @@ const Index = () => {
     }
     setActiveTab(tab);
   };
+
+  // Se l'autenticazione è in corso di caricamento, mostra una schermata di carico
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-drplant-green/5 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-drplant-green mx-auto mb-4"></div>
+          <p className="text-gray-600">Caricamento...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Se non autenticato, non renderizzare nulla (il redirect è gestito nell'useEffect)
+  if (!isAuthenticated) {
+    return null;
+  }
 
   /**
    * Renders a component based on the active tab selected

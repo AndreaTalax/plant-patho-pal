@@ -1,6 +1,8 @@
+
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User, Session } from '@supabase/supabase-js';
+import { useNavigate } from 'react-router-dom';
 import { 
   UserProfile, 
   AuthContextType 
@@ -203,12 +205,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       
       console.log('✅ Logout completato, stato pulito');
       
+      // Reindirizza alla pagina di login dopo il logout
+      window.location.href = '/auth';
+      
     } catch (error: any) {
       console.error('❌ Errore durante il logout:', error);
-      // Anche in caso di errore, pulisci lo stato locale
+      // Anche in caso di errore, pulisci lo stato locale e reindirizza
       setUser(null);
       setSession(null);
       setUserProfile(null);
+      window.location.href = '/auth';
       throw error;
     }
   };

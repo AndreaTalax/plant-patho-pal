@@ -1,4 +1,5 @@
 
+
 import React, { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -25,10 +26,9 @@ const Header = () => {
 
   const handleLogout = async () => {
     try {
-      await logout();
-      toast.success('Logout effettuato con successo!');
-      navigate('/');
       setIsMenuOpen(false);
+      await logout();
+      // Il reindirizzamento è gestito nell'AuthContext
     } catch (error) {
       console.error('Errore durante il logout:', error);
       toast.error('Errore durante il logout');
@@ -58,7 +58,7 @@ const Header = () => {
           {/* Logo */}
           <Link to="/" className="flex items-center space-x-2 font-bold text-xl text-drplant-green">
             <img 
-              src="/lovable-uploads/61c78ca3-f749-41b5-8491-149df4cd44ec.png" 
+              src="/lovable-uploads/2be72d96-649b-4a40-a1e0-fea41cc64fc8.png" 
               alt="Dr.Plant Logo" 
               className="h-8 w-auto"
             />
@@ -176,3 +176,4 @@ const Header = () => {
 };
 
 export default Header;
+
