@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { UserProfile } from './types';
@@ -272,17 +271,47 @@ export const fetchUserProfile = async (userId: string): Promise<UserProfile | nu
  */
 export const registerUser = async (email: string, password: string) => {
   try {
+    console.log('🔄 Starting registration for:', email);
+    
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth`,
+        data: {
+          email: email
+        }
+      }
     });
-    if (error) throw error;
-    if (data.user) {
-      toast.success('Registrazione completata! Controlla la tua email per confermare l\'account.');
+    
+    if (error) {
+      console.error('❌ Registration error:', error);
+      throw error;
     }
+    
+    if (data.user) {
+      console.log('✅ Registration successful for:', email);
+      console.log('📧 Confirmation email should be sent automatically');
+      
+      // La funzione edge send-registration-confirmation dovrebbe essere triggerata automaticamente
+      toast.success('Registrazione completata!', {
+        description: 'Ti abbiamo inviato un\'email di conferma. Controlla la tua casella di posta.',
+        duration: 8000
+      });
+    }
+    
+    return data;
   } catch (error: any) {
-    console.error('Registration error:', error?.message || error);
-    toast.error(error?.message || 'Errore durante la registrazione');
+    console.error('❌ Registration error:', error?.message || error);
+    
+    let errorMessage = 'Errore durante la registrazione';
+    if (error?.message?.includes('already registered')) {
+      errorMessage = 'Questo indirizzo email è già registrato. Prova ad accedere.';
+    } else if (error?.message?.includes('weak_password')) {
+      errorMessage = 'La password è troppo debole. Deve contenere almeno 6 caratteri.';
+    }
+    
+    toast.error(errorMessage);
     throw error;
   }
 };
