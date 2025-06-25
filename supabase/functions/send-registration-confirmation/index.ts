@@ -20,7 +20,7 @@ const EMAIL_PORT = Number(Deno.env.get("EMAIL_PORT")) || 465;
 const EMAIL_USERNAME = Deno.env.get("EMAIL_USERNAME") || "";
 const EMAIL_PASSWORD = Deno.env.get("EMAIL_PASSWORD") || "";
 const EMAIL_FROM = Deno.env.get("EMAIL_FROM") || "Dr.Plant <noreply@drplant.app>";
-const APP_URL = Deno.env.get("APP_URL") || "https://drplant.app";
+const APP_URL = Deno.env.get("APP_URL") || "https://plant-patho-pal.lovable.app";
 
 // Either use SMTP or SendGrid API depending on availability of API key
 const SENDGRID_API_KEY = Deno.env.get("SENDGRID_API_KEY");
@@ -339,8 +339,9 @@ async function sendConfirmationEmail(email: string, username: string, confirmati
 }
 
 serve(async (req) => {
-  // This Edge Function is automatically triggered by Supabase Auth when a user signs up
-  console.log("Registration confirmation request received");
+  console.log("🚀 Registration confirmation webhook received");
+  console.log("Method:", req.method);
+  console.log("Headers:", Object.fromEntries(req.headers.entries()));
   
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -349,29 +350,41 @@ serve(async (req) => {
   try {
     let body;
     try {
-      body = await req.json();
+      const rawBody = await req.text();
+      console.log("Raw body:", rawBody);
+      
+      if (rawBody) {
+        body = JSON.parse(rawBody);
+      } else {
+        body = {};
+      }
     } catch (error) {
       console.error("Error parsing JSON body:", error);
       body = {}; // Default to empty object if parsing fails
     }
     
-    console.log("Request body:", body);
+    console.log("Parsed request body:", JSON.stringify(body, null, 2));
     
-    const { user, email, confirmationToken, confirmationUrl } = body;
+    // Handle both direct calls and Supabase auth webhook format
+    const user = body.record || body.user || body;
+    const email = user?.email || body.email;
+    const confirmationUrl = body.confirmation_url || body.confirmationUrl;
     
-    if (!user && !email) {
-      console.error("Missing user or email in request");
-      throw new Error("Missing user or email");
+    if (!email) {
+      console.error("❌ Missing email in request");
+      console.log("Available data:", JSON.stringify(body, null, 2));
+      throw new Error("Missing email in request");
     }
     
-    const userEmail = user?.email || email;
-    console.log(`Processing registration for user: ${userEmail}`);
+    console.log(`📧 Processing registration confirmation for: ${email}`);
     
     // Initialize Supabase client with service role to access auth admin functions
     const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     
-    // Create user profile in the database if not already exists
+    // Create user profile in the database if user ID is available
     if (user?.id) {
+      console.log(`👤 Creating profile for user ID: ${user.id}`);
+      
       const { data: existingProfile } = await supabaseAdmin
         .from('profiles')
         .select('id')
@@ -379,38 +392,54 @@ serve(async (req) => {
         .single();
         
       if (!existingProfile) {
-        const username = userEmail.split('@')[0];
+        const username = email.split('@')[0];
         const { error: profileError } = await supabaseAdmin
           .from('profiles')
           .insert({
             id: user.id,
-            email: userEmail,
+            email: email,
             username: username,
-            created_at: new Date(),
-            updated_at: new Date()
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
           });
             
         if (profileError) {
-          console.error("Error creating profile:", profileError);
+          console.error("❌ Error creating profile:", profileError);
         } else {
-          console.log(`Profile created successfully for: ${userEmail}`);
+          console.log(`✅ Profile created successfully for: ${email}`);
         }
+      } else {
+        console.log(`👤 Profile already exists for: ${email}`);
       }
     }
     
-    // Send confirmation or welcome email based on context
+    // Send confirmation email
     try {
-      const username = userEmail.split('@')[0];
-      await sendConfirmationEmail(userEmail, username, confirmationUrl);
-      console.log(`Email sent to ${userEmail}`);
+      const username = email.split('@')[0];
+      console.log(`📤 Sending confirmation email to: ${email}`);
+      
+      await sendConfirmationEmail(email, username, confirmationUrl);
+      console.log(`✅ Confirmation email sent successfully to: ${email}`);
+      
+      return new Response(
+        JSON.stringify({ 
+          success: true,
+          message: "Registration confirmation email sent successfully"
+        }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 200,
+        },
+      );
     } catch (emailError) {
-      console.error("Error sending email:", emailError);
-      // Continue even if email sending fails, the user is still registered
+      console.error("❌ Error sending email:", emailError);
+      
+      // Still return success to avoid blocking user registration
       return new Response(
         JSON.stringify({ 
           success: true, 
-          message: "User registered, but an error occurred sending the email",
-          error: emailError.message 
+          message: "User registered successfully, but email sending failed",
+          warning: emailError.message 
         }),
         {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -419,18 +448,14 @@ serve(async (req) => {
       );
     }
     
-    return new Response(
-      JSON.stringify({ success: true }),
-      {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 200,
-      },
-    );
   } catch (error: any) {
-    console.error("Error during registration:", error);
+    console.error("❌ Error during registration confirmation:", error);
     
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ 
+        error: error.message,
+        success: false 
+      }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 500,

@@ -291,9 +291,35 @@ export const registerUser = async (email: string, password: string) => {
     
     if (data.user) {
       console.log('✅ Registration successful for:', email);
-      console.log('📧 Confirmation email should be sent automatically');
+      console.log('User data:', data.user);
       
-      // La funzione edge send-registration-confirmation dovrebbe essere triggerata automaticamente
+      // Manually trigger confirmation email if needed
+      if (data.user && !data.user.email_confirmed_at) {
+        console.log('📧 Triggering confirmation email manually...');
+        
+        try {
+          const { data: functionResult, error: functionError } = await supabase.functions.invoke(
+            'send-registration-confirmation',
+            {
+              body: {
+                user: data.user,
+                email: email,
+                confirmationUrl: data.user.confirmation_sent_at ? 
+                  `${window.location.origin}/auth?token_hash=${data.user.id}&type=signup` : undefined
+              }
+            }
+          );
+          
+          if (functionError) {
+            console.error('❌ Error invoking confirmation function:', functionError);
+          } else {
+            console.log('✅ Confirmation email function triggered:', functionResult);
+          }
+        } catch (functionError) {
+          console.error('❌ Error calling confirmation function:', functionError);
+        }
+      }
+      
       toast.success('Registrazione completata!', {
         description: 'Ti abbiamo inviato un\'email di conferma. Controlla la tua casella di posta.',
         duration: 8000
