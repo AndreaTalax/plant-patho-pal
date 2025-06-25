@@ -110,7 +110,7 @@ serve(async (req) => {
       .from('conversations')
       .select('*')
       .eq('id', conversationId)
-      .maybeSingle(); // Cambiato da .single() a .maybeSingle()
+      .maybeSingle();
 
     if (conversationError) {
       console.error("❌ Error fetching conversation:", conversationError);
@@ -128,9 +128,10 @@ serve(async (req) => {
       console.log("⚠️ Conversation not found or deleted:", conversationId);
       return new Response(JSON.stringify({ 
         error: "Conversation not found or has been deleted",
-        conversationId: conversationId
+        conversationId: conversationId,
+        shouldRedirect: true
       }), {
-        status: 410, // 410 Gone - indica che la risorsa esisteva ma è stata eliminata
+        status: 404, // Cambiato da 410 a 404 per essere più standard
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -180,7 +181,7 @@ serve(async (req) => {
       .from('profiles')
       .select('first_name, last_name, email')
       .eq('id', conversation.user_id)
-      .maybeSingle(); // Anche qui uso maybeSingle per sicurezza
+      .maybeSingle();
 
     if (profileError) {
       console.error("⚠️ Error fetching user profile:", profileError);

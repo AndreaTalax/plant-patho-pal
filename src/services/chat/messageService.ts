@@ -5,6 +5,63 @@ import { toast } from 'sonner';
 
 export class MessageService {
   /**
+   * Carica messaggi direttamente dal database (senza edge function)
+   */
+  static async loadMessages(conversationId: string) {
+    try {
+      console.log('📚 MessageService: Carico messaggi direttamente dal database', conversationId);
+
+      if (!conversationId) {
+        return [];
+      }
+
+      // Prima verifica se la conversazione esiste
+      const { data: conversation, error: convError } = await supabase
+        .from('conversations')
+        .select('id')
+        .eq('id', conversationId)
+        .maybeSingle();
+
+      if (convError) {
+        console.error('❌ MessageService: Errore verifica conversazione', convError);
+        throw convError;
+      }
+
+      if (!conversation) {
+        console.log('⚠️ MessageService: Conversazione non trovata', conversationId);
+        throw new Error('CONVERSATION_NOT_FOUND');
+      }
+
+      // Caricamento diretto dal database senza edge function
+      const { data: messages, error } = await supabase
+        .from('messages')
+        .select('*')
+        .eq('conversation_id', conversationId)
+        .order('sent_at', { ascending: true })
+        .limit(100);
+
+      if (error) {
+        console.error('❌ MessageService: Errore caricamento messaggi', error);
+        throw error;
+      }
+
+      console.log('✅ MessageService: Messaggi caricati direttamente', messages?.length || 0);
+      return messages || [];
+
+    } catch (error: any) {
+      console.error('❌ MessageService: Errore caricamento messaggi', error);
+      
+      // Gestione specifica per conversazione non trovata
+      if (error.message === 'CONVERSATION_NOT_FOUND') {
+        throw new Error('Conversazione non trovata o eliminata');
+      }
+      
+      toast.error('Errore caricamento messaggi');
+      throw error;
+    }
+  }
+
+  /**
    * Invia un messaggio usando la edge function
    */
   static async sendMessage(
@@ -32,6 +89,23 @@ export class MessageService {
 
       if (!conversationId || !senderId || !content?.trim()) {
         throw new Error('Dati messaggio incompleti');
+      }
+
+      // Prima verifica se la conversazione esiste ancora
+      const { data: conversation, error: convError } = await supabase
+        .from('conversations')
+        .select('id, status')
+        .eq('id', conversationId)
+        .maybeSingle();
+
+      if (convError) {
+        console.error('❌ MessageService: Errore verifica conversazione', convError);
+        throw convError;
+      }
+
+      if (!conversation) {
+        console.log('⚠️ MessageService: Conversazione non trovata', conversationId);
+        throw new Error('Conversazione non trovata o eliminata');
       }
 
       // Determina il recipientId
@@ -83,7 +157,14 @@ export class MessageService {
 
     } catch (error: any) {
       console.error('❌ MessageService: Errore invio messaggio', error);
-      toast.error(error.message || 'Errore invio messaggio');
+      
+      // Gestione specifica per conversazione non trovata
+      if (error.message?.includes('non trovata') || error.message?.includes('eliminata')) {
+        toast.error('Conversazione non più disponibile');
+      } else {
+        toast.error(error.message || 'Errore invio messaggio');
+      }
+      
       return false;
     }
   }
@@ -97,40 +178,6 @@ export class MessageService {
     imageUrl: string
   ) {
     return this.sendMessage(conversationId, senderId, '📸 Immagine allegata', imageUrl);
-  }
-
-  /**
-   * Carica messaggi direttamente dal database (senza edge function)
-   */
-  static async loadMessages(conversationId: string) {
-    try {
-      console.log('📚 MessageService: Carico messaggi direttamente dal database', conversationId);
-
-      if (!conversationId) {
-        return [];
-      }
-
-      // Caricamento diretto dal database senza edge function
-      const { data: messages, error } = await supabase
-        .from('messages')
-        .select('*')
-        .eq('conversation_id', conversationId)
-        .order('sent_at', { ascending: true })
-        .limit(100);
-
-      if (error) {
-        console.error('❌ MessageService: Errore caricamento messaggi', error);
-        throw error;
-      }
-
-      console.log('✅ MessageService: Messaggi caricati direttamente', messages?.length || 0);
-      return messages || [];
-
-    } catch (error: any) {
-      console.error('❌ MessageService: Errore caricamento messaggi', error);
-      toast.error('Errore caricamento messaggi');
-      return [];
-    }
   }
 
   /**

@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { DatabaseMessage } from "@/services/chat/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Loader2, Send, AlertCircle } from "lucide-react";
+import { ArrowLeft, Loader2, Send, AlertCircle, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { useRealtimeChat } from "@/hooks/useRealtimeChat";
 import { MARCO_NIGRO_ID } from "@/components/phytopathologist";
@@ -22,6 +22,7 @@ const ExpertChatDetailView = ({ conversation, onBack }: {
   const [error, setError] = useState<string | null>(null);
   const [newMessage, setNewMessage] = useState("");
   const [sending, setSending] = useState(false);
+  const [conversationDeleted, setConversationDeleted] = useState(false);
 
   // Setup real-time chat
   const { isConnected, sendMessage } = useRealtimeChat({
@@ -39,7 +40,7 @@ const ExpertChatDetailView = ({ conversation, onBack }: {
 
   // Carica messaggi della conversazione
   useEffect(() => {
-    let isMounted = true; // Previene aggiornamenti se il componente è smontato
+    let isMounted = true;
 
     const loadMessages = async () => {
       if (!conversation?.id) {
@@ -50,6 +51,7 @@ const ExpertChatDetailView = ({ conversation, onBack }: {
 
       setLoading(true);
       setError(null);
+      setConversationDeleted(false);
       
       try {
         console.log('🔄 Loading conversation messages for:', conversation.id);
@@ -79,13 +81,13 @@ const ExpertChatDetailView = ({ conversation, onBack }: {
         if (response.error) {
           console.error('❌ Function error:', response.error);
           
-          // Gestione specifica per conversazione eliminata - controlla il messaggio di errore
+          // Gestione specifica per conversazione eliminata
           if (response.error.message?.includes("not found") || 
               response.error.message?.includes("deleted") ||
-              response.error.message?.includes("Conversation not found or has been deleted")) {
-            console.log('🗑️ Conversation was deleted, going back');
-            toast.error('Questa conversazione è stata eliminata');
-            onBack(); // Torna automaticamente alla lista
+              response.error.message?.includes("404")) {
+            console.log('🗑️ Conversation was deleted');
+            setConversationDeleted(true);
+            setError('Questa conversazione è stata eliminata');
             return;
           }
           
@@ -109,18 +111,17 @@ const ExpertChatDetailView = ({ conversation, onBack }: {
         // Controlla se il componente è ancora montato prima di aggiornare lo stato
         if (!isMounted) return;
         
-        // Gestisci specificamente l'errore "conversazione non trovata"
+        // Gestisce specificamente l'errore "conversazione non trovata"
         if (e?.message?.includes("PGRST116") || 
             e?.message?.includes("0 rows") ||
             e?.message?.includes("not found") ||
-            e?.message?.includes("deleted")) {
+            e?.message?.includes("deleted") ||
+            e?.message?.includes("404")) {
           console.log('🗑️ Conversation not found, probably deleted');
-          toast.error('Conversazione non trovata o eliminata');
-          onBack(); // Torna automaticamente alla lista
-          return;
+          setConversationDeleted(true);
+          setError('Conversazione non trovata o eliminata');
         } else {
           setError(e?.message || "Errore nel caricamento della chat");
-          toast.error(e?.message || "Errore caricamento chat");
         }
       } finally {
         if (isMounted) {
@@ -135,7 +136,7 @@ const ExpertChatDetailView = ({ conversation, onBack }: {
     return () => {
       isMounted = false;
     };
-  }, [conversation?.id]); // Only depend on conversation.id
+  }, [conversation?.id]);
 
   const handleSendMessage = useCallback(async () => {
     if (!newMessage.trim() || sending) return;
@@ -165,15 +166,21 @@ const ExpertChatDetailView = ({ conversation, onBack }: {
     // Forza il reload resettando lo stato e richiamando useEffect
     setLoading(true);
     setError(null);
+    setConversationDeleted(false);
     // useEffect si riattiva automaticamente quando cambia lo stato
   }, []);
+
+  const handleGoBack = useCallback(() => {
+    console.log('🔙 Going back to conversations list');
+    onBack();
+  }, [onBack]);
 
   // Se non abbiamo un ID conversazione valido
   if (!conversation?.id) {
     return (
       <div className="max-w-2xl mx-auto mt-6 bg-white/95 rounded-2xl p-6 shadow-lg">
         <div className="flex items-center mb-4">
-          <Button variant="ghost" onClick={onBack} className="mr-2">
+          <Button variant="ghost" onClick={handleGoBack} className="mr-2">
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <h2 className="text-xl font-bold">Errore</h2>
@@ -192,7 +199,7 @@ const ExpertChatDetailView = ({ conversation, onBack }: {
     <div className="max-w-2xl mx-auto mt-6 bg-white/95 rounded-2xl p-6 shadow-lg">
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center">
-          <Button variant="ghost" onClick={onBack} className="mr-2">
+          <Button variant="ghost" onClick={handleGoBack} className="mr-2">
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
@@ -218,15 +225,24 @@ const ExpertChatDetailView = ({ conversation, onBack }: {
         </div>
       ) : error ? (
         <div className="flex flex-col justify-center items-center h-40 gap-4">
-          <Alert variant="destructive" className="w-full">
+          <Alert variant={conversationDeleted ? "destructive" : "default"} className="w-full">
             <AlertCircle className="h-4 w-4" />
-            <AlertDescription>{error}</AlertDescription>
+            <AlertDescription>
+              {conversationDeleted ? 
+                "Questa conversazione è stata eliminata e non è più disponibile." : 
+                error
+              }
+            </AlertDescription>
           </Alert>
           <div className="flex gap-2">
-            <Button onClick={handleRetry} variant="outline">
-              Riprova
-            </Button>
-            <Button onClick={onBack} variant="ghost">
+            {!conversationDeleted && (
+              <Button onClick={handleRetry} variant="outline">
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Riprova
+              </Button>
+            )}
+            <Button onClick={handleGoBack} variant="ghost">
+              <ArrowLeft className="h-4 w-4 mr-2" />
               Torna alla lista
             </Button>
           </div>
@@ -261,27 +277,29 @@ const ExpertChatDetailView = ({ conversation, onBack }: {
             )}
           </div>
 
-          <div className="flex gap-2">
-            <Input
-              value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
-              onKeyPress={handleKeyPress}
-              placeholder="Scrivi un messaggio..."
-              disabled={sending || !isConnected}
-              className="flex-1"
-            />
-            <Button 
-              onClick={handleSendMessage}
-              disabled={!newMessage.trim() || sending || !isConnected}
-              size="icon"
-            >
-              {sending ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Send className="h-4 w-4" />
-              )}
-            </Button>
-          </div>
+          {!conversationDeleted && (
+            <div className="flex gap-2">
+              <Input
+                value={newMessage}
+                onChange={(e) => setNewMessage(e.target.value)}
+                onKeyPress={handleKeyPress}
+                placeholder="Scrivi un messaggio..."
+                disabled={sending || !isConnected}
+                className="flex-1"
+              />
+              <Button 
+                onClick={handleSendMessage}
+                disabled={!newMessage.trim() || sending || !isConnected}
+                size="icon"
+              >
+                {sending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Send className="h-4 w-4" />
+                )}
+              </Button>
+            </div>
+          )}
         </>
       )}
     </div>
