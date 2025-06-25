@@ -1,23 +1,9 @@
 
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Leaf } from "lucide-react";
 import { AuthForm } from "@/components/auth/AuthForm";
 import { supabase } from "@/integrations/supabase/client";
 
-/**
- * Authenticates the user session and manages navigation post-authentication
- * @example
- * Auth()
- * <div>...</div>
- * @param none
- * @returns {JSX.Element} Returns a JSX element representing the authentication page.
- * @description
- *   - Checks the current user's authentication session and navigates if already signed in.
- *   - Listens for authentication state changes to handle navigation upon sign-in.
- *   - Unsubscribes from authentication state change listener on component unmount.
- *   - Returns structured JSX for rendering the authentication page interface.
- */
 export default function Auth() {
   const navigate = useNavigate();
   
@@ -52,7 +38,11 @@ export default function Auth() {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center p-4 bg-white/80 backdrop-blur-sm rounded-full shadow-lg mb-4">
-            <Leaf className="h-12 w-12 text-drplant-green" />
+            <img 
+              src="/lovable-uploads/72d5a60c-404a-4167-9430-511af91c523b.png" 
+              alt="Dr.Plant Logo" 
+              className="h-12 w-auto"
+            />
           </div>
           <h1 className="text-3xl font-bold text-drplant-blue-dark">Dr.Plant</h1>
           <p className="text-gray-600 mt-2">Il tuo assistente per la cura delle piante</p>

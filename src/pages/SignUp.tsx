@@ -82,7 +82,7 @@ const SignUp = () => {
         <div className="text-center mb-8">
           <div className="flex justify-center mb-4">
             <img 
-              src="/lovable-uploads/2be72d96-649b-4a40-a1e0-fea41cc64fc8.png" 
+              src="/lovable-uploads/72d5a60c-404a-4167-9430-511af91c523b.png" 
               alt="Dr.Plant Logo" 
               className="h-16 w-auto"
             />

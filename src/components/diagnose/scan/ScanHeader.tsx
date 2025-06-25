@@ -1,24 +1,17 @@
 
 import React from 'react';
-import { Leaf, Sparkles } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 
-/**
-* Renders the header for the Plant Health Scanner component.
-* @example
-* renderScanHeader()
-* <div className="text-center mb-8">...</div>
-* @returns {JSX.Element} The JSX for the Plant Health Scanner header.
-* @description
-*   - Incorporates iconography with the Leaf and Sparkles components to enhance visual appeal.
-*   - Utilizes Tailwind CSS classes for responsive and modern styling.
-*   - Emphasizes plant health scanning and AI technology features through descriptive text.
-*/
 const ScanHeader = () => {
   return (
     <div className="text-center mb-8">
       <div className="flex justify-center mb-4">
         <div className="bg-green-100 p-3 rounded-full">
-          <Leaf className="h-8 w-8 text-green-600" />
+          <img 
+            src="/lovable-uploads/72d5a60c-404a-4167-9430-511af91c523b.png" 
+            alt="Dr.Plant Logo" 
+            className="h-8 w-auto"
+          />
         </div>
       </div>
       <h1 className="text-3xl font-bold text-gray-900 mb-2">

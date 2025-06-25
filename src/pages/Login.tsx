@@ -6,23 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Leaf, LockKeyhole, Mail } from "lucide-react";
+import { LockKeyhole, Mail } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 
-/**
- * Handles user login by validating credentials and navigating to the main page upon success.
- * @example
- * handleLogin(event)
- * - No explicit return value, handles UI actions.
- * @param {React.FormEvent} e - Event triggered by form submission.
- * @returns {void} Nothing is returned. Function manages authentication process and UI state internally.
- * @description
- *   - Provides user feedback using toast notifications based on the success or failure of the authentication.
- *   - Implements client-side form validation ensuring both email and password fields are filled.
- *   - Utilizes async/await for login process to handle asynchronous operations smoothly.
- *   - Navigation to the home page is delayed for 500 milliseconds after a successful login 
- *     to ensure the authentication state is properly updated.
- */
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -37,19 +23,6 @@ const Login = () => {
     'premium@gmail.com'
   ];
 
-  /**
-  * Handles user login process by validating credentials and providing feedback.
-  * @example
-  * sync(formEvent)
-  * Initiates login and navigates home on success.
-  * @param {React.FormEvent} e - The form event that triggers the login process.
-  * @returns {void} No return value, but navigates on successful login.
-  * @description
-  *   - Trims whitespaces from the email input before sending login request.
-  *   - Uses toast notifications for both success and error feedback.
-  *   - Logs success and error information to the console for debugging purposes.
-  *   - Includes a delay before navigation to ensure authentication state is updated.
-  */
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     toast.dismiss();
@@ -118,7 +91,11 @@ const Login = () => {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center p-4 bg-white/80 backdrop-blur-sm rounded-full shadow-lg mb-4">
-            <Leaf className="h-12 w-12 text-drplant-green" />
+            <img 
+              src="/lovable-uploads/72d5a60c-404a-4167-9430-511af91c523b.png" 
+              alt="Dr.Plant Logo" 
+              className="h-12 w-auto"
+            />
           </div>
           <h1 className="text-3xl font-bold text-drplant-blue-dark">Dr.Plant</h1>
           <p className="text-gray-600 mt-2">Accedi al tuo assistente per la cura delle piante</p>
