@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -58,17 +57,10 @@ const ExpertDashboard = () => {
     try {
       console.log('Caricamento conversazioni...');
       
-      // Carica conversazioni con profili utente
+      // First, get conversations
       const { data: conversations, error } = await supabase
         .from('conversations')
-        .select(`
-          *,
-          profiles:user_id (
-            first_name,
-            last_name,
-            email
-          )
-        `)
+        .select('*')
         .order('last_message_at', { ascending: false, nullsFirst: false })
         .order('created_at', { ascending: false });
 
@@ -80,9 +72,21 @@ const ExpertDashboard = () => {
 
       console.log('Conversazioni caricate:', conversations);
 
-      // Conta messaggi non letti per ogni conversazione
-      const conversationsWithUnread = await Promise.all(
+      // Then get user profiles and unread counts for each conversation
+      const conversationsWithProfiles = await Promise.all(
         (conversations || []).map(async (conv) => {
+          // Get user profile
+          const { data: profile, error: profileError } = await supabase
+            .from('profiles')
+            .select('first_name, last_name, email')
+            .eq('id', conv.user_id)
+            .single();
+
+          if (profileError) {
+            console.error('Errore caricamento profilo:', profileError);
+          }
+
+          // Count unread messages
           const { count } = await supabase
             .from('messages')
             .select('*', { count: 'exact', head: true })
@@ -92,13 +96,13 @@ const ExpertDashboard = () => {
 
           return {
             ...conv,
-            user_profile: conv.profiles,
+            user_profile: profile || undefined,
             unread_count: count || 0
           };
         })
       );
 
-      setConversations(conversationsWithUnread);
+      setConversations(conversationsWithProfiles);
     } catch (error) {
       console.error('Errore:', error);
       toast.error('Errore nel caricamento delle conversazioni');
