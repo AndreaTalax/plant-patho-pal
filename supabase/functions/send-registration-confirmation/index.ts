@@ -13,9 +13,9 @@ console.log("Starting send-registration-confirmation function");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 
-// Email configuration - using SendGrid API
-const SENDGRID_API_KEY = Deno.env.get("SENDGRID_API_KEY");
-const EMAIL_FROM = Deno.env.get("EMAIL_FROM") || "noreply@drplant.app";
+// Email configuration - using Resend for better deliverability
+const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
+const EMAIL_FROM = "Dr.Plant <onboarding@resend.dev>"; // Using verified Resend domain
 const APP_URL = Deno.env.get("APP_URL") || "https://plant-patho-pal.lovable.app";
 
 // Debug log di tutti i parametri di configurazione
@@ -24,16 +24,16 @@ console.log("Configuration:", {
   SUPABASE_SERVICE_ROLE_KEY: SUPABASE_SERVICE_ROLE_KEY ? "Set" : "Not set",
   EMAIL_FROM,
   APP_URL,
-  SENDGRID_API_KEY: SENDGRID_API_KEY ? "Set" : "Not set",
+  RESEND_API_KEY: RESEND_API_KEY ? "Set" : "Not set",
 });
 
-// SendGrid API for email sending
-async function sendWithSendGridAPI(toEmail: string, username: string, confirmationUrl?: string) {
-  if (!SENDGRID_API_KEY) {
-    throw new Error("SendGrid API key is not configured");
+// Resend API for email sending
+async function sendWithResendAPI(toEmail: string, username: string) {
+  if (!RESEND_API_KEY) {
+    throw new Error("Resend API key is not configured");
   }
 
-  console.log(`Using SendGrid API to send email to ${toEmail}`);
+  console.log(`Using Resend API to send email to ${toEmail}`);
 
   // Create the email template
   const htmlContent = `
@@ -44,7 +44,7 @@ async function sendWithSendGridAPI(toEmail: string, username: string, confirmati
           .container { max-width: 600px; margin: 0 auto; padding: 20px; }
           .header { background: linear-gradient(135deg, #3b82f6 0%, #10b981 100%); color: white; padding: 30px 20px; text-align: center; border-radius: 8px 8px 0 0; }
           .header h1 { margin: 0; font-size: 28px; }
-          .logo { width: 80px; height: 80px; margin: 0 auto 20px; background-color: white; padding: 10px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+          .logo { width: 80px; height: 80px; margin: 0 auto 20px; background-color: white; padding: 10px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 40px; }
           .content { padding: 30px; background-color: #f9fafb; border-left: 1px solid #eaeaea; border-right: 1px solid #eaeaea; }
           .welcome-text { font-size: 18px; margin-bottom: 25px; }
           .features { background-color: #f0f9ff; padding: 20px; border-radius: 8px; margin: 20px 0; }
@@ -96,69 +96,54 @@ async function sendWithSendGridAPI(toEmail: string, username: string, confirmati
     </html>
   `;
   
-  console.log("About to call SendGrid API");
+  console.log("About to call Resend API");
   
   try {
-    // Call SendGrid API using v3 Mail Send API
-    const response = await fetch('https://api.sendgrid.com/v3/mail/send', {
+    // Call Resend API
+    const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${SENDGRID_API_KEY}`
+        'Authorization': `Bearer ${RESEND_API_KEY}`
       },
       body: JSON.stringify({
-        personalizations: [
-          {
-            to: [
-              {
-                email: toEmail
-              }
-            ]
-          }
-        ],
-        from: {
-          email: "noreply@drplant.app",
-          name: "Dr.Plant"
-        },
-        subject: "Benvenuto su Dr.Plant! Registrazione Confermata",
-        content: [
-          {
-            type: "text/html",
-            value: htmlContent
-          }
-        ]
+        from: EMAIL_FROM,
+        to: [toEmail],
+        subject: "Benvenuto su Dr.Plant! Registrazione Confermata 🌱",
+        html: htmlContent
       })
     });
     
-    console.log(`SendGrid API response status: ${response.status} ${response.statusText}`);
+    console.log(`Resend API response status: ${response.status} ${response.statusText}`);
     
     if (!response.ok) {
-      const errorData = await response.text();
-      console.error("SendGrid API error:", errorData);
-      throw new Error(`SendGrid API error: ${response.status} ${response.statusText}. Details: ${errorData}`);
+      const errorData = await response.json();
+      console.error("Resend API error:", errorData);
+      throw new Error(`Resend API error: ${response.status} ${response.statusText}. Details: ${JSON.stringify(errorData)}`);
     }
     
-    console.log("✅ Email sent successfully via SendGrid API");
-    return { success: true };
+    const result = await response.json();
+    console.log("✅ Email sent successfully via Resend API:", result);
+    return { success: true, id: result.id };
   } catch (error: any) {
-    console.error("Failed to send via SendGrid API:", error.message);
+    console.error("Failed to send via Resend API:", error.message);
     throw error;
   }
 }
 
 // Send registration confirmation email
-async function sendConfirmationEmail(email: string, username: string, confirmationUrl?: string) {
+async function sendConfirmationEmail(email: string, username: string) {
   try {
     console.log(`Attempting to send email to ${email} using username ${username}`);
     
-    if (!SENDGRID_API_KEY) {
-      console.error("❌ SendGrid API key not configured");
-      throw new Error("Email service not configured");
+    if (!RESEND_API_KEY) {
+      console.error("❌ Resend API key not configured");
+      throw new Error("Email service not configured. Please configure RESEND_API_KEY");
     }
     
-    await sendWithSendGridAPI(email, username, confirmationUrl);
-    console.log(`✅ Confirmation email sent to ${email} successfully`);
-    return { success: true };
+    const result = await sendWithResendAPI(email, username);
+    console.log(`✅ Confirmation email sent to ${email} successfully:`, result);
+    return { success: true, id: result.id };
   } catch (error) {
     console.error(`❌ Error sending email to ${email}:`, error);
     throw error;
@@ -243,20 +228,21 @@ serve(async (req) => {
       const username = email.split('@')[0];
       console.log(`📤 Sending confirmation email to: ${email}`);
       
-      await sendConfirmationEmail(email, username);
-      console.log(`✅ Confirmation email sent successfully to: ${email}`);
+      const emailResult = await sendConfirmationEmail(email, username);
+      console.log(`✅ Confirmation email sent successfully to: ${email}`, emailResult);
       
       return new Response(
         JSON.stringify({ 
           success: true,
-          message: "Registration confirmation email sent successfully"
+          message: "Registration confirmation email sent successfully",
+          emailId: emailResult.id
         }),
         {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
           status: 200,
         },
       );
-    } catch (emailError) {
+    } catch (emailError: any) {
       console.error("❌ Error sending email:", emailError);
       
       // Still return success to avoid blocking user registration
