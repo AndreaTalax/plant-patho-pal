@@ -1,5 +1,6 @@
 
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
 import { Card } from "@/components/ui/card";
@@ -13,6 +14,7 @@ const SignUp = () => {
   const [emailSent, setEmailSent] = useState(false);
   const [registeredEmail, setRegisteredEmail] = useState("");
   const { register } = useAuth();
+  const navigate = useNavigate();
 
   const onSubmit = async (values: SignUpFormValues) => {
     setIsLoading(true);
@@ -30,6 +32,12 @@ const SignUp = () => {
         duration: 8000,
         dismissible: true,
       });
+
+      // Dopo la registrazione, vai alla pagina di login dopo un breve delay
+      setTimeout(() => {
+        navigate("/login");
+      }, 3000);
+      
     } catch (error: any) {
       console.error("Errore registrazione:", error);
       let errorMessage = "Si è verificato un problema durante la registrazione";
