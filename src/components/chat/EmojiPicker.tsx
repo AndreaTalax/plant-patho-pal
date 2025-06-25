@@ -16,7 +16,10 @@ const EmojiPicker: React.FC<EmojiPickerProps> = ({ onSelect, open, onClose }) =>
 
   const handleEmojiSelect = (emoji: any) => {
     console.log('Emoji selezionata:', emoji);
+    // Passa l'emoji con il campo 'native' che contiene il carattere emoji
     onSelect(emoji);
+    // Chiudi automaticamente il picker dopo la selezione
+    onClose();
   };
 
   return (
@@ -42,6 +45,8 @@ const EmojiPicker: React.FC<EmojiPickerProps> = ({ onSelect, open, onClose }) =>
             perLine={8}
             maxFrequentRows={2}
             set="native"
+            emojiSize={20}
+            emojiButtonSize={28}
           />
         </div>
       </div>

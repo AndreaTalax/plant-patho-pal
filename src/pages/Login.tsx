@@ -16,12 +16,12 @@ const Login = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
 
-  // Lista degli account amministrativi per gestione speciale
-  const adminEmails = [
-    'agrotecnicomarconigro@gmail.com',
-    'test@gmail.com',
-    'premium@gmail.com'
-  ];
+  // Lista degli account amministrativi con le loro password
+  const adminCredentials = {
+    'agrotecnicomarconigro@gmail.com': 'marconigro93',
+    'test@gmail.com': 'test123',
+    'premium@gmail.com': 'premium123'
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,8 +40,8 @@ const Login = () => {
     try {
       console.log('Starting login process for:', email);
       
-      // Per account amministrativi, ignora la password inserita
-      const isAdminEmail = adminEmails.includes(email.trim().toLowerCase());
+      const emailLower = email.trim().toLowerCase();
+      const isAdminEmail = Object.keys(adminCredentials).includes(emailLower);
       
       if (isAdminEmail) {
         console.log('Account amministrativo rilevato:', email);
@@ -67,7 +67,7 @@ const Login = () => {
       } else {
         toast.error("Login fallito", {
           description: isAdminEmail ? 
-            "Problemi con l'account amministratore. Contattare il supporto tecnico." : 
+            "Problemi con l'account amministratore. Verifica le credenziali." : 
             "Credenziali non valide. Riprova.",
           dismissible: true
         });
@@ -144,9 +144,14 @@ const Login = () => {
               </div>
               
               {/* Suggerimento per account amministrativi */}
-              {adminEmails.includes(email.trim().toLowerCase()) && (
-                <div className="text-sm text-blue-600 bg-blue-50 p-2 rounded">
-                  💡 Account amministratore rilevato. Usa qualsiasi password.
+              {adminCredentials[email.trim().toLowerCase() as keyof typeof adminCredentials] && (
+                <div className="text-sm text-blue-600 bg-blue-50 p-3 rounded border border-blue-200">
+                  <div className="font-medium">💡 Account amministratore rilevato</div>
+                  <div className="mt-1">
+                    Password: <code className="bg-blue-100 px-1 rounded font-mono">
+                      {adminCredentials[email.trim().toLowerCase() as keyof typeof adminCredentials]}
+                    </code>
+                  </div>
                 </div>
               )}
               
