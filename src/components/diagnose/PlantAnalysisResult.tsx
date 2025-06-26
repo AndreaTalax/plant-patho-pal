@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -6,14 +7,11 @@ import {
   CheckCircle, 
   AlertTriangle, 
   RefreshCw, 
-  MessageSquare,
   Leaf,
   Activity,
-  Database,
-  ArrowRight
+  Database
 } from 'lucide-react';
 import { PlantAnalysisResult } from '@/services/realPlantAnalysisService';
-import { useNavigate } from 'react-router-dom';
 
 interface PlantAnalysisResultProps {
   analysisResult: PlantAnalysisResult;
@@ -22,38 +20,12 @@ interface PlantAnalysisResultProps {
   autoSentToExpert?: boolean;
 }
 
-/**
- * Renders the plant analysis result and expert consultation status.
- * @example
- * renderPlantAnalysisResult({ analysisResult, imageUrl, onNewAnalysis, autoSentToExpert })
- * Returns a JSX element displaying the analysis details and expert chat option.
- * @param {object} analysisResult - The plant analysis result containing health status, diseases, and recommendations.
- * @param {string} imageUrl - The URL of the image used for plant analysis.
- * @param {function} onNewAnalysis - Function to initiate a new plant analysis.
- * @param {boolean} autoSentToExpert - Indicates if the diagnosis was automatically sent to an expert.
- * @returns {JSX.Element} A component displaying the analysis results, consultation status, and action buttons.
- * @description
- *   - Handles navigation to the chat tab and dispatches a custom event.
- *   - Determines and applies color coding based on confidence level.
- *   - Includes sections for health status, diseases detected, and expert recommendations.
- *   - Displays various actionable buttons for user interactions, such as initiating a new analysis or chatting with an expert.
- */
 const PlantAnalysisResultComponent: React.FC<PlantAnalysisResultProps> = ({
   analysisResult,
   imageUrl,
   onNewAnalysis,
   autoSentToExpert = false
 }) => {
-  const navigate = useNavigate();
-
-  const handleGoToChat = () => {
-    navigate('/');
-    setTimeout(() => {
-      const event = new CustomEvent('switchTab', { detail: 'chat' });
-      window.dispatchEvent(event);
-    }, 100);
-  };
-
   const confidenceColor = analysisResult.confidence >= 0.8 
     ? 'bg-green-500' 
     : analysisResult.confidence >= 0.6 
@@ -193,23 +165,15 @@ const PlantAnalysisResultComponent: React.FC<PlantAnalysisResultProps> = ({
           </div>
         </Card>
 
-        {/* Action Buttons */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {/* Action Button - Solo "Analyze Another Plant" */}
+        <div className="flex justify-center">
           <Button 
             onClick={onNewAnalysis} 
             variant="outline" 
-            className="h-14 text-base border-2 border-gray-300 hover:border-gray-400 hover:bg-gray-50"
+            className="h-14 text-base border-2 border-gray-300 hover:border-gray-400 hover:bg-gray-50 px-8"
           >
             <RefreshCw className="mr-3 h-5 w-5" />
             Analyze Another Plant
-          </Button>
-          
-          <Button 
-            onClick={handleGoToChat} 
-            className="h-14 text-base bg-drplant-blue hover:bg-drplant-blue/90 text-white shadow-lg"
-          >
-            <MessageSquare className="mr-3 h-5 w-5" />
-            Chat with Expert
           </Button>
         </div>
 
@@ -223,7 +187,7 @@ const PlantAnalysisResultComponent: React.FC<PlantAnalysisResultProps> = ({
               <Badge variant="secondary" className="bg-white shadow-sm">EPPO Database</Badge>
             </div>
           </div>
-        </Card>
+        </div>
       </div>
     </div>
   );
