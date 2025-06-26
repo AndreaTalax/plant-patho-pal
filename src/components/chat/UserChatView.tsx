@@ -42,8 +42,10 @@ const UserChatView = ({ userId }: UserChatViewProps) => {
       />
       <MessageList messages={messages} />
       <MessageInput 
+        conversationId="temp-conversation"
+        senderId={userId}
+        recipientId="expert"
         onSendMessage={handleSendMessage}
-        isSending={isSending}
       />
     </div>
   );
