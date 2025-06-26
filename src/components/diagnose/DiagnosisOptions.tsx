@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,13 +13,15 @@ import { useState } from "react";
 interface DiagnosisOptionsProps {
   onSelectAI: () => void;
   onSelectExpert: () => void;
+  hasAIAccess: boolean;
 }
 
 const DiagnosisOptions: React.FC<DiagnosisOptionsProps> = ({
   onSelectAI,
-  onSelectExpert
+  onSelectExpert,
+  hasAIAccess
 }) => {
-  const { hasAIAccess, upgradeMessage } = usePremiumStatus();
+  const { upgradeMessage } = usePremiumStatus();
   const [paywallOpen, setPaywallOpen] = useState(false);
 
   const handleAISelection = () => {
