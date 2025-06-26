@@ -44,22 +44,27 @@ const ChatMessage = ({ message, isExpertView = false, userAvatar, userName }: Ch
   };
 
   return (
-    <div className={`flex gap-3 ${getMessageAlignment()}`}>
+    <div className={`flex gap-3 w-full ${getMessageAlignment()}`}>
       {(!isExpertView || !isUser) && (
-        <MessageAvatar 
-          isUser={isUser} 
-          userAvatar={userAvatar} 
-          userName={userName} 
-        />
+        <div className="flex-shrink-0">
+          <MessageAvatar 
+            isUser={isUser} 
+            userAvatar={userAvatar} 
+            userName={userName} 
+          />
+        </div>
       )}
       
-      <div className={`max-w-xs sm:max-w-md md:max-w-lg ${isUser ? 'text-right' : 'text-left'}`}>
+      <div className={`flex flex-col min-w-0 ${isUser ? 'items-end' : 'items-start'} max-w-[80%] md:max-w-[70%] lg:max-w-[60%]`}>
         <div className={`
-          inline-block px-4 py-3 rounded-2xl shadow-sm
+          inline-block px-4 py-3 rounded-2xl shadow-sm break-words
           ${getMessageBubbleStyle()}
           ${isUser ? 'rounded-br-md' : 'rounded-bl-md'}
+          max-w-full word-wrap
         `}>
-          <MessageContent message={message} />
+          <div className="overflow-hidden">
+            <MessageContent message={message} />
+          </div>
         </div>
         
         <div className={`text-xs text-gray-500 mt-1 px-1 ${isUser ? 'text-right' : 'text-left'}`}>
@@ -68,11 +73,13 @@ const ChatMessage = ({ message, isExpertView = false, userAvatar, userName }: Ch
       </div>
       
       {(isExpertView && isUser) && (
-        <MessageAvatar 
-          isUser={isUser} 
-          userAvatar={userAvatar} 
-          userName={userName} 
-        />
+        <div className="flex-shrink-0">
+          <MessageAvatar 
+            isUser={isUser} 
+            userAvatar={userAvatar} 
+            userName={userName} 
+          />
+        </div>
       )}
     </div>
   );

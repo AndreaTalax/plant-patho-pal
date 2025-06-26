@@ -37,8 +37,8 @@ const MessageList = ({ messages, isExpertView = false }: MessageListProps) => {
         ref={scrollAreaRef}
         className="h-full w-full bg-gradient-to-br from-gray-50/50 via-white/30 to-drplant-green/5"
       >
-        <div className="p-6 space-y-4 min-h-full">
-          <div className="max-w-4xl mx-auto space-y-6">
+        <div className="p-4 space-y-4 min-h-full">
+          <div className="w-full max-w-full mx-auto space-y-4">
             {messages.length === 0 ? (
               <div className="text-center py-16">
                 <div className="relative mb-8">
@@ -77,11 +77,12 @@ const MessageList = ({ messages, isExpertView = false }: MessageListProps) => {
                 {messages.map(message => {
                   console.log('🎨 Rendering messaggio:', message);
                   return (
-                    <ChatMessage 
-                      key={message.id}
-                      message={message}
-                      isExpertView={isExpertView}
-                    />
+                    <div key={message.id} className="w-full">
+                      <ChatMessage 
+                        message={message}
+                        isExpertView={isExpertView}
+                      />
+                    </div>
                   );
                 })}
               </>

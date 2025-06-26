@@ -1,178 +1,66 @@
-import { useState, useRef } from 'react';
+
+import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Send, Loader2, Image, X, Smile } from 'lucide-react';
-import { sendMessage } from './chatService';
-import { MessageService } from '@/services/chat/messageService';
+import { Send, Image as ImageIcon, Loader2, Smile, Mic } from 'lucide-react';
 import { toast } from 'sonner';
 import { uploadPlantImage } from '@/utils/imageStorage';
-import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/context/AuthContext';
 import AudioRecorder from './AudioRecorder';
 import EmojiPicker from './EmojiPicker';
 
 interface MessageInputProps {
-  conversationId?: string;
-  senderId?: string;
-  recipientId?: string;
-  onMessageSent?: () => void;
-  onSendMessage?: (text: string) => void | Promise<void>;
-  isSending?: boolean;
+  conversationId: string;
+  senderId: string;
+  recipientId: string;
+  onSendMessage: (message: string, imageUrl?: string) => Promise<void>;
   isMasterAccount?: boolean;
-  disabledInput?: boolean;
-  variant?: 'default' | 'persistent';
+  enableAudio?: boolean;
+  enableEmoji?: boolean;
 }
 
-const MessageInput = ({
+const MessageInput: React.FC<MessageInputProps> = ({
   conversationId,
   senderId,
   recipientId,
-  onMessageSent,
   onSendMessage,
-  isSending: externalIsSending = false,
   isMasterAccount = false,
-  disabledInput = false,
-  variant = 'default'
-}: any) => {
+  enableAudio = false,
+  enableEmoji = false
+}) => {
   const [message, setMessage] = useState('');
-  const [internalIsSending, setInternalIsSending] = useState(false);
-  const [selectedImage, setSelectedImage] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [uploadingImage, setUploadingImage] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [isSending, setIsSending] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { userProfile } = useAuth();
 
-  // Emoji
-  const [showEmoji, setShowEmoji] = useState(false);
-  const emojiBtnRef = useRef<HTMLButtonElement>(null);
-
-  const isSending = externalIsSending || internalIsSending || uploadingImage;
-
-  const handleImageSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    if (!file.type.startsWith('image/')) {
-      toast.error('Il file deve essere un\'immagine');
-      return;
+  // Auto-resize textarea
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
     }
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error('L\'immagine deve essere inferiore a 5MB');
-      return;
-    }
-    setSelectedImage(file);
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      setImagePreview(e.target?.result as string);
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const removeSelectedImage = () => {
-    setSelectedImage(null);
-    setImagePreview(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-  };
-
-  // AUDIO: handler per il fallback
-  const handleSendAudio = async (audioBlob: Blob) => {
-    if (!audioBlob) return;
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        toast.error('User non autenticato');
-        return;
-      }
-      const fileName = `audio_${Date.now()}.webm`;
-      const { data, error } = await supabase.storage
-        .from('plant-images')
-        .upload(`${user.id}/${fileName}`, audioBlob, { contentType: 'audio/webm' });
-      if (error) throw error;
-      const { data: pubUrl } = supabase.storage
-        .from('plant-images')
-        .getPublicUrl(`${user.id}/${fileName}`);
-      if (pubUrl?.publicUrl && onSendMessage) {
-        await onSendMessage(`🎵 Messaggio vocale: ${pubUrl.publicUrl}`);
-        toast.success('Messaggio vocale inviato!');
-      }
-    } catch (e) {
-      toast.error('Errore invio audio');
-    }
-  };
+  }, [message]);
 
   const handleSend = async () => {
-    if ((!message.trim() && !selectedImage) || isSending) return;
-    let imageUrl: string | null = null;
+    if (!message.trim() || isSending) return;
+
     try {
-      if (selectedImage) {
-        setUploadingImage(true);
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-          toast.error('User non autenticato');
-          setUploadingImage(false);
-          return;
-        }
-        imageUrl = await uploadPlantImage(selectedImage, user.id);
-        console.log('✅ Image uploaded successfully:', imageUrl);
-      }
-      
-      if (onSendMessage) {
-        if (imageUrl && message.trim()) {
-          await onSendMessage(message.trim());
-          if (conversationId && senderId) {
-            await MessageService.sendMessage(conversationId, senderId, '📸 Immagine allegata', imageUrl);
-          }
-        } else if (imageUrl) {
-          if (conversationId && senderId) {
-            await MessageService.sendMessage(conversationId, senderId, '📸 Immagine allegata', imageUrl);
-          }
-        } else {
-          await onSendMessage(message.trim());
-        }
-        setMessage('');
-        removeSelectedImage();
-        return;
-      }
-
-      if (!conversationId || !senderId || !recipientId) {
-        toast.error('Errore: parametri mancanti');
-        return;
-      }
-
-      setInternalIsSending(true);
-      
-      if (message.trim()) {
-        const result = await sendMessage(
-          conversationId,
-          senderId,
-          recipientId,
-          message.trim()
-        );
-        if (!result) {
-          throw new Error('Failed to send text message');
-        }
-      }
-      
-      if (imageUrl) {
-        const success = await MessageService.sendMessage(conversationId, senderId, '📸 Immagine allegata', imageUrl);
-        if (!success) {
-          throw new Error('Failed to send image message');
-        }
-      }
-      
+      setIsSending(true);
+      await onSendMessage(message.trim());
       setMessage('');
-      removeSelectedImage();
-      onMessageSent?.();
-      console.log('✅ Message sent successfully');
-    } catch (error: any) {
-      if (error && error.message && (error.message.includes("502") || error.message.includes("Bad Gateway"))) {
-        toast.error('Errore server temporaneo (502). Riprova tra poco.');
-      } else {
-        toast.error(error?.message || 'Errore nell\'invio del messaggio');
+      
+      // Reset textarea height
+      if (textareaRef.current) {
+        textareaRef.current.style.height = 'auto';
       }
-      console.error('❌ Error sending message:', error);
+    } catch (error) {
+      console.error('Errore invio messaggio:', error);
+      toast.error('Errore nell\'invio del messaggio');
     } finally {
-      setInternalIsSending(false);
-      setUploadingImage(false);
+      setIsSending(false);
     }
   };
 
@@ -183,178 +71,151 @@ const MessageInput = ({
     }
   };
 
-  const handleSelectEmoji = (emoji: any) => {
-    setMessage(prev => prev + (emoji.native ?? emoji.shortcodes ?? ''));
-    setShowEmoji(false);
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !userProfile?.id) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('Seleziona solo immagini');
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('L\'immagine deve essere inferiore a 10MB');
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      const imageUrl = await uploadPlantImage(file, userProfile.id);
+      await onSendMessage('📸 Immagine allegata', imageUrl);
+      toast.success('Immagine inviata con successo!');
+    } catch (error) {
+      console.error('Errore upload immagine:', error);
+      toast.error('Errore nel caricamento dell\'immagine');
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
   };
 
-  if (variant === 'persistent') {
-    return (
-      <div className="fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm border-t border-gray-200 p-4">
-        <div className="max-w-4xl mx-auto">
-          {imagePreview && (
-            <div className="mb-4 relative inline-block">
-              <img 
-                src={imagePreview} 
-                alt="Anteprima" 
-                className="max-h-32 rounded-lg shadow-md"
-              />
-              <button
-                onClick={removeSelectedImage}
-                className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600 transition-colors"
-                tabIndex={-1}
-                disabled={disabledInput}
-              >
-                <X className="h-3 w-3" />
-              </button>
-            </div>
-          )}
+  const handleEmojiSelect = (emoji: any) => {
+    if (emoji?.native) {
+      setMessage(prev => prev + emoji.native);
+      setShowEmojiPicker(false);
+      
+      // Focus back to textarea
+      if (textareaRef.current) {
+        textareaRef.current.focus();
+      }
+    }
+  };
 
-          <div className="flex items-end gap-3 bg-white rounded-3xl shadow-lg border border-gray-200 p-3">
-            <div className="flex-1">
-              <Textarea
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                onKeyPress={handleKeyPress}
-                placeholder={
-                  disabledInput
-                    ? "Chat non disponibile. Controlla la connessione e riprova tra poco."
-                    : "Scrivi il tuo messaggio all'esperto..."
-                }
-                className="min-h-[50px] max-h-[120px] resize-none border-none bg-transparent text-gray-700 placeholder:text-gray-400 focus:ring-0 focus:outline-none p-3"
-                disabled={isSending || disabledInput}
-              />
-            </div>
-
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={isSending || disabledInput}
-              className="h-12 w-12 rounded-2xl bg-gray-50 hover:bg-gray-100 border border-gray-200 flex-shrink-0"
-            >
-              <Image className="h-5 w-5 text-gray-600" />
-            </Button>
-
-            <Button
-              onClick={handleSend}
-              disabled={(!message.trim() && !selectedImage) || isSending || disabledInput}
-              className="h-12 w-12 rounded-2xl bg-drplant-green hover:bg-drplant-green-dark text-white shadow-md flex-shrink-0 disabled:opacity-50"
-            >
-              {isSending ? (
-                <Loader2 className="h-5 w-5 animate-spin" />
-              ) : (
-                <Send className="h-5 w-5" />
-              )}
-            </Button>
-
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              onChange={handleImageSelect}
-              className="hidden"
-              disabled={disabledInput}
-            />
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const handleAudioSend = async (audioBlob: Blob) => {
+    console.log('🎵 Gestione invio audio dal MessageInput');
+    // L'AudioRecorder gestisce già l'upload tramite la funzione edge
+  };
 
   return (
-    <div className="border-t border-drplant-green/20 bg-white/80 backdrop-blur-sm p-6">
-      <div className="max-w-4xl mx-auto">
-        {imagePreview && (
-          <div className="mb-4 relative inline-block">
-            <img 
-              src={imagePreview} 
-              alt="Anteprima" 
-              className="max-h-32 rounded-lg shadow-md"
-            />
-            <button
-              onClick={removeSelectedImage}
-              className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600 transition-colors"
-              tabIndex={-1}
-              disabled={disabledInput}
-            >
-              <X className="h-3 w-3" />
-            </button>
-          </div>
-        )}
+    <div className="bg-white border-t border-gray-200 p-4">
+      {/* Audio Recorder - Solo se abilitato */}
+      {enableAudio && (
+        <div className="mb-4">
+          <AudioRecorder 
+            onSendAudio={handleAudioSend}
+            disabled={isSending || isUploading}
+            conversationId={conversationId}
+            senderId={senderId}
+            recipientId={recipientId}
+          />
+        </div>
+      )}
 
-        {/* AUDIO RECORDER con parametri conversazione */}
-        <AudioRecorder 
-          onSendAudio={handleSendAudio} 
-          disabled={isSending || disabledInput}
-          conversationId={conversationId}
-          senderId={senderId}
-          recipientId={recipientId}
-        />
+      <div className="flex items-end gap-3">
+        {/* Message Input Area */}
+        <div className="flex-1 relative">
+          <Textarea
+            ref={textareaRef}
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            onKeyPress={handleKeyPress}
+            placeholder="Scrivi un messaggio..."
+            className="min-h-[50px] max-h-[200px] resize-none pr-12"
+            disabled={isSending || isUploading}
+          />
+          
+          {/* Emoji Picker - Solo se abilitato */}
+          {enableEmoji && (
+            <div className="absolute bottom-2 right-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                disabled={isSending || isUploading}
+                className="h-8 w-8 p-0"
+              >
+                <Smile className="h-4 w-4" />
+              </Button>
+              
+              <EmojiPicker
+                onSelect={handleEmojiSelect}
+                open={showEmojiPicker}
+                onClose={() => setShowEmojiPicker(false)}
+              />
+            </div>
+          )}
+        </div>
 
-        <div className="flex gap-2 sm:gap-4 items-end">
-          <div className="flex-1">
-            <Textarea
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              onKeyPress={handleKeyPress}
-              placeholder={
-                disabledInput
-                  ? "Chat non disponibile. Controlla la connessione e riprova tra poco."
-                  : "Scrivi il tuo messaggio all'esperto..."}
-              className="min-h-[80px] resize-none border-drplant-green/30 focus:border-drplant-blue focus:ring-drplant-blue/20 rounded-2xl bg-white/90 backdrop-blur-sm"
-              disabled={isSending || disabledInput}
-            />
-          </div>
-          <div className="flex flex-col gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="lg"
-              onClick={() => setShowEmoji(s => !s)}
-              ref={emojiBtnRef}
-              disabled={disabledInput}
-              className="h-[44px] px-1 border-drplant-green/30 hover:bg-drplant-green/10 rounded-2xl"
-            >
-              <Smile className="h-5 w-5" />
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="lg"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={isSending || disabledInput}
-              className="h-[44px] px-1 border-drplant-green/30 hover:bg-drplant-green/10 rounded-2xl"
-            >
-              <Image className="h-5 w-5" />
-            </Button>
-          </div>
+        {/* Action Buttons */}
+        <div className="flex items-center gap-2">
+          {/* Image Upload */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleImageUpload}
+            className="hidden"
+          />
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isSending || isUploading}
+            className="h-10 w-10 p-0"
+          >
+            {isUploading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <ImageIcon className="h-4 w-4" />
+            )}
+          </Button>
+
+          {/* Send Button */}
           <Button
             onClick={handleSend}
-            disabled={(!message.trim() && !selectedImage) || isSending || disabledInput}
-            className="h-[80px] px-6 bg-gradient-to-r from-drplant-green to-drplant-green-dark hover:from-drplant-green-dark hover:to-drplant-green text-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 disabled:opacity-50"
+            disabled={!message.trim() || isSending || isUploading}
+            className="h-10 px-4"
           >
             {isSending ? (
-              <Loader2 className="h-5 w-5 animate-spin" />
+              <>
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                Invio...
+              </>
             ) : (
-              <Send className="h-5 w-5" />
+              <>
+                <Send className="h-4 w-4 mr-2" />
+                Invia
+              </>
             )}
           </Button>
         </div>
-        <EmojiPicker
-          open={showEmoji}
-          onSelect={handleSelectEmoji}
-          onClose={() => setShowEmoji(false)}
-        />
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          onChange={handleImageSelect}
-          className="hidden"
-          disabled={disabledInput}
-        />
+      </div>
+
+      {/* Helper Text */}
+      <div className="text-xs text-gray-500 mt-2 text-center">
+        Premi Invio per inviare, Shift+Invio per andare a capo
       </div>
     </div>
   );

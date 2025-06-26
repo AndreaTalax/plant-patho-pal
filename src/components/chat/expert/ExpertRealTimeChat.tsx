@@ -381,8 +381,8 @@ export const ExpertRealTimeChat: React.FC = () => {
           >
             {({ messages, isConnected, sendMessage }) => (
               <>
-                {/* Chat Header with User Avatar */}
-                <div className="p-4 border-b border-gray-200 bg-white">
+                {/* Chat Header with User Avatar and Delete Button */}
+                <div className="p-4 border-b border-gray-200 bg-white flex-shrink-0">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <div className="relative">
@@ -459,32 +459,39 @@ export const ExpertRealTimeChat: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Messages */}
-                <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                  {messages.map((message) => (
-                    <ChatMessage 
-                      key={message.id} 
-                      message={message} 
-                      isExpertView={true}
-                      userAvatar={selectedConversation.user_profile?.avatar_url}
-                      userName={`${selectedConversation.user_profile?.first_name} ${selectedConversation.user_profile?.last_name}`}
-                    />
-                  ))}
+                {/* Messages - Con scroll migliorato */}
+                <div className="flex-1 overflow-y-auto">
+                  <div className="p-4 space-y-4 max-w-4xl mx-auto">
+                    {messages.map((message) => (
+                      <div key={message.id} className="w-full">
+                        <ChatMessage 
+                          message={message} 
+                          isExpertView={true}
+                          userAvatar={selectedConversation.user_profile?.avatar_url}
+                          userName={`${selectedConversation.user_profile?.first_name} ${selectedConversation.user_profile?.last_name}`}
+                        />
+                      </div>
+                    ))}
+                  </div>
                 </div>
 
-                {/* Message Input */}
-                <MessageInput
-                  conversationId={selectedConversationId}
-                  senderId={userProfile.id}
-                  recipientId={selectedConversation.user_profile?.id || ''}
-                  onSendMessage={async (text: string) => {
-                    const recipientId = selectedConversation.user_profile?.id;
-                    if (recipientId) {
-                      await sendMessage(recipientId, text);
-                    }
-                  }}
-                  isMasterAccount={true}
-                />
+                {/* Enhanced Message Input with Audio and Emoji */}
+                <div className="flex-shrink-0">
+                  <MessageInput
+                    conversationId={selectedConversationId}
+                    senderId={userProfile.id}
+                    recipientId={selectedConversation.user_profile?.id || ''}
+                    onSendMessage={async (text: string) => {
+                      const recipientId = selectedConversation.user_profile?.id;
+                      if (recipientId) {
+                        await sendMessage(recipientId, text);
+                      }
+                    }}
+                    isMasterAccount={true}
+                    enableAudio={true}
+                    enableEmoji={true}
+                  />
+                </div>
               </>
             )}
           </RealTimeChatWrapper>
