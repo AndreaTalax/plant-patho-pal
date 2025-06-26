@@ -1,4 +1,5 @@
 
+
 import React from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -187,10 +188,11 @@ const PlantAnalysisResultComponent: React.FC<PlantAnalysisResultProps> = ({
               <Badge variant="secondary" className="bg-white shadow-sm">EPPO Database</Badge>
             </div>
           </div>
-        </div>
+        </Card>
       </div>
     </div>
   );
 };
 
 export default PlantAnalysisResultComponent;
+
