@@ -1,5 +1,7 @@
+
 import React from 'react';
 import { usePlantInfo } from '@/context/PlantInfoContext';
+import { usePremiumStatus } from '@/services/premiumService';
 import PlantInfoForm from '../PlantInfoForm';
 import PlantInfoSummary from '../PlantInfoSummary';
 import DiagnosisOptions from '../DiagnosisOptions';
@@ -55,6 +57,7 @@ const DiagnosisStages: React.FC<DiagnosisStagesProps> = ({
   onChatWithExpert
 }) => {
   const { plantInfo } = usePlantInfo();
+  const { hasAIAccess } = usePremiumStatus();
   const navigate = useNavigate();
   const { userProfile } = useAuth();
 
@@ -161,8 +164,9 @@ const DiagnosisStages: React.FC<DiagnosisStagesProps> = ({
         />
 
         <ScanLayout
-          onTakePhoto={onTakePhoto}
-          onUploadPhoto={onUploadPhoto}
+          isAnalyzing={false}
+          plantInfo={plantInfo}
+          uploadedImage={null}
         />
       </>
     );
@@ -191,6 +195,7 @@ const DiagnosisStages: React.FC<DiagnosisStagesProps> = ({
         <DiagnosisOptions
           onSelectAI={onSelectAI}
           onSelectExpert={onSelectExpert}
+          hasAIAccess={hasAIAccess}
         />
       </>
     );
