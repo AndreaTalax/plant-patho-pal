@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client'; 
@@ -117,7 +116,7 @@ export const ExpertRealTimeChat: React.FC = () => {
             is_online: false
           }
         };
-      }));
+      });
       
       setConversations(conversationsWithLastMessage);
       console.log('✅ ExpertRealTimeChat: Conversations loaded:', conversationsWithLastMessage.length);
@@ -295,7 +294,6 @@ export const ExpertRealTimeChat: React.FC = () => {
                           {conv.user_profile?.first_name?.charAt(0)}{conv.user_profile?.last_name?.charAt(0)}
                         </AvatarFallback>
                       </Avatar>
-                      {/* Indicatore stato online */}
                       <div className="absolute -bottom-1 -right-1">
                         <div className={`w-3 h-3 rounded-full border-2 border-white ${
                           conv.user_profile?.is_online ? 'bg-green-500' : 'bg-gray-400'
@@ -333,16 +331,18 @@ export const ExpertRealTimeChat: React.FC = () => {
                     </div>
                   </div>
                   
+                  {/* Pulsante Elimina più visibile */}
                   <div className="ml-2 flex-shrink-0">
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
                         <Button
-                          variant="ghost"
+                          variant="outline"
                           size="sm"
-                          className="text-red-500 hover:text-red-700 hover:bg-red-50 h-8 w-8 p-0"
+                          className="text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300 flex items-center gap-1"
                           disabled={deletingConversation === conv.id}
                         >
                           <Trash2 className="h-4 w-4" />
+                          <span className="hidden sm:inline">Elimina</span>
                         </Button>
                       </AlertDialogTrigger>
                       <AlertDialogContent>
@@ -381,7 +381,7 @@ export const ExpertRealTimeChat: React.FC = () => {
           >
             {({ messages, isConnected, sendMessage }) => (
               <>
-                {/* Chat Header with User Avatar and Delete Button */}
+                {/* Chat Header with prominent Delete Button */}
                 <div className="p-4 border-b border-gray-200 bg-white flex-shrink-0">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
@@ -425,14 +425,15 @@ export const ExpertRealTimeChat: React.FC = () => {
                           {isConnected ? 'Connesso' : 'Disconnesso'}
                         </span>
                       </div>
+                      {/* Pulsante Elimina Chat più prominente */}
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
                           <Button
-                            variant="outline"
+                            variant="destructive"
                             size="sm"
-                            className="text-red-500 hover:text-red-700 border-red-200 hover:border-red-300"
+                            className="bg-red-600 hover:bg-red-700 text-white flex items-center gap-2"
                           >
-                            <Trash2 className="h-4 w-4 mr-2" />
+                            <Trash2 className="h-4 w-4" />
                             Elimina Chat
                           </Button>
                         </AlertDialogTrigger>
@@ -459,7 +460,7 @@ export const ExpertRealTimeChat: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Messages - Con scroll migliorato */}
+                {/* Messages */}
                 <div className="flex-1 overflow-y-auto">
                   <div className="p-4 space-y-4 max-w-4xl mx-auto">
                     {messages.map((message) => (

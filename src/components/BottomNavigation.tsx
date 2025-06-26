@@ -1,13 +1,7 @@
-import { useState } from "react";
-import { Badge } from "@/components/ui/badge";
-import { 
-  Home, 
-  MessageSquare, 
-  BookOpen, 
-  ShoppingCart, 
-  User,
-  Stethoscope
-} from "lucide-react";
+
+import { useState } from 'react';
+import { Leaf, MessageCircle, BookOpen, ShoppingBag, User, Stethoscope } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
 
 interface BottomNavigationProps {
   activeTab: string;
@@ -17,71 +11,75 @@ interface BottomNavigationProps {
   canAccessTabs?: boolean;
 }
 
-const BottomNavigation = ({
-  activeTab,
-  setActiveTab,
+const BottomNavigation = ({ 
+  activeTab, 
+  setActiveTab, 
   showExpertTab = false,
   plantInfoComplete = false,
   canAccessTabs = false
 }: BottomNavigationProps) => {
-  const [unreadCount] = useState(0);
+  const { isMasterAccount } = useAuth();
 
-  // Se è un master, NON mostrare Diagnosi né Libreria
-  const navItems = [
-    // Mostra solo se NON è master
-    ...(!showExpertTab ? [
-      { id: "diagnose", label: "Diagnosi", icon: Home, locked: false },
-      { id: "chat", label: "Chat", icon: MessageSquare, hasNotification: unreadCount > 0, locked: !canAccessTabs },
-      { id: "library", label: "Libreria", icon: BookOpen, locked: !canAccessTabs },
-      { id: "shop", label: "Shop", icon: ShoppingCart, locked: !canAccessTabs },
-      { id: "profile", label: "Profilo", icon: User, locked: !canAccessTabs }
-    ] : [
-      // Se master, mostra solo: Dashboard (Expert), Chat, Shop, Profilo
-      { id: "expert", label: "Dashboard", icon: Stethoscope, locked: false },
-      { id: "chat", label: "Chat", icon: MessageSquare, hasNotification: unreadCount > 0, locked: false },
-      { id: "shop", label: "Shop", icon: ShoppingCart, locked: false },
-      { id: "profile", label: "Profilo", icon: User, locked: false }
-    ])
+  const getTabOpacity = (tabName: string) => {
+    if (isMasterAccount) {
+      // Per master account, blocca solo diagnose
+      return tabName === "diagnose" ? "opacity-50 cursor-not-allowed" : "";
+    }
+    
+    // Per utenti normali, gestione esistente
+    if (!plantInfoComplete && tabName !== "diagnose") {
+      return "opacity-50 cursor-not-allowed";
+    }
+    if (!canAccessTabs && tabName !== "diagnose") {
+      return "opacity-50 cursor-not-allowed";
+    }
+    return "";
+  };
+
+  const tabs = [
+    // Per master account, NON mostrare diagnose
+    ...(!isMasterAccount ? [{ id: 'diagnose', icon: Leaf, label: 'Diagnosi' }] : []),
+    // Per master account, NON mostrare chat
+    ...(!isMasterAccount ? [{ id: 'chat', icon: MessageCircle, label: 'Chat' }] : []),
+    // Mostra expert tab solo per master account
+    ...(showExpertTab ? [{ id: 'expert', icon: Stethoscope, label: 'Dashboard' }] : []),
+    // Library solo per utenti normali
+    ...(!isMasterAccount ? [{ id: 'library', icon: BookOpen, label: 'Libreria' }] : []),
+    { id: 'shop', icon: ShoppingBag, label: 'Shop' },
+    { id: 'profile', icon: User, label: 'Profilo' }
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-2 z-50">
-      <div className="flex justify-around items-center max-w-md mx-auto">
-        {navItems.map((item) => {
-          const Icon = item.icon;
-          const isActive = activeTab === item.id;
-          const buttonDisabled = item.locked && !showExpertTab;
-
+    <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50">
+      <div className="flex justify-around items-center py-2 px-4 max-w-md mx-auto">
+        {tabs.map((tab) => {
+          const Icon = tab.icon;
+          const isActive = activeTab === tab.id;
+          const opacity = getTabOpacity(tab.id);
+          
           return (
             <button
-              key={item.id}
-              onClick={() => !buttonDisabled && setActiveTab(item.id)}
-              className={`flex flex-col items-center gap-1 p-2 rounded-lg transition-colors relative ${
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              disabled={opacity.includes('cursor-not-allowed')}
+              className={`flex flex-col items-center justify-center min-w-[60px] py-2 px-1 rounded-lg transition-all duration-200 ${opacity} ${
                 isActive
-                  ? "text-drplant-green bg-drplant-green/10"
-                  : buttonDisabled
-                    ? "text-gray-400 cursor-not-allowed"
-                    : "text-gray-600 hover:text-drplant-green"
+                  ? 'text-drplant-green bg-drplant-green/10'
+                  : 'text-gray-600 hover:text-drplant-green hover:bg-drplant-green/5'
               }`}
-              disabled={buttonDisabled}
-              tabIndex={buttonDisabled ? -1 : 0}
-              aria-disabled={buttonDisabled}
             >
-              <Icon className="h-5 w-5" />
-              <span className="text-xs font-medium">{item.label}</span>
-              {item.hasNotification && (
-                <Badge
-                  variant="destructive"
-                  className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center text-xs p-0"
-                >
-                  {unreadCount}
-                </Badge>
-              )}
-              {buttonDisabled && (
-                <span className="absolute -bottom-2 w-16 text-[10px] text-red-500 opacity-90 text-center pointer-events-none select-none">
-                  Completa prima la diagnosi
-                </span>
-              )}
+              <Icon 
+                className={`h-5 w-5 mb-1 ${
+                  isActive ? 'text-drplant-green' : 'text-gray-600'
+                }`} 
+              />
+              <span 
+                className={`text-xs font-medium ${
+                  isActive ? 'text-drplant-green' : 'text-gray-600'
+                }`}
+              >
+                {tab.label}
+              </span>
             </button>
           );
         })}

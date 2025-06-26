@@ -11,21 +11,6 @@ interface ConversationBodyProps {
   onOpenProductDialog: () => void;
 }
 
-/**
- * Renders the body of a conversation, displaying messages and user interaction options.
- * @example
- * ConversationBody(conversation, isSending, onSendMessage, onOpenProductDialog)
- * Returns a JSX element for the chat interface.
- * @param {Object} conversation - The conversation object containing messages and status.
- * @param {boolean} isSending - Indicates if a message is currently being sent.
- * @param {Function} onSendMessage - Function to handle sending a message.
- * @param {Function} onOpenProductDialog - Function to handle opening product dialog.
- * @returns {JSX.Element} A React component representing the conversation interface.
- * @description
- *   - Displays an empty state when there are no messages.
- *   - Conditionally renders message input based on user blocking status.
- *   - Enables expert view for message list rendering.
- */
 const ConversationBody = ({
   conversation,
   isSending,
@@ -63,6 +48,8 @@ const ConversationBody = ({
               await onSendMessage(message);
             }}
             isMasterAccount={true}
+            enableAudio={true}
+            enableEmoji={true}
           />
         )}
       </div>

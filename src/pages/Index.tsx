@@ -101,10 +101,20 @@ const Index = () => {
     };
   }, [isMasterAccount, canAccessTabs, toast]);
 
-  // Gestione tap utente
+  // Gestione tap utente con blocco Chat per master account
   const handleSetActiveTab = (tab: string) => {
     if (isMasterAccount && tab === "diagnose") {
       setActiveTab("expert");
+      return;
+    }
+    // Blocca accesso a chat per master account
+    if (isMasterAccount && tab === "chat") {
+      toast({
+        title: "Accesso non consentito",
+        description: "Usa la dashboard esperto per gestire le conversazioni.",
+        duration: 3500,
+        variant: "destructive",
+      });
       return;
     }
     if (!isMasterAccount && !canAccessTabs && tab !== "diagnose") {
@@ -150,13 +160,11 @@ const Index = () => {
    *   - Master accounts are prevented from accessing the diagnose tab.
    */
   const renderTabContent = () => {
-    // Se master, mostra SOLO Dashboard (Expert), Chat, Shop, Profilo
+    // Se master, mostra SOLO Dashboard (Expert), Shop, Profilo (NO CHAT)
     if (isMasterAccount) {
       switch (activeTab) {
         case "expert":
           return <ExpertTab />;
-        case "chat":
-          return <ChatTab />;
         case "shop":
           return <ShopTab />;
         case "profile":
