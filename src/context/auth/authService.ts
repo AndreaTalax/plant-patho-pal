@@ -36,102 +36,66 @@ export const authenticateUser = async (email: string, password: string): Promise
       const expectedPassword = whitelistedCredentials[emailLower as keyof typeof whitelistedCredentials];
       
       console.log('Email nella whitelist rilevata:', email);
-      console.log('Password attesa:', expectedPassword, 'Password inserita:', password);
       
       // Verifica la password per gli account whitelisted
       if (password === expectedPassword) {
         console.log('Password corretta per account whitelisted:', email);
         
         try {
-          // Prima prova con la password corretta
+          // Prova prima con la password temp123 (quella che dovrebbe essere nel database)
           const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({
             email,
-            password: 'temp123', // Usiamo sempre temp123 per tutti gli account whitelisted
+            password: 'temp123',
           });
 
           if (loginData.user && loginData.session && !loginError) {
             console.log('Login Supabase riuscito per:', email);
             
-            // Determina il ruolo
-            let role = 'user';
-            if (email === 'agrotecnicomarconigro@gmail.com') {
-              role = 'admin';
-            } else if (email === 'test@gmail.com') {
-              role = 'admin';
-            } else if (email.includes('marco') || email.includes('fitopatologo')) {
-              role = 'expert';
-            }
-            
-            // Crea/aggiorna profilo
-            await createOrUpdateProfile(loginData.user.id, {
-              email: email,
-              username: email.split('@')[0],
-              first_name: email === 'agrotecnicomarconigro@gmail.com' ? 'Marco' : 'User',
-              last_name: email === 'agrotecnicomarconigro@gmail.com' ? 'Nigro' : 'Name',
-              birth_date: '1990-01-01',
-              birth_place: 'Roma',
-              role: role,
-              subscription_plan: 'premium'
-            });
+            // Assicuriamoci che il profilo esista
+            await ensureProfileExists(loginData.user.id, email);
             
             return { success: true };
-          }
-        } catch (tempError) {
-          console.log('Errore con login Supabase, provo a creare account:', tempError);
-        }
+          } else {
+            console.log('Login fallito, provo a creare account per:', email);
+            
+            // Se il login fallisce, prova a creare l'account
+            const { data: signupData, error: signupError } = await supabase.auth.signUp({
+              email,
+              password: 'temp123',
+              options: {
+                data: {
+                  first_name: email === 'agrotecnicomarconigro@gmail.com' ? 'Marco' : 
+                             email === 'test@gmail.com' ? 'Test' : 'User',
+                  last_name: email === 'agrotecnicomarconigro@gmail.com' ? 'Nigro' : 
+                            email === 'test@gmail.com' ? 'User' : 'Name'
+                }
+              }
+            });
+            
+            if (signupData.user && !signupError) {
+              console.log('Account creato, provo il login per:', email);
+              
+              // Ora prova il login dopo la creazione
+              const { data: finalLoginData, error: finalLoginError } = await supabase.auth.signInWithPassword({
+                email,
+                password: 'temp123',
+              });
 
-        // Se fallisce, prova a creare l'account
-        try {
-          console.log('Creazione account per:', email);
-          
-          await supabase.auth.signUp({
-            email,
-            password: 'temp123',
-            options: {
-              data: {
-                first_name: email === 'agrotecnicomarconigro@gmail.com' ? 'Marco' : 'User',
-                last_name: email === 'agrotecnicomarconigro@gmail.com' ? 'Nigro' : 'Name'
+              if (finalLoginData.user && finalLoginData.session && !finalLoginError) {
+                console.log('Login dopo creazione riuscito per:', email);
+                
+                // Assicuriamoci che il profilo esista
+                await ensureProfileExists(finalLoginData.user.id, email);
+                
+                return { success: true };
               }
             }
-          });
-          
-          console.log('Account creato, provo il login per:', email);
-          
-          // Ora prova il login
-          const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({
-            email,
-            password: 'temp123',
-          });
-
-          if (loginData.user && loginData.session && !loginError) {
-            console.log('Login dopo creazione riuscito per:', email);
             
-            // Determina il ruolo
-            let role = 'user';
-            if (email === 'agrotecnicomarconigro@gmail.com') {
-              role = 'admin';
-            } else if (email === 'test@gmail.com') {
-              role = 'admin';
-            } else if (email.includes('marco') || email.includes('fitopatologo')) {
-              role = 'expert';
-            }
-            
-            // Crea/aggiorna profilo
-            await createOrUpdateProfile(loginData.user.id, {
-              email: email,
-              username: email.split('@')[0],
-              first_name: email === 'agrotecnicomarconigro@gmail.com' ? 'Marco' : 'User',
-              last_name: email === 'agrotecnicomarconigro@gmail.com' ? 'Nigro' : 'Name',
-              birth_date: '1990-01-01',
-              birth_place: 'Roma',
-              role: role,
-              subscription_plan: 'premium'
-            });
-            
-            return { success: true };
+            throw new Error('Unable to create or login to whitelisted account');
           }
-        } catch (signupError) {
-          console.log('Errore durante signup:', signupError);
+        } catch (authError) {
+          console.error('Errore durante autenticazione whitelisted:', authError);
+          throw new Error('Errore durante l\'autenticazione dell\'account amministratore');
         }
       } else {
         console.log('Password errata per account whitelisted:', email);
@@ -157,6 +121,51 @@ export const authenticateUser = async (email: string, password: string): Promise
     console.error('Login error:', error?.message || error);
     const errorMessage = error?.message || 'Errore durante il login';
     throw new Error(errorMessage);
+  }
+};
+
+/**
+ * Ensures that a profile exists for the given user, creating it if necessary
+ */
+const ensureProfileExists = async (userId: string, email: string) => {
+  try {
+    // Controlla se il profilo esiste già
+    const { data: existingProfile } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .maybeSingle();
+    
+    if (!existingProfile) {
+      console.log('Creating profile for user:', userId);
+      
+      // Determina il ruolo
+      let role = 'user';
+      if (email === 'agrotecnicomarconigro@gmail.com') {
+        role = 'admin';
+      } else if (email === 'test@gmail.com') {
+        role = 'admin';
+      } else if (email.includes('marco') || email.includes('fitopatologo')) {
+        role = 'expert';
+      }
+      
+      await createOrUpdateProfile(userId, {
+        email: email,
+        username: email.split('@')[0],
+        first_name: email === 'agrotecnicomarconigro@gmail.com' ? 'Marco' : 
+                   email === 'test@gmail.com' ? 'Test' : 'User',
+        last_name: email === 'agrotecnicomarconigro@gmail.com' ? 'Nigro' : 
+                  email === 'test@gmail.com' ? 'User' : 'Name',
+        birth_date: '1990-01-01',
+        birth_place: 'Roma',
+        role: role,
+        subscription_plan: 'premium'
+      });
+    } else {
+      console.log('Profile already exists for user:', userId);
+    }
+  } catch (error) {
+    console.error('Error ensuring profile exists:', error);
   }
 };
 
