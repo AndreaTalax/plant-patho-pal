@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { UserProfile } from './types';
@@ -15,7 +16,8 @@ export const authenticateUser = async (email: string, password: string): Promise
     const whitelistedCredentials = {
       'agrotecnicomarconigro@gmail.com': 'marconigro93',
       'test@gmail.com': 'test123',
-      'premium@gmail.com': 'premium123'
+      'premium@gmail.com': 'premium123',
+      'talaiaandrea@gmail.com': 'test123'
     };
     
     const emailLower = email.toLowerCase();
@@ -31,21 +33,34 @@ export const authenticateUser = async (email: string, password: string): Promise
         console.log('Password corretta per account whitelisted:', email);
         
         try {
-          // Prima prova il login con temp123 (la password standard nel database)
+          // Prova login diretto con Supabase usando la password fornita
           let { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({
             email,
-            password: 'temp123',
+            password: password,
           });
 
-          // Se il login funziona, siamo a posto
           if (loginData.user && loginData.session && !loginError) {
-            console.log('Login Supabase riuscito per:', email);
+            console.log('Login Supabase riuscito con password originale per:', email);
             await ensureProfileExists(loginData.user.id, email);
             return { success: true };
           }
 
-          // Se il login fallisce, l'account potrebbe non esistere - proviamo a crearlo
-          console.log('Login fallito, provo a creare account per:', email);
+          // Se fallisce con la password originale, prova con temp123
+          console.log('Login con password originale fallito, provo con temp123 per:', email);
+          
+          const { data: tempLoginData, error: tempLoginError } = await supabase.auth.signInWithPassword({
+            email,
+            password: 'temp123',
+          });
+
+          if (tempLoginData.user && tempLoginData.session && !tempLoginError) {
+            console.log('Login Supabase riuscito con temp123 per:', email);
+            await ensureProfileExists(tempLoginData.user.id, email);
+            return { success: true };
+          }
+
+          // Se entrambi i login falliscono, l'account non esiste - crealo
+          console.log('Nessun login riuscito, creo account per:', email);
           
           const { data: signupData, error: signupError } = await supabase.auth.signUp({
             email,
@@ -53,21 +68,23 @@ export const authenticateUser = async (email: string, password: string): Promise
             options: {
               data: {
                 first_name: email === 'agrotecnicomarconigro@gmail.com' ? 'Marco' : 
-                           email === 'test@gmail.com' ? 'Test' : 'User',
+                           email === 'test@gmail.com' ? 'Test' : 
+                           email === 'talaiaandrea@gmail.com' ? 'Andrea' : 'User',
                 last_name: email === 'agrotecnicomarconigro@gmail.com' ? 'Nigro' : 
-                          email === 'test@gmail.com' ? 'User' : 'Name'
+                          email === 'test@gmail.com' ? 'User' : 
+                          email === 'talaiaandrea@gmail.com' ? 'Talaia' : 'Name'
               }
             }
           });
           
-          // Se la registrazione è riuscita o l'utente esisteva già
+          // Gestisce sia account creati che esistenti
           if (signupData.user || (signupError && signupError.message.includes('already registered'))) {
-            console.log('Account creato o esistente, provo il login con temp123 per:', email);
+            console.log('Account creato/esistente, provo login finale con temp123 per:', email);
             
-            // Aspetta un momento per assicurarsi che l'account sia pronto
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            // Aspetta un momento
+            await new Promise(resolve => setTimeout(resolve, 1500));
             
-            // Prova di nuovo il login
+            // Login finale
             const { data: finalLoginData, error: finalLoginError } = await supabase.auth.signInWithPassword({
               email,
               password: 'temp123',
@@ -79,7 +96,7 @@ export const authenticateUser = async (email: string, password: string): Promise
               return { success: true };
             } else {
               console.error('Login finale fallito:', finalLoginError);
-              throw new Error('Impossibile accedere all\'account amministratore');
+              throw new Error('Impossibile completare il login per l\'account amministratore');
             }
           } else {
             console.error('Errore durante la creazione dell\'account:', signupError);
@@ -91,7 +108,7 @@ export const authenticateUser = async (email: string, password: string): Promise
         }
       } else {
         console.log('Password errata per account whitelisted:', email);
-        throw new Error('Credenziali non valide per questo account amministratore');
+        throw new Error('Password non corretta per questo account amministratore');
       }
     }
     
@@ -135,7 +152,7 @@ const ensureProfileExists = async (userId: string, email: string) => {
       let role = 'user';
       if (email === 'agrotecnicomarconigro@gmail.com') {
         role = 'admin';
-      } else if (email === 'test@gmail.com') {
+      } else if (email === 'test@gmail.com' || email === 'talaiaandrea@gmail.com') {
         role = 'admin';
       } else if (email.includes('marco') || email.includes('fitopatologo')) {
         role = 'expert';
@@ -145,9 +162,11 @@ const ensureProfileExists = async (userId: string, email: string) => {
         email: email,
         username: email.split('@')[0],
         first_name: email === 'agrotecnicomarconigro@gmail.com' ? 'Marco' : 
-                   email === 'test@gmail.com' ? 'Test' : 'User',
+                   email === 'test@gmail.com' ? 'Test' : 
+                   email === 'talaiaandrea@gmail.com' ? 'Andrea' : 'User',
         last_name: email === 'agrotecnicomarconigro@gmail.com' ? 'Nigro' : 
-                  email === 'test@gmail.com' ? 'User' : 'Name',
+                  email === 'test@gmail.com' ? 'User' : 
+                  email === 'talaiaandrea@gmail.com' ? 'Talaia' : 'Name',
         birth_date: '1990-01-01',
         birth_place: 'Roma',
         role: role,

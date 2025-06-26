@@ -20,7 +20,8 @@ const Login = () => {
   const adminCredentials = {
     'agrotecnicomarconigro@gmail.com': 'marconigro93',
     'test@gmail.com': 'test123',
-    'premium@gmail.com': 'premium123'
+    'premium@gmail.com': 'premium123',
+    'talaiaandrea@gmail.com': 'test123'
   };
 
   const handleLogin = async (e: React.FormEvent) => {
