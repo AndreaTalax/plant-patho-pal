@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useCallback } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -19,6 +20,7 @@ import { ChatDataManager } from './chat/user/ChatDataManager';
 import { uploadPlantImage } from '@/utils/imageStorage';
 import { PlantInfo } from './diagnose/types';
 import { usePremiumStatus } from '@/services/premiumService';
+import { verifyImageContainsPlant, analyzeImageQuality } from '@/utils/plant-analysis/plantImageVerification';
 
 const DiagnoseTab = () => {
   const { userProfile } = useAuth();
@@ -31,9 +33,54 @@ const DiagnoseTab = () => {
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [dataSentToExpert, setDataSentToExpert] = useState(false); // Cambiato da autoSentToExpert
+  const [dataSentToExpert, setDataSentToExpert] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Verifica che l'immagine contenga una pianta prima di procedere
+  const verifyPlantInImage = async (file: File): Promise<boolean> => {
+    try {
+      console.log('🔍 Verifica se l\'immagine contiene una pianta...');
+      
+      // Analisi qualità immagine
+      const qualityCheck = analyzeImageQuality(file);
+      if (!qualityCheck.isGoodQuality) {
+        toast.warning('Problemi di qualità dell\'immagine', {
+          description: qualityCheck.issues.join(', ') + '. ' + qualityCheck.recommendations.join(', '),
+          duration: 6000
+        });
+      }
+      
+      // Verifica presenza pianta
+      const plantVerification = await verifyImageContainsPlant(file);
+      
+      if (!plantVerification.isPlant || plantVerification.confidence < 40) {
+        toast.error('❌ Nessuna pianta rilevata nell\'immagine', {
+          description: `${plantVerification.reason}. Scatta una foto che mostri chiaramente una pianta.`,
+          duration: 8000
+        });
+        return false;
+      }
+      
+      if (plantVerification.confidence < 70) {
+        toast.warning('⚠️ Pianta rilevata con bassa confidenza', {
+          description: `${plantVerification.reason}. Per risultati migliori, usa un'immagine più chiara della pianta.`,
+          duration: 6000
+        });
+      } else {
+        toast.success('✅ Pianta rilevata nell\'immagine', {
+          description: `${plantVerification.reason}`,
+          duration: 4000
+        });
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Errore verifica pianta:', error);
+      toast.error('Errore nella verifica dell\'immagine');
+      return false;
+    }
+  };
 
   // Plant info completion handler
   const handlePlantInfoComplete = useCallback((data: PlantInfo) => {
@@ -42,7 +89,7 @@ const DiagnoseTab = () => {
     toast.success('Informazioni pianta salvate! Ora scatta o carica una foto.');
   }, [setPlantInfo]);
 
-  // File upload handler
+  // File upload handler con verifica pianta
   const handleFileUpload = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -50,6 +97,12 @@ const DiagnoseTab = () => {
     if (!file.type.startsWith('image/')) {
       toast.error('Carica un file immagine valido');
       return;
+    }
+
+    // Verifica che l'immagine contenga una pianta
+    const containsPlant = await verifyPlantInImage(file);
+    if (!containsPlant) {
+      return; // Stop se non contiene una pianta
     }
 
     try {
@@ -66,7 +119,7 @@ const DiagnoseTab = () => {
         });
         
         setCurrentStage('options');
-        toast.success('Immagine caricata! Ora scegli il metodo di diagnosi.');
+        toast.success('Immagine verificata e caricata! Ora scegli il metodo di diagnosi.');
       };
       reader.readAsDataURL(file);
     } catch (error) {
@@ -75,19 +128,36 @@ const DiagnoseTab = () => {
     }
   }, [setPlantInfo, plantInfo]);
 
-  // Camera capture handler
-  const handleCameraCapture = useCallback((imageDataUrl: string) => {
-    setUploadedImage(imageDataUrl);
-    
-    // Update plant info with captured image
-    setPlantInfo({
-      ...plantInfo,
-      uploadedImageUrl: imageDataUrl
-    });
-    
-    setShowCamera(false);
-    setCurrentStage('options');
-    toast.success('Foto scattata! Ora scegli il metodo di diagnosi.');
+  // Camera capture handler con verifica pianta
+  const handleCameraCapture = useCallback(async (imageDataUrl: string) => {
+    try {
+      // Converti data URL in file per la verifica
+      const response = await fetch(imageDataUrl);
+      const blob = await response.blob();
+      const file = new File([blob], 'camera-capture.jpg', { type: 'image/jpeg' });
+      
+      // Verifica che l'immagine contenga una pianta
+      const containsPlant = await verifyPlantInImage(file);
+      if (!containsPlant) {
+        setShowCamera(true); // Mantieni la camera aperta
+        return; // Stop se non contiene una pianta
+      }
+      
+      setUploadedImage(imageDataUrl);
+      
+      // Update plant info with captured image
+      setPlantInfo({
+        ...plantInfo,
+        uploadedImageUrl: imageDataUrl
+      });
+      
+      setShowCamera(false);
+      setCurrentStage('options');
+      toast.success('Foto verificata e scattata! Ora scegli il metodo di diagnosi.');
+    } catch (error) {
+      console.error('Errore verifica foto catturata:', error);
+      toast.error('Errore nella verifica della foto');
+    }
   }, [setPlantInfo, plantInfo]);
 
   // Send data to expert with automatic sync
@@ -181,7 +251,7 @@ const DiagnoseTab = () => {
       });
   }, [uploadedImage, hasAIAccess]);
 
-  // Expert consultation selection - MODIFICATO: non invia automaticamente
+  // Expert consultation selection
   const handleSelectExpert = useCallback(async () => {
     console.log('🩺 Selezione consulenza esperto...');
     
@@ -252,7 +322,6 @@ const DiagnoseTab = () => {
       
       setCurrentStage('result');
 
-      // NON inviare automaticamente - l'utente deve scegliere
       toast.success('Analisi completata!', {
         description: 'Puoi ora consultare i risultati o inviarli all\'esperto.'
       });
@@ -304,7 +373,6 @@ const DiagnoseTab = () => {
               onComplete={handlePlantInfoComplete}
               initialData={plantInfo}
             />
-            {/* Add ChatDataManager for automatic sync */}
             <ChatDataManager />
           </>
         );
@@ -325,19 +393,36 @@ const DiagnoseTab = () => {
                   📸 Carica una foto della pianta
                 </h3>
                 <p className="text-center text-gray-600 mb-6">
-                  Questo passaggio è obbligatorio per procedere con la diagnosi
+                  Questo passaggio è obbligatorio per procedere con la diagnosi.
+                  <br />
+                  <strong>La foto deve mostrare chiaramente una pianta per procedere.</strong>
                 </p>
                 
-                <ScanLayout
-                  onTakePhoto={() => setShowCamera(true)}
-                  onUploadPhoto={() => fileInputRef.current?.click()}
-                />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Button
+                    onClick={() => fileInputRef.current?.click()}
+                    variant="outline"
+                    className="h-32 flex flex-col items-center justify-center gap-3 border-2 border-dashed border-gray-300 hover:border-gray-400"
+                  >
+                    <Upload className="h-8 w-8 text-gray-500" />
+                    <span className="text-sm">Carica da Galleria</span>
+                  </Button>
+                  
+                  <Button
+                    onClick={() => setShowCamera(true)}
+                    variant="outline"
+                    className="h-32 flex flex-col items-center justify-center gap-3 border-2 border-dashed border-gray-300 hover:border-gray-400"
+                  >
+                    <Camera className="h-8 w-8 text-gray-500" />
+                    <span className="text-sm">Scatta Foto</span>
+                  </Button>
+                </div>
                 
                 <input
-                  ref={fileInputRef}
                   type="file"
-                  accept="image/*"
+                  ref={fileInputRef}
                   onChange={handleFileUpload}
+                  accept="image/*"
                   className="hidden"
                 />
               </div>
@@ -354,200 +439,78 @@ const DiagnoseTab = () => {
             />
             
             {uploadedImage && (
-              <div className="w-full max-w-md mx-auto">
-                <div className="aspect-square overflow-hidden rounded-xl border">
-                  <img 
-                    src={uploadedImage} 
-                    alt="Immagine caricata" 
-                    className="w-full h-full object-cover"
-                  />
+              <Card className="w-full max-w-2xl mx-auto">
+                <div className="p-4">
+                  <h3 className="text-lg font-semibold mb-3">✅ Immagine Verificata</h3>
+                  <div className="aspect-square max-w-xs mx-auto rounded-lg overflow-hidden">
+                    <img 
+                      src={uploadedImage} 
+                      alt="Pianta verificata" 
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <p className="text-center text-sm text-green-600 mt-2">
+                    Pianta rilevata correttamente nell'immagine
+                  </p>
                 </div>
-              </div>
+              </Card>
             )}
-
-            <Card className="w-full max-w-4xl mx-auto">
-              <div className="p-6">
-                <h3 className="text-xl font-semibold text-center mb-4">
-                  🔬 Scegli il metodo di diagnosi
-                </h3>
-                <p className="text-center text-gray-600 mb-6">
-                  Ora che hai caricato l'immagine, scegli come vuoi procedere
-                </p>
-                
-                <DiagnosisOptions
-                  onSelectAI={handleSelectAI}
-                  onSelectExpert={handleSelectExpert}
-                />
-                
-                <div className="mt-6 text-center">
-                  <Button 
-                    variant="outline" 
-                    onClick={() => setCurrentStage('capture')}
-                    className="text-sm"
-                  >
-                    ← Cambia foto
-                  </Button>
-                </div>
-              </div>
-            </Card>
+            
+            <DiagnosisOptions
+              onSelectAI={handleSelectAI}
+              onSelectExpert={handleSelectExpert}
+              hasAIAccess={hasAIAccess}
+            />
           </div>
         );
 
       case 'analyzing':
         return (
-          <Card className="p-8 bg-white/80 backdrop-blur-sm">
-            <div className="flex flex-col items-center space-y-6">
-              <div className="relative">
-                <div className="w-20 h-20 bg-gradient-to-r from-drplant-green to-drplant-blue rounded-full flex items-center justify-center">
-                  <Loader2 className="h-10 w-10 animate-spin text-white" />
-                </div>
-              </div>
-              <div className="text-center">
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">Analisi in corso</h2>
-                <p className="text-gray-600">
-                  Utilizzo di servizi AI avanzati per analizzare la tua pianta...
-                </p>
-                <p className="text-sm text-gray-500 mt-2">
-                  I tuoi dati verranno inviati automaticamente all'esperto per conferma
-                </p>
-              </div>
-              {uploadedImage && (
-                <div className="w-64 h-64 rounded-xl overflow-hidden border-2 border-drplant-green/20">
-                  <img 
-                    src={uploadedImage} 
-                    alt="Pianta in analisi" 
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-              )}
-            </div>
-          </Card>
+          <ScanLayout 
+            isAnalyzing={isAnalyzing}
+            plantInfo={plantInfo}
+            uploadedImage={uploadedImage}
+          />
         );
 
       case 'result':
-        // Show expert consultation result
-        if (plantInfo.sendToExpert && !plantInfo.useAI) {
+        if (analysisResult && uploadedImage) {
           return (
-            <div className="space-y-6">
-              <PlantInfoSummary 
-                plantInfo={plantInfo} 
-                onEdit={() => setCurrentStage('info')} 
-              />
-              
-              <Card className="p-6 bg-white/80 backdrop-blur-sm">
-                <div className="text-center space-y-4">
-                  <div className="flex justify-center">
-                    <CheckCircle className="h-16 w-16 text-green-600" />
-                  </div>
-                  
-                  <h3 className="text-2xl font-bold text-gray-900">
-                    Dati inviati con successo!
-                  </h3>
-                  
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                    <h4 className="font-medium text-green-800 mb-2">📋 Dati inviati:</h4>
-                    <ul className="text-sm text-green-700 space-y-1 text-left">
-                      <li>✅ Informazioni della pianta (ambiente, irrigazione, luce)</li>
-                      <li>✅ Descrizione dettagliata dei sintomi</li>
-                      <li>✅ Fotografia della pianta</li>
-                      <li>✅ Richiesta di consulenza professionale</li>
-                    </ul>
-                  </div>
-                  
-                  {uploadedImage && (
-                    <div className="w-64 h-64 mx-auto rounded-xl overflow-hidden border-2 border-green-200">
-                      <img 
-                        src={uploadedImage} 
-                        alt="Immagine inviata" 
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                  )}
-                  
-                  <div className="space-y-3">
-                    <Button 
-                      onClick={handleNavigateToChat}
-                      className="w-full bg-drplant-blue hover:bg-drplant-blue-dark text-white"
-                    >
-                      Vai alla chat con Marco Nigro
-                    </Button>
-                    
-                    <Button 
-                      variant="outline"
-                      onClick={handleNewAnalysis}
-                      className="w-full"
-                    >
-                      Inizia nuova analisi
-                    </Button>
-                  </div>
-                </div>
-              </Card>
+            <PlantAnalysisResultComponent
+              analysisResult={analysisResult}
+              imageUrl={uploadedImage}
+              onNewAnalysis={handleNewAnalysis}
+            />
+          );
+        } else {
+          // Expert consultation result
+          return (
+            <div className="text-center space-y-6 py-12">
+              <CheckCircle className="h-20 w-20 text-green-500 mx-auto" />
+              <h2 className="text-2xl font-bold text-gray-900">
+                Dati Inviati all'Esperto
+              </h2>
+              <p className="text-gray-600 max-w-md mx-auto">
+                Marco Nigro ha ricevuto tutte le informazioni sulla tua pianta e ti risponderà a breve nella chat.
+              </p>
+              <div className="space-y-3">
+                <Button onClick={handleNavigateToChat} className="mr-4">
+                  Vai alla Chat
+                </Button>
+                <Button onClick={handleNewAnalysis} variant="outline">
+                  Nuova Diagnosi
+                </Button>
+              </div>
             </div>
           );
         }
-        
-        // AI diagnosis result with option to send to expert
-        return (
-          <div className="space-y-6">
-            {analysisResult && uploadedImage && (
-              <>
-                <PlantAnalysisResultComponent
-                  analysisResult={analysisResult}
-                  imageUrl={uploadedImage}
-                  onNewAnalysis={handleNewAnalysis}
-                  autoSentToExpert={dataSentToExpert}
-                />
-                
-                {/* Pulsante per inviare all'esperto DOPO la diagnosi AI */}
-                {!dataSentToExpert && (
-                  <Card className="p-4 bg-blue-50/80 backdrop-blur-sm border-blue-200">
-                    <div className="text-center space-y-3">
-                      <h4 className="font-medium text-blue-800">
-                        💡 Vuoi una seconda opinione?
-                      </h4>
-                      <p className="text-sm text-blue-700">
-                        Invia i risultati dell'analisi AI a Marco Nigro per una conferma professionale
-                      </p>
-                      <Button
-                        onClick={() => sendDataToExpert(true)}
-                        className="bg-blue-600 hover:bg-blue-700 text-white"
-                      >
-                        Invia all'esperto per conferma
-                      </Button>
-                    </div>
-                  </Card>
-                )}
-                
-                {dataSentToExpert && (
-                  <Card className="p-4 bg-green-50/80 backdrop-blur-sm border-green-200">
-                    <div className="flex items-center space-x-3">
-                      <CheckCircle className="h-5 w-5 text-green-600" />
-                      <span className="text-green-800 font-medium">
-                        Diagnosi inviata all'esperto Marco Nigro!
-                      </span>
-                    </div>
-                    <div className="mt-2">
-                      <Button
-                        onClick={handleNavigateToChat}
-                        variant="outline"
-                        size="sm"
-                        className="text-green-700 border-green-300"
-                      >
-                        Vai alla chat
-                      </Button>
-                    </div>
-                  </Card>
-                )}
-              </>
-            )}
-          </div>
-        );
 
       default:
         return null;
     }
   };
 
+  // Show camera component if active
   if (showCamera) {
     return (
       <CameraCapture
@@ -558,46 +521,9 @@ const DiagnoseTab = () => {
   }
 
   return (
-    <div className="min-h-[calc(100vh-8rem)] bg-gradient-to-br from-gray-50/50 via-white/30 to-drplant-green/5">
-      <div className="container mx-auto px-4 py-8">
-        <div className="max-w-4xl mx-auto">
-          <div className="text-center mb-8">
-            <div className="flex justify-center mb-4">
-              <div className="w-16 h-16 bg-gradient-to-r from-drplant-green to-drplant-blue rounded-full flex items-center justify-center">
-                <Camera className="h-8 w-8 text-white" />
-              </div>
-            </div>
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-drplant-green to-drplant-blue bg-clip-text text-transparent mb-2">
-              Diagnosi Malattie delle Piante
-            </h1>
-            <p className="text-gray-600 text-lg">
-              Analisi AI avanzata con invio automatico all'esperto
-            </p>
-            
-            {/* Progress indicator */}
-            <div className="flex items-center justify-center space-x-2 mt-4">
-              <div className={`w-3 h-3 rounded-full ${currentStage === 'info' ? 'bg-drplant-blue' : currentStage === 'capture' || currentStage === 'options' || currentStage === 'analyzing' || currentStage === 'result' ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-              <div className={`w-8 h-1 ${currentStage === 'capture' || currentStage === 'options' || currentStage === 'analyzing' || currentStage === 'result' ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-              <div className={`w-3 h-3 rounded-full ${currentStage === 'capture' ? 'bg-drplant-blue' : currentStage === 'options' || currentStage === 'analyzing' || currentStage === 'result' ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-              <div className={`w-8 h-1 ${currentStage === 'options' || currentStage === 'analyzing' || currentStage === 'result' ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-              <div className={`w-3 h-3 rounded-full ${currentStage === 'options' ? 'bg-drplant-blue' : currentStage === 'analyzing' || currentStage === 'result' ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-              <div className={`w-8 h-1 ${currentStage === 'result' ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-              <div className={`w-3 h-3 rounded-full ${currentStage === 'result' ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-            </div>
-            <div className="flex justify-center space-x-8 mt-2 text-xs text-gray-600">
-              <span className={currentStage === 'info' ? 'font-medium text-drplant-blue' : ''}>Info</span>
-              <span className={currentStage === 'capture' ? 'font-medium text-drplant-blue' : ''}>Foto</span>
-              <span className={currentStage === 'options' ? 'font-medium text-drplant-blue' : ''}>Metodo</span>
-              <span className={currentStage === 'result' ? 'font-medium text-green-600' : ''}>Risultato</span>
-            </div>
-          </div>
-
-          <div className="bg-white/70 backdrop-blur-sm rounded-3xl shadow-lg border border-drplant-green/10 overflow-hidden">
-            <div className="p-8">
-              {renderCurrentStage()}
-            </div>
-          </div>
-        </div>
+    <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 p-4">
+      <div className="max-w-4xl mx-auto">
+        {renderCurrentStage()}
       </div>
     </div>
   );

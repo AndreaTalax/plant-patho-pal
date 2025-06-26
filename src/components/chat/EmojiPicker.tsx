@@ -16,9 +16,16 @@ const EmojiPicker: React.FC<EmojiPickerProps> = ({ onSelect, open, onClose }) =>
 
   const handleEmojiSelect = (emoji: any) => {
     console.log('Emoji selezionata:', emoji);
-    // Passa l'emoji con il campo 'native' che contiene il carattere emoji
-    onSelect(emoji);
-    // Chiudi automaticamente il picker dopo la selezione
+    // Passa l'emoji completo - assicuriamoci che abbia la proprietà native
+    if (emoji && emoji.native) {
+      onSelect(emoji);
+    } else if (emoji && emoji.unified) {
+      // Fallback per emoji unified format
+      const emojiChar = String.fromCodePoint(parseInt(emoji.unified, 16));
+      onSelect({ native: emojiChar, ...emoji });
+    } else {
+      console.error('Formato emoji non riconosciuto:', emoji);
+    }
     onClose();
   };
 
