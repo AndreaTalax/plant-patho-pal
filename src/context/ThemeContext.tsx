@@ -112,6 +112,13 @@ const translations = {
     sending: "Invio...",
     close: "Chiudi",
     back: "Indietro",
+    notifications: "Notifiche",
+    pushNotifications: "Notifiche Push",
+    testNotification: "Testa Notifica",
+    pushNotificationsEnabled: "Le notifiche push sono attivate. Riceverai notifiche per i nuovi messaggi.",
+    pushNotificationsDenied: "Le notifiche push sono state negate. Puoi riattivarle dalle impostazioni del browser.",
+    pushNotificationsDisabled: "Attiva le notifiche push per ricevere avvisi sui nuovi messaggi.",
+    pushNotificationsNotSupported: "Le notifiche push non sono supportate su questo dispositivo.",
   },
   en: {
     appName: "Dr.Plant",

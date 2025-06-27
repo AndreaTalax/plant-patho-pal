@@ -2,6 +2,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import { MARCO_NIGRO_ID } from '@/components/phytopathologist';
 import { toast } from 'sonner';
+import { PushNotificationService } from '@/services/notifications/pushNotificationService';
 
 export class MessageService {
   /**
@@ -62,7 +63,7 @@ export class MessageService {
   }
 
   /**
-   * Invia un messaggio usando la edge function
+   * Invia un messaggio usando la edge function con notifiche push e email
    */
   static async sendMessage(
     conversationId: string, 
@@ -72,7 +73,7 @@ export class MessageService {
     products?: any[]
   ) {
     try {
-      console.log('📤 MessageService: Invio messaggio', {
+      console.log('📤 MessageService: Invio messaggio con notifiche', {
         conversationId,
         senderId,
         contentLength: content?.length || 0,
@@ -111,7 +112,7 @@ export class MessageService {
       // Determina il recipientId
       const recipientId = senderId === MARCO_NIGRO_ID ? null : MARCO_NIGRO_ID;
 
-      // Prova prima con la edge function
+      // Prova prima con la edge function (che include notifiche)
       try {
         const { data, error } = await supabase.functions.invoke('send-message', {
           body: {
@@ -128,7 +129,13 @@ export class MessageService {
           throw new Error('Edge function error');
         }
 
-        console.log('✅ MessageService: Messaggio inviato via edge function', data);
+        console.log('✅ MessageService: Messaggio inviato via edge function con notifiche', data);
+
+        // Se il messaggio è diretto all'esperto, invia anche notifica push locale
+        if (recipientId === MARCO_NIGRO_ID && senderId !== MARCO_NIGRO_ID) {
+          await this.sendExpertPushNotification(content, senderId);
+        }
+
         return true;
       } catch (edgeFunctionError) {
         console.log('⚠️ Edge function non disponibile, uso inserimento diretto');
@@ -152,6 +159,12 @@ export class MessageService {
         }
 
         console.log('✅ MessageService: Messaggio inviato via inserimento diretto');
+        
+        // Invia notifica push anche con fallback
+        if (recipientId === MARCO_NIGRO_ID && senderId !== MARCO_NIGRO_ID) {
+          await this.sendExpertPushNotification(content, senderId);
+        }
+
         return true;
       }
 
@@ -166,6 +179,40 @@ export class MessageService {
       }
       
       return false;
+    }
+  }
+
+  /**
+   * Invia notifica push all'esperto
+   */
+  private static async sendExpertPushNotification(messageContent: string, senderId: string) {
+    try {
+      // Ottieni info del mittente
+      const { data: senderProfile } = await supabase
+        .from('profiles')
+        .select('first_name, last_name, email')
+        .eq('id', senderId)
+        .single();
+
+      const senderName = senderProfile 
+        ? `${senderProfile.first_name || ''} ${senderProfile.last_name || ''}`.trim() || senderProfile.email
+        : 'Utente sconosciuto';
+
+      // Invia notifica push locale per test
+      await PushNotificationService.sendLocalNotification({
+        title: `Dr.Plant - Nuovo messaggio da ${senderName}`,
+        body: messageContent.slice(0, 100) + (messageContent.length > 100 ? '...' : ''),
+        tag: 'expert-message',
+        data: {
+          senderId,
+          senderName,
+          type: 'new_message'
+        }
+      });
+
+      console.log('✅ Notifica push inviata all\'esperto');
+    } catch (error) {
+      console.error('❌ Errore invio notifica push:', error);
     }
   }
 

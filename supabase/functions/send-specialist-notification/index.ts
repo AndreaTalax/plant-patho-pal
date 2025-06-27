@@ -38,7 +38,7 @@ serve(async (req) => {
       conversation_id,
       sender_id,
       recipient_id,
-      expert_email,
+      expert_email: expert_email || 'agrotecnicomarconigro@gmail.com',
       recipient_email,
       has_user_details: !!user_details,
       has_image: !!image_url,
@@ -65,56 +65,97 @@ serve(async (req) => {
         : user_details?.email || 'Utente sconosciuto';
 
     const emailSubject = expert_email 
-      ? `Nuovo messaggio da ${senderName}`
-      : `Risposta dal Dr. Marco Nigro`;
+      ? `Dr.Plant - Nuovo messaggio da ${senderName}`
+      : `Dr.Plant - Risposta dal Dr. Marco Nigro`;
 
     const emailBody = `
-      <h2>${emailSubject}</h2>
-      <div style="background-color: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
-        <h3>💬 Messaggio:</h3>
-        <p style="font-size: 16px; line-height: 1.5;">${message_text}</p>
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <img src="https://plant-patho-pal.lovable.app/lovable-uploads/72d5a60c-404a-4167-9430-511af91c523b.png" alt="Dr.Plant Logo" style="height: 60px;">
+          <h1 style="color: #1e40af; margin: 10px 0;">Dr.Plant</h1>
+        </div>
+
+        <div style="background-color: #f8fafc; padding: 25px; border-radius: 10px; border-left: 4px solid #10b981;">
+          <h2 style="color: #1e40af; margin-top: 0;">${emailSubject}</h2>
+          
+          <div style="background-color: white; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="color: #059669; margin-top: 0;">💬 Messaggio:</h3>
+            <p style="font-size: 16px; line-height: 1.6; color: #374151; margin: 10px 0; padding: 15px; background-color: #f9fafb; border-radius: 6px;">${message_text}</p>
+            
+            ${image_url ? `
+              <h3 style="color: #059669;">📸 Immagine allegata:</h3>
+              <div style="text-align: center; margin: 15px 0;">
+                <img src="${image_url}" alt="Immagine della pianta" style="max-width: 100%; max-height: 300px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+              </div>
+            ` : ''}
+            
+            ${senderProfile ? `
+              <h3 style="color: #059669;">👤 Dettagli del mittente:</h3>
+              <div style="background-color: #f0f9ff; padding: 15px; border-radius: 6px;">
+                <p><strong>Nome:</strong> ${senderName}</p>
+                <p><strong>Email:</strong> ${senderProfile.email}</p>
+              </div>
+            ` : ''}
+            
+            ${plant_details && plant_details.length > 0 ? `
+              <h3 style="color: #059669;">🌱 Prodotti consigliati:</h3>
+              <ul style="background-color: #f0fdf4; padding: 15px; border-radius: 6px;">
+                ${plant_details.map((product: any) => `
+                  <li style="margin: 5px 0;"><strong>${product.name}</strong> - €${product.price}</li>
+                `).join('')}
+              </ul>
+            ` : ''}
+          </div>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="https://plant-patho-pal.lovable.app/" 
+               style="display: inline-block; background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%); color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold;">
+              Accedi alla Dashboard
+            </a>
+          </div>
+        </div>
         
-        ${image_url ? `
-          <h3>📸 Immagine allegata:</h3>
-          <img src="${image_url}" alt="Immagine della pianta" style="max-width: 300px; border-radius: 8px;">
-        ` : ''}
-        
-        ${senderProfile ? `
-          <h3>👤 Dettagli del mittente:</h3>
-          <ul>
-            <li><strong>Nome:</strong> ${senderName}</li>
-            <li><strong>Email:</strong> ${senderProfile.email}</li>
-          </ul>
-        ` : ''}
-        
-        ${plant_details && plant_details.length > 0 ? `
-          <h3>🌱 Prodotti consigliati:</h3>
-          <ul>
-            ${plant_details.map((product: any) => `
-              <li><strong>${product.name}</strong> - €${product.price}</li>
-            `).join('')}
-          </ul>
-        ` : ''}
+        <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+          <p style="color: #6b7280; font-size: 14px; margin: 5px 0;">
+            Questo messaggio è stato inviato automaticamente dal sistema di chat di Dr.Plant.
+          </p>
+          <p style="color: #9ca3af; font-size: 12px; margin: 5px 0;">
+            © 2025 Dr.Plant - Il tuo assistente personale per la cura delle piante
+          </p>
+        </div>
       </div>
-      
-      <p style="color: #666; font-size: 14px;">
-        Questo messaggio è stato inviato automaticamente dal sistema di chat di Dr.Plant.
-        <br>
-        Per rispondere, accedi alla dashboard: https://plant-patho-pal.lovable.app/
-      </p>
     `;
 
-    // Send email using a simple notification method
-    console.log('✅ Notification processed successfully');
-    console.log('📧 Email would be sent to:', expert_email || recipient_email);
+    // Send email notification (simulated - in real implementation would use SMTP/SendGrid)
+    console.log('✅ Email notification prepared successfully');
+    console.log('📧 Email would be sent to:', expert_email || recipient_email || 'agrotecnicomarconigro@gmail.com');
     console.log('📧 Email subject:', emailSubject);
-    console.log('📧 Email body prepared');
+
+    // Store notification in database for tracking
+    const { error: notificationError } = await supabaseAdmin
+      .from('notifications')
+      .insert({
+        user_id: recipient_id || sender_id,
+        title: `Nuovo messaggio da ${senderName}`,
+        message: message_text.slice(0, 200) + (message_text.length > 200 ? '...' : ''),
+        type: 'message',
+        data: {
+          conversation_id,
+          sender_id,
+          message_preview: message_text.slice(0, 100)
+        }
+      });
+
+    if (notificationError) {
+      console.error('⚠️ Error storing notification:', notificationError);
+    }
 
     return new Response(JSON.stringify({ 
       success: true,
       message: "Notification processed successfully",
-      recipient: expert_email || recipient_email,
-      subject: emailSubject
+      recipient: expert_email || recipient_email || 'agrotecnicomarconigro@gmail.com',
+      subject: emailSubject,
+      notification_stored: !notificationError
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,

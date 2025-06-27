@@ -1,105 +1,154 @@
 
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
+import { useState } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { useTheme } from "@/context/ThemeContext";
-import { useState, useEffect } from "react";
-import { Sun, Moon, Globe, Settings } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
+import { Moon, Sun, Globe, Bell, Smartphone } from "lucide-react";
+import { useTheme } from "@/context/ThemeContext";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
 
-type SettingsModalProps = {
+interface SettingsModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-};
+}
 
 const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
   const { mode, setMode, language, setLanguage, t } = useTheme();
-  
-  const [tempMode, setTempMode] = useState<"light" | "dark">(mode);
-  const [tempLanguage, setTempLanguage] = useState(language);
-  
-  useEffect(() => {
-    if (open) {
-      setTempMode(mode);
-      setTempLanguage(language);
-    }
-  }, [open, mode, language]);
+  const { isSupported, permission, requestPermission, sendTestNotification } = usePushNotifications();
   
   const handleSave = () => {
-    setMode(tempMode);
-    setLanguage(tempLanguage);
-    
     toast.success(t("settingsSaved"), {
       description: t("preferencesUpdated"),
     });
-    
     onOpenChange(false);
   };
-  
+
+  const handlePushNotificationToggle = async (enabled: boolean) => {
+    if (enabled) {
+      const success = await requestPermission();
+      if (!success) {
+        toast.error('Impossibile attivare le notifiche push');
+      }
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Settings className="h-5 w-5" />
-            {t("settings")}
-          </DialogTitle>
+          <DialogTitle className="text-drplant-blue-dark">{t("settings")}</DialogTitle>
         </DialogHeader>
-        
         <div className="space-y-6 py-4">
-          {/* Appearance */}
+          {/* Appearance Section */}
           <div className="space-y-4">
-            <h3 className="font-medium text-sm">{t("appearance")}</h3>
-            
+            <h3 className="text-lg font-medium text-gray-900 flex items-center gap-2">
+              {mode === 'dark' ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
+              {t("appearance")}
+            </h3>
             <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                {tempMode === "light" ? (
-                  <Sun className="h-5 w-5 text-amber-500" />
-                ) : (
-                  <Moon className="h-5 w-5 text-indigo-400" />
-                )}
-                <Label htmlFor="theme-mode">
-                  {tempMode === "light" ? t("lightMode") : t("darkMode")}
-                </Label>
-              </div>
+              <Label htmlFor="dark-mode" className="text-gray-700">
+                {mode === 'dark' ? t("lightMode") : t("darkMode")}
+              </Label>
               <Switch
-                id="theme-mode"
-                checked={tempMode === "dark"}
-                onCheckedChange={(checked) => setTempMode(checked ? "dark" : "light")}
+                id="dark-mode"
+                checked={mode === 'dark'}
+                onCheckedChange={(checked) => setMode(checked ? 'dark' : 'light')}
               />
             </div>
           </div>
-          
-          {/* Language */}
+
+          <Separator />
+
+          {/* Language Section */}
           <div className="space-y-4">
-            <div className="flex items-center space-x-2">
-              <Globe className="h-5 w-5 text-blue-500" />
-              <h3 className="font-medium text-sm">{t("language")}</h3>
+            <h3 className="text-lg font-medium text-gray-900 flex items-center gap-2">
+              <Globe className="h-5 w-5" />
+              {t("language")}
+            </h3>
+            <div className="space-y-2">
+              <Label htmlFor="language" className="text-gray-700">
+                {t("language")}
+              </Label>
+              <Select value={language} onValueChange={(value: any) => setLanguage(value)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="it">{t("italian")}</SelectItem>
+                  <SelectItem value="en">{t("english")}</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
+          </div>
+
+          <Separator />
+
+          {/* Notifications Section */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-medium text-gray-900 flex items-center gap-2">
+              <Bell className="h-5 w-5" />
+              {t("notifications")}
+            </h3>
             
-            <RadioGroup value={tempLanguage} onValueChange={(value) => setTempLanguage(value as any)}>
-              <div className="flex items-center space-x-2 mb-2">
-                <RadioGroupItem value="it" id="lang-it" />
-                <Label htmlFor="lang-it">{t("italian")}</Label>
+            {isSupported ? (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Smartphone className="h-4 w-4" />
+                    <Label htmlFor="push-notifications" className="text-gray-700">
+                      {t("pushNotifications")}
+                    </Label>
+                  </div>
+                  <Switch
+                    id="push-notifications"
+                    checked={permission === 'granted'}
+                    onCheckedChange={handlePushNotificationToggle}
+                  />
+                </div>
+                
+                {permission === 'granted' && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={sendTestNotification}
+                    className="w-full"
+                  >
+                    {t("testNotification")}
+                  </Button>
+                )}
+                
+                <p className="text-sm text-gray-500">
+                  {permission === 'granted' 
+                    ? t("pushNotificationsEnabled")
+                    : permission === 'denied'
+                    ? t("pushNotificationsDenied")
+                    : t("pushNotificationsDisabled")
+                  }
+                </p>
               </div>
-              <div className="flex items-center space-x-2 mb-2">
-                <RadioGroupItem value="en" id="lang-en" />
-                <Label htmlFor="lang-en">{t("english")}</Label>
-              </div>
-            </RadioGroup>
+            ) : (
+              <p className="text-sm text-gray-500">
+                {t("pushNotificationsNotSupported")}
+              </p>
+            )}
           </div>
         </div>
-        
-        <DialogFooter>
+
+        <div className="flex justify-end space-x-2">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             {t("cancel")}
           </Button>
-          <Button onClick={handleSave}>
+          <Button 
+            onClick={handleSave}
+            className="bg-gradient-to-r from-drplant-blue to-drplant-blue-dark hover:from-drplant-blue-dark hover:to-drplant-blue-dark"
+          >
             {t("save")}
           </Button>
-        </DialogFooter>
+        </div>
       </DialogContent>
     </Dialog>
   );
