@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -10,6 +9,7 @@ import { toast } from "sonner";
 import { LockKeyhole, Mail, Globe } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/context/ThemeContext";
+import ForgotPasswordModal from "@/components/auth/ForgotPasswordModal";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -18,6 +18,7 @@ const Login = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
   const { language, setLanguage, t } = useTheme();
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
 
   const adminCredentials = {
     'agrotecnicomarconigro@gmail.com': 'marconigro93',
@@ -183,6 +184,15 @@ const Login = () => {
             </form>
           </CardContent>
           <CardFooter className="flex flex-col space-y-4">
+            <div className="text-center w-full">
+              <button
+                type="button"
+                onClick={() => setShowForgotPassword(true)}
+                className="text-sm text-drplant-blue hover:underline font-medium"
+              >
+                {t("forgotPassword")}
+              </button>
+            </div>
             <div className="text-center w-full text-sm text-gray-500">
               {t("noAccount")} <Link to="/signup" className="text-drplant-blue font-medium hover:underline">{t("signup")}</Link>
             </div>
@@ -193,6 +203,11 @@ const Login = () => {
           <p>© 2025 Dr.Plant. {t("allRightsReserved")}</p>
         </div>
       </div>
+
+      <ForgotPasswordModal 
+        open={showForgotPassword} 
+        onOpenChange={setShowForgotPassword} 
+      />
     </div>
   );
 };
