@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
+import { useTheme } from '@/context/ThemeContext';
 import { supabase } from '@/integrations/supabase/client'; 
 import { RealTimeChatWrapper } from '../RealTimeChatWrapper';
 import ChatMessage from '../ChatMessage';
@@ -43,19 +44,18 @@ interface ConversationListItem {
 
 export const ExpertRealTimeChat: React.FC = () => {
   const { userProfile } = useAuth();
+  const { t } = useTheme();
   const [conversations, setConversations] = useState<ConversationListItem[]>([]);
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [deletingConversation, setDeletingConversation] = useState<string | null>(null);
   const [conversationDeleted, setConversationDeleted] = useState(false);
 
-  // Load conversations list con metodo ottimizzato
   const loadConversations = async () => {
     try {
       setLoading(true);
       console.log('🔄 ExpertRealTimeChat: Loading conversations...');
 
-      // Usa il servizio ottimizzato per caricare le conversazioni
       const conversationList = await ConversationService.refreshConversations(MARCO_NIGRO_ID);
 
       if (!conversationList || conversationList.length === 0) {
@@ -64,13 +64,11 @@ export const ExpertRealTimeChat: React.FC = () => {
         return;
       }
 
-      // Process conversations with enhanced last message handling
       const conversationsWithLastMessage = await Promise.all(conversationList.map(async (conv: any) => {
         let lastMessageText = conv.last_message_text;
         let lastMessageAt = conv.last_message_at;
-        let unread_count = 0; // TODO: Implement proper unread count
+        let unread_count = 0;
 
-        // Fallback: if no last message, get the latest from messages table
         if (!lastMessageText) {
           const { data: messages } = await supabase
             .from('messages')
@@ -98,7 +96,6 @@ export const ExpertRealTimeChat: React.FC = () => {
           }
         }
 
-        // Get user profile
         const { data: profile } = await supabase
           .from('profiles')
           .select('id, first_name, last_name, avatar_url, is_online')
@@ -128,33 +125,27 @@ export const ExpertRealTimeChat: React.FC = () => {
     }
   };
 
-  // Funzione per eliminare conversazione CON ELIMINAZIONE OTTIMIZZATA
   const handleDeleteConversation = async (conversationId: string) => {
     try {
       setDeletingConversation(conversationId);
       console.log('🗑️ ExpertRealTimeChat: Inizio eliminazione OTTIMIZZATA:', conversationId);
       
-      // RIMUOVI IMMEDIATAMENTE dalla UI per feedback veloce
       setConversations(prevConversations => 
         prevConversations.filter(conv => conv.id !== conversationId)
       );
       
-      // Se la conversazione eliminata era selezionata, deseleziona e marca come eliminata
       if (selectedConversationId === conversationId) {
         console.log('🔄 Deselecting deleted conversation and marking as deleted');
         setSelectedConversationId(null);
         setConversationDeleted(true);
       }
       
-      // Usa il ConversationService ottimizzato per l'eliminazione
       const success = await ConversationService.deleteConversation(conversationId);
 
       if (success) {
         console.log('✅ ExpertRealTimeChat: Conversazione eliminata con successo');
         toast.success('Conversazione eliminata con successo');
         
-        // Non serve ricaricare tutto, l'UI è già aggiornata
-        // Ma forziamo un refresh leggero dopo 2 secondi per sicurezza
         setTimeout(() => {
           loadConversations();
         }, 2000);
@@ -162,7 +153,6 @@ export const ExpertRealTimeChat: React.FC = () => {
         console.error('❌ ExpertRealTimeChat: Fallimento eliminazione, ripristino UI');
         toast.error('Errore durante l\'eliminazione della conversazione');
         
-        // Ripristina la lista in caso di errore
         await loadConversations();
         setConversationDeleted(false);
       }
@@ -171,7 +161,6 @@ export const ExpertRealTimeChat: React.FC = () => {
       console.error('❌ ExpertRealTimeChat: Errore eliminazione conversazione:', error);
       toast.error(error.message || 'Errore durante l\'eliminazione della conversazione');
       
-      // Ripristina la lista in caso di errore
       await loadConversations();
       setConversationDeleted(false);
     } finally {
@@ -179,27 +168,22 @@ export const ExpertRealTimeChat: React.FC = () => {
     }
   };
 
-  // --- SUBSCRIPTION CANALE REALTIME NOTIFICHE ---
   useEffect(() => {
-    // Iscrizione solo se loggato come Marco Nigro
     if (userProfile?.id !== MARCO_NIGRO_ID) return;
     const channel = supabase.channel(`expert-notifications:${MARCO_NIGRO_ID}`);
     channel.on("broadcast", { event: "new_plant_consultation" }, (payload) => {
-      // Log notifica e aggiorna conversazioni
       console.log("[Expert] Notifica realtime ricevuta:", payload);
       loadConversations();
     }).subscribe();
     return () => {
       supabase.removeChannel(channel);
     };
-    // eslint-disable-next-line
   }, [userProfile]);
 
   useEffect(() => {
     if (userProfile?.id === MARCO_NIGRO_ID) {
       loadConversations();
       
-      // Setup real-time subscription for conversation changes con gestione ottimizzata
       const conversationsChannel = supabase
         .channel('expert-conversations-realtime-optimized')
         .on('postgres_changes', 
@@ -208,17 +192,14 @@ export const ExpertRealTimeChat: React.FC = () => {
             console.log('🔄 Conversation change detected:', payload);
             if (payload.eventType === 'DELETE') {
               console.log('🗑️ Conversation deletion detected:', payload.old?.id);
-              // Remove deleted conversation immediately from UI
               setConversations(prev => prev.filter(conv => conv.id !== payload.old?.id));
               
-              // If currently selected conversation was deleted, deselect it and mark as deleted
               if (selectedConversationId === payload.old?.id) {
                 console.log('🔄 Deselecting deleted conversation and marking as deleted');
                 setSelectedConversationId(null);
                 setConversationDeleted(true);
               }
             } else {
-              // Per altri eventi, ricarica con debounce
               setTimeout(() => loadConversations(), 1000);
             }
           }
@@ -231,7 +212,6 @@ export const ExpertRealTimeChat: React.FC = () => {
     }
   }, [userProfile, selectedConversationId]);
 
-  // Reset conversation deleted state when selecting a new conversation
   useEffect(() => {
     if (selectedConversationId) {
       setConversationDeleted(false);
@@ -241,12 +221,11 @@ export const ExpertRealTimeChat: React.FC = () => {
   if (userProfile?.id !== MARCO_NIGRO_ID) {
     return (
       <div className="flex items-center justify-center h-96">
-        <p className="text-gray-500">Accesso negato. Solo Marco Nigro può accedere a questa sezione.</p>
+        <p className="text-gray-500">{t("accessDenied")}</p>
       </div>
     );
   }
 
-  // Safe conversation lookup with fallback
   const selectedConversation = conversations.find(c => c.id === selectedConversationId);
 
   return (
@@ -256,21 +235,21 @@ export const ExpertRealTimeChat: React.FC = () => {
         <div className="p-4 border-b border-gray-200">
           <div className="flex items-center gap-2">
             <Users className="h-5 w-5 text-drplant-green" />
-            <h2 className="text-lg font-semibold">Conversazioni Clienti</h2>
+            <h2 className="text-lg font-semibold">{t("clientConversations")}</h2>
           </div>
           <p className="text-sm text-gray-600 mt-1">
-            {conversations.length} conversazioni attive
+            {conversations.length} {t("activeConversations")}
           </p>
         </div>
 
         <div className="overflow-y-auto">
           {loading ? (
             <div className="p-4">
-              <p className="text-gray-500">Caricamento conversazioni...</p>
+              <p className="text-gray-500">{t("loadingConversations")}</p>
             </div>
           ) : conversations.length === 0 ? (
             <div className="p-4">
-              <p className="text-gray-500">Nessuna conversazione attiva</p>
+              <p className="text-gray-500">{t("noActiveConversations")}</p>
             </div>
           ) : (
             conversations.map((conv) => (
@@ -319,7 +298,7 @@ export const ExpertRealTimeChat: React.FC = () => {
                             ? 'bg-green-100 text-green-700' 
                             : 'bg-gray-100 text-gray-500'
                         }`}>
-                          {conv.user_profile?.is_online ? 'Online' : 'Offline'}
+                          {conv.user_profile?.is_online ? t("online") : t("offline")}
                         </span>
                       </div>
                       <p className="text-sm text-gray-600 truncate mt-1">
@@ -332,7 +311,6 @@ export const ExpertRealTimeChat: React.FC = () => {
                     </div>
                   </div>
                   
-                  {/* Pulsante Elimina più visibile */}
                   <div className="ml-2 flex-shrink-0">
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
@@ -343,24 +321,23 @@ export const ExpertRealTimeChat: React.FC = () => {
                           disabled={deletingConversation === conv.id}
                         >
                           <Trash2 className="h-4 w-4" />
-                          <span className="hidden sm:inline">Elimina</span>
+                          <span className="hidden sm:inline">{t("delete")}</span>
                         </Button>
                       </AlertDialogTrigger>
                       <AlertDialogContent>
                         <AlertDialogHeader>
-                          <AlertDialogTitle>Elimina Conversazione</AlertDialogTitle>
+                          <AlertDialogTitle>{t("deleteConversation")}</AlertDialogTitle>
                           <AlertDialogDescription>
-                            Sei sicuro di voler eliminare questa conversazione con {conv.user_profile?.first_name} {conv.user_profile?.last_name}? 
-                            Questa azione eliminerà anche tutti i messaggi associati e non può essere annullata.
+                            {t("confirmDeleteConversation")}
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
-                          <AlertDialogCancel>Annulla</AlertDialogCancel>
+                          <AlertDialogCancel>{t("cancel")}</AlertDialogCancel>
                           <AlertDialogAction
                             onClick={() => handleDeleteConversation(conv.id)}
                             className="bg-red-600 hover:bg-red-700"
                           >
-                            Elimina
+                            {t("delete")}
                           </AlertDialogAction>
                         </AlertDialogFooter>
                       </AlertDialogContent>
@@ -382,7 +359,7 @@ export const ExpertRealTimeChat: React.FC = () => {
           >
             {({ messages, isConnected, sendMessage }) => (
               <>
-                {/* Chat Header with prominent Delete Button */}
+                {/* Chat Header */}
                 <div className="p-4 border-b border-gray-200 bg-white flex-shrink-0">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
@@ -404,17 +381,17 @@ export const ExpertRealTimeChat: React.FC = () => {
                       </div>
                       <div>
                         <h3 className="font-medium text-gray-900">
-                          Chat con {selectedConversation.user_profile?.first_name} {selectedConversation.user_profile?.last_name}
+                          {t("chatWith")} {selectedConversation.user_profile?.first_name} {selectedConversation.user_profile?.last_name}
                         </h3>
                         <div className="flex items-center gap-2 text-sm text-gray-500">
                           <MessageCircle className="h-4 w-4" />
-                          <span>Conversazione Attiva</span>
+                          <span>{t("activeConversation")}</span>
                           <span className={`text-xs px-2 py-1 rounded-full ${
                             selectedConversation.user_profile?.is_online 
                               ? 'bg-green-100 text-green-700' 
                               : 'bg-gray-100 text-gray-500'
                           }`}>
-                            {selectedConversation.user_profile?.is_online ? 'Online' : 'Offline'}
+                            {selectedConversation.user_profile?.is_online ? t("online") : t("offline")}
                           </span>
                         </div>
                       </div>
@@ -423,10 +400,9 @@ export const ExpertRealTimeChat: React.FC = () => {
                       <div className="flex items-center gap-2">
                         <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`} />
                         <span className="text-sm text-gray-600">
-                          {isConnected ? 'Connesso' : 'Disconnesso'}
+                          {isConnected ? t("connected") : t("disconnected")}
                         </span>
                       </div>
-                      {/* Pulsante Elimina Chat più prominente */}
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
                           <Button
@@ -435,24 +411,23 @@ export const ExpertRealTimeChat: React.FC = () => {
                             className="bg-red-600 hover:bg-red-700 text-white flex items-center gap-2"
                           >
                             <Trash2 className="h-4 w-4" />
-                            Elimina Chat
+                            {t("deleteChat")}
                           </Button>
                         </AlertDialogTrigger>
                         <AlertDialogContent>
                           <AlertDialogHeader>
-                            <AlertDialogTitle>Elimina Conversazione</AlertDialogTitle>
+                            <AlertDialogTitle>{t("deleteConversation")}</AlertDialogTitle>
                             <AlertDialogDescription>
-                              Sei sicuro di voler eliminare questa conversazione con {selectedConversation.user_profile?.first_name} {selectedConversation.user_profile?.last_name}?
-                              Tutti i messaggi verranno eliminati permanentemente.
+                              {t("confirmDeleteConversation")}
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
-                            <AlertDialogCancel>Annulla</AlertDialogCancel>
+                            <AlertDialogCancel>{t("cancel")}</AlertDialogCancel>
                             <AlertDialogAction
                               onClick={() => handleDeleteConversation(selectedConversationId)}
                               className="bg-red-600 hover:bg-red-700"
                             >
-                              Elimina
+                              {t("delete")}
                             </AlertDialogAction>
                           </AlertDialogFooter>
                         </AlertDialogContent>
@@ -477,7 +452,7 @@ export const ExpertRealTimeChat: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Enhanced Message Input with Audio and Emoji */}
+                {/* Message Input */}
                 <div className="flex-shrink-0">
                   <MessageInput
                     conversationId={selectedConversationId}
@@ -498,23 +473,21 @@ export const ExpertRealTimeChat: React.FC = () => {
             )}
           </RealTimeChatWrapper>
         ) : conversationDeleted ? (
-          // Stato per conversazione eliminata
           <div className="flex-1 flex items-center justify-center">
             <Card className="w-96">
               <CardHeader>
                 <CardTitle className="text-center flex items-center justify-center gap-2 text-red-600">
                   <MessageCircleOff className="h-6 w-6" />
-                  Conversazione Eliminata
+                  {t("conversationDeleted")}
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <Alert variant="destructive">
                   <AlertTriangle className="h-4 w-4" />
                   <AlertDescription>
-                    <div className="font-medium mb-2">Conversazione non più disponibile</div>
+                    <div className="font-medium mb-2">{t("conversationNotAvailable")}</div>
                     <div className="text-sm">
-                      Questa conversazione è stata eliminata e non è più accessibile. 
-                      Tutte le interazioni con questa conversazione sono state disabilitate.
+                      {t("conversationDeletedDescription")}
                     </div>
                   </AlertDescription>
                 </Alert>
@@ -526,7 +499,7 @@ export const ExpertRealTimeChat: React.FC = () => {
                     }}
                     variant="outline"
                   >
-                    Seleziona un'altra conversazione
+                    {t("selectAnotherConversation")}
                   </Button>
                 </div>
               </CardContent>
@@ -539,8 +512,8 @@ export const ExpertRealTimeChat: React.FC = () => {
                 <CardTitle className="text-center flex items-center justify-center gap-2">
                   <MessageCircle className="h-6 w-6 text-drplant-green" />
                   {selectedConversationId && !selectedConversation ? 
-                    'Conversazione Non Trovata' : 
-                    'Seleziona una Conversazione'
+                    t("conversationNotFound") : 
+                    t("selectConversation")
                   }
                 </CardTitle>
               </CardHeader>
@@ -548,10 +521,10 @@ export const ExpertRealTimeChat: React.FC = () => {
                 <p className="text-center text-gray-600">
                   {selectedConversationId && !selectedConversation ? (
                     <span className="text-red-600">
-                      🟡 Nessuna conversazione trovata per questo utente.
+                      {t("noConversationFound")}
                     </span>
                   ) : (
-                    'Scegli una conversazione dalla lista per iniziare a chattare con i tuoi pazienti.'
+                    t("chooseConversation")
                   )}
                 </p>
               </CardContent>

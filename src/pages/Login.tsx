@@ -5,9 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { LockKeyhole, Mail } from "lucide-react";
+import { LockKeyhole, Mail, Globe } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import { useTheme } from "@/context/ThemeContext";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -15,8 +17,8 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const { login } = useAuth();
+  const { language, setLanguage, t } = useTheme();
 
-  // Lista degli account amministrativi con le loro password
   const adminCredentials = {
     'agrotecnicomarconigro@gmail.com': 'marconigro93',
     'test@gmail.com': 'test123',
@@ -30,8 +32,8 @@ const Login = () => {
     setIsLoading(true);
 
     if (!email || !password) {
-      toast.error("Errore", {
-        description: "Inserisci sia email che password",
+      toast.error(t("error"), {
+        description: t("enterCredentials"),
         dismissible: true
       });
       setIsLoading(false);
@@ -46,7 +48,7 @@ const Login = () => {
       
       if (isAdminEmail) {
         console.log('Account amministrativo rilevato:', email);
-        toast.info("Login amministratore in corso...", {
+        toast.info(t("loginInProgress"), {
           description: "Accesso con credenziali speciali",
           duration: 2000
         });
@@ -56,17 +58,16 @@ const Login = () => {
       
       if (result.success) {
         console.log('Login successful');
-        toast.success("Login effettuato con successo", {
-          description: isAdminEmail ? "Benvenuto, Amministratore!" : "Benvenuto nell'applicazione!",
+        toast.success(t("loginSuccessful"), {
+          description: isAdminEmail ? "Benvenuto, Amministratore!" : t("welcomeMessage"),
           dismissible: true
         });
         
-        // Navigate after a short delay to ensure auth state is updated
         setTimeout(() => {
           navigate("/", { replace: true });
         }, 500);
       } else {
-        toast.error("Login fallito", {
+        toast.error(t("loginFailed"), {
           description: isAdminEmail ? 
             "Problemi con l'account amministratore. Verifica le credenziali." : 
             "Credenziali non valide. Riprova.",
@@ -75,8 +76,8 @@ const Login = () => {
       }
     } catch (error: any) {
       console.error("Login error:", error);
-      toast.error("Login fallito", {
-        description: error.message || "Si è verificato un errore. Riprova.",
+      toast.error(t("loginFailed"), {
+        description: error.message || t("somethingWentWrong"),
         dismissible: true
       });
     } finally {
@@ -99,25 +100,42 @@ const Login = () => {
             />
           </div>
           <h1 className="text-3xl font-bold text-drplant-blue-dark">Dr.Plant</h1>
-          <p className="text-gray-600 mt-2">Accedi al tuo assistente per la cura delle piante</p>
+          <p className="text-gray-600 mt-2">{t("assistantMessage")}</p>
         </div>
 
         <Card className="border-none shadow-xl bg-white/80 backdrop-blur-sm">
           <CardHeader>
-            <CardTitle className="text-2xl text-drplant-blue-dark text-center">Benvenuto</CardTitle>
+            <CardTitle className="text-2xl text-drplant-blue-dark text-center">{t("welcome")}</CardTitle>
             <CardDescription className="text-center">
-              Inserisci le tue credenziali per continuare
+              {t("enterCredentials")}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleLogin} className="space-y-4">
+              {/* Language Selector */}
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-gray-700">Email</Label>
+                <Label htmlFor="language" className="text-gray-700 flex items-center gap-2">
+                  <Globe className="h-4 w-4" />
+                  {t("language")}
+                </Label>
+                <Select value={language} onValueChange={(value: any) => setLanguage(value)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="it">{t("italian")}</SelectItem>
+                    <SelectItem value="en">{t("english")}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="email" className="text-gray-700">{t("email")}</Label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
                   <Input 
                     id="email" 
-                    placeholder="Inserisci la tua email" 
+                    placeholder={t("enterEmail")} 
                     className="pl-10"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
@@ -128,13 +146,13 @@ const Login = () => {
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="password" className="text-gray-700">Password</Label>
+                <Label htmlFor="password" className="text-gray-700">{t("password")}</Label>
                 <div className="relative">
                   <LockKeyhole className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
                   <Input 
                     id="password" 
                     type="password" 
-                    placeholder="Inserisci la tua password" 
+                    placeholder={t("enterPassword")} 
                     className="pl-10"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
@@ -144,10 +162,9 @@ const Login = () => {
                 </div>
               </div>
               
-              {/* Suggerimento per account amministrativi */}
               {adminCredentials[email.trim().toLowerCase() as keyof typeof adminCredentials] && (
                 <div className="text-sm text-blue-600 bg-blue-50 p-3 rounded border border-blue-200">
-                  <div className="font-medium">💡 Account amministratore rilevato</div>
+                  <div className="font-medium">💡 {t("adminAccountDetected")}</div>
                   <div className="mt-1">
                     Password: <code className="bg-blue-100 px-1 rounded font-mono">
                       {adminCredentials[email.trim().toLowerCase() as keyof typeof adminCredentials]}
@@ -161,19 +178,19 @@ const Login = () => {
                 className="w-full bg-gradient-to-r from-drplant-blue to-drplant-blue-dark hover:from-drplant-blue-dark hover:to-drplant-blue-dark transition-all duration-300"
                 disabled={isLoading}
               >
-                {isLoading ? "Accesso in corso..." : "Accedi"}
+                {isLoading ? t("loginInProgress") : t("login")}
               </Button>
             </form>
           </CardContent>
           <CardFooter className="flex flex-col space-y-4">
             <div className="text-center w-full text-sm text-gray-500">
-              Non hai un account? <Link to="/signup" className="text-drplant-blue font-medium hover:underline">Registrati</Link>
+              {t("noAccount")} <Link to="/signup" className="text-drplant-blue font-medium hover:underline">{t("signup")}</Link>
             </div>
           </CardFooter>
         </Card>
 
         <div className="mt-8 text-center text-gray-600 text-sm">
-          <p>© 2025 Dr.Plant. Tutti i diritti riservati.</p>
+          <p>© 2025 Dr.Plant. {t("allRightsReserved")}</p>
         </div>
       </div>
     </div>

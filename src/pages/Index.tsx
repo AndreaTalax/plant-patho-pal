@@ -1,9 +1,10 @@
+
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
+import { useTheme } from "@/context/ThemeContext";
 import { useNavigate } from "react-router-dom";
 import Header from "@/components/Header";
 import DiagnoseTab from "@/components/DiagnoseTab";
-import ChatTab from "@/components/ChatTab";
 import LibraryTab from "@/components/LibraryTab";
 import ShopTab from "@/components/ShopTab";
 import ProfileTab from "@/components/ProfileTab";
@@ -13,28 +14,15 @@ import { ensureStorageBuckets } from "@/utils/storageSetup";
 import { usePlantInfo } from "@/context/PlantInfoContext";
 import { useToast } from "@/hooks/use-toast";
 
-/**
-* Renders the main application page with tab navigation and dynamic content based on active tab.
-* @example
-* Index()
-* Renders the default diagnose tab, header, and bottom navigation.
-* @returns {JSX.Element} The rendered application page component.
-* @description
-*   - Initializes storage buckets using a side-effect upon application startup.
-*   - Sets up event listeners for custom tab switch events to update activeTab state.
-*   - Conditionally renders the expert tab based on the user's account type.
-*   - Ensures smooth user interaction through dynamic tab content rendering.
-*/
 const Index = () => {
   const { isMasterAccount, isAuthenticated, isProfileComplete, loading } = useAuth();
   const { plantInfo } = usePlantInfo();
   const { toast } = useToast();
+  const { t } = useTheme();
   const navigate = useNavigate();
 
-  // Set default tab based on account type - master accounts start with expert tab
   const [activeTab, setActiveTab] = useState<string>(isMasterAccount ? "expert" : "diagnose");
 
-  // Reindirizza alla pagina di login se non autenticato
   useEffect(() => {
     if (!loading && !isAuthenticated) {
       console.log('🔒 Utente non autenticato, reindirizzamento al login...');
@@ -42,7 +30,6 @@ const Index = () => {
     }
   }, [isAuthenticated, loading, navigate]);
 
-  // Reindirizza alla pagina di completamento profilo se il profilo non è completo
   useEffect(() => {
     if (!loading && isAuthenticated && !isProfileComplete && !isMasterAccount) {
       console.log('📝 Profilo incompleto, reindirizzamento al completamento profilo...');
@@ -50,29 +37,24 @@ const Index = () => {
     }
   }, [isAuthenticated, isProfileComplete, isMasterAccount, loading, navigate]);
 
-  // Calcola se i tab sono sbloccati solo dopo scelta AI o Esperto
   const canAccessTabs = plantInfo.infoComplete && (plantInfo.useAI || plantInfo.sendToExpert);
 
-  // Initialize storage buckets on app start
   useEffect(() => {
     ensureStorageBuckets();
   }, []);
 
-  // Update default tab when master account status changes
   useEffect(() => {
     if (isMasterAccount && activeTab === "diagnose") {
       setActiveTab("expert");
     }
   }, [isMasterAccount, activeTab]);
 
-  // Aggiorna: blocca accesso tab se canAccessTabs è false e tab ≠ 'diagnose'
   useEffect(() => {
     if (!canAccessTabs && activeTab !== "diagnose" && !isMasterAccount) {
       setActiveTab("diagnose");
     }
   }, [canAccessTabs, activeTab, isMasterAccount]);
 
-  // Listen for custom tab switch events
   useEffect(() => {
     const handleSwitchTab = (event: CustomEvent) => {
       const newTab = event.detail;
@@ -83,8 +65,8 @@ const Index = () => {
       }
       if (!isMasterAccount && !canAccessTabs && newTab !== "diagnose") {
         toast({
-          title: "Completa prima la diagnosi della pianta!",
-          description: "Dopo il caricamento della foto, scegli tra Analisi AI o invio all'esperto.",
+          title: t("completeDiagnosisFirst"),
+          description: t("afterUploadChoose"),
           duration: 3500,
           variant: "destructive",
         });
@@ -99,28 +81,17 @@ const Index = () => {
     return () => {
       window.removeEventListener('switchTab', handleSwitchTab as EventListener);
     };
-  }, [isMasterAccount, canAccessTabs, toast]);
+  }, [isMasterAccount, canAccessTabs, toast, t]);
 
-  // Gestione tap utente con blocco Chat per master account
   const handleSetActiveTab = (tab: string) => {
     if (isMasterAccount && tab === "diagnose") {
       setActiveTab("expert");
       return;
     }
-    // Blocca accesso a chat per master account
-    if (isMasterAccount && tab === "chat") {
-      toast({
-        title: "Accesso non consentito",
-        description: "Usa la dashboard esperto per gestire le conversazioni.",
-        duration: 3500,
-        variant: "destructive",
-      });
-      return;
-    }
     if (!isMasterAccount && !canAccessTabs && tab !== "diagnose") {
       toast({
-        title: "Completa prima la diagnosi della pianta!",
-        description: "Dopo il caricamento della foto, scegli tra Analisi AI o invio all'esperto.",
+        title: t("completeDiagnosisFirst"),
+        description: t("afterUploadChoose"),
         duration: 3500,
         variant: "destructive",
       });
@@ -130,37 +101,22 @@ const Index = () => {
     setActiveTab(tab);
   };
 
-  // Se l'autenticazione è in corso di caricamento, mostra una schermata di carico
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-drplant-green/5 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-drplant-green mx-auto mb-4"></div>
-          <p className="text-gray-600">Caricamento...</p>
+          <p className="text-gray-600">{t("loading")}</p>
         </div>
       </div>
     );
   }
 
-  // Se non autenticato o profilo incompleto, non renderizzare nulla (il redirect è gestito negli useEffect)
   if (!isAuthenticated || (!isProfileComplete && !isMasterAccount)) {
     return null;
   }
 
-  /**
-   * Renders a component based on the active tab selected
-   * @example
-   * functionName("chat")
-   * <ChatTab />
-   * @param {string} activeTab - The name of the currently active tab.
-   * @returns {JSX.Element} The corresponding tab component to render.
-   * @description
-   *   - If the activeTab is "expert", it checks the isMasterAccount flag to determine which tab to render.
-   *   - Defaults to rendering <DiagnoseTab /> if activeTab doesn't match any case.
-   *   - Master accounts are prevented from accessing the diagnose tab.
-   */
   const renderTabContent = () => {
-    // Se master, mostra SOLO Dashboard (Expert), Shop, Profilo (NO CHAT)
     if (isMasterAccount) {
       switch (activeTab) {
         case "expert":
@@ -173,12 +129,10 @@ const Index = () => {
           return <ExpertTab />;
       }
     }
-    // Per utenti normali, mostra tutto
+    
     switch (activeTab) {
       case "diagnose":
         return <DiagnoseTab />;
-      case "chat":
-        return <ChatTab />;
       case "library":
         return <LibraryTab />;
       case "shop":
@@ -193,9 +147,9 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-drplant-green/5">
       <Header />
-      <main className="pb-20 pt-16">
+      <div className="pb-20">
         {renderTabContent()}
-      </main>
+      </div>
       <BottomNavigation 
         activeTab={activeTab} 
         setActiveTab={handleSetActiveTab}

@@ -8,19 +8,20 @@ import { Button } from "@/components/ui/button";
 import { SignUpForm, SignUpFormValues } from "@/components/signup/SignUpForm";
 import { AuthPageLayout } from "@/components/auth/AuthPageLayout";
 import { Link } from "react-router-dom";
+import { useTheme } from "@/context/ThemeContext";
 
 const SignUp = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
   const [registeredEmail, setRegisteredEmail] = useState("");
   const { register } = useAuth();
+  const { t } = useTheme();
   const navigate = useNavigate();
 
   const onSubmit = async (values: SignUpFormValues) => {
     setIsLoading(true);
     
     try {
-      // Clear any previous toasts
       toast.dismiss();
       
       await register(values.email, values.password);
@@ -32,8 +33,6 @@ const SignUp = () => {
         duration: 8000,
         dismissible: true,
       });
-
-      // Non reindirizzare automaticamente al login, mostra la schermata di conferma email
       
     } catch (error: any) {
       console.error("Errore registrazione:", error);
@@ -66,23 +65,23 @@ const SignUp = () => {
               </svg>
             </div>
           </div>
-          <h2 className="text-xl font-semibold mb-2">Controlla la tua email</h2>
+          <h2 className="text-xl font-semibold mb-2">{t("checkEmailConfirmation")}</h2>
           <p className="text-gray-600 mb-6">
-            Abbiamo inviato un'email di conferma a <span className="font-medium">{registeredEmail}</span>.<br />
-            Clicca sul link nell'email per completare la registrazione.
+            {t("confirmationEmailSent")} <span className="font-medium">{registeredEmail}</span>.<br />
+            {t("clickLinkToComplete")}
           </p>
           <div className="mt-4 p-3 bg-blue-50 rounded-md border border-blue-200">
             <p className="text-sm text-blue-800 font-medium">
-              Non hai ricevuto l'email?
+              {t("didntReceiveEmail")}
             </p>
             <p className="text-sm text-gray-600 mt-1">
-              Controlla nella cartella spam o nella posta indesiderata.
+              {t("checkSpamFolder")}
             </p>
           </div>
           <div className="mt-6 space-y-3">
             <Link to="/login">
               <Button className="w-full bg-drplant-green hover:bg-drplant-green/90 text-white">
-                Vai al Login
+                {t("goToLogin")}
               </Button>
             </Link>
             <Link to="/signup">
@@ -94,7 +93,7 @@ const SignUp = () => {
                   setRegisteredEmail("");
                 }}
               >
-                Registra un altro account
+                {t("registerAnotherAccount")}
               </Button>
             </Link>
           </div>

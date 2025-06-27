@@ -14,25 +14,12 @@ type SettingsModalProps = {
   onOpenChange: (open: boolean) => void;
 };
 
-/**
- * Renders a settings modal allowing users to adjust appearance and language preferences.
- * @example
- * functionName({ open: true, onOpenChange: (isOpen) => console.log(isOpen) })
- * // Renders the settings modal with current preferences.
- * @param {object} SettingsModalProps - Contains the current open state and function to change it.
- * @returns {JSX.Element} A dialog component containing settings options for appearance and language.
- * @description
- *   - Uses local state to temporarily hold user preferences before saving.
- *   - Resets temporary settings when the modal opens to reflect current preferences.
- *   - Shows success toast notification upon saving preferences.
- */
 const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
   const { mode, setMode, language, setLanguage, t } = useTheme();
   
   const [tempMode, setTempMode] = useState<"light" | "dark">(mode);
   const [tempLanguage, setTempLanguage] = useState(language);
   
-  // Reset temp values when modal opens
   useEffect(() => {
     if (open) {
       setTempMode(mode);
@@ -44,8 +31,8 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
     setMode(tempMode);
     setLanguage(tempLanguage);
     
-    toast.success("Settings saved", {
-      description: "Your preferences have been updated",
+    toast.success(t("settingsSaved"), {
+      description: t("preferencesUpdated"),
     });
     
     onOpenChange(false);
@@ -57,14 +44,14 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Settings className="h-5 w-5" />
-            Settings
+            {t("settings")}
           </DialogTitle>
         </DialogHeader>
         
         <div className="space-y-6 py-4">
           {/* Appearance */}
           <div className="space-y-4">
-            <h3 className="font-medium text-sm">Appearance</h3>
+            <h3 className="font-medium text-sm">{t("appearance")}</h3>
             
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
@@ -74,7 +61,7 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
                   <Moon className="h-5 w-5 text-indigo-400" />
                 )}
                 <Label htmlFor="theme-mode">
-                  {tempMode === "light" ? "Light Mode" : "Dark Mode"}
+                  {tempMode === "light" ? t("lightMode") : t("darkMode")}
                 </Label>
               </div>
               <Switch
@@ -89,29 +76,17 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
           <div className="space-y-4">
             <div className="flex items-center space-x-2">
               <Globe className="h-5 w-5 text-blue-500" />
-              <h3 className="font-medium text-sm">Language</h3>
+              <h3 className="font-medium text-sm">{t("language")}</h3>
             </div>
             
             <RadioGroup value={tempLanguage} onValueChange={(value) => setTempLanguage(value as any)}>
               <div className="flex items-center space-x-2 mb-2">
-                <RadioGroupItem value="en" id="lang-en" />
-                <Label htmlFor="lang-en">English</Label>
-              </div>
-              <div className="flex items-center space-x-2 mb-2">
                 <RadioGroupItem value="it" id="lang-it" />
-                <Label htmlFor="lang-it">Italian</Label>
+                <Label htmlFor="lang-it">{t("italian")}</Label>
               </div>
               <div className="flex items-center space-x-2 mb-2">
-                <RadioGroupItem value="fr" id="lang-fr" />
-                <Label htmlFor="lang-fr">French</Label>
-              </div>
-              <div className="flex items-center space-x-2 mb-2">
-                <RadioGroupItem value="es" id="lang-es" />
-                <Label htmlFor="lang-es">Spanish</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="de" id="lang-de" />
-                <Label htmlFor="lang-de">German</Label>
+                <RadioGroupItem value="en" id="lang-en" />
+                <Label htmlFor="lang-en">{t("english")}</Label>
               </div>
             </RadioGroup>
           </div>
@@ -119,10 +94,10 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
         
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
+            {t("cancel")}
           </Button>
           <Button onClick={handleSave}>
-            Save
+            {t("save")}
           </Button>
         </DialogFooter>
       </DialogContent>

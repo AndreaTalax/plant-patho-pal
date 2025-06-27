@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { Leaf, MessageCircle, BookOpen, ShoppingBag, User, Stethoscope } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import { useTheme } from '@/context/ThemeContext';
 
 interface BottomNavigationProps {
   activeTab: string;
@@ -19,14 +20,13 @@ const BottomNavigation = ({
   canAccessTabs = false
 }: BottomNavigationProps) => {
   const { isMasterAccount } = useAuth();
+  const { t } = useTheme();
 
   const getTabOpacity = (tabName: string) => {
     if (isMasterAccount) {
-      // Per master account, blocca solo diagnose
       return tabName === "diagnose" ? "opacity-50 cursor-not-allowed" : "";
     }
     
-    // Per utenti normali, gestione esistente
     if (!plantInfoComplete && tabName !== "diagnose") {
       return "opacity-50 cursor-not-allowed";
     }
@@ -37,16 +37,11 @@ const BottomNavigation = ({
   };
 
   const tabs = [
-    // Per master account, NON mostrare diagnose
-    ...(!isMasterAccount ? [{ id: 'diagnose', icon: Leaf, label: 'Diagnosi' }] : []),
-    // Per master account, NON mostrare chat
-    ...(!isMasterAccount ? [{ id: 'chat', icon: MessageCircle, label: 'Chat' }] : []),
-    // Mostra expert tab solo per master account
-    ...(showExpertTab ? [{ id: 'expert', icon: Stethoscope, label: 'Dashboard' }] : []),
-    // Library solo per utenti normali
-    ...(!isMasterAccount ? [{ id: 'library', icon: BookOpen, label: 'Libreria' }] : []),
-    { id: 'shop', icon: ShoppingBag, label: 'Shop' },
-    { id: 'profile', icon: User, label: 'Profilo' }
+    ...(!isMasterAccount ? [{ id: 'diagnose', icon: Leaf, label: t("diagnose") }] : []),
+    ...(showExpertTab ? [{ id: 'expert', icon: Stethoscope, label: t("dashboard") }] : []),
+    ...(!isMasterAccount ? [{ id: 'library', icon: BookOpen, label: t("library") }] : []),
+    { id: 'shop', icon: ShoppingBag, label: t("shop") },
+    { id: 'profile', icon: User, label: t("profile") }
   ];
 
   return (

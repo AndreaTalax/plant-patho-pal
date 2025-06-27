@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useToast } from "@/hooks/use-toast";
 import { User } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import { useTheme } from "@/context/ThemeContext";
 import { 
   Form,
   FormControl,
@@ -33,6 +34,7 @@ const CompleteProfile = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { updateProfile, userProfile } = useAuth();
+  const { t } = useTheme();
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
@@ -48,24 +50,22 @@ const CompleteProfile = () => {
     setIsLoading(true);
 
     try {
-      // Update the profile fields directly
       await updateProfile("firstName", values.firstName);
       await updateProfile("lastName", values.lastName);
       await updateProfile("birthDate", values.birthDate);  
       await updateProfile("birthPlace", values.birthPlace);
       
       toast({
-        title: "Profilo completato",
-        description: "Benvenuto su Dr.Plant!",
+        title: t("profileCompleted"),
+        description: t("welcomeMessage"),
       });
       
-      // Redirect to home page - il controllo isProfileComplete reindirizzerà alla diagnosi
       navigate("/");
     } catch (error) {
       toast({
         variant: "destructive",
-        title: "Errore",
-        description: "Si è verificato un problema. Riprova più tardi.",
+        title: t("error"),
+        description: t("tryAgain"),
       });
     } finally {
       setIsLoading(false);
@@ -85,9 +85,9 @@ const CompleteProfile = () => {
                 <User className="h-8 w-8 text-drplant-blue" />
               </div>
             </div>
-            <CardTitle className="text-2xl text-drplant-blue-dark text-center">Completa il tuo profilo</CardTitle>
+            <CardTitle className="text-2xl text-drplant-blue-dark text-center">{t("completeProfile")}</CardTitle>
             <CardDescription className="text-center">
-              Inserisci le tue informazioni per personalizzare la tua esperienza
+              {t("personalInfo")}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -98,9 +98,9 @@ const CompleteProfile = () => {
                   name="firstName"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Nome *</FormLabel>
+                      <FormLabel>{t("firstName")} *</FormLabel>
                       <FormControl>
-                        <Input {...field} placeholder="Inserisci il tuo nome" />
+                        <Input {...field} placeholder={t("enterFirstName")} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -111,9 +111,9 @@ const CompleteProfile = () => {
                   name="lastName"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Cognome *</FormLabel>
+                      <FormLabel>{t("lastName")} *</FormLabel>
                       <FormControl>
-                        <Input {...field} placeholder="Inserisci il tuo cognome" />
+                        <Input {...field} placeholder={t("enterLastName")} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -124,9 +124,9 @@ const CompleteProfile = () => {
                   name="birthDate"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Data di nascita *</FormLabel>
+                      <FormLabel>{t("birthDate")} *</FormLabel>
                       <FormControl>
-                        <Input {...field} type="date" placeholder="Inserisci la tua data di nascita" />
+                        <Input {...field} type="date" placeholder={t("enterBirthDate")} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -137,9 +137,9 @@ const CompleteProfile = () => {
                   name="birthPlace"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Luogo di nascita *</FormLabel>
+                      <FormLabel>{t("birthPlace")} *</FormLabel>
                       <FormControl>
-                        <Input {...field} placeholder="Inserisci il tuo luogo di nascita" />
+                        <Input {...field} placeholder={t("enterBirthPlace")} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -151,7 +151,7 @@ const CompleteProfile = () => {
                     className="w-full bg-gradient-to-r from-drplant-blue to-drplant-blue-dark hover:from-drplant-blue-dark hover:to-drplant-blue-dark transition-all duration-300"
                     disabled={isLoading}
                   >
-                    {isLoading ? "Salvataggio..." : "Continua"}
+                    {isLoading ? t("saving") : t("continue")}
                   </Button>
                 </div>
               </form>
