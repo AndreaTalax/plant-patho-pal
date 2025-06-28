@@ -161,8 +161,8 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
 
       {/* Immagine e info pianta */}
       <div className="grid md:grid-cols-2 gap-6">
-        <ImageDisplay imageSrc={imageSrc} altText="Pianta analizzata" />
-        <PlantInfoCard plantInfo={plantInfo} analysisData={analysisData} />
+        <ImageDisplay imageSrc={imageSrc} isHealthy={isHealthy} />
+        <PlantInfoCard plantInfo={plantInfo} analysisDetails={analysisDetails} />
       </div>
 
       {/* Risultati diagnosi */}
