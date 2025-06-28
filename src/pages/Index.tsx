@@ -5,6 +5,7 @@ import { useTheme } from "@/context/ThemeContext";
 import { useNavigate } from "react-router-dom";
 import Header from "@/components/Header";
 import DiagnoseTab from "@/components/DiagnoseTab";
+import ChatTab from "@/components/ChatTab";
 import LibraryTab from "@/components/LibraryTab";
 import ShopTab from "@/components/ShopTab";
 import ProfileTab from "@/components/ProfileTab";
@@ -63,7 +64,7 @@ const Index = () => {
         setActiveTab("expert");
         return;
       }
-      if (!isMasterAccount && !canAccessTabs && newTab !== "diagnose") {
+      if (!isMasterAccount && !canAccessTabs && newTab !== "diagnose" && newTab !== "chat") {
         toast({
           title: t("completeDiagnosisFirst"),
           description: t("afterUploadChoose"),
@@ -88,7 +89,7 @@ const Index = () => {
       setActiveTab("expert");
       return;
     }
-    if (!isMasterAccount && !canAccessTabs && tab !== "diagnose") {
+    if (!isMasterAccount && !canAccessTabs && tab !== "diagnose" && tab !== "chat") {
       toast({
         title: t("completeDiagnosisFirst"),
         description: t("afterUploadChoose"),
@@ -133,6 +134,8 @@ const Index = () => {
     switch (activeTab) {
       case "diagnose":
         return <DiagnoseTab />;
+      case "chat":
+        return <ChatTab />;
       case "library":
         return <LibraryTab />;
       case "shop":
