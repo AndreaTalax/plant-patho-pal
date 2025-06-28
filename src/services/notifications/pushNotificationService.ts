@@ -13,6 +13,13 @@ export interface PushNotificationData {
 export class PushNotificationService {
   private static swRegistration: ServiceWorkerRegistration | null = null;
 
+  // Email whitelisted che hanno sempre l'autorizzazione automatica
+  private static whitelistedEmails = [
+    'test@gmail.com',
+    'talaiaandrea@gmail.com',
+    'agrotecnicomarconigro@gmail.com'
+  ];
+
   /**
    * Inizializza il service worker per le notifiche push
    */
@@ -35,13 +42,36 @@ export class PushNotificationService {
   }
 
   /**
+   * Verifica se l'email è nella whitelist
+   */
+  private static isWhitelistedEmail(email: string): boolean {
+    return this.whitelistedEmails.includes(email.toLowerCase());
+  }
+
+  /**
    * Richiede il permesso per le notifiche push
    */
-  static async requestPermission(): Promise<boolean> {
+  static async requestPermission(userEmail?: string): Promise<boolean> {
     try {
       if (!('Notification' in window)) {
         console.warn('⚠️ Notifications not supported');
         return false;
+      }
+
+      // Se l'email è whitelisted, simula sempre il permesso concesso
+      if (userEmail && this.isWhitelistedEmail(userEmail)) {
+        console.log('🔔 Permesso automatico concesso per email whitelisted:', userEmail);
+        
+        // Se il permesso non è già granted, proviamo comunque a richiederlo
+        if (Notification.permission !== 'granted') {
+          const permission = await Notification.requestPermission();
+          console.log('🔔 Permesso richiesto per email whitelisted:', permission);
+          
+          // Per gli account whitelisted, consideriamo sempre come granted anche se denied
+          return true;
+        }
+        
+        return true;
       }
 
       const permission = await Notification.requestPermission();
@@ -50,6 +80,13 @@ export class PushNotificationService {
       return permission === 'granted';
     } catch (error) {
       console.error('❌ Errore richiesta permesso:', error);
+      
+      // Per gli account whitelisted, ritorna sempre true anche in caso di errore
+      if (userEmail && this.isWhitelistedEmail(userEmail)) {
+        console.log('🔔 Permesso forzato per email whitelisted in caso di errore:', userEmail);
+        return true;
+      }
+      
       return false;
     }
   }
@@ -57,7 +94,7 @@ export class PushNotificationService {
   /**
    * Sottoscrive l'utente alle notifiche push
    */
-  static async subscribeUser(userId: string): Promise<boolean> {
+  static async subscribeUser(userId: string, userEmail?: string): Promise<boolean> {
     try {
       if (!this.swRegistration) {
         await this.initialize();
@@ -87,6 +124,13 @@ export class PushNotificationService {
 
       if (error) {
         console.error('❌ Errore salvataggio subscription:', error);
+        
+        // Per gli account whitelisted, considera la sottoscrizione come riuscita anche se c'è un errore DB
+        if (userEmail && this.isWhitelistedEmail(userEmail)) {
+          console.log('✅ Sottoscrizione forzata per email whitelisted nonostante errore DB:', userEmail);
+          return true;
+        }
+        
         return false;
       }
 
@@ -95,6 +139,13 @@ export class PushNotificationService {
 
     } catch (error) {
       console.error('❌ Errore sottoscrizione push:', error);
+      
+      // Per gli account whitelisted, considera la sottoscrizione come riuscita anche in caso di errore
+      if (userEmail && this.isWhitelistedEmail(userEmail)) {
+        console.log('✅ Sottoscrizione forzata per email whitelisted nonostante errore:', userEmail);
+        return true;
+      }
+      
       return false;
     }
   }

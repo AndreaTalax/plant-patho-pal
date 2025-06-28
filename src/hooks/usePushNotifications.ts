@@ -1,81 +1,100 @@
 
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import { PushNotificationService } from '@/services/notifications/pushNotificationService';
 import { useAuth } from '@/context/AuthContext';
-import { toast } from 'sonner';
 
 export const usePushNotifications = () => {
   const [isSupported, setIsSupported] = useState(false);
-  const [isSubscribed, setIsSubscribed] = useState(false);
   const [permission, setPermission] = useState<NotificationPermission>('default');
-  const { user } = useAuth();
+  const [isSubscribed, setIsSubscribed] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const { userProfile } = useAuth();
 
   useEffect(() => {
-    const initializePushNotifications = async () => {
-      // Verifica supporto
-      const supported = 'serviceWorker' in navigator && 'PushManager' in window;
+    // Verifica il supporto per le notifiche push
+    const checkSupport = () => {
+      const supported = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
       setIsSupported(supported);
-
-      if (!supported) {
-        console.warn('⚠️ Push notifications non supportate');
-        return;
-      }
-
-      // Inizializza service worker
-      const initialized = await PushNotificationService.initialize();
-      if (!initialized) {
-        console.error('❌ Impossibile inizializzare service worker');
-        return;
-      }
-
-      // Controlla permesso attuale
-      if ('Notification' in window) {
+      
+      if (supported) {
         setPermission(Notification.permission);
       }
     };
 
-    initializePushNotifications();
-  }, []);
+    checkSupport();
+    
+    // Inizializza il service worker
+    if (isSupported) {
+      PushNotificationService.initialize();
+    }
+  }, [isSupported]);
 
-  const requestPermission = async (): Promise<boolean> => {
+  const requestPermission = async () => {
+    setIsLoading(true);
     try {
-      const granted = await PushNotificationService.requestPermission();
-      setPermission(Notification.permission);
+      const granted = await PushNotificationService.requestPermission(userProfile?.email);
       
-      if (granted && user) {
-        const subscribed = await PushNotificationService.subscribeUser(user.id);
-        setIsSubscribed(subscribed);
-        
-        if (subscribed) {
-          toast.success('Notifiche push attivate!', {
-            description: 'Riceverai notifiche per i nuovi messaggi'
-          });
-        }
-        
-        return subscribed;
+      if (granted) {
+        setPermission('granted');
+        console.log('✅ Permesso notifiche concesso');
+      } else {
+        setPermission('denied');
+        console.log('❌ Permesso notifiche negato');
       }
       
       return granted;
     } catch (error) {
-      console.error('❌ Errore richiesta permesso push:', error);
-      toast.error('Errore attivazione notifiche push');
+      console.error('❌ Errore richiesta permesso:', error);
+      setPermission('denied');
       return false;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const subscribe = async () => {
+    if (!userProfile?.id) {
+      console.error('❌ Nessun utente autenticato');
+      return false;
+    }
+
+    setIsLoading(true);
+    try {
+      const success = await PushNotificationService.subscribeUser(userProfile.id, userProfile.email);
+      setIsSubscribed(success);
+      
+      if (success) {
+        console.log('✅ Sottoscrizione push completata');
+      } else {
+        console.log('❌ Sottoscrizione push fallita');
+      }
+      
+      return success;
+    } catch (error) {
+      console.error('❌ Errore sottoscrizione:', error);
+      return false;
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const sendTestNotification = async () => {
-    await PushNotificationService.sendLocalNotification({
-      title: 'Dr.Plant - Test',
-      body: 'Le notifiche push funzionano correttamente!',
-      tag: 'test-notification'
+    const success = await PushNotificationService.sendLocalNotification({
+      title: 'Test Dr.Plant',
+      body: 'Le notifiche push sono attive!',
+      icon: '/lovable-uploads/72d5a60c-404a-4167-9430-511af91c523b.png'
     });
+
+    return success;
   };
 
   return {
     isSupported,
-    isSubscribed,
     permission,
+    isSubscribed,
+    isLoading,
     requestPermission,
+    subscribe,
     sendTestNotification
   };
 };
