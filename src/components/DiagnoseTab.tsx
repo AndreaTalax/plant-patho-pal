@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useCallback } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -34,6 +33,7 @@ const DiagnoseTab = () => {
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [dataSentToExpert, setDataSentToExpert] = useState(false);
+  const [cameraStoppedByUser, setCameraStoppedByUser] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -64,7 +64,7 @@ const DiagnoseTab = () => {
       
       if (plantVerification.confidence < 70) {
         toast.warning('⚠️ Pianta rilevata con bassa confidenza', {
-          description: `${plantVerification.reason}. Per risultati migliori, usa un'immagine più chiara della pianta.`,
+          description: `${plantVerification.reason}. Per risultati migliori, usa un\'immagine più chiara della pianta.`,
           duration: 6000
         });
       } else {
@@ -128,7 +128,7 @@ const DiagnoseTab = () => {
     }
   }, [setPlantInfo, plantInfo]);
 
-  // Camera capture handler con verifica pianta
+  // Camera capture handler migliorato per permettere nuove foto
   const handleCameraCapture = useCallback(async (imageDataUrl: string) => {
     try {
       // Converti data URL in file per la verifica
@@ -139,10 +139,15 @@ const DiagnoseTab = () => {
       // Verifica che l'immagine contenga una pianta
       const containsPlant = await verifyPlantInImage(file);
       if (!containsPlant) {
-        setShowCamera(true); // Mantieni la camera aperta
-        return; // Stop se non contiene una pianta
+        // NON chiudere la fotocamera - permetti di scattare un'altra foto
+        console.log('🔄 Pianta non rilevata, fotocamera rimane attiva per nuovi tentativi');
+        toast.error('Pianta non rilevata. Prova a scattare un\'altra foto con una pianta ben visibile.', {
+          duration: 5000
+        });
+        return; // Esci senza chiudere la fotocamera
       }
       
+      // Solo se la pianta è stata rilevata, procedi con la chiusura della fotocamera
       setUploadedImage(imageDataUrl);
       
       // Update plant info with captured image
@@ -152,13 +157,21 @@ const DiagnoseTab = () => {
       });
       
       setShowCamera(false);
+      setCameraStoppedByUser(false);
       setCurrentStage('options');
       toast.success('Foto verificata e scattata! Ora scegli il metodo di diagnosi.');
     } catch (error) {
       console.error('Errore verifica foto catturata:', error);
-      toast.error('Errore nella verifica della foto');
+      toast.error('Errore nella verifica della foto. Riprova.');
     }
   }, [setPlantInfo, plantInfo]);
+
+  // Gestione chiusura fotocamera da parte dell'utente
+  const handleCameraCancel = useCallback(() => {
+    setShowCamera(false);
+    setCameraStoppedByUser(true);
+    setCurrentStage('capture');
+  }, []);
 
   // Send data to expert with automatic sync
   const sendDataToExpert = useCallback(async (includeAnalysis: boolean = false) => {
@@ -409,7 +422,10 @@ const DiagnoseTab = () => {
                   </Button>
                   
                   <Button
-                    onClick={() => setShowCamera(true)}
+                    onClick={() => {
+                      setShowCamera(true);
+                      setCameraStoppedByUser(false);
+                    }}
                     variant="outline"
                     className="h-32 flex flex-col items-center justify-center gap-3 border-2 border-dashed border-gray-300 hover:border-gray-400"
                   >
@@ -425,6 +441,15 @@ const DiagnoseTab = () => {
                   accept="image/*"
                   className="hidden"
                 />
+
+                {/* Messaggio di incoraggiamento se la fotocamera è stata chiusa senza successo */}
+                {cameraStoppedByUser && (
+                  <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <p className="text-sm text-blue-800">
+                      💡 <strong>Suggerimento:</strong> Assicurati che la pianta sia ben illuminata e chiaramente visibile nell'inquadratura. Puoi riprovare con la fotocamera o caricare un'immagine dalla galleria.
+                    </p>
+                  </div>
+                )}
               </div>
             </Card>
           </div>
@@ -515,7 +540,7 @@ const DiagnoseTab = () => {
     return (
       <CameraCapture
         onCapture={handleCameraCapture}
-        onCancel={() => setShowCamera(false)}
+        onCancel={handleCameraCancel}
       />
     );
   }

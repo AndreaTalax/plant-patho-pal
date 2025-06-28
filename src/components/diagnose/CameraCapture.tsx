@@ -34,8 +34,8 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
     console.log('📸 Capture button clicked');
     const imageDataUrl = capturePhoto();
     if (imageDataUrl) {
-      console.log('📸 Photo captured successfully, stopping camera');
-      stopCamera();
+      console.log('📸 Photo captured successfully, keeping camera active for potential retakes');
+      // Non fermare la fotocamera qui - lascia che sia il componente padre a decidere
       onCapture(imageDataUrl);
     }
   };
