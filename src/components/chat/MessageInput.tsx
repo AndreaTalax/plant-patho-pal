@@ -25,8 +25,8 @@ const MessageInput: React.FC<MessageInputProps> = ({
   recipientId,
   onSendMessage,
   isMasterAccount = false,
-  enableAudio = false,
-  enableEmoji = false
+  enableAudio = true,
+  enableEmoji = true
 }) => {
   const [message, setMessage] = useState('');
   const [isUploading, setIsUploading] = useState(false);
@@ -120,7 +120,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
 
   return (
     <div className="bg-white border-t border-gray-200 p-4">
-      {/* Audio Recorder - Solo se abilitato */}
+      {/* Audio Recorder - Abilitato di default */}
       {enableAudio && (
         <div className="mb-4">
           <AudioRecorder 
@@ -146,7 +146,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
             disabled={isSending || isUploading}
           />
           
-          {/* Emoji Picker - Solo se abilitato */}
+          {/* Emoji Picker - Abilitato di default */}
           {enableEmoji && (
             <div className="absolute bottom-2 right-2">
               <Button

@@ -5,6 +5,7 @@ import MessageList from './MessageList';
 import { ChatInitializer } from './user/ChatInitializer';
 import { ComprehensiveDataDisplay } from './user/ComprehensiveDataDisplay';
 import { MessageBoard } from './user/MessageBoard';
+import ChatHeader from './user/ChatHeader';
 import { DatabaseMessage } from '@/services/chat/types';
 import { Message } from './types';
 import { Button } from '@/components/ui/button';
@@ -66,30 +67,20 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
     }));
   };
 
+  // Handle back button - emit custom event to switch tab
+  const handleBackClick = () => {
+    const event = new CustomEvent('switchTab', { detail: 'diagnose' });
+    window.dispatchEvent(event);
+  };
+
   // Error state with quick recovery
   if (initializationError) {
     return (
       <div className="flex flex-col h-full">
-        <div className="bg-white border-b border-gray-200 p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="font-semibold text-lg">Chat con Marco Nigro</h3>
-              <p className="text-sm text-red-500">Problema di connessione</p>
-            </div>
-            <Button
-              onClick={() => {
-                resetChat();
-                setTimeout(startChatWithExpert, 500);
-              }}
-              variant="outline"
-              size="sm"
-              className="flex items-center gap-2"
-            >
-              <RefreshCw className="h-4 w-4" />
-              Riconnetti
-            </Button>
-          </div>
-        </div>
+        <ChatHeader 
+          onBackClick={handleBackClick}
+          isConnected={isConnected}
+        />
 
         <div className="flex-1 flex items-center justify-center p-4">
           <Alert className="max-w-md">
@@ -118,10 +109,17 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
   // Simplified loading state
   if (!activeChat) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-drplant-green mx-auto mb-4"></div>
-          <p className="text-gray-600">Connessione alla chat...</p>
+      <div className="flex flex-col h-full">
+        <ChatHeader 
+          onBackClick={handleBackClick}
+          isConnected={isConnected}
+        />
+        
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-drplant-green mx-auto mb-4"></div>
+            <p className="text-gray-600">Connessione alla chat...</p>
+          </div>
         </div>
       </div>
     );
@@ -137,31 +135,12 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
         setAutoDataSent={setAutoDataSent}
       />
       
-      {/* Simplified header */}
-      <div className="bg-white border-b border-gray-200 p-4 shadow-sm flex-shrink-0">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="font-semibold text-lg text-gray-900">💬 Chat con Marco Nigro</h3>
-            <p className="text-sm text-gray-600 flex items-center">
-              Fitopatologo Professionista
-              <span className={`ml-2 w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-yellow-500'}`}></span>
-              <span className="ml-1 text-xs">
-                {isConnected ? 'Online' : 'Connessione...'}
-              </span>
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowComprehensiveData(!showComprehensiveData)}
-              className="flex items-center gap-2"
-            >
-              {showComprehensiveData ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              Dati
-            </Button>
-          </div>
-        </div>
+      {/* Header with back button */}
+      <div className="flex-shrink-0">
+        <ChatHeader 
+          onBackClick={handleBackClick}
+          isConnected={isConnected}
+        />
       </div>
 
       {/* Data display when needed */}
@@ -181,13 +160,16 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
         />
       </div>
 
-      {/* Message input - always visible */}
+      {/* Message input with audio and emoji enabled */}
       <div className="flex-shrink-0">
         <MessageBoard
           onSendMessage={handleSendMessage}
           isSending={isSending}
           isConnected={isConnected}
           disabled={!isConnected}
+          conversationId={currentConversationId}
+          senderId={userId}
+          recipientId="marco-nigro-id"
         />
       </div>
     </div>

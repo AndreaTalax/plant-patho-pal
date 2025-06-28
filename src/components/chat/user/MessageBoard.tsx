@@ -14,6 +14,7 @@ import { toast } from 'sonner';
 import { uploadPlantImage } from '@/utils/imageStorage';
 import { useAuth } from '@/context/AuthContext';
 import AudioRecorder from '@/components/chat/AudioRecorder';
+import EmojiPicker from '@/components/chat/EmojiPicker';
 
 interface MessageBoardProps {
   onSendMessage: (message: string, imageUrl?: string) => Promise<void>;
@@ -36,6 +37,7 @@ export const MessageBoard: React.FC<MessageBoardProps> = ({
 }) => {
   const [message, setMessage] = useState('');
   const [isUploading, setIsUploading] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { userProfile } = useAuth();
@@ -115,6 +117,18 @@ export const MessageBoard: React.FC<MessageBoardProps> = ({
     // L'AudioRecorder gestisce già l'upload tramite la funzione edge
   };
 
+  const handleEmojiSelect = (emoji: any) => {
+    if (emoji?.native) {
+      setMessage(prev => prev + emoji.native);
+      setShowEmojiPicker(false);
+      
+      // Focus back to textarea
+      if (textareaRef.current) {
+        textareaRef.current.focus();
+      }
+    }
+  };
+
   const isDisabled = disabled || !isConnected || isSending || isUploading;
 
   return (
@@ -156,25 +170,29 @@ export const MessageBoard: React.FC<MessageBoardProps> = ({
               }
               disabled={isDisabled}
               className={`
-                min-h-[60px] max-h-[200px] resize-none pr-12 w-full
+                min-h-[60px] max-h-[200px] resize-none pr-16 w-full
                 ${isDisabled ? 'bg-gray-100 cursor-not-allowed' : 'bg-white'}
                 border border-gray-300 rounded-lg p-3
               `}
             />
             
-            {/* Quick Actions in Textarea */}
+            {/* Emoji Picker Button */}
             <div className="absolute bottom-2 right-2 flex items-center space-x-1">
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => {
-                  toast.info('Emoji picker - Coming soon!');
-                }}
+                onClick={() => setShowEmojiPicker(!showEmojiPicker)}
                 disabled={isDisabled}
                 className="h-6 w-6 p-0 hover:bg-gray-100"
               >
                 <Smile className="h-3 w-3" />
               </Button>
+              
+              <EmojiPicker
+                onSelect={handleEmojiSelect}
+                open={showEmojiPicker}
+                onClose={() => setShowEmojiPicker(false)}
+              />
             </div>
           </div>
 

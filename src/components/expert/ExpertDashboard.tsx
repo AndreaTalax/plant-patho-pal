@@ -1,11 +1,13 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { RefreshCw, MessageCircle, Users, Clock } from 'lucide-react';
+import { RefreshCw, MessageCircle, Users, Clock, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { ConversationDetail } from './ConversationDetail';
+import ConversationCard from './ConversationCard';
 
 interface Conversation {
   id: string;
@@ -28,6 +30,7 @@ const ExpertDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
   const [selectedUserProfile, setSelectedUserProfile] = useState<any>(null);
+  const [deletingConversation, setDeletingConversation] = useState<string | null>(null);
 
   useEffect(() => {
     loadConversations();
@@ -134,6 +137,71 @@ const ExpertDashboard = () => {
     setSelectedUserProfile(conversation.user_profile);
   };
 
+  const handleDeleteConversation = async (conversationId: string) => {
+    setDeletingConversation(conversationId);
+    
+    try {
+      console.log('🗑️ Eliminazione conversazione:', conversationId);
+      
+      // Prima elimina tutti i messaggi della conversazione
+      const { error: messagesError } = await supabase
+        .from('messages')
+        .delete()
+        .eq('conversation_id', conversationId);
+
+      if (messagesError) {
+        console.error('Errore eliminazione messaggi:', messagesError);
+        throw messagesError;
+      }
+
+      // Poi elimina la conversazione
+      const { error: conversationError } = await supabase
+        .from('conversations')
+        .delete()
+        .eq('id', conversationId);
+
+      if (conversationError) {
+        console.error('Errore eliminazione conversazione:', conversationError);
+        throw conversationError;
+      }
+
+      console.log('✅ Conversazione eliminata con successo');
+      toast.success('Conversazione eliminata con successo');
+      
+      // Aggiorna la lista delle conversazioni
+      loadConversations();
+      
+    } catch (error: any) {
+      console.error('❌ Errore eliminazione conversazione:', error);
+      toast.error('Errore nell\'eliminazione della conversazione');
+    } finally {
+      setDeletingConversation(null);
+    }
+  };
+
+  const getInitials = (firstName?: string, lastName?: string) => {
+    const first = firstName?.charAt(0)?.toUpperCase() || '';
+    const last = lastName?.charAt(0)?.toUpperCase() || '';
+    return first + last || 'U';
+  };
+
+  const getUserDisplayName = (userProfile?: { first_name: string; last_name: string; email: string } | null) => {
+    if (!userProfile) return 'Utente Sconosciuto';
+    
+    const firstName = userProfile.first_name || '';
+    const lastName = userProfile.last_name || '';
+    
+    if (firstName && lastName) {
+      return `${firstName} ${lastName}`;
+    } else if (firstName) {
+      return firstName;
+    } else if (lastName) {
+      return lastName;
+    } else {
+      return userProfile.email || 'Utente Sconosciuto';
+    }
+  };
+
   if (selectedConversation) {
     return (
       <ConversationDetail
@@ -225,48 +293,17 @@ const ExpertDashboard = () => {
               <p>Nessuna conversazione disponibile</p>
             </div>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-3">
               {conversations.map((conversation) => (
-                <div
+                <ConversationCard
                   key={conversation.id}
-                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 cursor-pointer"
-                  onClick={() => openConversation(conversation)}
-                >
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3">
-                      <h3 className="font-medium">
-                        {conversation.user_profile?.first_name} {conversation.user_profile?.last_name}
-                      </h3>
-                      {conversation.unread_count > 0 && (
-                        <Badge variant="destructive" className="text-xs">
-                          {conversation.unread_count} nuovo{conversation.unread_count > 1 ? 'i' : ''}
-                        </Badge>
-                      )}
-                      <Badge 
-                        variant={conversation.status === 'active' ? 'default' : 'secondary'}
-                        className="text-xs"
-                      >
-                        {conversation.status}
-                      </Badge>
-                    </div>
-                    <p className="text-sm text-gray-600 mt-1">
-                      {conversation.user_profile?.email}
-                    </p>
-                    {conversation.last_message_text && (
-                      <p className="text-sm text-gray-500 mt-1 truncate">
-                        {conversation.last_message_text}
-                      </p>
-                    )}
-                  </div>
-                  <div className="text-right">
-                    <p className="text-xs text-gray-400">
-                      {conversation.last_message_at 
-                        ? formatTime(conversation.last_message_at)
-                        : formatTime(conversation.created_at)
-                      }
-                    </p>
-                  </div>
-                </div>
+                  conversation={conversation}
+                  getInitials={getInitials}
+                  getUserDisplayName={getUserDisplayName}
+                  handleOpenChat={openConversation}
+                  onDeleteConversation={handleDeleteConversation}
+                  deletingConversation={deletingConversation}
+                />
               ))}
             </div>
           )}
