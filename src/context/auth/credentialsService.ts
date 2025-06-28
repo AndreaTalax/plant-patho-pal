@@ -6,8 +6,7 @@
 export const getWhitelistedCredentials = () => ({
   'agrotecnicomarconigro@gmail.com': 'marconigro93',
   'test@gmail.com': 'test123',
-  'premium@gmail.com': 'premium123',
-  'talaiaandrea@gmail.com': 'test123'
+  'premium@gmail.com': 'premium123'
 });
 
 export const isWhitelistedEmail = (email: string): boolean => {
@@ -24,7 +23,7 @@ export const getExpectedPassword = (email: string): string | null => {
 export const determineUserRole = (email: string): string => {
   if (email === 'agrotecnicomarconigro@gmail.com') {
     return 'admin';
-  } else if (email === 'test@gmail.com' || email === 'talaiaandrea@gmail.com') {
+  } else if (email === 'test@gmail.com') {
     return 'admin';
   } else if (email.includes('marco') || email.includes('fitopatologo')) {
     return 'expert';
@@ -38,8 +37,6 @@ export const getUserDisplayName = (email: string): { firstName: string; lastName
       return { firstName: 'Marco', lastName: 'Nigro' };
     case 'test@gmail.com':
       return { firstName: 'Test', lastName: 'User' };
-    case 'talaiaandrea@gmail.com':
-      return { firstName: 'Andrea', lastName: 'Talaia' };
     default:
       return { firstName: 'User', lastName: 'Name' };
   }

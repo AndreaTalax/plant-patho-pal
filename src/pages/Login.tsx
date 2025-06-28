@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -23,8 +24,7 @@ const Login = () => {
   const adminCredentials = {
     'agrotecnicomarconigro@gmail.com': 'marconigro93',
     'test@gmail.com': 'test123',
-    'premium@gmail.com': 'premium123',
-    'talaiaandrea@gmail.com': 'test123'
+    'premium@gmail.com': 'premium123'
   };
 
   const handleLogin = async (e: React.FormEvent) => {
