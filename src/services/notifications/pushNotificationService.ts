@@ -75,13 +75,14 @@ export class PushNotificationService {
         )
       });
 
-      // Salva la subscription nel database
+      // Salva la subscription nel database usando una query raw per evitare problemi di tipo
       const { error } = await supabase
-        .from('push_subscriptions')
+        .from('push_subscriptions' as any)
         .upsert({
           user_id: userId,
           subscription: subscription.toJSON(),
-          created_at: new Date().toISOString()
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
         });
 
       if (error) {
