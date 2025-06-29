@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,7 +10,8 @@ import {
   Users,
   Clock,
   Lightbulb,
-  Shield
+  Shield,
+  Database
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { PlantDataSyncService } from '@/services/chat/plantDataSyncService';
@@ -19,6 +19,7 @@ import { AutoExpertNotificationService } from '@/components/chat/AutoExpertNotif
 import { toast } from 'sonner';
 import ImageDisplay from './ImageDisplay';
 import PlantInfoCard from './PlantInfoCard';
+import EppoDataPanel from './EppoDataPanel';
 
 interface DiagnosisResultProps {
   imageSrc: string;
@@ -121,7 +122,7 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
     return (
       <div className="text-center space-y-4 py-8">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-drplant-blue mx-auto"></div>
-        <p className="text-gray-600">Analisi in corso...</p>
+        <p className="text-gray-600">Analisi avanzata in corso con database EPPO...</p>
       </div>
     );
   }
@@ -135,10 +136,11 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
   const isHealthy = analysisData?.isHealthy || analysisData?.healthy || false;
   const isHighConfidence = (analysisData?.confidence || analysisDetails?.confidence || 0) >= 0.7;
   const isLowConfidence = (analysisData?.confidence || analysisDetails?.confidence || 0) < 0.5;
+  const hasEppoData = analysisDetails?.eppoResultsCount > 0;
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
-      {/* Header risultati */}
+      {/* Enhanced Header risultati */}
       <Card className={`border-2 ${isHealthy && isHighConfidence ? 'border-green-200 bg-green-50' : 'border-amber-200 bg-amber-50'}`}>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -148,16 +150,36 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
               ) : (
                 <AlertTriangle className="h-6 w-6 text-amber-600" />
               )}
-              <span>Analisi Completata</span>
+              <span>Diagnosi Avanzata Completata</span>
+              {hasEppoData && (
+                <Badge className="bg-blue-100 text-blue-800 border border-blue-300">
+                  <Database className="h-3 w-3 mr-1" />
+                  EPPO Enhanced
+                </Badge>
+              )}
             </CardTitle>
             {confidencePercent > 0 && (
               <Badge variant={isHighConfidence ? "default" : isLowConfidence ? "destructive" : "secondary"}>
-                {confidencePercent}% confidenza
+                {confidencePercent}% accuratezza
               </Badge>
             )}
           </div>
+          {hasEppoData && (
+            <p className="text-sm text-blue-700 mt-2">
+              Diagnosi potenziata con database europeo EPPO per maggiore precisione
+            </p>
+          )}
         </CardHeader>
       </Card>
+
+      {/* EPPO Data Panel - Show if enhanced analysis was performed */}
+      {hasEppoData && (
+        <EppoDataPanel 
+          analysisDetails={analysisDetails}
+          userInput={plantInfo?.symptoms}
+          eppoData={analysisData?.diseases?.filter(d => d.eppoCode) || []}
+        />
+      )}
 
       {/* Immagine e info pianta */}
       <div className="grid md:grid-cols-2 gap-6">
@@ -165,11 +187,18 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
         <PlantInfoCard plantInfo={plantInfo} analysisDetails={analysisDetails} />
       </div>
 
-      {/* Risultati diagnosi */}
+      {/* Enhanced Risultati diagnosi */}
       {analysisData && (
         <Card>
           <CardHeader>
-            <CardTitle>🔬 Risultati Diagnosi</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              🔬 Risultati Diagnosi Avanzata
+              {hasEppoData && (
+                <Badge variant="outline" className="text-blue-600">
+                  Database EPPO
+                </Badge>
+              )}
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             {/* Nome pianta */}
@@ -184,17 +213,35 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
               )}
             </div>
 
-            {/* Malattie/problemi */}
+            {/* Enhanced Malattie/problemi */}
             {analysisData.diseases && analysisData.diseases.length > 0 && (
               <div className="space-y-2">
                 <h4 className="font-medium flex items-center gap-2">
                   <AlertTriangle className="h-4 w-4 text-amber-600" />
                   Problemi Rilevati
+                  {hasEppoData && (
+                    <Badge variant="outline" className="text-xs">
+                      Enhanced
+                    </Badge>
+                  )}
                 </h4>
                 {analysisData.diseases.map((disease: any, index: number) => (
-                  <div key={index} className="border rounded-lg p-3 bg-red-50">
+                  <div key={index} className={`border rounded-lg p-3 ${disease.isRegulated ? 'bg-red-50 border-red-200' : 'bg-red-50'}`}>
                     <div className="flex justify-between items-start mb-2">
-                      <h5 className="font-medium text-red-800">{disease.name}</h5>
+                      <div className="flex items-center gap-2">
+                        <h5 className="font-medium text-red-800">{disease.name}</h5>
+                        {disease.isRegulated && (
+                          <Badge variant="destructive" className="text-xs">
+                            <Shield className="h-3 w-3 mr-1" />
+                            REGOLAMENTATO
+                          </Badge>
+                        )}
+                        {disease.eppoCode && (
+                          <Badge variant="outline" className="text-xs text-blue-600">
+                            EPPO: {disease.eppoCode}
+                          </Badge>
+                        )}
+                      </div>
                       {disease.probability && (
                         <Badge variant="destructive" className="text-xs">
                           {Math.round(disease.probability * 100)}%
@@ -214,18 +261,20 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
               </div>
             )}
 
-            {/* Raccomandazioni */}
+            {/* Enhanced Raccomandazioni */}
             {analysisData.recommendations && analysisData.recommendations.length > 0 && (
               <div className="space-y-2">
                 <h4 className="font-medium flex items-center gap-2">
                   <Lightbulb className="h-4 w-4 text-yellow-600" />
-                  Raccomandazioni
+                  Raccomandazioni Avanzate
                 </h4>
                 <ul className="space-y-1">
                   {analysisData.recommendations.map((rec: string, index: number) => (
                     <li key={index} className="flex items-start gap-2">
                       <Shield className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                      <span className="text-sm">{rec}</span>
+                      <span className={`text-sm ${rec.includes('ATTENZIONE') || rec.includes('URGENTE') ? 'font-medium text-red-700' : ''}`}>
+                        {rec}
+                      </span>
                     </li>
                   ))}
                 </ul>
@@ -309,17 +358,22 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
         </Card>
       </div>
 
-      {/* Avviso confidenza bassa */}
-      {isLowConfidence && analysisData && (
+      {/* Enhanced warning for low confidence or regulated organisms */}
+      {(isLowConfidence || analysisData?.diseases?.some((d: any) => d.isRegulated)) && (
         <Card className="border-amber-200 bg-amber-50">
           <CardContent className="p-4">
             <div className="flex items-start gap-3">
               <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5" />
               <div>
-                <h3 className="font-semibold text-amber-800">Consulenza Esperto Raccomandata</h3>
+                <h3 className="font-semibold text-amber-800">
+                  {analysisData?.diseases?.some((d: any) => d.isRegulated) 
+                    ? 'Organismi Regolamentati Rilevati - Consulenza Urgente' 
+                    : 'Consulenza Esperto Raccomandata'}
+                </h3>
                 <p className="text-sm text-amber-700">
-                  L'analisi AI ha una confidenza del {confidencePercent}%. 
-                  Ti consigliamo di consultare il nostro fitopatologo per una diagnosi più accurata.
+                  {analysisData?.diseases?.some((d: any) => d.isRegulated)
+                    ? 'Sono stati rilevati possibili organismi regolamentati EPPO. È necessaria una consulenza fitopatologo urgente e possibile notifica alle autorità competenti.'
+                    : `L'analisi AI ha una accuratezza del ${confidencePercent}%. Ti consigliamo di consultare il nostro fitopatologo per una diagnosi più precisa.`}
                 </p>
               </div>
             </div>

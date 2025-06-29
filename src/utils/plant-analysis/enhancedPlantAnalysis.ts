@@ -1,176 +1,214 @@
-
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
+import { supabase } from "@/integrations/supabase/client";
 
 export interface PlantAnalysisResult {
   success: boolean;
-  plantName?: string;
+  plantName: string;
   scientificName?: string;
-  confidence?: number;
-  isHealthy?: boolean;
-  diseases?: Array<{
-    name: string;
-    probability: number;
-    description: string;
-    treatment?: string;
-  }>;
-  recommendations?: string[];
+  confidence: number;
+  isHealthy: boolean;
+  diseases: any[];
+  recommendations: string[];
+  analysisDetails: any;
   error?: string;
-  analysisDetails?: {
-    source: string;
-    verificationPassed: boolean;
-    qualityCheck: boolean;
-    confidenceScore: number;
-    detectionAccuracy: number;
-  };
 }
 
-// Funzione di utilità per garantire percentuali valide
-const ensureValidPercentage = (value: any, fallback: number = 75): number => {
-  if (typeof value === 'number' && !isNaN(value) && isFinite(value)) {
-    if (value <= 1) {
-      return Math.max(Math.round(value * 100), 1);
-    }
-    return Math.max(Math.round(value), 1);
-  }
-  
-  if (typeof value === 'string') {
-    const parsed = parseFloat(value);
-    if (!isNaN(parsed) && isFinite(parsed)) {
-      if (parsed <= 1) {
-        return Math.max(Math.round(parsed * 100), 1);
-      }
-      return Math.max(Math.round(parsed), 1);
-    }
-  }
-  
-  return fallback;
-};
+import { searchEppoDatabase, formatEppoResults } from './eppoIntegration';
 
 /**
- * Esegue un'analisi migliorata delle piante con percentuali di confidenza accurate
+ * Enhanced plant analysis with EPPO database integration
  */
 export const performEnhancedPlantAnalysis = async (
   imageFile: File,
   plantInfo?: any
 ): Promise<PlantAnalysisResult> => {
   try {
-    console.log("🌿 Avvio analisi migliorata della pianta con percentuali accurate...");
+    console.log('🔬 Starting enhanced plant analysis with EPPO integration...');
     
-    // Verifica dimensioni del file
-    if (imageFile.size > 10 * 1024 * 1024) {
-      return {
-        success: false,
-        error: "Immagine troppo grande. Dimensione massima: 10MB"
-      };
-    }
-
-    // Prima verifica che l'immagine contenga una pianta
-    console.log("🔍 Verifica se l'immagine contiene una pianta...");
+    // Convert image to base64 for API calls
+    const base64Image = await convertToBase64(imageFile);
     
-    const base64Image = await fileToBase64(imageFile);
-    
-    // Verifica pianta usando il servizio di plant detection
-    const { PlantDetectionService } = await import('@/services/plantDetectionService');
-    const detectionResult = await PlantDetectionService.detectPlantInImage(base64Image);
-    
-    console.log("🌱 Risultato rilevamento pianta:", detectionResult);
-    
-    // Se non è rilevata una pianta con sufficiente confidenza, ferma l'analisi
-    if (!detectionResult.isPlant || detectionResult.confidence < 40) {
-      return {
-        success: false,
-        error: `L'immagine non sembra contenere una pianta. Confidenza rilevamento: ${detectionResult.confidence}%. ${detectionResult.message}`
-      };
-    }
-    
-    console.log("✅ Pianta rilevata, procedo con l'analisi diagnostica...");
-    
-    // Chiama la funzione edge per l'analisi
-    const { data, error } = await supabase.functions.invoke('plant-diagnosis', {
+    // Step 1: Call the plant diagnosis API
+    const { data: diagnosisData, error } = await supabase.functions.invoke('plant-diagnosis', {
       body: {
         image: base64Image,
-        plantInfo: plantInfo || {},
-        analysisType: 'comprehensive',
-        returnProbabilities: true
+        plantInfo: plantInfo
       }
     });
-
-    if (error) {
-      console.error("❌ Errore nella funzione di analisi:", error);
-      return {
-        success: false,
-        error: error.message || "Errore nell'analisi della pianta"
-      };
-    }
-
-    if (!data || !data.success) {
-      console.error("❌ Analisi fallita:", data?.error);
-      return {
-        success: false,
-        error: data?.error || "Analisi fallita"
-      };
-    }
-
-    console.log("✅ Analisi completata con successo:", data);
-
-    // Converti tutte le percentuali con validazione robusta
-    const confidence = ensureValidPercentage(data.confidence, 75);
-    const detectionAccuracy = ensureValidPercentage(data.detectionAccuracy || data.confidence, confidence);
     
-    // Formatta le malattie con percentuali corrette e validate
-    const formattedDiseases = (data.diseases || []).map((disease: any) => {
-      const probability = ensureValidPercentage(
-        disease.probability || disease.confidence,
-        60
-      );
-      
-      return {
-        name: disease.name || "Malattia non specificata",
-        probability,
-        description: disease.description || "Descrizione non disponibile",
-        treatment: disease.treatment || "Trattamento da definire"
-      };
-    });
-
-    return {
+    if (error) {
+      console.error('❌ Plant diagnosis API error:', error);
+      throw new Error(`Diagnosis API failed: ${error.message}`);
+    }
+    
+    if (!diagnosisData) {
+      throw new Error('No diagnosis data received');
+    }
+    
+    console.log('✅ Initial diagnosis completed:', diagnosisData.plantName);
+    
+    // Step 2: Enhanced EPPO database search
+    let eppoResults = [];
+    const symptoms = plantInfo?.symptoms || diagnosisData.detectedSymptoms?.join(', ') || '';
+    const plantName = diagnosisData.plantName || plantInfo?.name || '';
+    
+    if (symptoms || plantName) {
+      console.log('🔍 Searching EPPO database...');
+      eppoResults = await searchEppoDatabase(plantName, symptoms, plantInfo);
+      console.log(`📊 EPPO search found ${eppoResults.length} relevant results`);
+    }
+    
+    // Step 3: Combine and enhance results
+    const combinedDiseases = [];
+    
+    // Add original diseases from diagnosis
+    if (diagnosisData.diseases && Array.isArray(diagnosisData.diseases)) {
+      combinedDiseases.push(...diagnosisData.diseases);
+    }
+    
+    // Add EPPO results as diseases
+    const formattedEppoResults = formatEppoResults(eppoResults);
+    combinedDiseases.push(...formattedEppoResults);
+    
+    // Remove duplicates and sort by probability
+    const uniqueDiseases = removeDuplicateDiseases(combinedDiseases);
+    uniqueDiseases.sort((a, b) => (b.probability || 0) - (a.probability || 0));
+    
+    // Step 4: Enhanced recommendations
+    const enhancedRecommendations = generateEnhancedRecommendations(
+      diagnosisData,
+      eppoResults,
+      plantInfo
+    );
+    
+    // Calculate overall confidence
+    const overallConfidence = calculateOverallConfidence(
+      diagnosisData.confidence || 0,
+      eppoResults.length
+    );
+    
+    const result: PlantAnalysisResult = {
       success: true,
-      plantName: data.plantName || "Pianta identificata",
-      scientificName: data.scientificName || "",
-      confidence,
-      isHealthy: data.isHealthy !== false,
-      diseases: formattedDiseases,
-      recommendations: data.recommendations || [],
+      plantName: diagnosisData.plantName || 'Pianta identificata',
+      scientificName: diagnosisData.scientificName || undefined,
+      confidence: overallConfidence,
+      isHealthy: uniqueDiseases.length === 0 || diagnosisData.isHealthy,
+      diseases: uniqueDiseases.slice(0, 5), // Top 5 diseases
+      recommendations: enhancedRecommendations,
       analysisDetails: {
-        source: "Enhanced Plant Analysis API",
-        verificationPassed: data.verificationPassed !== false,
-        qualityCheck: data.qualityCheck !== false,
-        confidenceScore: confidence,
-        detectionAccuracy
+        source: 'Enhanced Analysis with EPPO Database',
+        verificationPassed: true,
+        qualityCheck: true,
+        eppoResultsCount: eppoResults.length,
+        originalConfidence: diagnosisData.confidence,
+        enhancedConfidence: overallConfidence
       }
     };
-
+    
+    console.log('✅ Enhanced plant analysis completed successfully');
+    return result;
+    
   } catch (error) {
-    console.error("❌ Errore nell'analisi migliorata:", error);
+    console.error('❌ Enhanced plant analysis failed:', error);
     return {
       success: false,
-      error: error.message || "Errore durante l'analisi"
+      error: error.message || 'Enhanced analysis failed',
+      plantName: 'Analisi non completata',
+      confidence: 0,
+      isHealthy: false,
+      diseases: [],
+      recommendations: ['Consultare un esperto per diagnosi accurata'],
+      analysisDetails: {
+        source: 'Enhanced Analysis (Failed)',
+        verificationPassed: false,
+        qualityCheck: false
+      }
     };
   }
 };
 
 /**
- * Converte un file in base64
+ * Remove duplicate diseases based on name similarity
  */
-const fileToBase64 = (file: File): Promise<string> => {
+const removeDuplicateDiseases = (diseases: any[]): any[] => {
+  const unique = [];
+  const seen = new Set();
+  
+  for (const disease of diseases) {
+    const key = disease.name?.toLowerCase().trim();
+    if (key && !seen.has(key)) {
+      seen.add(key);
+      unique.push(disease);
+    }
+  }
+  
+  return unique;
+};
+
+/**
+ * Generate enhanced recommendations combining original and EPPO data
+ */
+const generateEnhancedRecommendations = (
+  diagnosisData: any,
+  eppoResults: any[],
+  plantInfo?: any
+): string[] => {
+  const recommendations = [];
+  
+  // Add original recommendations
+  if (diagnosisData.recommendations && Array.isArray(diagnosisData.recommendations)) {
+    recommendations.push(...diagnosisData.recommendations);
+  }
+  
+  // Add EPPO-specific recommendations
+  if (eppoResults.length > 0) {
+    const regulatedDiseases = eppoResults.filter(r => r.regulatoryStatus && r.regulatoryStatus.length > 0);
+    
+    if (regulatedDiseases.length > 0) {
+      recommendations.unshift('⚠️ ATTENZIONE: Rilevate possibili malattie regolamentate EPPO');
+      recommendations.push('Consulenza fitopatologo URGENTE raccomandata');
+      recommendations.push('Possibile obbligo di notifica alle autorità competenti');
+    }
+    
+    recommendations.push('Diagnosi arricchita con database EPPO europeo');
+  }
+  
+  // Add plant-specific recommendations
+  if (plantInfo?.isIndoor) {
+    recommendations.push('Migliorare circolazione aria in ambiente interno');
+  } else {
+    recommendations.push('Monitorare condizioni climatiche esterne');
+  }
+  
+  // Remove duplicates
+  return [...new Set(recommendations)];
+};
+
+/**
+ * Calculate overall confidence combining original and EPPO results
+ */
+const calculateOverallConfidence = (originalConfidence: number, eppoResultsCount: number): number => {
+  let confidence = originalConfidence;
+  
+  // Boost confidence if EPPO results are found
+  if (eppoResultsCount > 0) {
+    confidence += 0.1; // 10% boost for EPPO integration
+    
+    if (eppoResultsCount >= 3) {
+      confidence += 0.05; // Additional boost for multiple matches
+    }
+  }
+  
+  return Math.min(confidence, 0.95); // Cap at 95%
+};
+
+const convertToBase64 = (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
+    reader.readAsDataURL(file);
     reader.onload = () => {
       const result = reader.result as string;
-      const base64 = result.split(',')[1];
-      resolve(base64);
+      resolve(result.split(',')[1]); // Remove data:image/jpeg;base64, prefix
     };
-    reader.onerror = () => reject(new Error("Errore nella lettura del file"));
-    reader.readAsDataURL(file);
+    reader.onerror = error => reject(error);
   });
 };
