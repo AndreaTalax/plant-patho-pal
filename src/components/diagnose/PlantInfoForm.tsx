@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -85,7 +84,7 @@ const PlantInfoForm = ({ onComplete, initialData }: PlantInfoFormProps) => {
                 <SelectValue placeholder="Seleziona il tipo di pianta se lo conosci" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="non-so">Non so che pianta è</SelectItem>
+                <SelectItem value="non-so">Non so che pianta sia</SelectItem>
                 <SelectItem value="rose">Rosa</SelectItem>
                 <SelectItem value="basilico">Basilico</SelectItem>
                 <SelectItem value="monstera">Monstera</SelectItem>
