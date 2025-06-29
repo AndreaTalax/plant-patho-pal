@@ -54,7 +54,10 @@ export interface AnalysisDetails {
   analysisTechnology?: string;
   alternativeDiagnoses?: string[];
   recommendedAdditionalTests?: string[];
-  // AGGIUNGIAMO eppoData per evitare TypeScript error
+  // EPPO integration properties
+  eppoResultsCount?: number;
+  originalConfidence?: number;
+  enhancedConfidence?: number;
   eppoData?: {
     plantMatch?: any;
     diseaseMatches?: any[];
