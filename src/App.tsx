@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -7,7 +8,6 @@ import { PlantInfoProvider } from "@/context/PlantInfoContext";
 import { ThemeProvider } from "@/context/ThemeContext";
 import { useUserPresence } from "@/hooks/useUserPresence";
 import Index from "./pages/Index";
-import Auth from "./pages/Auth";
 import Login from "./pages/Login";
 import SignUp from "./pages/SignUp";
 import NotFound from "./pages/NotFound";
@@ -37,7 +37,6 @@ function App() {
                 <Router>
                   <Routes>
                     <Route path="/" element={<Index />} />
-                    <Route path="/auth" element={<Auth />} />
                     <Route path="/login" element={<Login />} />
                     <Route path="/signup" element={<SignUp />} />
                     <Route path="/complete-profile" element={<CompleteProfile />} />

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/context/ThemeContext";
@@ -27,7 +26,7 @@ const Index = () => {
   useEffect(() => {
     if (!loading && !isAuthenticated) {
       console.log('🔒 Utente non autenticato, reindirizzamento al login...');
-      navigate('/auth');
+      navigate('/login');
     }
   }, [isAuthenticated, loading, navigate]);
 
