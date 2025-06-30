@@ -1,12 +1,15 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { Resend } from "npm:resend@2.0.0";
 import { corsHeaders } from "../_shared/cors.ts";
 
 const supabaseAdmin = createClient(
   Deno.env.get("SUPABASE_URL") ?? "",
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
 );
+
+const resend = new Resend(Deno.env.get("SENDGRID_API_KEY"));
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -126,10 +129,22 @@ serve(async (req) => {
       </div>
     `;
 
-    // Send email notification (simulated - in real implementation would use SMTP/SendGrid)
-    console.log('✅ Email notification prepared successfully');
-    console.log('📧 Email would be sent to:', expert_email || recipient_email || 'agrotecnicomarconigro@gmail.com');
-    console.log('📧 Email subject:', emailSubject);
+    // Send actual email using Resend
+    const targetEmail = expert_email || recipient_email || 'agrotecnicomarconigro@gmail.com';
+    
+    try {
+      const emailResponse = await resend.emails.send({
+        from: 'Dr.Plant <noreply@plant-patho-pal.lovable.app>',
+        to: [targetEmail],
+        subject: emailSubject,
+        html: emailBody,
+      });
+
+      console.log('✅ Email sent successfully:', emailResponse);
+    } catch (emailError) {
+      console.error('❌ Error sending email:', emailError);
+      // Continue with notification logging even if email fails
+    }
 
     // Store notification in database for tracking
     const { error: notificationError } = await supabaseAdmin
@@ -153,7 +168,7 @@ serve(async (req) => {
     return new Response(JSON.stringify({ 
       success: true,
       message: "Notification processed successfully",
-      recipient: expert_email || recipient_email || 'agrotecnicomarconigro@gmail.com',
+      recipient: targetEmail,
       subject: emailSubject,
       notification_stored: !notificationError
     }), {
