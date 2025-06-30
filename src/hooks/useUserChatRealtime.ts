@@ -1,264 +1,219 @@
 
-import { useState, useCallback, useEffect, useRef } from 'react';
-import { ConversationService } from '@/services/chat/conversationService';
-import { MessageService } from '@/services/chat/messageService';
-import { MARCO_NIGRO_ID } from '@/components/phytopathologist';
-import { DatabaseMessage } from '@/services/chat/types';
-import { toast } from 'sonner';
+import { useState, useEffect, useCallback } from 'react';
+import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-
-// Global request tracking to prevent duplicate requests
-const globalRequestTracker = new Map<string, Promise<any>>();
+import { toast } from 'sonner';
+import { DatabaseMessage } from '@/services/chat/types';
+import { MARCO_NIGRO_ID } from '@/components/phytopathologist';
 
 export const useUserChatRealtime = (userId: string) => {
-  const [activeChat, setActiveChat] = useState<'expert' | null>(null);
+  const [activeChat, setActiveChat] = useState<any>(null);
   const [messages, setMessages] = useState<DatabaseMessage[]>([]);
   const [isSending, setIsSending] = useState(false);
-  const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
   const [isConnected, setIsConnected] = useState(false);
+  const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
   const [initializationError, setInitializationError] = useState<string | null>(null);
-  const [retryCount, setRetryCount] = useState(0);
   
-  // Refs to prevent multiple operations
-  const isInitializingRef = useRef(false);
-  const subscriptionRef = useRef<any>(null);
+  const { user } = useAuth();
 
-  // Simplified deduplication helper
-  const withDeduplication = useCallback(async <T>(key: string, operation: () => Promise<T>): Promise<T | null> => {
-    if (globalRequestTracker.has(key)) {
-      console.log('⏳ Riutilizzo richiesta esistente:', key);
-      try {
-        return await globalRequestTracker.get(key);
-      } catch (error) {
-        globalRequestTracker.delete(key);
-        throw error;
-      }
-    }
-
-    const promise = operation();
-    globalRequestTracker.set(key, promise);
-    
+  // Send notification to expert via edge function
+  const sendExpertNotification = useCallback(async (
+    conversationId: string,
+    senderId: string,
+    recipientId: string,
+    messageText: string,
+    imageUrl?: string
+  ) => {
     try {
-      const result = await promise;
-      globalRequestTracker.delete(key);
-      return result;
-    } catch (error) {
-      globalRequestTracker.delete(key);
-      throw error;
-    }
-  }, []);
-
-  // Optimized message loading with faster timeout
-  const loadMessages = useCallback(async (conversationId: string) => {
-    if (!conversationId) return;
-    
-    const requestKey = `load-messages-${conversationId}`;
-    
-    try {
-      console.log('📚 Caricamento messaggi per conversazione:', conversationId);
-      
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 3000); // Timeout ridotto a 3 secondi
-      
-      const messagesData = await withDeduplication(requestKey, async () => {
-        const result = await MessageService.loadMessages(conversationId);
-        clearTimeout(timeoutId);
-        return result;
+      console.log('📧 Sending expert notification...', {
+        conversationId,
+        senderId,
+        recipientId,
+        messageText: messageText.slice(0, 50) + '...',
+        hasImage: !!imageUrl
       });
-      
-      if (messagesData) {
-        console.log('✅ Messaggi caricati:', messagesData.length);
-        setMessages(messagesData);
-      }
-    } catch (error: any) {
-      if (error.name === 'AbortError') {
-        console.log('⏰ Timeout nel caricamento messaggi, continuo senza');
-        setMessages([]); // Imposta array vuoto per continuare
-      } else {
-        console.error('❌ Errore caricamento messaggi:', error);
-      }
-    }
-  }, [withDeduplication]);
 
-  // Optimized real-time subscription
-  useEffect(() => {
-    if (!currentConversationId || !userId || subscriptionRef.current) return;
-
-    console.log('🔄 Configurazione subscription real-time per:', currentConversationId);
-    
-    const channelName = `conversation_${currentConversationId}`;
-    const channel = supabase.channel(channelName);
-
-    channel
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'messages',
-          filter: `conversation_id=eq.${currentConversationId}`
-        },
-        (payload) => {
-          try {
-            console.log('📨 Nuovo messaggio ricevuto:', payload.new);
-            const newMessage = payload.new as DatabaseMessage;
-            
-            setMessages(prev => {
-              const exists = prev.some(msg => msg.id === newMessage.id);
-              if (exists) return prev;
-              
-              return [...prev, newMessage].sort((a, b) => 
-                new Date(a.sent_at).getTime() - new Date(b.sent_at).getTime()
-              );
-            });
-            
-            if (newMessage.sender_id !== userId) {
-              toast.success('Nuovo messaggio ricevuto!');
-            }
-          } catch (error) {
-            console.error('❌ Errore gestione nuovo messaggio:', error);
+      const { data, error } = await supabase.functions.invoke('send-specialist-notification', {
+        body: {
+          conversation_id: conversationId,
+          sender_id: senderId,
+          recipient_id: recipientId,
+          message_text: messageText,
+          expert_email: 'marco.nigro@drplant.it',
+          image_url: imageUrl,
+          user_details: {
+            firstName: user?.user_metadata?.first_name || 'Utente',
+            lastName: user?.user_metadata?.last_name || '',
+            email: user?.email || ''
           }
         }
-      )
-      .subscribe((status) => {
-        console.log('🔗 Stato subscription:', status);
-        setIsConnected(status === 'SUBSCRIBED');
       });
 
-    subscriptionRef.current = channel;
-
-    return () => {
-      console.log('🔌 Pulizia subscription');
-      if (subscriptionRef.current) {
-        supabase.removeChannel(subscriptionRef.current);
-        subscriptionRef.current = null;
+      if (error) {
+        console.error('❌ Error sending expert notification:', error);
+      } else {
+        console.log('✅ Expert notification sent successfully:', data);
       }
-      setIsConnected(false);
-    };
-  }, [currentConversationId, userId]);
+    } catch (error) {
+      console.error('❌ Failed to send expert notification:', error);
+    }
+  }, [user]);
 
-  // Faster chat initialization with reduced retry logic
+  // Start or get existing chat with expert
   const startChatWithExpert = useCallback(async () => {
-    if (!userId || isInitializingRef.current) {
-      console.log('⚠️ Inizializzazione già in corso o ID utente mancante');
-      return;
-    }
-
-    const requestKey = `init-chat-${userId}`;
-    isInitializingRef.current = true;
-    setInitializationError(null);
-
     try {
-      console.log('🚀 Avvio chat con esperto');
-      
-      const conversation = await withDeduplication(requestKey, () =>
-        ConversationService.findOrCreateConversation(userId)
-      );
+      setInitializationError(null);
+      console.log('🚀 Starting chat with expert for user:', userId);
 
-      if (!conversation) {
-        throw new Error('Impossibile stabilire la conversazione');
+      // Check if conversation already exists
+      const { data: existingConversations, error: fetchError } = await supabase
+        .from('conversations')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('expert_id', MARCO_NIGRO_ID)
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (fetchError) {
+        console.error('❌ Error fetching conversations:', fetchError);
+        setInitializationError('Errore nel recupero delle conversazioni');
+        return;
       }
 
-      console.log('✅ Conversazione stabilita:', conversation.id);
-      setActiveChat('expert');
+      let conversation;
+      if (existingConversations && existingConversations.length > 0) {
+        conversation = existingConversations[0];
+        console.log('💬 Using existing conversation:', conversation.id);
+      } else {
+        console.log('🆕 Creating new conversation');
+        const { data: newConversation, error: createError } = await supabase
+          .from('conversations')
+          .insert({
+            user_id: userId,
+            expert_id: MARCO_NIGRO_ID,
+            status: 'active',
+            title: 'Consulenza Esperto'
+          })
+          .select()
+          .single();
+
+        if (createError) {
+          console.error('❌ Error creating conversation:', createError);
+          setInitializationError('Errore nella creazione della conversazione');
+          return;
+        }
+
+        conversation = newConversation;
+      }
+
+      setActiveChat(conversation);
       setCurrentConversationId(conversation.id);
-      
-      // Carica messaggi senza bloccare l'UI
-      loadMessages(conversation.id);
-      
-      setRetryCount(0);
-      toast.success('Chat connessa!');
-      
-    } catch (error: any) {
-      console.error('❌ Errore avvio chat:', error);
-      const errorMessage = error.message || 'Errore di connessione';
-      setInitializationError(errorMessage);
-      
-      // Retry automatico solo una volta con delay ridotto
-      if (retryCount < 1) {
-        console.log(`🔄 Nuovo tentativo in 2 secondi...`);
-        setTimeout(() => {
-          isInitializingRef.current = false;
-          setRetryCount(prev => prev + 1);
-          startChatWithExpert();
-        }, 2000);
-      } else {
-        toast.error('Problema di connessione. Riprova tra poco.');
-        isInitializingRef.current = false;
+      setIsConnected(true);
+
+      // Load existing messages
+      const { data: existingMessages } = await supabase
+        .from('messages')
+        .select('*')
+        .eq('conversation_id', conversation.id)
+        .order('sent_at', { ascending: true });
+
+      if (existingMessages) {
+        setMessages(existingMessages);
       }
-    } finally {
-      if (retryCount >= 1) {
-        isInitializingRef.current = false;
-      }
+
+      // Set up real-time subscription
+      const channel = supabase
+        .channel(`conversation_${conversation.id}`)
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'messages',
+            filter: `conversation_id=eq.${conversation.id}`
+          },
+          (payload) => {
+            console.log('📨 New message received:', payload.new);
+            setMessages(prev => [...prev, payload.new as DatabaseMessage]);
+          }
+        )
+        .subscribe();
+
+      return () => {
+        channel.unsubscribe();
+      };
+
+    } catch (error) {
+      console.error('❌ Error in startChatWithExpert:', error);
+      setInitializationError('Errore nell\'inizializzazione della chat');
     }
-  }, [userId, loadMessages, retryCount, withDeduplication]);
+  }, [userId]);
 
-  // Optimized message sending
-  const handleSendMessage = useCallback(async (messageText: string) => {
-    if (!currentConversationId || !userId || !messageText.trim() || isSending) {
-      return;
-    }
+  // Send message handler
+  const handleSendMessage = useCallback(async (
+    text: string, 
+    imageUrl?: string
+  ) => {
+    if (!activeChat || !currentConversationId || isSending) return;
 
-    const requestKey = `send-message-${currentConversationId}-${Date.now()}`;
-
+    setIsSending(true);
+    
     try {
-      setIsSending(true);
-      console.log('📤 Invio messaggio');
-      
-      const success = await withDeduplication(requestKey, () =>
-        MessageService.sendMessage(currentConversationId, userId, messageText.trim())
-      );
-      
-      if (success) {
-        console.log('✅ Messaggio inviato');
-        // Ricarica messaggi dopo un breve delay
-        setTimeout(() => loadMessages(currentConversationId), 500);
-      } else {
-        throw new Error('Invio fallito');
+      console.log('📤 Sending message:', { text: text.slice(0, 50) + '...', hasImage: !!imageUrl });
+
+      const messageData = {
+        conversation_id: currentConversationId,
+        sender_id: userId,
+        recipient_id: MARCO_NIGRO_ID,
+        content: text,
+        text: text, // Also populate text field for consistency
+        image_url: imageUrl || null,
+        metadata: {
+          type: imageUrl ? 'image_with_text' : 'text',
+          timestamp: new Date().toISOString()
+        }
+      };
+
+      const { error: messageError } = await supabase
+        .from('messages')
+        .insert(messageData);
+
+      if (messageError) {
+        console.error('❌ Error sending message:', messageError);
+        toast.error('Errore nell\'invio del messaggio');
+        return;
       }
+
+      // Send notification to expert
+      await sendExpertNotification(
+        currentConversationId,
+        userId,
+        MARCO_NIGRO_ID,
+        text,
+        imageUrl
+      );
+
+      console.log('✅ Message sent successfully');
       
-    } catch (error: any) {
-      console.error('❌ Errore invio messaggio:', error);
+    } catch (error) {
+      console.error('❌ Error in handleSendMessage:', error);
       toast.error('Errore nell\'invio del messaggio');
     } finally {
       setIsSending(false);
     }
-  }, [currentConversationId, userId, loadMessages, isSending, withDeduplication]);
+  }, [activeChat, currentConversationId, userId, isSending, sendExpertNotification]);
 
-  // Simplified reset function
+  // Reset chat state
   const resetChat = useCallback(() => {
-    console.log('🔄 Reset chat');
-    
-    isInitializingRef.current = false;
-    globalRequestTracker.clear();
-    
-    if (subscriptionRef.current) {
-      supabase.removeChannel(subscriptionRef.current);
-      subscriptionRef.current = null;
-    }
-    
+    setActiveChat(null);
     setMessages([]);
     setCurrentConversationId(null);
-    setActiveChat(null);
     setIsConnected(false);
     setInitializationError(null);
-    setIsSending(false);
-    setRetryCount(0);
-  }, []);
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (subscriptionRef.current) {
-        supabase.removeChannel(subscriptionRef.current);
-      }
-      globalRequestTracker.clear();
-    };
   }, []);
 
   return {
     activeChat,
-    setActiveChat,
     messages,
     isSending,
     isConnected,
@@ -266,7 +221,6 @@ export const useUserChatRealtime = (userId: string) => {
     startChatWithExpert,
     currentConversationId,
     initializationError,
-    resetChat,
-    retryCount
+    resetChat
   };
 };

@@ -124,7 +124,7 @@ Per favore, rivedi l'analisi e fornisci la tua valutazione professionale. L'uten
 
       // Send image as separate message if available
       if (diagnosisData.imageUrl) {
-        const imageMessage = `📸 Immagine della pianta: ${diagnosisData.imageUrl}`;
+        const imageMessage = `📸 Immagine della pianta allegata alla diagnosi`;
         const { error: imageMessageError } = await supabase
           .from('messages')
           .insert({
@@ -133,6 +133,7 @@ Per favore, rivedi l'analisi e fornisci la tua valutazione professionale. L'uten
             recipient_id: MARCO_NIGRO_ID,
             content: imageMessage, // Required field
             text: imageMessage, // Also populate text field
+            image_url: diagnosisData.imageUrl,
             metadata: {
               type: 'image',
               isPlantImage: true,
@@ -144,6 +145,38 @@ Per favore, rivedi l'analisi e fornisci la tua valutazione professionale. L'uten
           console.error('❌ Error sending image message:', imageMessageError);
           // Don't fail the whole process for image message
         }
+      }
+
+      // Send notification to expert using the edge function
+      try {
+        const { data, error } = await supabase.functions.invoke('send-specialist-notification', {
+          body: {
+            conversation_id: conversationId,
+            sender_id: userId,
+            recipient_id: MARCO_NIGRO_ID,
+            message_text: messageContent,
+            expert_email: 'marco.nigro@drplant.it',
+            image_url: diagnosisData.imageUrl,
+            user_details: {
+              firstName: userProfile?.first_name || 'Utente',
+              lastName: userProfile?.last_name || '',
+              email: user.email || ''
+            },
+            plant_details: [{
+              name: diagnosisData.plantType,
+              price: 'Diagnosi automatica'
+            }]
+          }
+        });
+
+        if (error) {
+          console.error('❌ Error sending expert notification:', error);
+        } else {
+          console.log('✅ Expert notification sent successfully:', data);
+        }
+      } catch (notificationError) {
+        console.error('❌ Failed to send expert notification:', notificationError);
+        // Don't fail the whole process for notification error
       }
 
       console.log('✅ Successfully sent diagnosis to expert');
