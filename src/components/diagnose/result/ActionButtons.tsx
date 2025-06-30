@@ -1,6 +1,5 @@
-
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Save, AlertCircle, MessageCircle, Loader2, RefreshCw } from "lucide-react";
+import { ArrowRight, Save, AlertCircle, MessageCircle, Loader2, RefreshCw, Crown } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { useState } from "react";
@@ -9,6 +8,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { EXPERT } from '@/components/chat/types';
 import { MARCO_NIGRO_ID } from '@/components/phytopathologist';
 import { toast } from "sonner";
+import { usePremiumStatus } from "@/services/premiumService";
+import { PremiumPaywallModal } from "../PremiumPaywallModal";
 
 interface ActionButtonsProps {
   onStartNewAnalysis: () => void;
@@ -37,14 +38,22 @@ const ActionButtons = ({
   diagnosisData
 }: ActionButtonsProps) => {
   const { user, userProfile } = useAuth();
+  const { hasExpertChatAccess } = usePremiumStatus();
   const navigate = useNavigate();
   const [showAuthDialog, setShowAuthDialog] = useState(false);
+  const [showPaywallModal, setShowPaywallModal] = useState(false);
   
   const isAuthenticated = !!user;
   
   const startChatWithExpert = async () => {
     if (!isAuthenticated) {
       setShowAuthDialog(true);
+      return;
+    }
+
+    // Controlla se l'utente ha accesso premium
+    if (!hasExpertChatAccess) {
+      setShowPaywallModal(true);
       return;
     }
 
@@ -171,11 +180,17 @@ Ciao Marco, ho bisogno del tuo aiuto per questa pianta. Puoi darmi una diagnosi 
       )}
 
       <Button
-        className="w-full bg-drplant-blue-dark hover:bg-drplant-blue-darker flex items-center justify-center gap-2"
+        className={`w-full flex items-center justify-center gap-2 ${
+          hasExpertChatAccess 
+            ? 'bg-drplant-blue-dark hover:bg-drplant-blue-darker' 
+            : 'border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-800'
+        }`}
+        variant={hasExpertChatAccess ? 'default' : 'outline'}
         onClick={handleChatWithExpert}
       >
+        {!hasExpertChatAccess && <Crown className="h-4 w-4" />}
         <MessageCircle className="h-4 w-4" />
-        <span>Chat con il fitopatologo</span>
+        <span>{hasExpertChatAccess ? 'Chat con il fitopatologo' : 'Chat Premium con Esperto'}</span>
       </Button>
       
       <Button 
@@ -201,6 +216,11 @@ Ciao Marco, ho bisogno del tuo aiuto per questa pianta. Puoi darmi una diagnosi 
         onClose={() => setShowAuthDialog(false)}
         title="Devi accedere per contattare il fitopatologo"
         description="Per visualizzare le conversazioni con il fitopatologo devi prima accedere."
+      />
+
+      <PremiumPaywallModal
+        open={showPaywallModal}
+        onClose={() => setShowPaywallModal(false)}
       />
     </div>
   );

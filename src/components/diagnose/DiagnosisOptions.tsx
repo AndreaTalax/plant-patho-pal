@@ -21,15 +21,15 @@ const DiagnosisOptions: React.FC<DiagnosisOptionsProps> = ({
   onSelectExpert,
   hasAIAccess
 }) => {
-  const { upgradeMessage } = usePremiumStatus();
+  const { hasExpertChatAccess, upgradeMessage } = usePremiumStatus();
   const [paywallOpen, setPaywallOpen] = useState(false);
 
-  const handleAISelection = () => {
-    if (!hasAIAccess) {
+  const handleExpertSelection = () => {
+    if (!hasExpertChatAccess) {
       setPaywallOpen(true);
       return;
     }
-    onSelectAI();
+    onSelectExpert();
   };
 
   return (
@@ -37,20 +37,17 @@ const DiagnosisOptions: React.FC<DiagnosisOptionsProps> = ({
       <AIAccuracyStats />
       
       <div className="grid md:grid-cols-2 gap-4">
-        {/* Opzione Diagnosi AI */}
-        <Card className={`relative transition-all hover:shadow-lg`}>
+        {/* Opzione Diagnosi AI - ORA GRATUITA */}
+        <Card className="transition-all hover:shadow-lg">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="flex items-center gap-2 text-lg">
                 <Brain className="h-5 w-5 text-drplant-blue" />
                 Diagnosi AI
               </CardTitle>
-              {!hasAIAccess && (
-                <Badge variant="secondary" className="bg-amber-100 text-amber-800">
-                  <Crown className="h-3 w-3 mr-1" />
-                  Premium
-                </Badge>
-              )}
+              <Badge variant="secondary" className="bg-green-100 text-green-800">
+                Gratuito
+              </Badge>
             </div>
             <CardDescription>
               Analisi immediata con intelligenza artificiale avanzata
@@ -73,29 +70,33 @@ const DiagnosisOptions: React.FC<DiagnosisOptionsProps> = ({
             </div>
             
             <Button 
-              onClick={handleAISelection}
+              onClick={onSelectAI}
               className="w-full"
-              variant={!hasAIAccess ? "outline" : "default"}
             >
-              {!hasAIAccess && <Lock className="h-4 w-4 mr-2" />}
-              {hasAIAccess ? 'Analizza con AI' : 'Richiede Premium'}
+              Analizza con AI
             </Button>
             
-            {!hasAIAccess && (
-              <p className="text-xs text-amber-600 text-center">
-                Disponibile per utenti Premium
-              </p>
-            )}
+            <p className="text-xs text-green-600 text-center">
+              Sempre disponibile e gratuito
+            </p>
           </CardContent>
         </Card>
 
-        {/* Opzione Esperto */}
-        <Card className="transition-all hover:shadow-lg">
+        {/* Opzione Esperto - ORA PREMIUM */}
+        <Card className={`relative transition-all hover:shadow-lg`}>
           <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Users className="h-5 w-5 text-drplant-green" />
-              Chat con Fitopatologo
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Users className="h-5 w-5 text-drplant-green" />
+                Chat con Fitopatologo
+              </CardTitle>
+              {!hasExpertChatAccess && (
+                <Badge variant="secondary" className="bg-amber-100 text-amber-800">
+                  <Crown className="h-3 w-3 mr-1" />
+                  Premium
+                </Badge>
+              )}
+            </div>
             <CardDescription>
               Consulenza diretta con il nostro esperto Marco Nigro
             </CardDescription>
@@ -117,26 +118,31 @@ const DiagnosisOptions: React.FC<DiagnosisOptionsProps> = ({
             </div>
             
             <Button 
-              onClick={onSelectExpert}
-              className="w-full bg-drplant-green hover:bg-drplant-green-dark"
+              onClick={handleExpertSelection}
+              className="w-full"
+              variant={!hasExpertChatAccess ? "outline" : "default"}
             >
-              Chat con Esperto
+              {!hasExpertChatAccess && <Lock className="h-4 w-4 mr-2" />}
+              {hasExpertChatAccess ? 'Chat con Esperto' : 'Richiede Premium'}
             </Button>
             
-            <p className="text-xs text-green-600 text-center">
-              Sempre disponibile e gratuito
-            </p>
+            {!hasExpertChatAccess && (
+              <p className="text-xs text-amber-600 text-center">
+                Disponibile per utenti Premium
+              </p>
+            )}
           </CardContent>
         </Card>
       </div>
       
       <div className="bg-gray-50 rounded-lg p-4">
         <p className="text-sm text-gray-700 text-center">
-          <strong>Raccomandazione:</strong> Entrambe le opzioni inviano automaticamente 
-          le tue informazioni e foto all'esperto per una valutazione completa.
+          <strong>Raccomandazione:</strong> Inizia con l'analisi AI gratuita, poi passa alla consulenza premium 
+          per una valutazione professionale completa.
         </p>
       </div>
-      {/* Paywall modale */}
+      
+      {/* Paywall modale per la chat esperto */}
       <PremiumPaywallModal
         open={paywallOpen}
         onClose={() => setPaywallOpen(false)}

@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { usePlantInfo } from '@/context/PlantInfoContext';
 import { usePremiumStatus } from '@/services/premiumService';
@@ -57,7 +56,7 @@ const DiagnosisStages: React.FC<DiagnosisStagesProps> = ({
   onChatWithExpert
 }) => {
   const { plantInfo } = usePlantInfo();
-  const { hasAIAccess } = usePremiumStatus();
+  const { hasAIAccess, hasExpertChatAccess } = usePremiumStatus();
   const navigate = useNavigate();
   const { userProfile } = useAuth();
 
@@ -65,6 +64,12 @@ const DiagnosisStages: React.FC<DiagnosisStagesProps> = ({
   const handleExpertConsultation = async () => {
     if (!userProfile?.id) {
       toast.error('Devi essere autenticato per contattare l\'esperto');
+      return;
+    }
+
+    // Controlla se l'utente ha accesso premium alla chat esperto
+    if (!hasExpertChatAccess) {
+      toast.error('La chat con l\'esperto richiede un abbonamento Premium');
       return;
     }
 
