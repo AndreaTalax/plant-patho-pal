@@ -23,13 +23,12 @@ export const ChatInitializer: React.FC<ChatInitializerProps> = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
 
-  // INVIO AUTOMATICO GARANTITO - anche offline
+  // INVIO AUTOMATICO GARANTITO dei dati di consultazione
   useEffect(() => {
     const sendDataGuaranteed = async () => {
-      // Condizioni per l'invio
+      // Condizioni per l'invio automatico
       if (
         !activeChat ||
-        activeChat !== 'expert' ||
         !currentConversationId ||
         !userProfile ||
         autoDataSent ||
@@ -38,12 +37,20 @@ export const ChatInitializer: React.FC<ChatInitializerProps> = ({
         return;
       }
 
+      console.log('🚀 [CHAT-INIT] Avvio invio automatico dati consultazione...');
       setIsProcessing(true);
 
       try {
-        console.log('[CHAT-INIT] 🚀 INVIO GARANTITO dati automatici...');
-        
-        // Preparazione dati completi
+        // Verifica prima se i dati sono già stati inviati
+        const alreadySent = await ConsultationDataService.isConsultationDataSent(currentConversationId);
+        if (alreadySent) {
+          console.log('✅ [CHAT-INIT] Dati già inviati precedentemente');
+          setAutoDataSent(true);
+          setIsProcessing(false);
+          return;
+        }
+
+        // Preparazione dati completi dell'utente
         const userData = {
           firstName: userProfile.first_name || userProfile.firstName || 'Non specificato',
           lastName: userProfile.last_name || userProfile.lastName || 'Non specificato',
@@ -52,6 +59,7 @@ export const ChatInitializer: React.FC<ChatInitializerProps> = ({
           birthPlace: userProfile.birth_place || userProfile.birthPlace || 'Non specificato'
         };
 
+        // Preparazione dati della pianta
         const plantData = {
           symptoms: plantInfo?.symptoms || 'Da descrivere durante la consulenza',
           wateringFrequency: plantInfo?.wateringFrequency || 'Da specificare',
@@ -64,12 +72,16 @@ export const ChatInitializer: React.FC<ChatInitializerProps> = ({
           sendToExpert: plantInfo?.sendToExpert || false
         };
 
-        console.log('[CHAT-INIT] 📦 Dati preparati:', { userData, plantData });
+        console.log('[CHAT-INIT] 📦 Dati preparati per invio:', { 
+          userData: userData.email, 
+          plantData: plantData.plantName,
+          hasImage: !!plantData.imageUrl 
+        });
 
         // INVIO CON RETRY AUTOMATICO
         let success = false;
         let attempts = 0;
-        const maxAttempts = 5;
+        const maxAttempts = 3;
 
         while (!success && attempts < maxAttempts) {
           attempts++;
@@ -88,7 +100,7 @@ export const ChatInitializer: React.FC<ChatInitializerProps> = ({
               setAutoDataSent(true);
               setRetryCount(0);
               
-              toast.success('✅ Dati inviati automaticamente!', {
+              toast.success('✅ Dati inviati automaticamente all\'esperto!', {
                 description: `Informazioni ${plantData.imageUrl ? 'e foto ' : ''}inviate a Marco Nigro`,
                 duration: 3000,
               });
@@ -100,7 +112,7 @@ export const ChatInitializer: React.FC<ChatInitializerProps> = ({
 
           // Attesa prima del prossimo tentativo
           if (!success && attempts < maxAttempts) {
-            const delay = Math.min(1000 * attempts, 5000);
+            const delay = Math.min(1000 * attempts, 3000);
             console.log(`[CHAT-INIT] ⏳ Attendo ${delay}ms prima del prossimo tentativo...`);
             await new Promise(resolve => setTimeout(resolve, delay));
           }
@@ -120,7 +132,7 @@ export const ChatInitializer: React.FC<ChatInitializerProps> = ({
             }));
             console.log('[CHAT-INIT] 💾 Dati salvati per invio differito');
             
-            toast.info('📝 Dati salvati offline', {
+            toast.info('📝 Dati salvati per invio differito', {
               description: 'Verranno inviati quando la connessione si ristabilirà',
               duration: 4000,
             });
@@ -138,9 +150,10 @@ export const ChatInitializer: React.FC<ChatInitializerProps> = ({
     };
 
     // Avvio immediato quando le condizioni sono soddisfatte
-    if (activeChat === 'expert' && currentConversationId && userProfile && !autoDataSent && !isProcessing) {
-      console.log('[CHAT-INIT] 🎯 Avvio invio automatico immediato...');
-      const timer = setTimeout(sendDataGuaranteed, 200);
+    if (activeChat && currentConversationId && userProfile && !autoDataSent && !isProcessing) {
+      console.log('[CHAT-INIT] 🎯 Condizioni soddisfatte - avvio invio automatico...');
+      // Piccolo delay per assicurare che la chat sia completamente inizializzata
+      const timer = setTimeout(sendDataGuaranteed, 500);
       return () => clearTimeout(timer);
     }
   }, [

@@ -127,7 +127,7 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
 
   return (
     <div className="flex flex-col h-full bg-gray-50">
-      {/* Auto data initializer */}
+      {/* Auto data initializer - RIPRISTINATO */}
       <ChatInitializer
         activeChat={activeChat}
         currentConversationId={currentConversationId}
