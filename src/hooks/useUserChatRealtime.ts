@@ -16,56 +16,13 @@ export const useUserChatRealtime = (userId: string) => {
   
   const { user } = useAuth();
 
-  // Send notification to expert via edge function
-  const sendExpertNotification = useCallback(async (
-    conversationId: string,
-    senderId: string,
-    recipientId: string,
-    messageText: string,
-    imageUrl?: string
-  ) => {
-    try {
-      console.log('📧 Sending expert notification...', {
-        conversationId,
-        senderId,
-        recipientId,
-        messageText: messageText.slice(0, 50) + '...',
-        hasImage: !!imageUrl
-      });
-
-      const { data, error } = await supabase.functions.invoke('send-specialist-notification', {
-        body: {
-          conversation_id: conversationId,
-          sender_id: senderId,
-          recipient_id: recipientId,
-          message_text: messageText,
-          expert_email: 'agrotecnicomarconigro@gmail.com',
-          image_url: imageUrl,
-          user_details: {
-            firstName: user?.user_metadata?.first_name || 'Utente',
-            lastName: user?.user_metadata?.last_name || '',
-            email: user?.email || ''
-          }
-        }
-      });
-
-      if (error) {
-        console.error('❌ Error sending expert notification:', error);
-      } else {
-        console.log('✅ Expert notification sent successfully:', data);
-      }
-    } catch (error) {
-      console.error('❌ Failed to send expert notification:', error);
-    }
-  }, [user]);
-
   // Start or get existing chat with expert
   const startChatWithExpert = useCallback(async () => {
     try {
       setInitializationError(null);
       console.log('🚀 Starting chat with expert for user:', userId);
 
-      // Check if conversation already exists
+      // Check if conversation already exists - metodo diretto
       const { data: existingConversations, error: fetchError } = await supabase
         .from('conversations')
         .select('*')
@@ -110,7 +67,7 @@ export const useUserChatRealtime = (userId: string) => {
       setCurrentConversationId(conversation.id);
       setIsConnected(true);
 
-      // Load existing messages
+      // Load existing messages - metodo diretto
       const { data: existingMessages } = await supabase
         .from('messages')
         .select('*')
@@ -149,7 +106,7 @@ export const useUserChatRealtime = (userId: string) => {
     }
   }, [userId]);
 
-  // Send message handler
+  // Send message handler - metodo diretto
   const handleSendMessage = useCallback(async (
     text: string, 
     imageUrl?: string
@@ -166,7 +123,7 @@ export const useUserChatRealtime = (userId: string) => {
         sender_id: userId,
         recipient_id: MARCO_NIGRO_ID,
         content: text,
-        text: text, // Also populate text field for consistency
+        text: text,
         image_url: imageUrl || null,
         metadata: {
           type: imageUrl ? 'image_with_text' : 'text',
@@ -184,15 +141,6 @@ export const useUserChatRealtime = (userId: string) => {
         return;
       }
 
-      // Send notification to expert
-      await sendExpertNotification(
-        currentConversationId,
-        userId,
-        MARCO_NIGRO_ID,
-        text,
-        imageUrl
-      );
-
       console.log('✅ Message sent successfully');
       
     } catch (error) {
@@ -201,7 +149,7 @@ export const useUserChatRealtime = (userId: string) => {
     } finally {
       setIsSending(false);
     }
-  }, [activeChat, currentConversationId, userId, isSending, sendExpertNotification]);
+  }, [activeChat, currentConversationId, userId, isSending]);
 
   // Reset chat state
   const resetChat = useCallback(() => {

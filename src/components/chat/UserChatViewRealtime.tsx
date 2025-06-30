@@ -9,7 +9,7 @@ import ChatHeader from './user/ChatHeader';
 import { DatabaseMessage } from '@/services/chat/types';
 import { Message } from './types';
 import { Button } from '@/components/ui/button';
-import { ChevronDown, ChevronUp, Eye, EyeOff, RefreshCw, AlertCircle } from 'lucide-react';
+import { RefreshCw, AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface UserChatViewRealtimeProps {
@@ -127,7 +127,7 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
 
   return (
     <div className="flex flex-col h-full bg-gray-50">
-      {/* Auto data initializer - RIPRISTINATO */}
+      {/* Auto data initializer */}
       <ChatInitializer
         activeChat={activeChat}
         currentConversationId={currentConversationId}
@@ -160,7 +160,7 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
         />
       </div>
 
-      {/* Message input with audio and emoji enabled */}
+      {/* Message input */}
       <div className="flex-shrink-0">
         <MessageBoard
           onSendMessage={handleSendMessage}

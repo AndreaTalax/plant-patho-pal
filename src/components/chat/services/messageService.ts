@@ -11,7 +11,7 @@ export class ChatMessageService {
         return [];
       }
 
-      // Caricamento diretto dal database senza edge function
+      // Caricamento diretto dal database - metodo semplice e affidabile
       const { data, error } = await supabase
         .from('messages')
         .select('*')
@@ -57,48 +57,26 @@ export class ChatMessageService {
         throw new Error('User not authenticated');
       }
 
-      // Prova prima con la edge function
-      try {
-        const { data, error } = await supabase.functions.invoke('send-message', {
-          body: {
-            conversationId,
-            recipientId,
-            text,
-            imageUrl,
-            products
-          }
+      // Inserimento diretto - metodo semplice che funziona sempre
+      const { error: insertError } = await supabase
+        .from('messages')
+        .insert({
+          conversation_id: conversationId,
+          sender_id: senderId,
+          recipient_id: recipientId,
+          content: text,
+          text: text,
+          image_url: imageUrl,
+          sent_at: new Date().toISOString()
         });
 
-        if (error) {
-          throw new Error('Edge function error');
-        }
-
-        console.log('✅ Message sent via edge function:', data);
-        return true;
-      } catch (edgeFunctionError) {
-        console.log('⚠️ Edge function not available, using direct insert');
-        
-        // Fallback: inserimento diretto
-        const { error: insertError } = await supabase
-          .from('messages')
-          .insert({
-            conversation_id: conversationId,
-            sender_id: senderId,
-            recipient_id: recipientId,
-            content: text,
-            text: text,
-            image_url: imageUrl,
-            sent_at: new Date().toISOString()
-          });
-
-        if (insertError) {
-          console.error('❌ Error in direct insert:', insertError);
-          throw insertError;
-        }
-
-        console.log('✅ Message sent via direct insert');
-        return true;
+      if (insertError) {
+        console.error('❌ Error in message insert:', insertError);
+        throw insertError;
       }
+
+      console.log('✅ Message sent successfully');
+      return true;
     } catch (error) {
       console.error('❌ Error in sendMessage:', error);
       throw error;
