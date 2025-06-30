@@ -48,6 +48,7 @@ export interface AnalysisDetails {
     plantInfo?: PlantInfo;
     accuracyGuarantee?: string;
     plantIdResult?: any;
+    detectedDiseases?: any[];
   };
   identifiedFeatures?: string[];
   sistemaDigitaleFoglia?: boolean;

@@ -167,11 +167,9 @@ export const usePlantAnalysis = () => {
         ],
         sistemaDigitaleFoglia: false,
         analysisTechnology: data.analysisDetails?.source || 'Enhanced AI Plant Analysis',
-        alternativeDiagnoses: validatedDiseases.slice(1).map(d => ({
-          disease: d.name,
-          probability: d.confidence / 100,
-          description: d.description
-        }))
+        alternativeDiagnoses: validatedDiseases.slice(1).map(d => 
+          `${d.name} - ${d.confidence}% probabilità: ${d.description || 'Diagnosi alternativa'}`
+        )
       };
       
       setDiagnosedDisease(diseaseInfo);
