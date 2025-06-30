@@ -9,7 +9,8 @@ const supabaseAdmin = createClient(
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
 );
 
-const resend = new Resend(Deno.env.get("SENDGRID_API_KEY"));
+// Usa RESEND_API_KEY invece di SENDGRID_API_KEY per Resend
+const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -41,7 +42,7 @@ serve(async (req) => {
       conversation_id,
       sender_id,
       recipient_id,
-      expert_email: expert_email || 'agrotecnicomarconigro@gmail.com',
+      expert_email: expert_email || 'marco.nigro@drplant.it',
       recipient_email,
       has_user_details: !!user_details,
       has_image: !!image_url,
@@ -130,20 +131,27 @@ serve(async (req) => {
     `;
 
     // Send actual email using Resend
-    const targetEmail = expert_email || recipient_email || 'agrotecnicomarconigro@gmail.com';
+    const targetEmail = expert_email || recipient_email || 'marco.nigro@drplant.it';
     
-    try {
-      const emailResponse = await resend.emails.send({
-        from: 'Dr.Plant <noreply@plant-patho-pal.lovable.app>',
-        to: [targetEmail],
-        subject: emailSubject,
-        html: emailBody,
-      });
+    // Verifica se abbiamo l'API key di Resend
+    const resendApiKey = Deno.env.get("RESEND_API_KEY");
+    if (!resendApiKey) {
+      console.error('❌ RESEND_API_KEY not found in environment variables');
+      // Continua comunque con la notifica nel database
+    } else {
+      try {
+        const emailResponse = await resend.emails.send({
+          from: 'Dr.Plant <noreply@plant-patho-pal.lovable.app>',
+          to: [targetEmail],
+          subject: emailSubject,
+          html: emailBody,
+        });
 
-      console.log('✅ Email sent successfully:', emailResponse);
-    } catch (emailError) {
-      console.error('❌ Error sending email:', emailError);
-      // Continue with notification logging even if email fails
+        console.log('✅ Email sent successfully:', emailResponse);
+      } catch (emailError) {
+        console.error('❌ Error sending email:', emailError);
+        // Continue with notification logging even if email fails
+      }
     }
 
     // Store notification in database for tracking
@@ -170,7 +178,8 @@ serve(async (req) => {
       message: "Notification processed successfully",
       recipient: targetEmail,
       subject: emailSubject,
-      notification_stored: !notificationError
+      notification_stored: !notificationError,
+      email_service: resendApiKey ? 'resend' : 'disabled'
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,
