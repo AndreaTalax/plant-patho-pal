@@ -155,7 +155,7 @@ Per favore, rivedi l'analisi e fornisci la tua valutazione professionale. L'uten
             sender_id: userId,
             recipient_id: MARCO_NIGRO_ID,
             message_text: messageContent,
-            expert_email: 'marco.nigro@drplant.it',
+            expert_email: 'agrotecnicomarconigro@gmail.com',
             image_url: diagnosisData.imageUrl,
             user_details: {
               firstName: userProfile?.first_name || 'Utente',

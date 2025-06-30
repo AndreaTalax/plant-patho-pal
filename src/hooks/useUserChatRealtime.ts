@@ -39,7 +39,7 @@ export const useUserChatRealtime = (userId: string) => {
           sender_id: senderId,
           recipient_id: recipientId,
           message_text: messageText,
-          expert_email: 'marco.nigro@drplant.it',
+          expert_email: 'agrotecnicomarconigro@gmail.com',
           image_url: imageUrl,
           user_details: {
             firstName: user?.user_metadata?.first_name || 'Utente',

@@ -9,7 +9,7 @@ const supabaseAdmin = createClient(
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
 );
 
-// Usa RESEND_API_KEY invece di SENDGRID_API_KEY per Resend
+// Usa RESEND_API_KEY per Resend
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
 serve(async (req) => {
@@ -42,7 +42,7 @@ serve(async (req) => {
       conversation_id,
       sender_id,
       recipient_id,
-      expert_email: expert_email || 'marco.nigro@drplant.it',
+      expert_email: expert_email || 'agrotecnicomarconigro@gmail.com',
       recipient_email,
       has_user_details: !!user_details,
       has_image: !!image_url,
@@ -130,8 +130,8 @@ serve(async (req) => {
       </div>
     `;
 
-    // Send actual email using Resend
-    const targetEmail = expert_email || recipient_email || 'marco.nigro@drplant.it';
+    // Send actual email using Resend - sempre a agrotecnicomarconigro@gmail.com
+    const targetEmail = 'agrotecnicomarconigro@gmail.com';
     
     // Verifica se abbiamo l'API key di Resend
     const resendApiKey = Deno.env.get("RESEND_API_KEY");
