@@ -86,8 +86,8 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
           <Alert className="max-w-md">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription className="mt-2">
-              <p className="font-medium mb-2">Connessione in corso...</p>
-              <p className="text-sm mb-4">Sto stabilendo la connessione con l'esperto</p>
+              <p className="font-medium mb-2">Problema di connessione</p>
+              <p className="text-sm mb-4">{initializationError}</p>
               <Button
                 onClick={() => {
                   resetChat();
@@ -97,7 +97,7 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
                 className="w-full"
               >
                 <RefreshCw className="h-4 w-4 mr-2" />
-                Riprova ora
+                Riprova
               </Button>
             </AlertDescription>
           </Alert>
@@ -106,7 +106,7 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
     );
   }
 
-  // Simplified loading state
+  // Loading state
   if (!activeChat) {
     return (
       <div className="flex flex-col h-full">

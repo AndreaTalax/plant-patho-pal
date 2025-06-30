@@ -5,6 +5,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { DatabaseMessage } from '@/services/chat/types';
 import { MARCO_NIGRO_ID } from '@/components/phytopathologist';
+import { ConversationService } from '@/services/chat/conversationService';
+import { MessageService } from '@/services/chat/messageService';
 
 export const useUserChatRealtime = (userId: string) => {
   const [activeChat, setActiveChat] = useState<any>(null);
@@ -22,60 +24,25 @@ export const useUserChatRealtime = (userId: string) => {
       setInitializationError(null);
       console.log('🚀 Starting chat with expert for user:', userId);
 
-      // Check if conversation already exists - metodo diretto
-      const { data: existingConversations, error: fetchError } = await supabase
-        .from('conversations')
-        .select('*')
-        .eq('user_id', userId)
-        .eq('expert_id', MARCO_NIGRO_ID)
-        .order('created_at', { ascending: false })
-        .limit(1);
-
-      if (fetchError) {
-        console.error('❌ Error fetching conversations:', fetchError);
-        setInitializationError('Errore nel recupero delle conversazioni');
+      // Find or create conversation using direct service
+      const conversation = await ConversationService.findOrCreateConversation(userId);
+      
+      if (!conversation) {
+        setInitializationError('Errore nella creazione della conversazione');
         return;
-      }
-
-      let conversation;
-      if (existingConversations && existingConversations.length > 0) {
-        conversation = existingConversations[0];
-        console.log('💬 Using existing conversation:', conversation.id);
-      } else {
-        console.log('🆕 Creating new conversation');
-        const { data: newConversation, error: createError } = await supabase
-          .from('conversations')
-          .insert({
-            user_id: userId,
-            expert_id: MARCO_NIGRO_ID,
-            status: 'active',
-            title: 'Consulenza Esperto'
-          })
-          .select()
-          .single();
-
-        if (createError) {
-          console.error('❌ Error creating conversation:', createError);
-          setInitializationError('Errore nella creazione della conversazione');
-          return;
-        }
-
-        conversation = newConversation;
       }
 
       setActiveChat(conversation);
       setCurrentConversationId(conversation.id);
       setIsConnected(true);
 
-      // Load existing messages - metodo diretto
-      const { data: existingMessages } = await supabase
-        .from('messages')
-        .select('*')
-        .eq('conversation_id', conversation.id)
-        .order('sent_at', { ascending: true });
-
-      if (existingMessages) {
-        setMessages(existingMessages);
+      // Load existing messages using direct service
+      try {
+        const existingMessages = await MessageService.loadMessages(conversation.id);
+        setMessages(existingMessages || []);
+      } catch (messageError) {
+        console.warn('⚠️ Could not load existing messages:', messageError);
+        setMessages([]);
       }
 
       // Set up real-time subscription
@@ -106,7 +73,7 @@ export const useUserChatRealtime = (userId: string) => {
     }
   }, [userId]);
 
-  // Send message handler - metodo diretto
+  // Send message handler using direct service
   const handleSendMessage = useCallback(async (
     text: string, 
     imageUrl?: string
@@ -118,25 +85,14 @@ export const useUserChatRealtime = (userId: string) => {
     try {
       console.log('📤 Sending message:', { text: text.slice(0, 50) + '...', hasImage: !!imageUrl });
 
-      const messageData = {
-        conversation_id: currentConversationId,
-        sender_id: userId,
-        recipient_id: MARCO_NIGRO_ID,
-        content: text,
-        text: text,
-        image_url: imageUrl || null,
-        metadata: {
-          type: imageUrl ? 'image_with_text' : 'text',
-          timestamp: new Date().toISOString()
-        }
-      };
+      const success = await MessageService.sendMessage(
+        currentConversationId,
+        userId,
+        text,
+        imageUrl
+      );
 
-      const { error: messageError } = await supabase
-        .from('messages')
-        .insert(messageData);
-
-      if (messageError) {
-        console.error('❌ Error sending message:', messageError);
+      if (!success) {
         toast.error('Errore nell\'invio del messaggio');
         return;
       }

@@ -15,23 +15,6 @@ export class MessageService {
         return [];
       }
 
-      // Prima verifica se la conversazione esiste
-      const { data: conversation, error: convError } = await supabase
-        .from('conversations')
-        .select('id')
-        .eq('id', conversationId)
-        .maybeSingle();
-
-      if (convError) {
-        console.error('❌ MessageService: Errore verifica conversazione', convError);
-        throw convError;
-      }
-
-      if (!conversation) {
-        console.log('⚠️ MessageService: Conversazione non trovata', conversationId);
-        throw new Error('CONVERSATION_NOT_FOUND');
-      }
-
       // Caricamento diretto dal database
       const { data: messages, error } = await supabase
         .from('messages')
@@ -50,11 +33,6 @@ export class MessageService {
 
     } catch (error: any) {
       console.error('❌ MessageService: Errore caricamento messaggi', error);
-      
-      if (error.message === 'CONVERSATION_NOT_FOUND') {
-        throw new Error('Conversazione non trovata o eliminata');
-      }
-      
       toast.error('Errore caricamento messaggi');
       throw error;
     }
@@ -90,23 +68,6 @@ export class MessageService {
         throw new Error('Dati messaggio incompleti');
       }
 
-      // Prima verifica se la conversazione esiste ancora
-      const { data: conversation, error: convError } = await supabase
-        .from('conversations')
-        .select('id, status')
-        .eq('id', conversationId)
-        .maybeSingle();
-
-      if (convError) {
-        console.error('❌ MessageService: Errore verifica conversazione', convError);
-        throw convError;
-      }
-
-      if (!conversation) {
-        console.log('⚠️ MessageService: Conversazione non trovata', conversationId);
-        throw new Error('Conversazione non trovata o eliminata');
-      }
-
       // Determina il recipientId
       const recipientId = senderId === MARCO_NIGRO_ID ? null : MARCO_NIGRO_ID;
 
@@ -133,13 +94,7 @@ export class MessageService {
 
     } catch (error: any) {
       console.error('❌ MessageService: Errore invio messaggio', error);
-      
-      if (error.message?.includes('non trovata') || error.message?.includes('eliminata')) {
-        toast.error('Conversazione non più disponibile');
-      } else {
-        toast.error(error.message || 'Errore invio messaggio');
-      }
-      
+      toast.error(error.message || 'Errore invio messaggio');
       return false;
     }
   }
