@@ -8,6 +8,70 @@ import { MARCO_NIGRO_ID } from '@/components/phytopathologist';
 import { ConversationService } from '@/services/chat/conversationService';
 import { MessageService } from '@/services/chat/messageService';
 
+// Funzioni di debug per diagnosticare problemi della chat
+const validateChatParameters = (userId: string, expertId: string) => {
+  const errors: string[] = [];
+  
+  if (!userId || typeof userId !== 'string' || userId.trim() === '') {
+    errors.push('userId non valido o mancante');
+  }
+  
+  if (!expertId || typeof expertId !== 'string' || expertId.trim() === '') {
+    errors.push('expertId non valido o mancante');
+  }
+  
+  // Controlla se gli ID hanno un formato valido (UUID)
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  if (userId && !uuidRegex.test(userId.trim())) {
+    errors.push('userId non è un UUID valido');
+  }
+  
+  if (expertId && !uuidRegex.test(expertId.trim())) {
+    errors.push('expertId non è un UUID valido');
+  }
+  
+  return errors;
+};
+
+const logSupabaseOperation = (operation: string, params: any) => {
+  console.group(`🔍 Debug Operazione Supabase: ${operation}`);
+  console.log('📦 Parametri:', JSON.stringify(params, null, 2));
+  console.log('🕐 Timestamp:', new Date().toISOString());
+  console.log('🔗 Supabase Project:', 'otdmqmpxukifoxjlgzmq');
+  console.groupEnd();
+};
+
+const analyzeSupabaseError = (error: any, operation: string) => {
+  console.group(`❌ Analisi Errore Supabase: ${operation}`);
+  console.log('📊 Error code:', error?.code);
+  console.log('📝 Error message:', error?.message);
+  console.log('🔍 Error details:', error?.details);
+  console.log('💡 Error hint:', error?.hint);
+  console.log('🔗 Error context:', error);
+  console.groupEnd();
+};
+
+const testSupabaseConnection = async () => {
+  try {
+    console.log('🧪 Test connessione Supabase...');
+    
+    const { data, error } = await supabase
+      .from('conversations')
+      .select('count')
+      .limit(1);
+    
+    if (error) {
+      console.log('⚠️ Errore test connessione:', error);
+      analyzeSupabaseError(error, 'connection-test');
+    } else {
+      console.log('✅ Supabase connesso correttamente');
+    }
+    
+  } catch (error) {
+    console.error('❌ Supabase non raggiungibile:', error);
+  }
+};
+
 export const useUserChatRealtime = (userId: string) => {
   const [activeChat, setActiveChat] = useState<any>(null);
   const [messages, setMessages] = useState<DatabaseMessage[]>([]);
@@ -19,7 +83,7 @@ export const useUserChatRealtime = (userId: string) => {
   
   const { user } = useAuth();
 
-  // Inizializzazione chat con fallback robusto
+  // Inizializzazione chat con fallback robusto e debug
   const startChatWithExpert = useCallback(async () => {
     if (isInitializing) {
       console.log('🔄 useUserChatRealtime: Inizializzazione già in corso');
@@ -29,7 +93,20 @@ export const useUserChatRealtime = (userId: string) => {
     try {
       setIsInitializing(true);
       setInitializationError(null);
+      
+      // Validazione parametri con debug
+      const validationErrors = validateChatParameters(userId, MARCO_NIGRO_ID);
+      if (validationErrors.length > 0) {
+        const errorMessage = `Errori di validazione: ${validationErrors.join(', ')}`;
+        console.error('❌ Validazione fallita:', errorMessage);
+        throw new Error(errorMessage);
+      }
+
       console.log('🚀 useUserChatRealtime: Avvio chat con esperto per:', userId);
+      logSupabaseOperation('findOrCreateConversation', { userId, expertId: MARCO_NIGRO_ID });
+
+      // Test connessione Supabase prima di procedere
+      await testSupabaseConnection();
 
       // Trova o crea conversazione usando il servizio diretto
       const conversation = await ConversationService.findOrCreateConversation(userId);
@@ -41,13 +118,15 @@ export const useUserChatRealtime = (userId: string) => {
       setActiveChat(conversation);
       setCurrentConversationId(conversation.id);
 
-      // Carica messaggi esistenti con fallback
+      // Carica messaggi esistenti con fallback e debug
       try {
+        logSupabaseOperation('loadMessages', { conversationId: conversation.id });
         const existingMessages = await MessageService.loadMessages(conversation.id);
         setMessages(existingMessages || []);
         console.log('✅ useUserChatRealtime: Messaggi caricati:', existingMessages?.length || 0);
       } catch (messageError) {
         console.warn('⚠️ useUserChatRealtime: Impossibile caricare messaggi esistenti:', messageError);
+        analyzeSupabaseError(messageError, 'loadMessages');
         setMessages([]); // Fallback a lista vuota
       }
 
