@@ -56,11 +56,11 @@ const ChatMessage = ({ message, isExpertView = false, userAvatar, userName }: Ch
       )}
       
       <div className={`flex flex-col min-w-0 ${isUser ? 'items-end' : 'items-start'} max-w-[80%] md:max-w-[70%] lg:max-w-[60%]`}>
-        <div className={`
-          inline-block px-4 py-3 rounded-2xl shadow-sm break-words
+      <div className={`
+          inline-block px-4 py-3 rounded-2xl shadow-sm break-words overflow-wrap-anywhere
           ${getMessageBubbleStyle()}
           ${isUser ? 'rounded-br-md' : 'rounded-bl-md'}
-          max-w-full word-wrap
+          max-w-full
         `}>
           <div className="overflow-hidden">
             <MessageContent message={message} />
