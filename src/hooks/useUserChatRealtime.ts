@@ -15,105 +15,157 @@ export const useUserChatRealtime = (userId: string) => {
   const [isConnected, setIsConnected] = useState(false);
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
   const [initializationError, setInitializationError] = useState<string | null>(null);
+  const [isInitializing, setIsInitializing] = useState(false);
   
   const { user } = useAuth();
 
-  // Start or get existing chat with expert
+  // Inizializzazione chat con fallback robusto
   const startChatWithExpert = useCallback(async () => {
-    try {
-      setInitializationError(null);
-      console.log('🚀 Starting chat with expert for user:', userId);
+    if (isInitializing) {
+      console.log('🔄 useUserChatRealtime: Inizializzazione già in corso');
+      return;
+    }
 
-      // Find or create conversation using direct service
+    try {
+      setIsInitializing(true);
+      setInitializationError(null);
+      console.log('🚀 useUserChatRealtime: Avvio chat con esperto per:', userId);
+
+      // Trova o crea conversazione usando il servizio diretto
       const conversation = await ConversationService.findOrCreateConversation(userId);
       
       if (!conversation) {
-        setInitializationError('Errore nella creazione della conversazione');
-        return;
+        throw new Error('Impossibile creare o trovare la conversazione');
       }
 
       setActiveChat(conversation);
       setCurrentConversationId(conversation.id);
-      setIsConnected(true);
 
-      // Load existing messages using direct service
+      // Carica messaggi esistenti con fallback
       try {
         const existingMessages = await MessageService.loadMessages(conversation.id);
         setMessages(existingMessages || []);
+        console.log('✅ useUserChatRealtime: Messaggi caricati:', existingMessages?.length || 0);
       } catch (messageError) {
-        console.warn('⚠️ Could not load existing messages:', messageError);
-        setMessages([]);
+        console.warn('⚠️ useUserChatRealtime: Impossibile caricare messaggi esistenti:', messageError);
+        setMessages([]); // Fallback a lista vuota
       }
 
-      // Set up real-time subscription
-      const channel = supabase
-        .channel(`conversation_${conversation.id}`)
-        .on(
-          'postgres_changes',
-          {
-            event: 'INSERT',
-            schema: 'public',
-            table: 'messages',
-            filter: `conversation_id=eq.${conversation.id}`
-          },
-          (payload) => {
-            console.log('📨 New message received:', payload.new);
-            setMessages(prev => [...prev, payload.new as DatabaseMessage]);
-          }
-        )
-        .subscribe();
+      // Configura sottoscrizione real-time con fallback
+      try {
+        const channel = supabase
+          .channel(`conversation_${conversation.id}`)
+          .on(
+            'postgres_changes',
+            {
+              event: 'INSERT',
+              schema: 'public',
+              table: 'messages',
+              filter: `conversation_id=eq.${conversation.id}`
+            },
+            (payload) => {
+              console.log('📨 useUserChatRealtime: Nuovo messaggio ricevuto:', payload.new);
+              const newMessage = payload.new as DatabaseMessage;
+              
+              setMessages(prev => {
+                // Evita duplicati
+                const exists = prev.some(msg => msg.id === newMessage.id);
+                if (exists) {
+                  console.log('⚠️ useUserChatRealtime: Messaggio già esistente, ignorato');
+                  return prev;
+                }
+                return [...prev, newMessage];
+              });
+            }
+          )
+          .subscribe((status) => {
+            console.log('🔗 useUserChatRealtime: Stato sottoscrizione:', status);
+            setIsConnected(status === 'SUBSCRIBED');
+          });
 
-      return () => {
-        channel.unsubscribe();
-      };
+        // Cleanup function
+        return () => {
+          try {
+            channel.unsubscribe();
+          } catch (error) {
+            console.warn('⚠️ useUserChatRealtime: Errore durante cleanup sottoscrizione:', error);
+          }
+        };
+      } catch (realtimeError) {
+        console.warn('⚠️ useUserChatRealtime: Errore configurazione real-time:', realtimeError);
+        setIsConnected(false); // Funziona comunque senza real-time
+      }
+
+      console.log('✅ useUserChatRealtime: Inizializzazione completata con successo');
 
     } catch (error) {
-      console.error('❌ Error in startChatWithExpert:', error);
-      setInitializationError('Errore nell\'inizializzazione della chat');
+      console.error('❌ useUserChatRealtime: Errore inizializzazione:', error);
+      setInitializationError(error instanceof Error ? error.message : 'Errore sconosciuto');
+    } finally {
+      setIsInitializing(false);
     }
-  }, [userId]);
+  }, [userId, isInitializing]);
 
-  // Send message handler using direct service
+  // Gestore invio messaggi con fallback
   const handleSendMessage = useCallback(async (
     text: string, 
     imageUrl?: string
   ) => {
-    if (!activeChat || !currentConversationId || isSending) return;
+    if (!activeChat || !currentConversationId || isSending) {
+      console.log('⚠️ useUserChatRealtime: Condizioni invio non soddisfatte');
+      return;
+    }
+
+    if (!text?.trim() && !imageUrl) {
+      toast.error('Il messaggio non può essere vuoto');
+      return;
+    }
 
     setIsSending(true);
     
     try {
-      console.log('📤 Sending message:', { text: text.slice(0, 50) + '...', hasImage: !!imageUrl });
+      console.log('📤 useUserChatRealtime: Invio messaggio:', { text: text?.slice(0, 50), hasImage: !!imageUrl });
 
       const success = await MessageService.sendMessage(
         currentConversationId,
         userId,
-        text,
+        text || '📸 Immagine allegata',
         imageUrl
       );
 
       if (!success) {
-        toast.error('Errore nell\'invio del messaggio');
-        return;
+        throw new Error('Invio fallito');
       }
 
-      console.log('✅ Message sent successfully');
+      console.log('✅ useUserChatRealtime: Messaggio inviato con successo');
+      
+      // Ricarica messaggi dopo l'invio (fallback se real-time non funziona)
+      setTimeout(async () => {
+        try {
+          const refreshedMessages = await MessageService.loadMessages(currentConversationId);
+          setMessages(refreshedMessages || []);
+        } catch (error) {
+          console.warn('⚠️ useUserChatRealtime: Impossibile ricaricare messaggi:', error);
+        }
+      }, 1000);
       
     } catch (error) {
-      console.error('❌ Error in handleSendMessage:', error);
+      console.error('❌ useUserChatRealtime: Errore invio messaggio:', error);
       toast.error('Errore nell\'invio del messaggio');
     } finally {
       setIsSending(false);
     }
   }, [activeChat, currentConversationId, userId, isSending]);
 
-  // Reset chat state
+  // Reset stato chat
   const resetChat = useCallback(() => {
+    console.log('🔄 useUserChatRealtime: Reset stato chat');
     setActiveChat(null);
     setMessages([]);
     setCurrentConversationId(null);
     setIsConnected(false);
     setInitializationError(null);
+    setIsInitializing(false);
   }, []);
 
   return {
@@ -125,6 +177,7 @@ export const useUserChatRealtime = (userId: string) => {
     startChatWithExpert,
     currentConversationId,
     initializationError,
-    resetChat
+    resetChat,
+    isInitializing
   };
 };

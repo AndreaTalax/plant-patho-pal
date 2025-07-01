@@ -5,17 +5,35 @@ import { toast } from 'sonner';
 
 export class MessageService {
   /**
-   * Carica messaggi direttamente dal database
+   * Carica messaggi direttamente dal database con fallback robusto
    */
   static async loadMessages(conversationId: string) {
     try {
       console.log('📚 MessageService: Carico messaggi dal database', conversationId);
 
       if (!conversationId) {
+        console.log('📭 MessageService: ID conversazione mancante');
         return [];
       }
 
-      // Caricamento diretto dal database
+      // Verifica prima se la conversazione esiste
+      const { data: conversation, error: convError } = await supabase
+        .from('conversations')
+        .select('id, status')
+        .eq('id', conversationId)
+        .single();
+
+      if (convError) {
+        console.error('❌ MessageService: Conversazione non trovata', convError);
+        return [];
+      }
+
+      if (!conversation) {
+        console.log('📭 MessageService: Conversazione non esiste');
+        return [];
+      }
+
+      // Caricamento diretto dei messaggi dal database
       const { data: messages, error } = await supabase
         .from('messages')
         .select('*')
@@ -25,7 +43,8 @@ export class MessageService {
 
       if (error) {
         console.error('❌ MessageService: Errore caricamento messaggi', error);
-        throw error;
+        // Fallback: ritorna array vuoto invece di lanciare errore
+        return [];
       }
 
       console.log('✅ MessageService: Messaggi caricati', messages?.length || 0);
@@ -33,13 +52,13 @@ export class MessageService {
 
     } catch (error: any) {
       console.error('❌ MessageService: Errore caricamento messaggi', error);
-      toast.error('Errore caricamento messaggi');
-      throw error;
+      // Fallback silenzioso - non mostrare errore all'utente
+      return [];
     }
   }
 
   /**
-   * Invia un messaggio usando inserimento diretto
+   * Invia un messaggio usando inserimento diretto con fallback
    */
   static async sendMessage(
     conversationId: string, 
@@ -57,19 +76,44 @@ export class MessageService {
         hasProducts: !!products
       });
 
-      // Verifica sessione
+      // Verifica sessione con fallback
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       if (sessionError || !session) {
         console.error('❌ MessageService: Sessione non valida', sessionError);
-        throw new Error('Sessione scaduta');
+        toast.error('Sessione scaduta, ricarica la pagina');
+        return false;
       }
 
       if (!conversationId || !senderId || !content?.trim()) {
-        throw new Error('Dati messaggio incompleti');
+        console.error('❌ MessageService: Dati messaggio incompleti');
+        toast.error('Dati messaggio incompleti');
+        return false;
       }
 
-      // Determina il recipientId
-      const recipientId = senderId === MARCO_NIGRO_ID ? null : MARCO_NIGRO_ID;
+      // Verifica che la conversazione esista prima di inviare
+      const { data: conversation, error: convError } = await supabase
+        .from('conversations')
+        .select('id, status, user_id, expert_id')
+        .eq('id', conversationId)
+        .single();
+
+      if (convError || !conversation) {
+        console.error('❌ MessageService: Conversazione non trovata per invio', convError);
+        toast.error('Conversazione non disponibile');
+        return false;
+      }
+
+      // Determina il recipientId basandosi sui partecipanti della conversazione
+      let recipientId = null;
+      if (senderId === conversation.user_id) {
+        recipientId = conversation.expert_id;
+      } else if (senderId === conversation.expert_id) {
+        recipientId = conversation.user_id;
+      } else {
+        console.error('❌ MessageService: Sender non autorizzato per questa conversazione');
+        toast.error('Non autorizzato a inviare messaggi in questa conversazione');
+        return false;
+      }
 
       // Inserimento diretto nel database
       const { error: insertError } = await supabase
@@ -86,15 +130,16 @@ export class MessageService {
 
       if (insertError) {
         console.error('❌ MessageService: Errore inserimento', insertError);
-        throw insertError;
+        toast.error('Errore nell\'invio del messaggio');
+        return false;
       }
 
-      console.log('✅ MessageService: Messaggio inviato');
+      console.log('✅ MessageService: Messaggio inviato con successo');
       return true;
 
     } catch (error: any) {
       console.error('❌ MessageService: Errore invio messaggio', error);
-      toast.error(error.message || 'Errore invio messaggio');
+      toast.error('Errore nell\'invio del messaggio');
       return false;
     }
   }

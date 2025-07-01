@@ -6,9 +6,9 @@ import { DatabaseConversation } from './types';
 export class ConversationService {
   static async findOrCreateConversation(userId: string): Promise<DatabaseConversation | null> {
     try {
-      console.log('🔍 Finding or creating conversation for user:', userId);
+      console.log('🔍 ConversationService: Ricerca conversazione per utente:', userId);
 
-      // First try to find existing conversation
+      // Ricerca conversazione esistente con fallback robusto
       const { data: existing, error: findError } = await supabase
         .from('conversations')
         .select('*')
@@ -17,17 +17,18 @@ export class ConversationService {
         .eq('status', 'active')
         .maybeSingle();
 
-      if (findError && findError.code !== 'PGRST116') {
-        throw findError;
+      if (findError) {
+        console.error('❌ ConversationService: Errore ricerca conversazione', findError);
+        // Continua con la creazione invece di fallire
       }
 
       if (existing) {
-        console.log('✅ Found existing conversation:', existing.id);
+        console.log('✅ ConversationService: Conversazione esistente trovata:', existing.id);
         return existing;
       }
 
-      // Create new conversation
-      console.log('🆕 Creating new conversation...');
+      // Creazione nuova conversazione con fallback
+      console.log('🆕 ConversationService: Creazione nuova conversazione...');
       const { data: newConversation, error: createError } = await supabase
         .from('conversations')
         .insert({
@@ -40,76 +41,79 @@ export class ConversationService {
         .single();
 
       if (createError) {
-        throw createError;
+        console.error('❌ ConversationService: Errore creazione conversazione', createError);
+        return null;
       }
 
-      console.log('✅ New conversation created:', newConversation.id);
+      console.log('✅ ConversationService: Nuova conversazione creata:', newConversation.id);
       return newConversation;
     } catch (error: any) {
-      console.error('❌ Error in findOrCreateConversation:', error);
+      console.error('❌ ConversationService: Errore in findOrCreateConversation:', error);
       return null;
     }
   }
 
   static async getConversation(conversationId: string): Promise<DatabaseConversation | null> {
     try {
+      console.log('🔍 ConversationService: Caricamento conversazione:', conversationId);
+      
       const { data, error } = await supabase
         .from('conversations')
         .select('*')
         .eq('id', conversationId)
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ ConversationService: Errore caricamento conversazione', error);
+        return null;
+      }
+
+      console.log('✅ ConversationService: Conversazione caricata:', data.id);
       return data;
     } catch (error: any) {
-      console.error('❌ Error getting conversation:', error);
+      console.error('❌ ConversationService: Errore getConversation:', error);
       return null;
     }
   }
 
   static async deleteConversation(conversationId: string): Promise<boolean> {
     try {
-      console.log('🗑️ ConversationService: Starting conversation deletion:', conversationId);
+      console.log('🗑️ ConversationService: Eliminazione conversazione:', conversationId);
       
-      // Direct deletion method only
-      console.log('🔥 Attempting direct database deletion...');
-      
-      // First delete all messages
+      // Eliminazione diretta dei messaggi
       const { error: messagesError } = await supabase
         .from('messages')
         .delete()
         .eq('conversation_id', conversationId);
 
       if (messagesError) {
-        console.error('❌ Error deleting messages:', messagesError);
-        throw messagesError;
+        console.error('❌ ConversationService: Errore eliminazione messaggi', messagesError);
+        // Continua comunque con l'eliminazione della conversazione
       }
 
-      console.log('✅ Messages deleted successfully');
-
-      // Then delete the conversation
+      // Eliminazione della conversazione
       const { error: conversationError } = await supabase
         .from('conversations')
         .delete()
         .eq('id', conversationId);
 
       if (conversationError) {
-        console.error('❌ Error deleting conversation:', conversationError);
-        throw conversationError;
+        console.error('❌ ConversationService: Errore eliminazione conversazione', conversationError);
+        return false;
       }
 
-      console.log('✅ ConversationService: Direct deletion successful');
+      console.log('✅ ConversationService: Conversazione eliminata con successo');
       return true;
 
     } catch (error: any) {
-      console.error('❌ ConversationService: Error deleting conversation:', error);
+      console.error('❌ ConversationService: Errore deleteConversation:', error);
       return false;
     }
   }
 
   static async refreshConversations(expertId: string = MARCO_NIGRO_ID): Promise<any[]> {
     try {
-      console.log('🔄 ConversationService: Refreshing conversations...');
+      console.log('🔄 ConversationService: Aggiornamento conversazioni...');
       
       const { data: conversations, error } = await supabase
         .from('conversations')
@@ -129,14 +133,14 @@ export class ConversationService {
         .order('updated_at', { ascending: false });
 
       if (error) {
-        console.error('❌ Error refreshing conversations:', error);
+        console.error('❌ ConversationService: Errore aggiornamento conversazioni', error);
         return [];
       }
 
-      console.log('✅ Conversations refreshed:', conversations?.length || 0);
+      console.log('✅ ConversationService: Conversazioni aggiornate:', conversations?.length || 0);
       return conversations || [];
     } catch (error) {
-      console.error('❌ Error in refreshConversations:', error);
+      console.error('❌ ConversationService: Errore refreshConversations:', error);
       return [];
     }
   }

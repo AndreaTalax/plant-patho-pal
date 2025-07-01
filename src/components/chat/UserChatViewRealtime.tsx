@@ -29,25 +29,26 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
     startChatWithExpert,
     currentConversationId,
     initializationError,
-    resetChat
+    resetChat,
+    isInitializing
   } = useUserChatRealtime(userId);
 
-  // Auto-start chat immediately when component mounts
+  // Auto-avvio chat quando il componente si monta
   useEffect(() => {
-    if (!activeChat && !initializationError) {
-      console.log('🚀 Avvio automatico chat con esperto...');
+    if (!activeChat && !initializationError && !isInitializing) {
+      console.log('🚀 UserChatViewRealtime: Avvio automatico chat');
       startChatWithExpert();
     }
-  }, [activeChat, startChatWithExpert, initializationError]);
+  }, [activeChat, startChatWithExpert, initializationError, isInitializing]);
 
-  // Reset auto data sent when conversation changes
+  // Reset dati automatici quando cambia conversazione
   useEffect(() => {
     if (currentConversationId) {
       setAutoDataSent(false);
     }
   }, [currentConversationId]);
 
-  // Show comprehensive data automatically when data is sent
+  // Mostra dati comprensivi quando vengono inviati
   useEffect(() => {
     if (autoDataSent) {
       setShowComprehensiveData(true);
@@ -67,13 +68,22 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
     }));
   };
 
-  // Handle back button - emit custom event to switch tab
+  // Gestione click pulsante indietro
   const handleBackClick = () => {
     const event = new CustomEvent('switchTab', { detail: 'diagnose' });
     window.dispatchEvent(event);
   };
 
-  // Error state with quick recovery
+  // Gestione retry con reset completo
+  const handleRetry = () => {
+    console.log('🔄 UserChatViewRealtime: Tentativo di riconnessione');
+    resetChat();
+    setTimeout(() => {
+      startChatWithExpert();
+    }, 500);
+  };
+
+  // Stato di errore con opzioni di recupero
   if (initializationError) {
     return (
       <div className="flex flex-col h-full">
@@ -86,19 +96,26 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
           <Alert className="max-w-md">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription className="mt-2">
-              <p className="font-medium mb-2">Problema di connessione</p>
+              <p className="font-medium mb-2">Problema di connessione alla chat</p>
               <p className="text-sm mb-4">{initializationError}</p>
-              <Button
-                onClick={() => {
-                  resetChat();
-                  setTimeout(startChatWithExpert, 500);
-                }}
-                size="sm"
-                className="w-full"
-              >
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Riprova
-              </Button>
+              <div className="space-y-2">
+                <Button
+                  onClick={handleRetry}
+                  size="sm"
+                  className="w-full"
+                >
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Riprova
+                </Button>
+                <Button
+                  onClick={handleBackClick}
+                  size="sm"
+                  variant="outline"
+                  className="w-full"
+                >
+                  Torna alla diagnosi
+                </Button>
+              </div>
             </AlertDescription>
           </Alert>
         </div>
@@ -106,8 +123,8 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
     );
   }
 
-  // Loading state
-  if (!activeChat) {
+  // Stato di caricamento
+  if (isInitializing || !activeChat) {
     return (
       <div className="flex flex-col h-full">
         <ChatHeader 
@@ -118,7 +135,9 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-drplant-green mx-auto mb-4"></div>
-            <p className="text-gray-600">Connessione alla chat...</p>
+            <p className="text-gray-600">
+              {isInitializing ? 'Inizializzazione chat...' : 'Connessione alla chat...'}
+            </p>
           </div>
         </div>
       </div>
@@ -127,7 +146,7 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
 
   return (
     <div className="flex flex-col h-full bg-gray-50">
-      {/* Auto data initializer */}
+      {/* Inizializzatore dati automatico */}
       <ChatInitializer
         activeChat={activeChat}
         currentConversationId={currentConversationId}
@@ -135,7 +154,7 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
         setAutoDataSent={setAutoDataSent}
       />
       
-      {/* Header with back button */}
+      {/* Header con pulsante indietro */}
       <div className="flex-shrink-0">
         <ChatHeader 
           onBackClick={handleBackClick}
@@ -143,7 +162,7 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
         />
       </div>
 
-      {/* Data display when needed */}
+      {/* Visualizzazione dati quando necessario */}
       {showComprehensiveData && (
         <div className="flex-shrink-0">
           <ComprehensiveDataDisplay
@@ -153,23 +172,23 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
         </div>
       )}
 
-      {/* Main chat area */}
+      {/* Area chat principale */}
       <div className="flex-1 overflow-hidden bg-white">
         <MessageList 
           messages={formatMessagesForDisplay(messages)}
         />
       </div>
 
-      {/* Message input */}
+      {/* Input messaggi */}
       <div className="flex-shrink-0">
         <MessageBoard
           onSendMessage={handleSendMessage}
           isSending={isSending}
           isConnected={isConnected}
-          disabled={!isConnected}
+          disabled={!isConnected && !activeChat}
           conversationId={currentConversationId}
           senderId={userId}
-          recipientId="marco-nigro-id"
+          recipientId={MARCO_NIGRO_ID}
         />
       </div>
     </div>
