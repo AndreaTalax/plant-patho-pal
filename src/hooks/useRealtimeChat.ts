@@ -124,14 +124,14 @@ export const useRealtimeChat = ({
     };
   }, [conversationId, userId, onNewMessage, onConversationUpdate]);
 
-  // Send message function using the edge function with better error handling
+  // Send message function using direct database insert with better error handling
   const sendMessage = useCallback(async (recipientId: string, text: string, imageUrl?: string, products?: any) => {
     if (!conversationId || !text.trim()) {
       throw new Error('Missing required data for sending message');
     }
 
     try {
-      console.log('📤 Sending message via edge function:', {
+      console.log('📤 Sending message via direct database insert:', {
         conversationId,
         recipientId,
         text,
@@ -144,32 +144,32 @@ export const useRealtimeChat = ({
         throw new Error('User not authenticated');
       }
 
-      const response = await supabase.functions.invoke('send-message', {
-        body: {
-          conversationId,
-          recipientId,
-          text,
-          imageUrl,
-          products
-        },
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      });
+      // Inserimento diretto nel database
+      const { error: insertError } = await supabase
+        .from('messages')
+        .insert({
+          conversation_id: conversationId,
+          sender_id: userId,
+          recipient_id: recipientId,
+          content: text.trim(),
+          text: text.trim(),
+          image_url: imageUrl,
+          sent_at: new Date().toISOString()
+        });
 
-      if (response.error) {
-        console.error('❌ Send message error:', response.error);
-        throw new Error(response.error.message || 'Failed to send message');
+      if (insertError) {
+        console.error('❌ Direct insert error:', insertError);
+        throw new Error(insertError.message || 'Failed to send message');
       }
 
-      console.log('✅ Message sent successfully:', response.data);
-      return response.data;
+      console.log('✅ Message sent successfully via direct insert');
+      return { success: true };
 
     } catch (error: any) {
       console.error('❌ Error in sendMessage:', error);
       throw error;
     }
-  }, [conversationId]);
+  }, [conversationId, userId]);
 
   // Add cleanup on unmount
   useEffect(() => {

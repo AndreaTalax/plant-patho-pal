@@ -8,6 +8,7 @@ import { MARCO_NIGRO_ID } from '@/components/phytopathologist';
 import ExpertChatDetailView from './ExpertChatDetailView';
 import ConsultationCard from './ConsultationCard';
 import ConversationCard from './ConversationCard';
+import { ConversationService } from '@/services/chat/conversationService';
 
 interface Consultation {
   id: string;
@@ -214,25 +215,11 @@ const OptimizedExpertDashboard = () => {
       setDeletingConversation(conversationId);
       console.log('🗑️ Starting conversation deletion for ID:', conversationId);
       
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        toast.error('Sessione scaduta');
-        return;
-      }
-
-      // Make the API call to delete the conversation
-      const response = await supabase.functions.invoke('delete-conversation', {
-        body: { conversationId },
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      });
-
-      console.log('🔄 Delete conversation response:', response);
-
-      if (response.error) {
-        console.error('❌ Delete conversation failed:', response.error);
-        throw new Error(response.error.message || 'Errore durante l\'eliminazione');
+      // Usa ConversationService per eliminare la conversazione
+      const success = await ConversationService.deleteConversation(conversationId);
+      
+      if (!success) {
+        throw new Error('Errore durante l\'eliminazione della conversazione');
       }
       
       console.log('✅ Conversation deleted successfully');

@@ -7,6 +7,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { ArrowLeft, Send, User, Bot } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { MessageService } from '@/services/chat/messageService';
 
 interface Message {
   id: string;
@@ -100,16 +101,22 @@ export const ConversationDetail: React.FC<ConversationDetailProps> = ({
 
     setSending(true);
     try {
-      const { error } = await supabase.functions.invoke('send-message', {
-        body: {
-          conversationId,
-          recipientId: messages[0]?.sender_id === currentUserId ? messages[0]?.recipient_id : messages[0]?.sender_id,
-          text: newMessage.trim()
-        }
-      });
+      // Determina il recipient ID
+      const recipientId = messages[0]?.sender_id === currentUserId ? messages[0]?.recipient_id : messages[0]?.sender_id;
+      
+      if (!recipientId) {
+        toast.error('Impossibile determinare il destinatario');
+        return;
+      }
 
-      if (error) {
-        console.error('Errore invio messaggio:', error);
+      // Usa MessageService per inviare il messaggio
+      const success = await MessageService.sendMessage(
+        conversationId,
+        currentUserId,
+        newMessage.trim()
+      );
+
+      if (!success) {
         toast.error('Errore nell\'invio del messaggio');
         return;
       }

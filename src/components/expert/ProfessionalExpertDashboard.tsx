@@ -43,6 +43,7 @@ import { toast } from 'sonner';
 import { MARCO_NIGRO_ID } from '@/components/phytopathologist';
 import ExpertChatDetailView from './ExpertChatDetailView';
 import ConsultationCard from './ConsultationCard';
+import { ConversationService } from '@/services/chat/conversationService';
 
 interface Consultation {
   id: string;
@@ -238,34 +239,11 @@ const ProfessionalExpertDashboard = () => {
       setDeletingConversation(conversationId);
       console.log('💪 Force deleting conversation:', conversationId);
       
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        toast.error('Sessione scaduta');
-        return;
-      }
-
-      // Try force delete first
-      const { data, error } = await supabase.functions.invoke('force-delete-conversation', {
-        body: { conversationId },
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      });
-
-      if (error || !data?.success) {
-        console.log('⚠️ Force delete failed, trying normal delete...');
-        
-        // Fallback to normal delete
-        const response = await supabase.functions.invoke('delete-conversation', {
-          body: { conversationId },
-          headers: {
-            Authorization: `Bearer ${session.access_token}`,
-          },
-        });
-
-        if (response.error) {
-          throw new Error(response.error.message || 'Errore durante l\'eliminazione');
-        }
+      // Usa ConversationService per eliminare la conversazione
+      const success = await ConversationService.deleteConversation(conversationId);
+      
+      if (!success) {
+        throw new Error('Errore durante l\'eliminazione della conversazione');
       }
       
       console.log('✅ Conversation deleted successfully');

@@ -9,6 +9,8 @@ import { toast } from "sonner";
 import { useRealtimeChat } from "@/hooks/useRealtimeChat";
 import { MARCO_NIGRO_ID } from "@/components/phytopathologist";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { ConversationService } from "@/services/chat/conversationService";
+import { MessageService } from "@/services/chat/messageService";
 
 /**
  * Dettaglio Chat Esperto (singola conversazione) con messaggistica real-time
@@ -56,50 +58,27 @@ const ExpertChatDetailView = ({ conversation, onBack }: {
       try {
         console.log('🔄 Loading conversation messages for:', conversation.id);
         
-        // Verifica sessione
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        // Verifica che la conversazione esista usando il servizio diretto
+        const conversationData = await ConversationService.getConversation(conversation.id);
         
-        if (sessionError) {
-          throw new Error(`Errore sessione: ${sessionError.message}`);
+        if (!conversationData) {
+          console.log('🗑️ Conversation not found');
+          setConversationDeleted(true);
+          setError('Questa conversazione è stata eliminata');
+          return;
         }
         
-        if (!session) {
-          throw new Error('Sessione scaduta, effettua di nuovo il login');
-        }
+        console.log('✅ Conversation found, loading messages...');
         
-        console.log('📤 Calling get-conversation function...');
+        // Carica i messaggi usando il servizio diretto
+        const messagesData = await MessageService.loadMessages(conversation.id);
         
-        const response = await supabase.functions.invoke('get-conversation', {
-          body: { conversationId: conversation.id }
-        });
-
-        console.log('📨 Response received:', {
-          hasData: !!response.data,
-          hasError: !!response.error
-        });
-
-        if (response.error) {
-          console.error('❌ Function error:', response.error);
-          
-          // Gestione specifica per conversazione eliminata
-          if (response.error.message?.includes("not found") || 
-              response.error.message?.includes("deleted") ||
-              response.error.message?.includes("404")) {
-            console.log('🗑️ Conversation was deleted');
-            setConversationDeleted(true);
-            setError('Questa conversazione è stata eliminata');
-            return;
-          }
-          
-          throw new Error(response.error.message || "Errore nel caricamento messaggi");
-        }
-
         // Controlla se il componente è ancora montato prima di aggiornare lo stato
         if (!isMounted) return;
 
-        if (response.data?.messages) {
-          console.log('✅ Messages loaded:', response.data.messages.length);
-          setMessages(response.data.messages);
+        if (messagesData && messagesData.length > 0) {
+          console.log('✅ Messages loaded:', messagesData.length);
+          setMessages(messagesData);
         } else {
           console.log('📭 No messages found');
           setMessages([]);
