@@ -33,13 +33,13 @@ export class MessageService {
         return [];
       }
 
-      // Caricamento diretto dei messaggi dal database
+      // Caricamento diretto dei messaggi dal database con timeout più breve
       const { data: messages, error } = await supabase
         .from('messages')
-        .select('*')
+        .select('id, conversation_id, sender_id, recipient_id, content, text, image_url, sent_at, read')
         .eq('conversation_id', conversationId)
         .order('sent_at', { ascending: true })
-        .limit(100);
+        .limit(50);
 
       if (error) {
         console.error('❌ MessageService: Errore caricamento messaggi', error);
