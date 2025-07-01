@@ -11,6 +11,7 @@ import { Message } from './types';
 import { Button } from '@/components/ui/button';
 import { RefreshCw, AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { MARCO_NIGRO_ID } from '@/components/phytopathologist';
 
 interface UserChatViewRealtimeProps {
   userId: string;
