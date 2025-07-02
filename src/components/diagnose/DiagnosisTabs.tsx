@@ -142,7 +142,7 @@ const DiagnosisTabs = ({
                     <li key={index} className="text-gray-700">
                       {alt.disease} 
                       <span className="text-gray-500 ml-2">
-                        ({Math.round(alt.probability * 100)}% confidence)
+                        ({alt.probability && !isNaN(alt.probability) ? Math.round(alt.probability * 100) : 0}% confidence)
                       </span>
                     </li>
                   ))}

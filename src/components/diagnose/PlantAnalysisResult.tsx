@@ -37,6 +37,16 @@ const PlantAnalysisResultComponent: React.FC<PlantAnalysisResultComponentProps> 
   const [dataSentToExpert, setDataSentToExpert] = useState(false);
   const [sendingToExpert, setSendingToExpert] = useState(false);
 
+  // Function to safely display probability percentages
+  const getProbabilityDisplay = (probability: number | undefined | null): string => {
+    if (probability === undefined || probability === null || isNaN(probability)) {
+      return "N/A";
+    }
+    // Handle both 0-1 range and 0-100 range
+    const percent = probability <= 1 ? probability * 100 : probability;
+    return `${Math.round(percent)}%`;
+  };
+
   const confidencePercent = Math.round(analysisResult.confidence * 100);
   const isHighConfidence = analysisResult.confidence >= 0.7;
   const isLowConfidence = analysisResult.confidence < 0.5;
@@ -171,7 +181,7 @@ const PlantAnalysisResultComponent: React.FC<PlantAnalysisResultComponentProps> 
                   <div className="flex justify-between items-start mb-2">
                     <h5 className="font-medium text-red-800">{disease.name}</h5>
                     <Badge variant="destructive" className="text-xs">
-                      {Math.round(disease.probability * 100)}%
+                      {getProbabilityDisplay(disease.probability)}
                     </Badge>
                   </div>
                   {disease.description && (

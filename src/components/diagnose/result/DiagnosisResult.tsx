@@ -44,6 +44,16 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
   const [dataSentToExpert, setDataSentToExpert] = useState(false);
   const [sendingToExpert, setSendingToExpert] = useState(false);
 
+  // Function to safely display probability percentages
+  const getProbabilityDisplay = (probability: number | undefined | null): string => {
+    if (probability === undefined || probability === null || isNaN(probability)) {
+      return "N/A";
+    }
+    // Handle both 0-1 range and 0-100 range
+    const percent = probability <= 1 ? probability * 100 : probability;
+    return `${Math.round(percent)}%`;
+  };
+
   const handleSendToExpert = async () => {
     if (!userProfile?.id || dataSentToExpert) {
       return;
@@ -242,11 +252,9 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
                           </Badge>
                         )}
                       </div>
-                      {disease.probability && (
-                        <Badge variant="destructive" className="text-xs">
-                          {Math.round(disease.probability * 100)}%
-                        </Badge>
-                      )}
+                      <Badge variant="destructive" className="text-xs">
+                        {getProbabilityDisplay(disease.probability)}
+                      </Badge>
                     </div>
                     {disease.description && (
                       <p className="text-sm text-red-700 mb-2">{disease.description}</p>
