@@ -55,12 +55,12 @@ export default function ConversationCard({
                 />
               </div>
             </div>
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2 mb-1">
-                <div className="font-medium text-sm truncate">
+            <div className="min-w-0 flex-1 overflow-hidden">
+              <div className="flex items-center gap-2 mb-1 flex-wrap">
+                <div className="font-medium text-sm truncate min-w-0">
                   {getUserDisplayName(conversation.user_profile)}
                 </div>
-                <span className={`text-xs px-2 py-1 rounded-full whitespace-nowrap ${
+                <span className={`text-xs px-2 py-1 rounded-full whitespace-nowrap flex-shrink-0 ${
                   isUserOnline 
                     ? 'bg-green-100 text-green-700' 
                     : 'bg-gray-100 text-gray-500'
@@ -68,10 +68,10 @@ export default function ConversationCard({
                   {isUserOnline ? 'Online' : 'Offline'}
                 </span>
               </div>
-              <div className="text-sm text-gray-500 truncate">
+              <div className="text-sm text-gray-500 break-words overflow-wrap-anywhere line-clamp-2">
                 {conversation.last_message_text || 'Nessun messaggio'}
               </div>
-              <div className="text-xs text-gray-400 mt-1">
+              <div className="text-xs text-gray-400 mt-1 truncate">
                 {conversation.last_message_timestamp && 
                   formatDistanceToNow(new Date(conversation.last_message_timestamp), {
                     addSuffix: true,
@@ -82,15 +82,15 @@ export default function ConversationCard({
             </div>
           </div>
           
-          <div className="flex flex-col gap-2 flex-shrink-0">
+          <div className="flex flex-col gap-2 flex-shrink-0 ml-2">
             <Button 
               size="sm" 
               variant="outline" 
-              className="gap-1 whitespace-nowrap"
+              className="gap-1 whitespace-nowrap text-xs px-2"
               onClick={() => handleOpenChat(conversation)}
             >
-              <MessageSquare className="h-4 w-4" />
-              Apri Chat
+              <MessageSquare className="h-3 w-3" />
+              Visualizza
             </Button>
             
             <AlertDialog>
@@ -98,10 +98,10 @@ export default function ConversationCard({
                 <Button 
                   size="sm" 
                   variant="outline" 
-                  className="text-red-500 hover:text-red-700 border-red-200 hover:border-red-300"
+                  className="text-red-500 hover:text-red-700 border-red-200 hover:border-red-300 px-2"
                   disabled={deletingConversation === conversation.id}
                 >
-                  <Trash2 className="h-4 w-4" />
+                  <Trash2 className="h-3 w-3" />
                 </Button>
               </AlertDialogTrigger>
               <AlertDialogContent>
