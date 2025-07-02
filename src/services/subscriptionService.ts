@@ -21,6 +21,27 @@ export class SubscriptionService {
         return { subscribed: false };
       }
 
+      // Fallback: prima prova a controllare direttamente dal database
+      try {
+        const { data: subscriber } = await supabase
+          .from('subscribers')
+          .select('*')
+          .eq('user_id', session.user.id)
+          .single();
+
+        if (subscriber) {
+          console.log('📋 Stato abbonamento da database:', subscriber);
+          return {
+            subscribed: subscriber.subscribed || false,
+            subscription_tier: subscriber.subscription_tier,
+            subscription_end: subscriber.subscription_end
+          };
+        }
+      } catch (dbError) {
+        console.log('⚠️ Nessun record abbonamento trovato nel database');
+      }
+
+      // Prova la funzione edge
       const { data, error } = await supabase.functions.invoke('check-subscription', {
         headers: {
           Authorization: `Bearer ${session.access_token}`,
@@ -28,11 +49,13 @@ export class SubscriptionService {
       });
 
       if (error) {
-        console.error('❌ Errore controllo abbonamento:', error);
-        throw error;
+        console.error('❌ Errore funzione check-subscription:', error);
+        // Fallback: ritorna stato non abbonato se la funzione fallisce
+        console.log('🔄 Fallback: assumo stato non abbonato');
+        return { subscribed: false };
       }
 
-      console.log('✅ Stato abbonamento:', data);
+      console.log('✅ Stato abbonamento dalla funzione:', data);
       return data as SubscriptionStatus;
     } catch (error) {
       console.error('❌ Errore nel controllo abbonamento:', error);
