@@ -1,5 +1,6 @@
 
 import { User, Session } from '@supabase/supabase-js';
+import { SubscriptionStatus } from '@/services/subscriptionService';
 
 export interface UserProfile {
   id: string;
@@ -25,6 +26,7 @@ export interface AuthContextType {
   user: User | null;
   session: Session | null;
   userProfile: UserProfile | null;
+  subscriptionStatus: SubscriptionStatus;
   isAuthenticated: boolean;
   isProfileComplete: boolean;
   isMasterAccount: boolean;
@@ -35,4 +37,6 @@ export interface AuthContextType {
   updateProfile: (updates: Partial<UserProfile> | string, value?: any) => Promise<void>;
   updateUsername: (username: string) => Promise<void>;
   updatePassword: (password: string) => Promise<void>;
+  checkSubscription: () => Promise<void>;
+  hasActiveSubscription: () => boolean;
 }

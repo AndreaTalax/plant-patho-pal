@@ -18,6 +18,7 @@ import {
   updateUserPassword,
   signOutUser
 } from './auth/authService';
+import { SubscriptionService, SubscriptionStatus } from '@/services/subscriptionService';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -38,6 +39,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [subscriptionStatus, setSubscriptionStatus] = useState<SubscriptionStatus>({ subscribed: false });
   const [loading, setLoading] = useState(true);
 
   // Computed properties
@@ -222,10 +224,30 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     await registerUser(email, password);
   };
 
+  // Subscription management functions
+  const checkSubscription = async () => {
+    if (user) {
+      const status = await SubscriptionService.checkSubscription();
+      setSubscriptionStatus(status);
+    }
+  };
+
+  const hasActiveSubscription = () => {
+    return subscriptionStatus.subscribed;
+  };
+
+  // Check subscription on user login
+  useEffect(() => {
+    if (user && !loading) {
+      checkSubscription();
+    }
+  }, [user, loading]);
+
   const value: AuthContextType = {
     user,
     session,
     userProfile,
+    subscriptionStatus,
     isAuthenticated,
     isProfileComplete,
     isMasterAccount,
@@ -236,6 +258,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     updateProfile,
     updateUsername,
     updatePassword,
+    checkSubscription,
+    hasActiveSubscription,
   };
 
   return (

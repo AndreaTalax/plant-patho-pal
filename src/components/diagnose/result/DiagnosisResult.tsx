@@ -16,6 +16,7 @@ import {
 import { useAuth } from '@/context/AuthContext';
 import { PlantDataSyncService } from '@/services/chat/plantDataSyncService';
 import { AutoExpertNotificationService } from '@/components/chat/AutoExpertNotificationService';
+import { PaymentRequiredModal } from '@/components/subscription/PaymentRequiredModal';
 import { toast } from 'sonner';
 import ImageDisplay from './ImageDisplay';
 import PlantInfoCard from './PlantInfoCard';
@@ -40,9 +41,10 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
   onChatWithExpert,
   analysisDetails
 }) => {
-  const { userProfile } = useAuth();
+  const { userProfile, hasActiveSubscription } = useAuth();
   const [dataSentToExpert, setDataSentToExpert] = useState(false);
   const [sendingToExpert, setSendingToExpert] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
 
   // Function to safely display probability percentages
   const getProbabilityDisplay = (probability: number | undefined | null): string => {
@@ -56,6 +58,12 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
 
   const handleSendToExpert = async () => {
     if (!userProfile?.id || dataSentToExpert) {
+      return;
+    }
+
+    // Controllo abbonamento prima dell'invio
+    if (!hasActiveSubscription()) {
+      setShowPaymentModal(true);
       return;
     }
 
@@ -388,6 +396,17 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
           </CardContent>
         </Card>
       )}
+
+      {/* Payment Required Modal */}
+      <PaymentRequiredModal 
+        open={showPaymentModal}
+        onClose={() => setShowPaymentModal(false)}
+        onSubscribed={() => {
+          setShowPaymentModal(false);
+          // Dopo il pagamento, l'utente può provare di nuovo
+          toast.success('Abbonamento attivato! Ora puoi contattare l\'esperto.');
+        }}
+      />
     </div>
   );
 };
