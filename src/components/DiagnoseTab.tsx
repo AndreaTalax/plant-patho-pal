@@ -20,9 +20,10 @@ import { uploadPlantImage } from '@/utils/imageStorage';
 import { PlantInfo } from './diagnose/types';
 import { usePremiumStatus } from '@/services/premiumService';
 import { verifyImageContainsPlant, analyzeImageQuality } from '@/utils/plant-analysis/plantImageVerification';
+import { PaymentRequiredModal } from './subscription/PaymentRequiredModal';
 
 const DiagnoseTab = () => {
-  const { userProfile } = useAuth();
+  const { userProfile, hasActiveSubscription } = useAuth();
   const { plantInfo, setPlantInfo } = usePlantInfo();
   const { hasAIAccess } = usePremiumStatus();
   
@@ -33,6 +34,7 @@ const DiagnoseTab = () => {
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [dataSentToExpert, setDataSentToExpert] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [cameraStoppedByUser, setCameraStoppedByUser] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -181,6 +183,13 @@ const DiagnoseTab = () => {
         uploadedImage: !!uploadedImage, 
         dataSentToExpert 
       });
+      return false;
+    }
+
+    // 🔒 CONTROLLO ABBONAMENTO - Blocca se non abbonato
+    if (!hasActiveSubscription()) {
+      console.log('❌ Abbonamento richiesto per invio esperto');
+      setShowPaymentModal(true);
       return false;
     }
 
@@ -550,6 +559,16 @@ const DiagnoseTab = () => {
       <div className="max-w-4xl mx-auto">
         {renderCurrentStage()}
       </div>
+      
+      {/* Payment Required Modal */}
+      <PaymentRequiredModal 
+        open={showPaymentModal}
+        onClose={() => setShowPaymentModal(false)}
+        onSubscribed={() => {
+          setShowPaymentModal(false);
+          toast.success('Abbonamento attivato! Ora puoi contattare l\'esperto.');
+        }}
+      />
     </div>
   );
 };

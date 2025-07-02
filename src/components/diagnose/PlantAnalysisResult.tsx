@@ -17,6 +17,7 @@ import {
 import { RealPlantAnalysisService, PlantAnalysisResult } from '@/services/realPlantAnalysisService';
 import { useAuth } from '@/context/AuthContext';
 import { usePlantInfo } from '@/context/PlantInfoContext';
+import { PaymentRequiredModal } from '../subscription/PaymentRequiredModal';
 import { PlantDataSyncService } from '@/services/chat/plantDataSyncService';
 import { AutoExpertNotificationService } from '@/components/chat/AutoExpertNotificationService';
 import { toast } from 'sonner';
@@ -32,10 +33,11 @@ const PlantAnalysisResultComponent: React.FC<PlantAnalysisResultComponentProps> 
   imageUrl,
   onNewAnalysis
 }) => {
-  const { userProfile } = useAuth();
+  const { userProfile, hasActiveSubscription } = useAuth();
   const { plantInfo } = usePlantInfo();
   const [dataSentToExpert, setDataSentToExpert] = useState(false);
   const [sendingToExpert, setSendingToExpert] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
 
   // Function to safely display probability percentages
   const getProbabilityDisplay = (probability: number | undefined | null): string => {
@@ -54,6 +56,12 @@ const PlantAnalysisResultComponent: React.FC<PlantAnalysisResultComponentProps> 
   // Funzione per inviare dati all'esperto
   const handleSendToExpert = async () => {
     if (!userProfile?.id || dataSentToExpert) {
+      return;
+    }
+
+    // 🔒 CONTROLLO ABBONAMENTO - Blocca se non abbonato
+    if (!hasActiveSubscription()) {
+      setShowPaymentModal(true);
       return;
     }
 
@@ -339,6 +347,16 @@ const PlantAnalysisResultComponent: React.FC<PlantAnalysisResultComponentProps> 
           </CardContent>
         </Card>
       )}
+
+      {/* Payment Required Modal */}
+      <PaymentRequiredModal 
+        open={showPaymentModal}
+        onClose={() => setShowPaymentModal(false)}
+        onSubscribed={() => {
+          setShowPaymentModal(false);
+          toast.success('Abbonamento attivato! Ora puoi contattare l\'esperto.');
+        }}
+      />
     </div>
   );
 };
