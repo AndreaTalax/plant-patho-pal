@@ -11,8 +11,10 @@ import DiagnosisOptions from './diagnose/DiagnosisOptions';
 import PhotoInstructions from './diagnose/PhotoInstructions';
 import ScanLayout from './diagnose/scan/ScanLayout';
 import PlantAnalysisResultComponent from './diagnose/PlantAnalysisResult';
+import { EnhancedResultsView } from './diagnose/EnhancedResultsView';
 import CameraCapture from './diagnose/CameraCapture';
 import { RealPlantAnalysisService, PlantAnalysisResult as AnalysisResult } from '@/services/realPlantAnalysisService';
+import { EnhancedPlantAnalysisService, type AnalysisProgress } from '@/services/enhancedPlantAnalysisService';
 import { AutoExpertNotificationService } from './chat/AutoExpertNotificationService';
 import { PlantDataSyncService } from '@/services/chat/plantDataSyncService';
 import { ChatDataManager } from './chat/user/ChatDataManager';
@@ -33,6 +35,8 @@ const DiagnoseTab = () => {
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisProgress, setAnalysisProgress] = useState<AnalysisProgress | null>(null);
+  const [enhancedResult, setEnhancedResult] = useState<any>(null);
   const [dataSentToExpert, setDataSentToExpert] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [cameraStoppedByUser, setCameraStoppedByUser] = useState(false);
@@ -245,8 +249,8 @@ const DiagnoseTab = () => {
     }
   }, [userProfile, uploadedImage, plantInfo, analysisResult, dataSentToExpert]);
 
-  // AI diagnosis selection
-  const handleSelectAI = useCallback(async () => {
+  // Implementazione handleAIAnalysis con EnhancedPlantAnalysisService
+  const handleAIAnalysis = async () => {
     if (!hasAIAccess) {
       toast.error('La diagnosi AI richiede un account Premium');
       return;
@@ -258,20 +262,52 @@ const DiagnoseTab = () => {
     }
 
     setCurrentStage('analyzing');
+    setIsAnalyzing(true);
+    setAnalysisProgress({ step: 'start', progress: 0, message: 'Inizializzazione analisi...' });
     
-    // Convert dataURL to file for upload
-    fetch(uploadedImage)
-      .then(res => res.blob())
-      .then(blob => {
-        const file = new File([blob], 'uploaded-image.jpg', { type: 'image/jpeg' });
-        performAnalysis(file, uploadedImage);
-      })
-      .catch(error => {
-        console.error('Errore conversione immagine:', error);
-        toast.error('Errore nell\'elaborazione dell\'immagine');
-        setCurrentStage('options');
+    try {
+      console.log('🔍 Avvio analisi migliorata con EnhancedPlantAnalysisService...');
+      
+      // Avvia analisi multi-AI con progress in tempo reale
+      const result = await EnhancedPlantAnalysisService.analyzeImage(
+        uploadedImage.split(',')[1], // Rimuovi prefisso data:image
+        (progress) => setAnalysisProgress(progress) // Aggiorna progress in tempo reale
+      );
+      
+      // Converti risultato per compatibilità
+      const analysisResult: AnalysisResult = {
+        plantName: result.consensus.mostLikelyPlant?.plantName || 'Pianta identificata',
+        scientificName: result.consensus.mostLikelyPlant?.scientificName,
+        confidence: result.consensus.finalConfidence / 100,
+        isHealthy: result.diseaseDetection.length === 0,
+        diseases: result.diseaseDetection.map(disease => ({
+          name: disease.disease,
+          probability: disease.confidence / 100,
+          description: disease.symptoms.join(', '),
+          treatment: disease.treatments.join(', ')
+        })),
+        recommendations: result.consensus.mostLikelyPlant?.careInstructions || [],
+        analysisDetails: {
+          source: 'Enhanced Multi-AI Analysis',
+          timestamp: result.analysisMetadata?.timestamp
+        }
+      };
+
+      setCurrentStage('result');
+      setEnhancedResult(result); // Salva anche il risultato completo
+      
+      toast.success('Analisi completata con successo!', {
+        description: `Provider migliore: ${result.consensus.bestProvider} - Confidenza: ${result.consensus.finalConfidence}%`
       });
-  }, [uploadedImage, hasAIAccess]);
+
+    } catch (error) {
+      console.error('❌ Analisi fallita:', error);
+      toast.error(`Errore durante l'analisi: ${error.message}`);
+      setCurrentStage('options');
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
 
   // Expert consultation selection
   const handleSelectExpert = useCallback(async () => {
@@ -362,7 +398,7 @@ const DiagnoseTab = () => {
     setCurrentStage('info');
     setUploadedImage(null);
     setAnalysisResult(null);
-    setDataSentToExpert(false);
+    setEnhancedResult(null);
     setPlantInfo({
       isIndoor: true,
       wateringFrequency: '',
@@ -491,7 +527,7 @@ const DiagnoseTab = () => {
             )}
             
             <DiagnosisOptions
-              onSelectAI={handleSelectAI}
+              onSelectAI={handleAIAnalysis}
               onSelectExpert={handleSelectExpert}
               hasAIAccess={hasAIAccess}
             />
@@ -500,44 +536,82 @@ const DiagnoseTab = () => {
 
       case 'analyzing':
         return (
-          <ScanLayout 
-            isAnalyzing={isAnalyzing}
-            plantInfo={plantInfo}
-            uploadedImage={uploadedImage}
-          />
+          <div className="space-y-6">
+            <PlantInfoSummary 
+              plantInfo={plantInfo} 
+              onEdit={() => setCurrentStage('info')} 
+            />
+            
+            <Card className="w-full max-w-2xl mx-auto">
+              <div className="p-8 text-center">
+                <div className="flex flex-col items-center space-y-4">
+                  <Loader2 className="h-12 w-12 text-blue-600 animate-spin" />
+                  <div className="space-y-2">
+                    <h3 className="text-xl font-semibold">
+                      🤖 Analisi AI Multi-Provider in corso...
+                    </h3>
+                    {analysisProgress && (
+                      <>
+                        <p className="text-gray-600">{analysisProgress.message}</p>
+                        <div className="w-full bg-gray-200 rounded-full h-2.5">
+                          <div 
+                            className="bg-blue-600 h-2.5 rounded-full transition-all duration-300" 
+                            style={{ width: `${analysisProgress.progress}%` }}
+                          ></div>
+                        </div>
+                        <p className="text-sm text-gray-500">
+                          {analysisProgress.step} - {analysisProgress.progress}%
+                        </p>
+                      </>
+                    )}
+                  </div>
+                  <p className="text-sm text-gray-500 max-w-md">
+                    Stiamo analizzando la tua pianta usando provider AI multipli per darti 
+                    la diagnosi più accurata possibile...
+                  </p>
+                </div>
+              </div>
+            </Card>
+          </div>
         );
 
       case 'result':
-        if (analysisResult && uploadedImage) {
-          return (
-            <PlantAnalysisResultComponent
-              analysisResult={analysisResult}
-              imageUrl={uploadedImage}
-              onNewAnalysis={handleNewAnalysis}
-            />
-          );
-        } else {
-          // Expert consultation result
-          return (
-            <div className="text-center space-y-6 py-12">
-              <CheckCircle className="h-20 w-20 text-green-500 mx-auto" />
-              <h2 className="text-2xl font-bold text-gray-900">
-                Dati Inviati all'Esperto
-              </h2>
-              <p className="text-gray-600 max-w-md mx-auto">
-                Marco Nigro ha ricevuto tutte le informazioni sulla tua pianta e ti risponderà a breve nella chat.
-              </p>
-              <div className="space-y-3">
-                <Button onClick={handleNavigateToChat} className="mr-4">
-                  Vai alla Chat
-                </Button>
-                <Button onClick={handleNewAnalysis} variant="outline">
-                  Nuova Diagnosi
-                </Button>
+        return (
+          <div className="space-y-6">
+            {enhancedResult ? (
+              <EnhancedResultsView
+                result={enhancedResult}
+                imageUrl={uploadedImage || ''}
+                onSendToExpert={() => sendDataToExpert(true)}
+                onNewAnalysis={handleNewAnalysis}
+              />
+            ) : analysisResult && uploadedImage ? (
+              <PlantAnalysisResultComponent
+                analysisResult={analysisResult}
+                imageUrl={uploadedImage}
+                onNewAnalysis={handleNewAnalysis}
+              />
+            ) : (
+              <div className="text-center space-y-6 py-12">
+                <CheckCircle className="h-20 w-20 text-green-500 mx-auto" />
+                <h2 className="text-2xl font-bold text-gray-900">
+                  Dati Inviati all'Esperto
+                </h2>
+                <p className="text-gray-600 max-w-md mx-auto">
+                  Marco Nigro ha ricevuto tutte le informazioni sulla tua pianta e ti risponderà a breve nella chat.
+                </p>
+                <div className="space-y-3">
+                  <Button onClick={handleNavigateToChat} className="mr-4">
+                    Vai alla Chat
+                  </Button>
+                  <Button onClick={handleNewAnalysis} variant="outline">
+                    Nuova Diagnosi
+                  </Button>
+                </div>
               </div>
-            </div>
-          );
-        }
+            )}
+          </div>
+        );
 
       default:
         return null;
