@@ -6,6 +6,15 @@ export interface CombinedAnalysisResult {
     mostLikelyPlant: any;
     mostLikelyDisease?: any;
     overallConfidence: number;
+    finalConfidence: number;
+    agreementScore: number;
+    bestProvider: string;
+    providersUsed?: string[];
+    weightedScores?: Array<{
+      provider: string;
+      confidence: number;
+      weightedScore: number;
+    }>;
   };
   eppoData?: {
     plantMatch?: any;

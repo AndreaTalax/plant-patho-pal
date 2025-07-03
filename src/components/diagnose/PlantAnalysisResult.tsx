@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { ConfidenceBadge } from './ConfidenceBadge';
 import { 
   CheckCircle, 
   AlertTriangle, 
@@ -134,9 +135,7 @@ const PlantAnalysisResultComponent: React.FC<PlantAnalysisResultComponentProps> 
               )}
               <span className="text-xl">Analisi Completata</span>
             </CardTitle>
-            <Badge variant={isHighConfidence ? "default" : isLowConfidence ? "destructive" : "secondary"}>
-              {confidencePercent}% confidenza
-            </Badge>
+            <ConfidenceBadge confidence={confidencePercent} />
           </div>
           <p className="text-gray-600">
             {isHighConfidence 

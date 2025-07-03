@@ -91,34 +91,26 @@ export class EnhancedPlantAnalysisService {
       // Fase 3: Calcolo del consenso
       updateProgress('consensus', 80, 'Elaborazione consensus finale...');
       
-      const consensus = this.calculateAdvancedConsensus(multiAIResults);
-      
       // Fase 4: Integrazione EPPO se necessario
       updateProgress('eppo', 90, 'Verifica database EPPO...');
       
-      const eppoData = await this.checkEppoDatabase(consensus);
+      const identifications = this.formatPlantIdentifications(multiAIResults);
+      const diseases = this.formatDiseaseDetections(multiAIResults);
+      const consensus = this.calculateEnhancedConsensus({ identifications, diseases });
       
       const totalProcessingTime = Date.now() - startTime;
       
       const finalResult: EnhancedAnalysisResult = {
         plantIdentification: this.formatPlantIdentifications(multiAIResults),
         diseaseDetection: this.formatDiseaseDetections(multiAIResults),
-        consensus: {
-          mostLikelyPlant: consensus.mostLikelyPlant,
-          mostLikelyDisease: consensus.mostLikelyDisease,
-          overallConfidence: consensus.finalConfidence,
-          finalConfidence: consensus.finalConfidence,
-          agreementScore: consensus.agreementScore,
-          bestProvider: consensus.bestProvider
-        },
+        consensus: consensus.consensus,
         plantDetection,
         multiAIResults,
-        eppoData,
         analysisMetadata: {
           timestamp: new Date().toISOString(),
           totalProcessingTime,
           aiProvidersUsed: Object.keys(multiAIResults).filter(k => multiAIResults[k]),
-          confidenceScore: consensus.finalConfidence
+          confidenceScore: consensus.consensus.finalConfidence
         }
       };
       
@@ -126,7 +118,7 @@ export class EnhancedPlantAnalysisService {
       
       // Mostra risultato all'utente
       toast.success(`Analisi completata!`, {
-        description: `${consensus.bestProvider} - Confidenza: ${consensus.finalConfidence}%`
+        description: `${consensus.consensus.bestProvider} - Confidenza: ${consensus.consensus.finalConfidence}%`
       });
       
       return finalResult;
@@ -195,67 +187,78 @@ export class EnhancedPlantAnalysisService {
     }
   }
   
-  private static calculateAdvancedConsensus(multiAIResults: any) {
-    const confidences: number[] = [];
-    const providers: string[] = [];
-    let bestProvider = 'unknown';
-    let maxConfidence = 0;
-    let mostLikelyPlant: any = null;
-    let mostLikelyDisease: any = null;
+  private static calculateEnhancedConsensus(
+    results: { identifications: PlantIdentificationResult[]; diseases: DiseaseDetectionResult[] }
+  ): CombinedAnalysisResult {
+    const identifications = results.identifications || [];
+    const diseases = results.diseases || [];
     
-    // Estrai confidenze da tutti i provider con validazione
-    if (multiAIResults.plantID?.confidence) {
-      const confidence = Math.round(multiAIResults.plantID.confidence);
-      confidences.push(confidence);
-      providers.push('Plant.ID');
-      if (confidence > maxConfidence) {
-        maxConfidence = confidence;
-        bestProvider = 'Plant.ID';
-        mostLikelyPlant = multiAIResults.plantID;
-      }
-    }
+    // Calcolo consenso ponderato per identificazioni piante
+    const weightedScores = identifications.map(id => ({
+      ...id,
+      weightedScore: this.calculateProviderWeight(id.provider) * (id.confidence / 100)
+    }));
     
-    if (multiAIResults.plexi?.plantIdentification?.confidence) {
-      const confidence = Math.round(multiAIResults.plexi.plantIdentification.confidence);
-      confidences.push(confidence);
-      providers.push('PlexiAI');
-      if (confidence > maxConfidence) {
-        maxConfidence = confidence;
-        bestProvider = 'PlexiAI';
-        mostLikelyPlant = multiAIResults.plexi.plantIdentification;
-      }
-    }
+    // Trova la pianta con score ponderato più alto
+    const bestPlant = weightedScores.length > 0 ? 
+      weightedScores.reduce((prev, current) => 
+        prev.weightedScore > current.weightedScore ? prev : current
+      ) : null;
     
-    // Considera anche i dati EPPO per malattie
-    if (multiAIResults.eppo?.diseases?.length > 0) {
-      providers.push('EPPO Database');
-      mostLikelyDisease = multiAIResults.eppo.diseases[0];
-    }
+    // Calcola consenso generale
+    const totalWeight = weightedScores.reduce((sum, item) => sum + this.calculateProviderWeight(item.provider), 0);
+    const overallConfidence = totalWeight > 0 ? 
+      Math.round(weightedScores.reduce((sum, item) => 
+        sum + (this.calculateProviderWeight(item.provider) * item.confidence), 0
+      ) / totalWeight) : 50;
     
-    // Calcola consensus finale con valori sempre validi
-    const avgConfidence = confidences.length > 0 ? 
-      Math.round(confidences.reduce((a, b) => a + b, 0) / confidences.length) : 75;
-    
+    // Calcola agreement score (quanto concordano i provider)
+    const confidences = identifications.map(id => id.confidence);
     const agreementScore = confidences.length > 1 ? 
-      Math.round((1 - (Math.max(...confidences) - Math.min(...confidences)) / 100) * 100) : 100;
+      Math.round(100 - (Math.max(...confidences) - Math.min(...confidences))) : 100;
     
-    // Assicura che maxConfidence sia sempre un numero valido
-    if (maxConfidence === 0) {
-      maxConfidence = avgConfidence;
-    }
+    // Trova la malattia più probabile
+    const mostLikelyDisease = diseases.length > 0 ? 
+      diseases.reduce((prev, current) => 
+        prev.confidence > current.confidence ? prev : current
+      ) : undefined;
     
-    // Il consensus finale è una media pesata tra la confidence migliore e quella media
-    const finalConfidence = Math.round((maxConfidence * 0.7) + (avgConfidence * 0.3));
+    const finalConfidence = overallConfidence;
     
     return {
-      finalConfidence: Math.max(finalConfidence, 1), // Assicura sempre almeno 1%
-      agreementScore,
-      bestProvider,
-      providersCount: providers.length,
-      providersUsed: providers,
-      mostLikelyPlant,
-      mostLikelyDisease
+      plantIdentification: identifications,
+      diseaseDetection: diseases,
+      consensus: {
+        mostLikelyPlant: bestPlant,
+        mostLikelyDisease,
+        overallConfidence: finalConfidence,
+        finalConfidence,
+        agreementScore,
+        bestProvider: bestPlant?.provider || 'unknown',
+        providersUsed: [...new Set(identifications.map(id => id.provider))],
+        weightedScores: weightedScores.map(ws => ({
+          provider: ws.provider,
+          confidence: ws.confidence,
+          weightedScore: Math.round(ws.weightedScore * 100)
+        }))
+      },
+      analysisMetadata: {
+        timestamp: new Date().toISOString(),
+        totalProcessingTime: 0,
+        aiProvidersUsed: [...new Set(identifications.map(id => id.provider))],
+        confidenceScore: finalConfidence
+      }
     };
+  }
+  
+  private static calculateProviderWeight(provider: string): number {
+    const weights = {
+      'plantid': 0.4,    // Plant.ID è molto affidabile
+      'plantnet': 0.35,  // PlexiAI/PlantNet buono
+      'eppo': 0.5,       // EPPO è il più affidabile
+      'huggingface': 0.25 // HuggingFace meno specifico
+    };
+    return weights[provider] || 0.3;
   }
   
   private static formatPlantIdentifications(multiAIResults: any): PlantIdentificationResult[] {
