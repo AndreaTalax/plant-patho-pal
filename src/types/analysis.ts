@@ -9,7 +9,7 @@ export interface CombinedAnalysisResult {
     finalConfidence: number;
     agreementScore: number;
     bestProvider: string;
-    providersUsed?: string[];
+    providersUsed: string[];
     weightedScores?: Array<{
       provider: string;
       confidence: number;
@@ -24,7 +24,7 @@ export interface CombinedAnalysisResult {
       pests: any[];
       careAdvice: string[];
     };
-  };
+  };  
   analysisMetadata?: {
     timestamp: string;
     totalProcessingTime: number;

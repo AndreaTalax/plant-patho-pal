@@ -16,6 +16,12 @@ export interface DiseaseDetectionResult {
   treatments: string[];
   severity: 'low' | 'medium' | 'high';
   provider: string;
+  additionalInfo?: {
+    cause?: string;
+    commonNames?: string[];
+    classification?: any;
+    similar_images?: any[];
+  };
 }
 
 export interface AnalysisProgress {

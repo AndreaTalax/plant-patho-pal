@@ -30,14 +30,6 @@ export interface EnhancedAnalysisResult extends CombinedAnalysisResult {
     plantID?: any;
     eppo?: any;
   };
-  consensus: {
-    mostLikelyPlant: any;
-    mostLikelyDisease?: any;
-    overallConfidence: number;
-    finalConfidence: number;
-    agreementScore: number;
-    bestProvider: string;
-  };
 }
 
 export class EnhancedPlantAnalysisService {
@@ -75,7 +67,8 @@ export class EnhancedPlantAnalysisService {
             overallConfidence: plantDetection.confidence,
             finalConfidence: plantDetection.confidence,
             agreementScore: 0,
-            bestProvider: 'plant-detection'
+            bestProvider: 'plant-detection',
+            providersUsed: ['plant-detection']
           },
           plantDetection,
           analysisMetadata: {
@@ -254,6 +247,7 @@ export class EnhancedPlantAnalysisService {
       ) : undefined;
     
     const finalConfidence = overallConfidence;
+    const providersUsed = [...new Set(identifications.map(id => id.provider))];
     
     return {
       plantIdentification: identifications,
@@ -265,7 +259,7 @@ export class EnhancedPlantAnalysisService {
         finalConfidence,
         agreementScore,
         bestProvider: bestPlant?.provider || 'unknown',
-        providersUsed: [...new Set(identifications.map(id => id.provider))],
+        providersUsed,
         weightedScores: weightedScores.map(ws => ({
           provider: ws.provider,
           confidence: ws.confidence,
@@ -275,7 +269,7 @@ export class EnhancedPlantAnalysisService {
       analysisMetadata: {
         timestamp: new Date().toISOString(),
         totalProcessingTime: 0,
-        aiProvidersUsed: [...new Set(identifications.map(id => id.provider))],
+        aiProvidersUsed: providersUsed,
         confidenceScore: finalConfidence
       }
     };

@@ -568,12 +568,11 @@ const DiagnoseTab = () => {
 
       case 'analyzing':
         return (
-          <ScanLayout 
-            isAnalyzing={isAnalyzing}
-            plantInfo={plantInfo}
-            uploadedImage={uploadedImage}
-            analysisProgress={analysisProgress}
-          />
+        <ScanLayout
+          isAnalyzing={isAnalyzing}
+          plantInfo={plantInfo}
+          uploadedImage={uploadedImage}
+        />
         );
 
       case 'result':
