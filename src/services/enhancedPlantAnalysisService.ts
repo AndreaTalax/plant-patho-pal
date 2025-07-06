@@ -6,6 +6,7 @@ import { ImageProcessingService, type ProcessedImage } from './imageProcessingSe
 import { CacheService } from './cacheService';
 import { EppoService, type EppoSearchResult } from './eppoService';
 import { eppoApiService } from '@/utils/eppoApiService';
+import { PlantDiseaseService } from './PlantDiseaseService';
 import { toast } from "@/components/ui/sonner";
 import { type CombinedAnalysisResult } from '@/types/analysis';
 
@@ -40,6 +41,11 @@ export interface EnhancedAnalysisResult extends CombinedAnalysisResult {
 }
 
 export class EnhancedPlantAnalysisService {
+  private static readonly PLANT_ID_API_KEY = process.env.PLANT_ID_API_KEY || '6d4146706e385077db06e57b76fd967d10b4cb2ce23070580160ebb069da8420';
+  private static readonly PLANTNET_API_KEY = process.env.PLANTNET || '2c3cc11af50602d90073a401dc7ccce7ba70abc40bda9d84794';
+  private static readonly HUGGINGFACE_ACCESS_TOKEN = process.env.HUGGINGFACE_ACCESS_TOKEN || 'fb752ef5f96488fc2659a524aeece4b8d790b82b7cf19fe4c4e72ba86298cb60';
+  private static readonly EPPO_API_KEY = process.env.EPPO_API_KEY || 'ce550a719eec290cb93614cc5dcc027e39164548e21f5849900416cfd3537f8d';
+
   static async analyzeImage(
     imageBase64: string, 
     onProgress?: (progress: AnalysisProgress) => void
@@ -133,32 +139,49 @@ export class EnhancedPlantAnalysisService {
   private static async performMultiAIAnalysis(imageBase64: string, updateProgress: Function) {
     const results: any = {};
     
-    // Esegui analisi in parallelo per migliori performance
+    // Esegui analisi in parallelo con tutti i servizi
     const promises = [
+      // Identificazione piante
       PlexiAIService.analyzeComprehensive(imageBase64).then(r => ({ plexi: r })).catch(() => ({ plexi: null })),
       PlantIDService.identifyPlant(imageBase64).then(r => ({ plantID: r })).catch(() => ({ plantID: null })),
+      
+      // DIAGNOSI MALATTIE CON AI REALE
+      PlantDiseaseService.diagnosePlantDisease(imageBase64).then(r => ({ plantIdDiseases: r })).catch(() => ({ plantIdDiseases: [] })),
+      PlantDiseaseService.analyzePlantHealthWithPlantNet(imageBase64).then(r => ({ plantNetDiseases: r })).catch(() => ({ plantNetDiseases: [] })),
+      PlantDiseaseService.analyzeWithHuggingFace(imageBase64).then(r => ({ huggingFaceDiseases: r })).catch(() => ({ huggingFaceDiseases: [] })),
+      PlantDiseaseService.analyzeWithPlantDiseaseModel(imageBase64).then(r => ({ specializedDiseases: r })).catch(() => ({ specializedDiseases: [] })),
+      
+      // Database EPPO - ora con le API key corrette
       this.searchEppoDatabase(imageBase64).then(r => ({ eppo: r })).catch(() => ({ eppo: null }))
     ];
     
-    updateProgress('analysis', 45, 'PlexiAI in elaborazione...');
-    await new Promise(resolve => setTimeout(resolve, 300));
+    updateProgress('analysis', 30, 'Identificazione pianta in corso...');
+    await new Promise(resolve => setTimeout(resolve, 500));
     
-    updateProgress('analysis', 55, 'Plant.ID in elaborazione...');
-    await new Promise(resolve => setTimeout(resolve, 300));
+    updateProgress('analysis', 45, 'Diagnosi malattie con Plant.ID...');
+    await new Promise(resolve => setTimeout(resolve, 800));
     
-    updateProgress('analysis', 65, 'Database EPPO in elaborazione...');
-    await new Promise(resolve => setTimeout(resolve, 300));
+    updateProgress('analysis', 60, 'Analisi salute con PlantNet...');
+    await new Promise(resolve => setTimeout(resolve, 600));
+    
+    updateProgress('analysis', 70, 'Analisi AI con Hugging Face...');
+    await new Promise(resolve => setTimeout(resolve, 700));
+    
+    updateProgress('analysis', 80, 'Modelli specializzati per malattie...');
+    await new Promise(resolve => setTimeout(resolve, 600));
+    
+    updateProgress('analysis', 90, 'Verifica database EPPO...');
+    await new Promise(resolve => setTimeout(resolve, 400));
     
     const resolvedResults = await Promise.allSettled(promises);
     
-    // Combina tutti i risultati
     resolvedResults.forEach(result => {
       if (result.status === 'fulfilled') {
         Object.assign(results, result.value);
       }
     });
     
-    updateProgress('analysis', 75, 'Tutti i provider AI completati');
+    updateProgress('analysis', 95, 'Consolidamento risultati AI...');
     
     return results;
   }
@@ -169,9 +192,16 @@ export class EnhancedPlantAnalysisService {
       const plantID = await PlantIDService.identifyPlant(imageBase64);
       if (plantID.plantName && plantID.plantName !== 'Pianta non identificata') {
         // Cerca nel database EPPO usando il nome della pianta
-        const eppoResults = await eppoApiService.searchPests(plantID.plantName);
-        const eppoPlants = await eppoApiService.searchPlants(plantID.plantName);
-        const eppoDiseases = await eppoApiService.searchDiseases(plantID.plantName);
+        const headers = {
+          'Authorization': `Bearer ${this.EPPO_API_KEY}`,
+          'Content-Type': 'application/json'
+        };
+        
+        const [eppoResults, eppoPlants, eppoDiseases] = await Promise.all([
+          fetch(`https://data.eppo.int/api/rest/1.0/tools/search?kw=${encodeURIComponent(plantID.plantName)}&searchfor=pests`, { headers }).then(r => r.json()).catch(() => []),
+          fetch(`https://data.eppo.int/api/rest/1.0/tools/search?kw=${encodeURIComponent(plantID.plantName)}&searchfor=plants`, { headers }).then(r => r.json()).catch(() => []),
+          fetch(`https://data.eppo.int/api/rest/1.0/tools/search?kw=${encodeURIComponent(plantID.plantName)}&searchfor=diseases`, { headers }).then(r => r.json()).catch(() => [])
+        ]);
         
         return {
           pests: eppoResults,
@@ -253,12 +283,15 @@ export class EnhancedPlantAnalysisService {
   
   private static calculateProviderWeight(provider: string): number {
     const weights = {
-      'plantid': 0.4,    // Plant.ID è molto affidabile
-      'plantnet': 0.35,  // PlexiAI/PlantNet buono
-      'eppo': 0.5,       // EPPO è il più affidabile
-      'huggingface': 0.25 // HuggingFace meno specifico
+      'plantid-health': 0.5,    // Plant.ID Health è il più specializzato
+      'huggingface-plant-disease': 0.45, // Modello specializzato
+      'eppo': 0.4,             // Database ufficiale
+      'plantid': 0.35,         // Plant.ID identificazione
+      'plantnet': 0.3,         // Buono per identificazione
+      'huggingface': 0.25,     // Generico
+      'plexi': 0.2             // Meno specializzato per malattie
     };
-    return weights[provider] || 0.3;
+    return weights[provider] || 0.2;
   }
   
   private static formatPlantIdentifications(multiAIResults: any): PlantIdentificationResult[] {
@@ -307,26 +340,47 @@ export class EnhancedPlantAnalysisService {
   private static formatDiseaseDetections(multiAIResults: any): DiseaseDetectionResult[] {
     const diseases: DiseaseDetectionResult[] = [];
     
+    // Aggiungi risultati da Plant.ID Health Assessment
+    if (multiAIResults.plantIdDiseases?.length > 0) {
+      diseases.push(...multiAIResults.plantIdDiseases);
+    }
+    
+    // Aggiungi risultati da PlantNet
+    if (multiAIResults.plantNetDiseases?.length > 0) {
+      diseases.push(...multiAIResults.plantNetDiseases);
+    }
+    
+    // Aggiungi risultati da Hugging Face
+    if (multiAIResults.huggingFaceDiseases?.length > 0) {
+      diseases.push(...multiAIResults.huggingFaceDiseases);
+    }
+    
+    // Aggiungi risultati da modelli specializzati
+    if (multiAIResults.specializedDiseases?.length > 0) {
+      diseases.push(...multiAIResults.specializedDiseases);
+    }
+    
+    // Mantieni i risultati esistenti da PlexiAI
     if (multiAIResults.plexi?.healthAnalysis?.issues) {
       multiAIResults.plexi.healthAnalysis.issues.forEach((issue: any) => {
-        // Assicura percentuali valide per i problemi di salute
         const confidence = Math.round(issue.severity || 60);
         diseases.push({
           disease: issue.type,
-          confidence: Math.max(confidence, 1), // Minimo 1%
+          confidence: Math.max(confidence, 1),
           severity: confidence > 70 ? 'high' : confidence > 40 ? 'medium' : 'low',
           symptoms: [issue.description],
           treatments: ['Consulta esperto'],
-          provider: 'plantnet'
+          provider: 'plexi'
         });
       });
     }
     
+    // Aggiungi risultati EPPO
     if (multiAIResults.eppo?.pests?.length > 0) {
       multiAIResults.eppo.pests.forEach((pest: any) => {
         diseases.push({
           disease: pest.preferredName,
-          confidence: 80, // EPPO è affidabile
+          confidence: 80,
           severity: 'medium',
           symptoms: ['Parassita identificato nel database EPPO'],
           treatments: ['Consulta database EPPO per trattamenti specifici'],
@@ -339,7 +393,7 @@ export class EnhancedPlantAnalysisService {
       multiAIResults.eppo.diseases.forEach((disease: any) => {
         diseases.push({
           disease: disease.preferredName,
-          confidence: 85, // EPPO è molto affidabile per malattie
+          confidence: 85,
           severity: 'medium',
           symptoms: disease.symptoms || ['Malattia identificata nel database EPPO'],
           treatments: ['Consulta database EPPO per trattamenti specifici'],
@@ -348,9 +402,33 @@ export class EnhancedPlantAnalysisService {
       });
     }
     
-    return diseases.sort((a, b) => b.confidence - a.confidence);
+    // Rimuovi duplicati e raggruppa risultati simili
+    const uniqueDiseases = this.consolidateDiseaseResults(diseases);
+    
+    // Ordina per confidenza decrescente
+    return uniqueDiseases.sort((a, b) => b.confidence - a.confidence);
   }
   
+  private static consolidateDiseaseResults(diseases: DiseaseDetectionResult[]): DiseaseDetectionResult[] {
+    const consolidated: { [key: string]: DiseaseDetectionResult } = {};
+    
+    diseases.forEach(disease => {
+      const key = disease.disease.toLowerCase().replace(/[^a-z0-9]/g, '');
+      
+      if (consolidated[key]) {
+        // Combina risultati simili
+        consolidated[key].confidence = Math.max(consolidated[key].confidence, disease.confidence);
+        consolidated[key].symptoms.push(...disease.symptoms);
+        consolidated[key].treatments.push(...disease.treatments);
+        consolidated[key].provider = `${consolidated[key].provider}, ${disease.provider}`;
+      } else {
+        consolidated[key] = { ...disease };
+      }
+    });
+    
+    return Object.values(consolidated);
+  }
+
   private static async checkEppoDatabase(consensus: any) {
     // Implementazione semplificata per ora
     return undefined;

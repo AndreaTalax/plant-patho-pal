@@ -13,6 +13,7 @@ import ScanLayout from './diagnose/scan/ScanLayout';
 import PlantAnalysisResultComponent from './diagnose/PlantAnalysisResult';
 import CameraCapture from './diagnose/CameraCapture';
 import { RealPlantAnalysisService, PlantAnalysisResult as AnalysisResult } from '@/services/realPlantAnalysisService';
+import { EnhancedPlantAnalysisService, EnhancedAnalysisResult, AnalysisProgress } from '@/services/enhancedPlantAnalysisService';
 import { AutoExpertNotificationService } from './chat/AutoExpertNotificationService';
 import { PlantDataSyncService } from '@/services/chat/plantDataSyncService';
 import { ChatDataManager } from './chat/user/ChatDataManager';
@@ -32,7 +33,9 @@ const DiagnoseTab = () => {
   const [showCamera, setShowCamera] = useState(false);
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
+  const [enhancedResult, setEnhancedResult] = useState<EnhancedAnalysisResult | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisProgress, setAnalysisProgress] = useState<AnalysisProgress | null>(null);
   const [dataSentToExpert, setDataSentToExpert] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [cameraStoppedByUser, setCameraStoppedByUser] = useState(false);
@@ -245,7 +248,7 @@ const DiagnoseTab = () => {
     }
   }, [userProfile, uploadedImage, plantInfo, analysisResult, dataSentToExpert]);
 
-  // AI diagnosis selection
+  // AI diagnosis selection con EnhancedPlantAnalysisService
   const handleSelectAI = useCallback(async () => {
     if (!hasAIAccess) {
       toast.error('La diagnosi AI richiede un account Premium');
@@ -257,21 +260,84 @@ const DiagnoseTab = () => {
       return;
     }
 
-    setCurrentStage('analyzing');
-    
-    // Convert dataURL to file for upload
-    fetch(uploadedImage)
-      .then(res => res.blob())
-      .then(blob => {
-        const file = new File([blob], 'uploaded-image.jpg', { type: 'image/jpeg' });
-        performAnalysis(file, uploadedImage);
-      })
-      .catch(error => {
-        console.error('Errore conversione immagine:', error);
-        toast.error('Errore nell\'elaborazione dell\'immagine');
-        setCurrentStage('options');
-      });
+    handleAIAnalysis();
   }, [uploadedImage, hasAIAccess]);
+
+  // Gestisce l'analisi AI avanzata con consenso ponderato
+  const handleAIAnalysis = async () => {
+    if (!uploadedImage || !userProfile?.id) return;
+    
+    setCurrentStage('analyzing');
+    setIsAnalyzing(true);
+    setAnalysisProgress(null);
+    
+    try {
+      console.log('🚀 Avvio analisi AI avanzata...');
+      
+      // Avvia analisi multi-AI con progress callback
+      const result = await EnhancedPlantAnalysisService.analyzeImage(
+        uploadedImage,
+        (progress) => {
+          console.log('📊 Progress update:', progress);
+          setAnalysisProgress(progress); // Aggiorna progress in tempo reale
+        }
+      );
+      
+      console.log('✅ Analisi completata:', result);
+      
+      // Upload image to storage per persistenza
+      const response = await fetch(uploadedImage);
+      const blob = await response.blob();
+      const file = new File([blob], 'analysis-image.jpg', { type: 'image/jpeg' });
+      const imageUrl = await uploadPlantImage(file, userProfile.id);
+      
+      // Salva risultati nel database
+      await RealPlantAnalysisService.saveAnalysisToDatabase(
+        userProfile.id,
+        imageUrl,
+        {
+          plantName: result.consensus.mostLikelyPlant?.plantName || 'Pianta non identificata',
+          scientificName: result.consensus.mostLikelyPlant?.scientificName || '',
+          confidence: result.consensus.finalConfidence / 100,
+          isHealthy: !result.diseaseDetection || result.diseaseDetection.length === 0,
+          diseases: result.diseaseDetection?.map(d => ({
+            name: d.disease,
+            probability: d.confidence / 100,
+            description: d.symptoms?.join(', ') || '',
+            treatment: d.treatments?.join(', ') || ''
+          })) || [],
+          recommendations: ['Risultati basati su consenso AI multi-provider'],
+          analysisDetails: {
+            source: 'enhanced-ai-analysis',
+            timestamp: new Date().toISOString()
+          }
+        },
+        plantInfo
+      );
+      
+      setEnhancedResult(result);
+      setCurrentStage('result');
+      
+      // Update plant info per la sincronizzazione
+      setPlantInfo({
+        ...plantInfo,
+        useAI: true,
+        sendToExpert: false
+      });
+      
+      toast.success('🎉 Analisi AI completata!', {
+        description: `Consenso di ${result.consensus.providersUsed?.length || 0} provider AI - Confidenza: ${result.consensus.finalConfidence}%`
+      });
+      
+    } catch (error) {
+      console.error('❌ Errore analisi AI:', error);
+      toast.error(`Analisi fallita: ${error.message}`);
+      setCurrentStage('options');
+    } finally {
+      setIsAnalyzing(false);
+      setAnalysisProgress(null);
+    }
+  };
 
   // Expert consultation selection
   const handleSelectExpert = useCallback(async () => {
@@ -362,6 +428,8 @@ const DiagnoseTab = () => {
     setCurrentStage('info');
     setUploadedImage(null);
     setAnalysisResult(null);
+    setEnhancedResult(null);
+    setAnalysisProgress(null);
     setDataSentToExpert(false);
     setPlantInfo({
       isIndoor: true,
@@ -504,11 +572,128 @@ const DiagnoseTab = () => {
             isAnalyzing={isAnalyzing}
             plantInfo={plantInfo}
             uploadedImage={uploadedImage}
+            analysisProgress={analysisProgress}
           />
         );
 
       case 'result':
-        if (analysisResult && uploadedImage) {
+        if (enhancedResult && uploadedImage) {
+          return (
+            <div className="space-y-6 max-w-4xl mx-auto p-4">
+              {/* Header con consenso finale */}
+              <div className="bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-lg p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                      🎯 Analisi AI Completata
+                    </h2>
+                    <p className="text-gray-600">
+                      Consenso da {enhancedResult.consensus.providersUsed?.length || 0} provider AI
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-3xl font-bold text-green-600">
+                      {enhancedResult.consensus.finalConfidence}%
+                    </div>
+                    <div className="text-sm text-gray-500">
+                      Confidenza finale
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Risultati identificazione */}
+              {enhancedResult.consensus.mostLikelyPlant && (
+                <div className="bg-white border border-gray-200 rounded-lg p-6">
+                  <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                    🌿 Identificazione Pianta
+                  </h3>
+                  <div className="space-y-2">
+                    <h4 className="text-lg font-medium">
+                      {enhancedResult.consensus.mostLikelyPlant.plantName}
+                    </h4>
+                    {enhancedResult.consensus.mostLikelyPlant.scientificName && (
+                      <p className="text-gray-600 italic">
+                        {enhancedResult.consensus.mostLikelyPlant.scientificName}
+                      </p>
+                    )}
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-gray-500">Provider migliore:</span>
+                      <span className="font-medium text-blue-600">
+                        {enhancedResult.consensus.bestProvider}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Risultati malattie */}
+              {enhancedResult.diseaseDetection && enhancedResult.diseaseDetection.length > 0 && (
+                <div className="bg-white border border-red-200 rounded-lg p-6">
+                  <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                    🔍 Problemi Rilevati
+                  </h3>
+                  <div className="space-y-4">
+                    {enhancedResult.diseaseDetection.slice(0, 3).map((disease, index) => (
+                      <div key={index} className="border-l-4 border-red-400 pl-4">
+                        <div className="flex justify-between items-start mb-2">
+                          <h4 className="font-medium text-red-800">{disease.disease}</h4>
+                          <span className="bg-red-100 text-red-800 px-2 py-1 rounded text-sm">
+                            {disease.confidence}%
+                          </span>
+                        </div>
+                        {disease.symptoms && disease.symptoms.length > 0 && (
+                          <p className="text-sm text-red-700 mb-1">
+                            {disease.symptoms[0]}
+                          </p>
+                        )}
+                        <span className="text-xs text-gray-500">
+                          Fonte: {disease.provider}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Pulsanti azione */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Button
+                  onClick={async () => {
+                    // Converti enhanced result in formato compatibile per l'invio esperto
+                    const compatibleResult = {
+                      plantName: enhancedResult.consensus.mostLikelyPlant?.plantName || 'Pianta non identificata',
+                      scientificName: enhancedResult.consensus.mostLikelyPlant?.scientificName || '',
+                      confidence: enhancedResult.consensus.finalConfidence / 100,
+                      isHealthy: !enhancedResult.diseaseDetection || enhancedResult.diseaseDetection.length === 0,
+                      diseases: enhancedResult.diseaseDetection?.map(d => ({
+                        name: d.disease,
+                        probability: d.confidence / 100,
+                        description: d.symptoms?.join(', ') || '',
+                        treatment: d.treatments?.join(', ') || ''
+                      })) || [],
+                      recommendations: ['Risultati da analisi AI multi-provider'],
+                      analysisDetails: {
+                        source: 'enhanced-ai-consensus',
+                        timestamp: new Date().toISOString(),
+                        providers: enhancedResult.consensus.providersUsed
+                      }
+                    };
+                    setAnalysisResult(compatibleResult);
+                    // Invia all'esperto
+                    await sendDataToExpert(true);
+                  }}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  📨 Invia all'Esperto
+                </Button>
+                <Button onClick={handleNewAnalysis} variant="outline">
+                  🔄 Nuova Analisi
+                </Button>
+              </div>
+            </div>
+          );
+        } else if (analysisResult && uploadedImage) {
           return (
             <PlantAnalysisResultComponent
               analysisResult={analysisResult}
