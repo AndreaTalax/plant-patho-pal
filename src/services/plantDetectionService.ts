@@ -104,17 +104,48 @@ export class PlantDetectionService {
   
   private static async detectWithHuggingFace(imageData: string) {
     try {
-      const { data, error } = await supabase.functions.invoke('plant-verification', {
-        body: { image: imageData, service: 'huggingface' }
+      // Usa direttamente l'API HuggingFace per plant classification
+      const response = await fetch('https://api-inference.huggingface.co/models/google/vit-base-patch16-224', {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Bearer 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',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          inputs: imageData
+        })
       });
+
+      if (!response.ok) throw new Error(`HuggingFace API error: ${response.status}`);
       
-      if (error) throw error;
+      const results = await response.json();
+      
+      // Cerca indicatori di piante nei risultati
+      let isPlant = false;
+      let confidence = 0;
+      const elements: string[] = [];
+      
+      if (Array.isArray(results)) {
+        results.forEach(result => {
+          const label = result.label?.toLowerCase() || '';
+          const score = result.score || 0;
+          
+          // Keywords che indicano elementi vegetali
+          const plantKeywords = ['plant', 'leaf', 'flower', 'tree', 'grass', 'vegetation', 'botanical', 'green'];
+          
+          if (plantKeywords.some(keyword => label.includes(keyword))) {
+            isPlant = true;
+            confidence = Math.max(confidence, score);
+            elements.push(result.label);
+          }
+        });
+      }
       
       return {
         serviceName: 'HuggingFace Plant Classifier',
-        result: data.isPlant || false,
-        confidence: data.confidence || 0,
-        elements: data.detectedElements || []
+        result: isPlant,
+        confidence: confidence,
+        elements: elements
       };
     } catch (error) {
       console.warn('HuggingFace detection failed:', error);
@@ -129,17 +160,45 @@ export class PlantDetectionService {
   
   private static async detectWithPlantVerification(imageData: string) {
     try {
-      const { data, error } = await supabase.functions.invoke('plant-verification', {
-        body: { image: imageData, service: 'plant-verification' }
+      // Usa Plant.ID per verifica diretta
+      const response = await fetch('https://api.plant.id/v3/identification', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Api-Key': '6d4146706e385077db06e57b76fd967d10b4cb2ce23070580160ebb069da8420'
+        },
+        body: JSON.stringify({
+          images: [imageData],
+          similar_images: false,
+          plant_details: ['common_names'],
+          plant_language: 'it'
+        })
       });
+
+      if (!response.ok) throw new Error(`Plant.ID API error: ${response.status}`);
       
-      if (error) throw error;
+      const data = await response.json();
+      
+      let isPlant = false;
+      let confidence = 0;
+      const elements: string[] = [];
+      
+      if (data.suggestions && data.suggestions.length > 0) {
+        const topSuggestion = data.suggestions[0];
+        isPlant = true;
+        confidence = topSuggestion.probability || 0;
+        elements.push(topSuggestion.plant_name || 'Pianta identificata');
+        
+        if (topSuggestion.plant_details?.common_names) {
+          elements.push(...topSuggestion.plant_details.common_names.slice(0, 2));
+        }
+      }
       
       return {
         serviceName: 'Plant Verification Service',
-        result: data.isPlant || false,
-        confidence: data.confidence || 0,
-        elements: data.detectedPlantParts || []
+        result: isPlant,
+        confidence: confidence,
+        elements: elements
       };
     } catch (error) {
       console.warn('Plant verification failed:', error);
