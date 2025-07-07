@@ -40,12 +40,12 @@ function App() {
                     <Route path="/login" element={<Login />} />
                     <Route path="/signup" element={<SignUp />} />
                     <Route path="/complete-profile" element={<CompleteProfile />} />
+                    <Route path="/reset-password" element={<ResetPassword />} />
                     <Route path="/about" element={<AboutUs />} />
                     <Route path="/services" element={<Services />} />
                     <Route path="/contact" element={<Contact />} />
                     <Route path="/404" element={<NotFound />} />
                     <Route path="*" element={<Navigate to="/404" replace />} />
-                    <Route path="/reset-password" element={<ResetPassword />} />
                   </Routes>
                 </Router>
               </TooltipProvider>
