@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Mail, LockKeyhole } from "lucide-react";
 import { CardContent, CardFooter } from "@/components/ui/card";
+import ForgotPasswordModal from './ForgotPasswordModal';
 
 interface AuthFormFieldsProps {
   email: string;
@@ -53,6 +54,8 @@ export function AuthFormFields({
   toggleMode,
   isLoading
 }: AuthFormFieldsProps) {
+  const [showForgotModal, setShowForgotModal] = useState(false);
+
   return (
     <form onSubmit={onSubmit}>
       <CardContent className="space-y-4">
@@ -86,6 +89,17 @@ export function AuthFormFields({
             />
           </div>
         </div>
+        {mode === 'login' && (
+          <div className="text-right">
+            <button 
+              type="button" 
+              className="text-sm text-drplant-blue hover:underline"
+              onClick={() => setShowForgotModal(true)}
+            >
+              Password dimenticata?
+            </button>
+          </div>
+        )}
       </CardContent>
       <CardFooter className="flex flex-col space-y-4">
         <Button type="submit" className="w-full" disabled={isLoading}>
@@ -101,6 +115,11 @@ export function AuthFormFields({
           )}
         </div>
       </CardFooter>
+      
+      <ForgotPasswordModal 
+        open={showForgotModal} 
+        onOpenChange={setShowForgotModal} 
+      />
     </form>
   );
 }
