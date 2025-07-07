@@ -22,12 +22,17 @@ export class PlantDetectionService {
   
   static async detectPlantInImage(imageData: string): Promise<PlantDetectionResult> {
     console.log("🔍 Avvio rilevamento pianta nell'immagine...");
+    console.log("📷 Formato immagine:", imageData.substring(0, 50) + "...");
     
     const detectionResults = await Promise.allSettled([
       this.detectWithHuggingFace(imageData),
       this.detectWithPlantVerification(imageData),
       this.performColorAnalysis(imageData)
     ]);
+    
+    console.log("📊 Risultati rilevamento:", detectionResults.map(r => 
+      r.status === 'fulfilled' ? 'success' : `error: ${r.reason?.message || 'unknown'}`
+    ));
     
     const aiServices: PlantDetectionResult['aiServices'] = [];
     let maxConfidence = 0;
@@ -104,6 +109,14 @@ export class PlantDetectionService {
   
   private static async detectWithHuggingFace(imageData: string) {
     try {
+      console.log("🤗 Tentativo HuggingFace...");
+      
+      // Verifica che l'immagine sia in formato base64 corretto
+      if (!imageData.startsWith('data:image/')) {
+        console.warn("⚠️ Immagine non in formato data URL, convertendo...");
+        imageData = `data:image/jpeg;base64,${imageData}`;
+      }
+      
       // Usa direttamente l'API HuggingFace per plant classification
       const response = await fetch('https://api-inference.huggingface.co/models/google/vit-base-patch16-224', {
         method: 'POST',
@@ -116,9 +129,14 @@ export class PlantDetectionService {
         })
       });
 
-      if (!response.ok) throw new Error(`HuggingFace API error: ${response.status}`);
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("❌ HuggingFace error:", response.status, errorText);
+        throw new Error(`HuggingFace API error: ${response.status} - ${errorText}`);
+      }
       
       const results = await response.json();
+      console.log("🤗 HuggingFace risultati:", results);
       
       // Cerca indicatori di piante nei risultati
       let isPlant = false;
@@ -160,6 +178,14 @@ export class PlantDetectionService {
   
   private static async detectWithPlantVerification(imageData: string) {
     try {
+      console.log("🌱 Tentativo Plant.ID...");
+      
+      // Assicurati che l'immagine sia solo il base64 senza prefix per Plant.ID
+      let base64Data = imageData;
+      if (imageData.startsWith('data:image/')) {
+        base64Data = imageData.split(',')[1];
+      }
+      
       // Usa Plant.ID per verifica diretta
       const response = await fetch('https://api.plant.id/v3/identification', {
         method: 'POST',
@@ -168,16 +194,21 @@ export class PlantDetectionService {
           'Api-Key': '6d4146706e385077db06e57b76fd967d10b4cb2ce23070580160ebb069da8420'
         },
         body: JSON.stringify({
-          images: [imageData],
+          images: [base64Data],
           similar_images: false,
           plant_details: ['common_names'],
           plant_language: 'it'
         })
       });
 
-      if (!response.ok) throw new Error(`Plant.ID API error: ${response.status}`);
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("❌ Plant.ID error:", response.status, errorText);
+        throw new Error(`Plant.ID API error: ${response.status} - ${errorText}`);
+      }
       
       const data = await response.json();
+      console.log("🌱 Plant.ID risultati:", data);
       
       let isPlant = false;
       let confidence = 0;
