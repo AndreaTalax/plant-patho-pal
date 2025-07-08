@@ -20,16 +20,40 @@ const ResetPassword = () => {
   const { t } = useTheme();
 
   useEffect(() => {
-    // Check if we have the required tokens from the URL
-    const accessToken = searchParams.get('access_token');
-    const refreshToken = searchParams.get('refresh_token');
+    // Check if we have the required session from Supabase auth
+    const handleAuthSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      // If no session, check for recovery session from URL params
+      if (!session) {
+        const accessToken = searchParams.get('access_token');
+        const refreshToken = searchParams.get('refresh_token');
+        const type = searchParams.get('type');
+        
+        if (type === 'recovery' && accessToken && refreshToken) {
+          // Set the session from the URL params
+          const { error } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken
+          });
+          
+          if (error) {
+            console.error('Error setting session:', error);
+            toast.error(t("error"), {
+              description: t("invalidResetLink"),
+            });
+            navigate('/login');
+          }
+        } else {
+          toast.error(t("error"), {
+            description: t("invalidResetLink"),
+          });
+          navigate('/login');
+        }
+      }
+    };
     
-    if (!accessToken || !refreshToken) {
-      toast.error(t("error"), {
-        description: t("invalidResetLink"),
-      });
-      navigate('/login');
-    }
+    handleAuthSession();
   }, [searchParams, navigate, t]);
 
   const handleSubmit = async (e: React.FormEvent) => {
