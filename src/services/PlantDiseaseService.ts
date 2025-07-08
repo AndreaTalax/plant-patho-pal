@@ -16,7 +16,7 @@ export class PlantDiseaseService {
    */
   static async diagnosePlantDisease(imageBase64: string): Promise<DiseaseDetectionResult[]> {
     try {
-      const response = await fetch('https://api.plant.id/v3/health_assessment', {
+      const response = await fetch('https://api.plant.id/v2/health_assessment', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -24,11 +24,9 @@ export class PlantDiseaseService {
         },
         body: JSON.stringify({
           images: [imageBase64],
-          similar_images: true,
-          health: 'all',
-          disease_details: ['cause', 'common_names', 'classification', 'description', 'treatment'],
-          modifiers: ['crops_fast', 'similar_images'],
-          plant_language: 'it'
+          modifiers: ["crops_fast", "similar_images"],
+          disease_details: ["cause", "common_names", "classification", "description", "treatment", "url"],
+          plant_language: "it"
         })
       });
 

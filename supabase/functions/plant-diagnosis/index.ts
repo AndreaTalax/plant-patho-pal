@@ -21,13 +21,15 @@ serve(async (req) => {
       try {
         const imageBuffer = Uint8Array.from(atob(imageData.split(',')[1]), c => c.charCodeAt(0))
         
-        const response = await fetch('https://api-inference.huggingface.co/models/microsoft/resnet-50', {
+        const response = await fetch('https://api-inference.huggingface.co/models/google/vit-base-patch16-224', {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${huggingFaceToken}`,
-            'Content-Type': 'application/octet-stream',
+            'Content-Type': 'application/json',
           },
-          body: imageBuffer
+          body: JSON.stringify({
+            inputs: imageData
+          })
         })
         
         if (response.ok) {

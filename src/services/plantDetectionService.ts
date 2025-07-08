@@ -186,8 +186,8 @@ export class PlantDetectionService {
         base64Data = imageData.split(',')[1];
       }
       
-      // Usa Plant.ID per verifica diretta
-      const response = await fetch('https://api.plant.id/v3/identification', {
+      // Usa Plant.ID API v2 (v3 non funziona correttamente)
+      const response = await fetch('https://api.plant.id/v2/identify', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -195,9 +195,9 @@ export class PlantDetectionService {
         },
         body: JSON.stringify({
           images: [base64Data],
-          similar_images: false,
-          plant_details: ['common_names'],
-          plant_language: 'it'
+          modifiers: ["crops_fast", "similar_images"],
+          plant_details: ["common_names", "url", "name_authority"],
+          plant_language: "it"
         })
       });
 
