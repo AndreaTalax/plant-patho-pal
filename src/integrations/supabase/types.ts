@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      cdc_events: {
+        Row: {
+          id: string
+          metadata: Json | null
+          new_data: Json | null
+          occurred_at: string
+          old_data: Json | null
+          operation: string
+          processed: boolean | null
+          table_name: string
+          user_id: string | null
+        }
+        Insert: {
+          id?: string
+          metadata?: Json | null
+          new_data?: Json | null
+          occurred_at?: string
+          old_data?: Json | null
+          operation: string
+          processed?: boolean | null
+          table_name: string
+          user_id?: string | null
+        }
+        Update: {
+          id?: string
+          metadata?: Json | null
+          new_data?: Json | null
+          occurred_at?: string
+          old_data?: Json | null
+          operation?: string
+          processed?: boolean | null
+          table_name?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       consultations: {
         Row: {
           created_at: string | null
