@@ -17,6 +17,7 @@ import Contact from "./pages/Contact";
 import CompleteProfile from "./pages/CompleteProfile";
 import ResetPassword from "./pages/ResetPassword";
 import { CDCDashboard } from "./components/cdc/CDCDashboard";
+import { UserManagement } from "./components/admin/UserManagement";
 
 const queryClient = new QueryClient();
 
@@ -46,6 +47,7 @@ function App() {
                     <Route path="/services" element={<Services />} />
                     <Route path="/contact" element={<Contact />} />
                     <Route path="/cdc-dashboard" element={<CDCDashboard />} />
+                    <Route path="/user-management" element={<UserManagement />} />
                     <Route path="/404" element={<NotFound />} />
                     <Route path="*" element={<Navigate to="/404" replace />} />
                   </Routes>
