@@ -118,7 +118,21 @@ async function processEvent(event: CDCEvent, supabaseClient: any) {
 
 async function processMessageEvent(event: CDCEvent, supabaseClient: any) {
   if (event.operation === 'INSERT' && event.new_data) {
-    // Notify expert when new message from user
+    console.log('💬 Processing new message for notifications')
+    
+    // Send Firebase notification for chat message
+    try {
+      await supabaseClient.functions.invoke('notify-chat-message', {
+        body: {
+          messageData: event.new_data
+        }
+      })
+      console.log('✅ Firebase chat notification triggered')
+    } catch (error) {
+      console.error('❌ Error sending Firebase notification:', error)
+    }
+
+    // Notify expert when new message from user (legacy)
     if (event.new_data.sender_id !== event.new_data.recipient_id) {
       await supabaseClient.functions.invoke('notify-expert', {
         body: {

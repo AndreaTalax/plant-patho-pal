@@ -18,6 +18,8 @@ import CompleteProfile from "./pages/CompleteProfile";
 import ResetPassword from "./pages/ResetPassword";
 import { CDCDashboard } from "./components/cdc/CDCDashboard";
 import { UserManagement } from "./components/admin/UserManagement";
+import { NotificationSettings } from "./components/notifications/NotificationSettings";
+import { NotificationProvider } from "./components/notifications/NotificationProvider";
 
 const queryClient = new QueryClient();
 
@@ -32,10 +34,11 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <AuthProvider>
-          <AppWithPresence>
-            <PlantInfoProvider>
-              <TooltipProvider>
-                <Toaster />
+          <NotificationProvider>
+            <AppWithPresence>
+              <PlantInfoProvider>
+                <TooltipProvider>
+                  <Toaster />
                 <Router>
                   <Routes>
                     <Route path="/" element={<Index />} />
@@ -48,13 +51,15 @@ function App() {
                     <Route path="/contact" element={<Contact />} />
                     <Route path="/cdc-dashboard" element={<CDCDashboard />} />
                     <Route path="/user-management" element={<UserManagement />} />
+                    <Route path="/notification-settings" element={<NotificationSettings />} />
                     <Route path="/404" element={<NotFound />} />
                     <Route path="*" element={<Navigate to="/404" replace />} />
                   </Routes>
                 </Router>
-              </TooltipProvider>
-            </PlantInfoProvider>
-          </AppWithPresence>
+                </TooltipProvider>
+              </PlantInfoProvider>
+            </AppWithPresence>
+          </NotificationProvider>
         </AuthProvider>
       </ThemeProvider>
     </QueryClientProvider>

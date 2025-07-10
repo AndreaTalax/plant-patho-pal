@@ -37,6 +37,12 @@ verify_jwt = false
 [functions.cdc-webhook-handler]
 verify_jwt = false
 
+[functions.send-firebase-notification]
+verify_jwt = false
+
+[functions.notify-chat-message]
+verify_jwt = false
+
 [auth.hooks.send_email]
 enabled = true
 uri = "{{PROJECT_REF}}/functions/v1/send-registration-confirmation"
