@@ -6,10 +6,10 @@ import { PlantIDService } from './aiProviders/PlantIDService';
  * Integra multiple API AI per una diagnosi completa e accurata
  */
 export class PlantDiseaseService {
-  private static readonly PLANT_ID_API_KEY = process.env.PLANT_ID_API_KEY || '6d4146706e385077db06e57b76fd967d10b4cb2ce23070580160ebb069da8420';
-  private static readonly PLANTNET_API_KEY = process.env.PLANTNET || '2c3cc11af50602d90073a401dc7ccce7ba70abc40bda9d84794';
-  private static readonly HUGGINGFACE_ACCESS_TOKEN = process.env.HUGGINGFACE_ACCESS_TOKEN || 'fb752ef5f96488fc2659a524aeece4b8d790b82b7cf19fe4c4e72ba86298cb60';
-  private static readonly EPPO_API_KEY = process.env.EPPO_API_KEY || 'ce550a719eec290cb93614cc5dcc027e39164548e21f5849900416cfd3537f8d';
+  private static readonly PLANT_ID_API_KEY = '6d4146706e385077db06e57b76fd967d10b4cb2ce23070580160ebb069da8420';
+  private static readonly PLANTNET_API_KEY = '2c3cc11af50602d90073a401dc7ccce7ba70abc40bda9d84794';
+  private static readonly HUGGINGFACE_ACCESS_TOKEN = 'fb752ef5f96488fc2659a524aeece4b8d790b82b7cf19fe4c4e72ba86298cb60';
+  private static readonly EPPO_API_KEY = 'ce550a719eec290cb93614cc5dcc027e39164548e21f5849900416cfd3537f8d';
   
   /**
    * Plant.ID - Diagnosi specializzata delle malattie
