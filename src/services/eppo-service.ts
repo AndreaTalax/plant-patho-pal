@@ -33,7 +33,7 @@ class EPPOService {
   constructor() {
     // In produzione su Netlify userà /.netlify/functions/
     // In sviluppo locale puoi usare il proxy o configurare netlify dev
-    this.baseUrl = process.env.NODE_ENV === 'development' 
+    this.baseUrl = window.location.hostname === 'localhost' 
       ? 'http://localhost:8888/.netlify/functions' 
       : '/.netlify/functions';
   }

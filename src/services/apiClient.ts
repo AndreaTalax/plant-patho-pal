@@ -4,7 +4,7 @@ class ApiClient {
   private baseUrl: string;
 
   constructor() {
-    this.baseUrl = process.env.NODE_ENV === 'development' 
+    this.baseUrl = window.location.hostname === 'localhost' 
       ? 'http://localhost:8888/.netlify/functions' 
       : '/.netlify/functions';
   }

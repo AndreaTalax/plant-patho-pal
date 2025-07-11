@@ -379,7 +379,7 @@ export const identifyPlantFromImage = async (imageFile: File): Promise<{plantNam
     // Convert file to base64 (no prefix)
     const base64String = await fileToBase64WithoutPrefix(imageFile);
     const response = await fetch(
-      `${process.env.NEXT_PUBLIC_SUPABASE_URL || "https://otdmqmpxukifoxjlgzmq.supabase.co"}/functions/v1/plant-id-diagnosis`,
+      `https://otdmqmpxukifoxjlgzmq.supabase.co/functions/v1/plant-id-diagnosis`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
