@@ -205,38 +205,48 @@ export class PlantDetectionService {
 
   private static async detectWithPlantNet(imageData: string): Promise<{isPlant: boolean, confidence: number}> {
     try {
-      console.log("🌐 Avvio rilevamento PlantNet...");
+      console.log("🌐 Avvio rilevamento PlantNet reale...");
       
+      // Chiama la edge function PlantNet
+      const { data, error } = await supabase.functions.invoke('plantnet-identification', {
+        body: { imageBase64: imageData }
+      });
+
+      if (error) {
+        console.error("❌ Errore edge function PlantNet:", error);
+        // Fallback all'analisi locale
+        const analysis = await this.analyzeImageFeatures(imageData);
+        return {
+          isPlant: analysis.hasGreenColors && analysis.hasOrganicShapes,
+          confidence: analysis.hasGreenColors ? 0.6 : 0.1
+        };
+      }
+
+      if (data && typeof data.isPlant === 'boolean') {
+        console.log(`🌐 PlantNet API result: isPlant=${data.isPlant}, confidence=${data.confidence}`);
+        console.log(`🌿 Specie identificata: ${data.species || 'Non identificata'}`);
+        
+        return {
+          isPlant: data.isPlant,
+          confidence: data.confidence || 0
+        };
+      }
+
+      // Fallback se la risposta non è valida
+      console.warn("⚠️ Risposta PlantNet non valida, uso fallback");
       const analysis = await this.analyzeImageFeatures(imageData);
-      let confidence = 0.1;
-      
-      // PlantNet si concentra su strutture botaniche specifiche
-      if (analysis.hasLeafLikeStructures && analysis.hasGreenColors) {
-        confidence += 0.45;
-      }
-      
-      if (analysis.hasOrganicShapes) {
-        confidence += 0.25;
-      }
-      
-      if (analysis.colorVariety > 2) {
-        confidence += 0.15; // Varietà di colori naturali
-      }
-      
-      confidence = Math.min(confidence, 0.88);
-      const isPlant = confidence > 0.5;
-      
-      console.log(`🌐 PlantNet result: isPlant=${isPlant}, confidence=${confidence}`);
-      
       return {
-        isPlant,
-        confidence
+        isPlant: analysis.hasGreenColors && analysis.hasOrganicShapes,
+        confidence: analysis.hasGreenColors ? 0.5 : 0.1
       };
+      
     } catch (error) {
       console.error("❌ Errore PlantNet:", error);
+      // Fallback all'analisi locale
+      const analysis = await this.analyzeImageFeatures(imageData);
       return {
-        isPlant: false,
-        confidence: 0
+        isPlant: analysis.hasGreenColors && analysis.hasOrganicShapes,
+        confidence: analysis.hasGreenColors ? 0.4 : 0.1
       };
     }
   }
