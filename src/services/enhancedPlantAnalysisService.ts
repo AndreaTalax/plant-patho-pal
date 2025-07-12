@@ -54,9 +54,9 @@ export class EnhancedPlantAnalysisService {
       
       const plantDetection = await PlantDetectionService.detectPlantInImage(imageBase64);
       
-      if (!plantDetection.isPlant || plantDetection.confidence < 30) {
+      if (!plantDetection.isPlant || plantDetection.confidence < 0.3) {
         toast.error('Nessuna pianta rilevata nell\'immagine', {
-          description: `Confidenza: ${plantDetection.confidence}% - ${plantDetection.message}`
+          description: `Confidenza: ${(plantDetection.confidence * 100).toFixed(1)}% - ${plantDetection.message}`
         });
         
         return {
@@ -219,7 +219,7 @@ export class EnhancedPlantAnalysisService {
     // Calcolo consenso ponderato per identificazioni piante
     const weightedScores = identifications.map(id => ({
       ...id,
-      weightedScore: this.calculateProviderWeight(id.provider) * (id.confidence / 100)
+      weightedScore: this.calculateProviderWeight(id.provider) * id.confidence
     }));
     
     // Trova la pianta con score ponderato più alto

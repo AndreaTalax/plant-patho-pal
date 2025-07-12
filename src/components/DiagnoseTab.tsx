@@ -59,7 +59,7 @@ const DiagnoseTab = () => {
       // Verifica presenza pianta
       const plantVerification = await verifyImageContainsPlant(file);
       
-      if (!plantVerification.isPlant || plantVerification.confidence < 40) {
+      if (!plantVerification.isPlant || plantVerification.confidence < 0.4) {
         toast.error('❌ Nessuna pianta rilevata nell\'immagine', {
           description: `${plantVerification.reason}. Scatta una foto che mostri chiaramente una pianta.`,
           duration: 8000
@@ -67,7 +67,7 @@ const DiagnoseTab = () => {
         return false;
       }
       
-      if (plantVerification.confidence < 70) {
+      if (plantVerification.confidence < 0.7) {
         toast.warning('⚠️ Pianta rilevata con bassa confidenza', {
           description: `${plantVerification.reason}. Per risultati migliori, usa un\'immagine più chiara della pianta.`,
           duration: 6000
@@ -298,11 +298,11 @@ const DiagnoseTab = () => {
         {
           plantName: result.consensus.mostLikelyPlant?.plantName || 'Pianta non identificata',
           scientificName: result.consensus.mostLikelyPlant?.scientificName || '',
-          confidence: result.consensus.finalConfidence / 100,
+          confidence: result.consensus.finalConfidence,
           isHealthy: !result.diseaseDetection || result.diseaseDetection.length === 0,
           diseases: result.diseaseDetection?.map(d => ({
             name: d.disease,
-            probability: d.confidence / 100,
+            probability: d.confidence,
             description: d.symptoms?.join(', ') || '',
             treatment: d.treatments?.join(', ') || ''
           })) || [],
@@ -663,11 +663,11 @@ const DiagnoseTab = () => {
                     const compatibleResult = {
                       plantName: enhancedResult.consensus.mostLikelyPlant?.plantName || 'Pianta non identificata',
                       scientificName: enhancedResult.consensus.mostLikelyPlant?.scientificName || '',
-                      confidence: enhancedResult.consensus.finalConfidence / 100,
+                      confidence: enhancedResult.consensus.finalConfidence,
                       isHealthy: !enhancedResult.diseaseDetection || enhancedResult.diseaseDetection.length === 0,
                       diseases: enhancedResult.diseaseDetection?.map(d => ({
                         name: d.disease,
-                        probability: d.confidence / 100,
+                        probability: d.confidence,
                         description: d.symptoms?.join(', ') || '',
                         treatment: d.treatments?.join(', ') || ''
                       })) || [],

@@ -136,10 +136,10 @@ export const usePlantAnalysis = () => {
           isHealthy: data.isHealthy || false,
           isValidPlantImage: true,
           primaryService: 'Enhanced Plant Diagnosis',
-          agreementScore: confidencePercent / 100,
+          agreementScore: confidencePercent,
           huggingFaceResult: {
             label: data.plantName || 'Pianta',
-            score: confidencePercent / 100
+            score: confidencePercent
           },
           dataSource: data.analysisDetails?.source || 'Advanced AI Analysis'
         },
