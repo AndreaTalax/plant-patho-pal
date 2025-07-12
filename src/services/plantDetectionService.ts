@@ -91,9 +91,9 @@ export class PlantDetectionService {
     
     if (detectionResults[3].status === 'fulfilled') {
       colorAnalysis = detectionResults[3].value;
-      if (colorAnalysis.greenPercentage > 0.3) {
+      if (colorAnalysis.greenPercentage > 0.08) { // Abbassato da 0.3 a 0.08
         isPlantDetected = true;
-        maxConfidence = Math.max(maxConfidence, 0.7);
+        maxConfidence = Math.max(maxConfidence, 0.6); // Ridotto da 0.7 a 0.6
       }
     }
 
@@ -146,7 +146,7 @@ export class PlantDetectionService {
       
       // Aggiusta confidenza per essere più realistica
       confidence = Math.min(confidence, 0.95);
-      const isPlant = confidence > 0.6;
+      const isPlant = confidence > 0.4; // Abbassato da 0.6 a 0.4
       
       console.log(`🤗 HuggingFace result: isPlant=${isPlant}, confidence=${confidence}`);
       
@@ -186,7 +186,7 @@ export class PlantDetectionService {
       }
       
       confidence = Math.min(confidence, 0.92);
-      const isPlant = confidence > 0.55;
+      const isPlant = confidence > 0.35; // Abbassato da 0.55 a 0.35
       
       console.log(`🌿 PlantVerification result: isPlant=${isPlant}, confidence=${confidence}`);
       
@@ -345,10 +345,10 @@ export class PlantDetectionService {
           const avgBrightness = totalBrightness / totalPixels / 255;
           
           resolve({
-            hasGreenColors: greenPercentage > 0.15,
-            hasOrganicShapes: greenPercentage > 0.1 && colorSet.size > 3,
-            hasLeafLikeStructures: greenPercentage > 0.2 && avgBrightness > 0.2,
-            hasNaturalTextures: colorSet.size > 5,
+            hasGreenColors: greenPercentage > 0.08, // Abbassato da 0.15 a 0.08
+            hasOrganicShapes: greenPercentage > 0.05 && colorSet.size > 2, // Soglie più permissive
+            hasLeafLikeStructures: greenPercentage > 0.08 && avgBrightness > 0.1, // Soglie ridotte
+            hasNaturalTextures: colorSet.size > 3, // Ridotto da 5 a 3
             brightness: avgBrightness,
             colorVariety: colorSet.size
           });
