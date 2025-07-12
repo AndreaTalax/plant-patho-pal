@@ -6,7 +6,8 @@
 export const getWhitelistedCredentials = () => ({
   'agrotecnicomarconigro@gmail.com': 'marconigro93',
   'test@gmail.com': 'test123',
-  'premium@gmail.com': 'premium123'
+  'premium@gmail.com': 'premium123',
+  'talaiaandrea@gmail.com': 'test123'
 });
 
 export const isWhitelistedEmail = (email: string): boolean => {
