@@ -9,6 +9,7 @@ import { eppoApiService } from '@/utils/eppoApiService';
 import { PlantDiseaseService } from './PlantDiseaseService';
 import { toast } from "@/components/ui/sonner";
 import { type CombinedAnalysisResult } from '@/types/analysis';
+import { supabase } from '@/integrations/supabase/client';
 
 export type { CombinedAnalysisResult } from '@/types/analysis';
 
@@ -33,10 +34,7 @@ export interface EnhancedAnalysisResult extends CombinedAnalysisResult {
 }
 
 export class EnhancedPlantAnalysisService {
-  private static readonly PLANT_ID_API_KEY = '6d4146706e385077db06e57b76fd967d10b4cb2ce23070580160ebb069da8420';
-  private static readonly PLANTNET_API_KEY = '2c3cc11af50602d90073a401dc7ccce7ba70abc40bda9d84794';
-  private static readonly HUGGINGFACE_ACCESS_TOKEN = 'fb752ef5f96488fc2659a524aeece4b8d790b82b7cf19fe4c4e72ba86298cb60';
-  private static readonly EPPO_API_KEY = 'ce550a719eec290cb93614cc5dcc027e39164548e21f5849900416cfd3537f8d';
+  // Rimuoviamo le chiavi hardcoded - ora usiamo solo edge functions con chiavi configurate nei segreti
 
   static async analyzeImage(
     imageBase64: string, 
@@ -184,24 +182,34 @@ export class EnhancedPlantAnalysisService {
       // Prima identifica la pianta con Plant.ID per ottenere il nome
       const plantID = await PlantIDService.identifyPlant(imageBase64);
       if (plantID.plantName && plantID.plantName !== 'Pianta non identificata') {
-        // Cerca nel database EPPO usando il nome della pianta
-        const headers = {
-          'Authorization': `Bearer ${this.EPPO_API_KEY}`,
-          'Content-Type': 'application/json'
-        };
-        
-        const [eppoResults, eppoPlants, eppoDiseases] = await Promise.all([
-          fetch(`https://data.eppo.int/api/rest/1.0/tools/search?kw=${encodeURIComponent(plantID.plantName)}&searchfor=pests`, { headers }).then(r => r.json()).catch(() => []),
-          fetch(`https://data.eppo.int/api/rest/1.0/tools/search?kw=${encodeURIComponent(plantID.plantName)}&searchfor=plants`, { headers }).then(r => r.json()).catch(() => []),
-          fetch(`https://data.eppo.int/api/rest/1.0/tools/search?kw=${encodeURIComponent(plantID.plantName)}&searchfor=diseases`, { headers }).then(r => r.json()).catch(() => [])
-        ]);
-        
-        return {
-          pests: eppoResults,
-          plants: eppoPlants,
-          diseases: eppoDiseases,
-          searchTerm: plantID.plantName
-        };
+        // Usa la edge function EPPO invece di chiamate dirette
+        try {
+          const { data: eppoData, error } = await supabase.functions.invoke('eppo-search', {
+            body: { plantName: plantID.plantName }
+          });
+          
+          if (error) {
+            console.error('❌ Errore EPPO edge function:', error);
+            return {
+              pests: [],
+              plants: [],
+              diseases: [],
+              searchTerm: plantID.plantName,
+              source: 'fallback_error'
+            };
+          }
+          
+          return eppoData;
+        } catch (error) {
+          console.error('❌ Errore chiamata EPPO:', error);
+          return {
+            pests: [],
+            plants: [],
+            diseases: [],
+            searchTerm: plantID.plantName,
+            source: 'fallback_catch'
+          };
+        }
       }
       return null;
     } catch (error) {
