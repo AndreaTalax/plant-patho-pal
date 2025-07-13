@@ -21,7 +21,7 @@ export const usePlantImageUpload = ({
     }
   };
 
-  // Se l'immagine arriva dalla fotocamera (base64)
+  // Se l'immagine arriva dalla fotocamera (base64) - NON avvia automaticamente l'analisi
   const captureImage = (imageDataUrl: string, plantInfo?: PlantInfo) => {
     if (!imageDataUrl) {
       toast.error("Errore nella cattura dell'immagine");
@@ -30,16 +30,12 @@ export const usePlantImageUpload = ({
     setUploadedImage(imageDataUrl);
     stopCameraStream();
     setAnalysisProgress(0);
-
-    try {
-      const imageFile = dataURLtoFile(imageDataUrl, "camera-capture.jpg");
-      analyzeUploadedImage(imageFile, plantInfo);
-    } catch (error) {
-      toast.error("Errore nell'elaborazione dell'immagine catturata");
-    }
+    
+    // NON avviare automaticamente l'analisi qui
+    console.log('📸 Immagine catturata, in attesa della scelta dell\'utente per la diagnosi');
   };
 
-  // Gestione upload normale
+  // Gestione upload normale - NON avvia automaticamente l'analisi
   const handleImageUpload = (file: File, plantInfo?: PlantInfo) => {
     if (!file) {
       toast.error("Nessun file selezionato");
@@ -50,7 +46,8 @@ export const usePlantImageUpload = ({
       const result = event.target?.result;
       if (result) {
         setUploadedImage(result as string);
-        analyzeUploadedImage(file, plantInfo);
+        // NON avviare automaticamente l'analisi qui
+        console.log('📁 File caricato, in attesa della scelta dell\'utente per la diagnosi');
       } else {
         toast.error("Errore nella lettura del file");
       }

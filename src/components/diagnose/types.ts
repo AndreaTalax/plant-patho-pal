@@ -1,4 +1,3 @@
-
 export interface PlantInfo {
   isIndoor: boolean;
   wateringFrequency: string;
@@ -8,6 +7,8 @@ export interface PlantInfo {
   sendToExpert: boolean;
   name: string;
   infoComplete: boolean;
+  uploadedFile?: File | null;
+  uploadedImageUrl?: string | null;
 }
 
 export interface DiagnosedDisease {

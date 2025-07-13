@@ -37,7 +37,6 @@ const DiagnoseTab = () => {
     analysisDetails,
     resetDiagnosis,
     captureImage,
-    handleImageUpload,
     analyzeUploadedImage,
     stopCameraStream,
     setUploadedImage,
@@ -113,7 +112,7 @@ const DiagnoseTab = () => {
     toast.success('Informazioni pianta salvate! Ora scatta o carica una foto.');
   }, [setPlantInfo]);
 
-  // File upload handler con verifica pianta
+  // File upload handler - NON avvia automaticamente la diagnosi
   const handleFileUpload = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -130,16 +129,27 @@ const DiagnoseTab = () => {
     }
 
     try {
-      handleImageUpload(file, plantInfo);
+      // Crea URL temporaneo SENZA avviare l'analisi
+      const tempUrl = URL.createObjectURL(file);
+      setUploadedImage(tempUrl);
+      
+      // Salva il file per uso futuro (quando l'utente sceglie il metodo di diagnosi)
+      const updatedPlantInfo = { 
+        ...plantInfo, 
+        uploadedFile: file,
+        uploadedImageUrl: tempUrl
+      };
+      setPlantInfo(updatedPlantInfo);
+      
       setCurrentStage('options');
       toast.success('Immagine verificata e caricata! Ora scegli il metodo di diagnosi.');
     } catch (error) {
       console.error('Errore caricamento file:', error);
       toast.error('Errore nel caricamento immagine');
     }
-  }, [handleImageUpload, plantInfo]);
+  }, [plantInfo, setPlantInfo, setUploadedImage]);
 
-  // Camera capture handler migliorato per permettere nuove foto
+  // Camera capture handler - NON avvia automaticamente la diagnosi
   const handleCameraCapture = useCallback(async (imageDataUrl: string) => {
     try {
       // Converti data URL in file per la verifica
@@ -158,8 +168,17 @@ const DiagnoseTab = () => {
         return; // Esci senza chiudere la fotocamera
       }
       
-      // Solo se la pianta è stata rilevata, procedi con la chiusura della fotocamera
-      captureImage(imageDataUrl, plantInfo);
+      // Solo se la pianta è stata rilevata, procedi
+      setUploadedImage(imageDataUrl);
+      
+      // Salva il file per uso futuro
+      const updatedPlantInfo = { 
+        ...plantInfo, 
+        uploadedFile: file,
+        uploadedImageUrl: imageDataUrl
+      };
+      setPlantInfo(updatedPlantInfo);
+      
       setShowCamera(false);
       setCameraStoppedByUser(false);
       setCurrentStage('options');
@@ -168,7 +187,7 @@ const DiagnoseTab = () => {
       console.error('Errore verifica foto catturata:', error);
       toast.error('Errore nella verifica della foto. Riprova.');
     }
-  }, [captureImage, plantInfo]);
+  }, [plantInfo, setPlantInfo, setUploadedImage]);
 
   // Gestione chiusura fotocamera da parte dell'utente
   const handleCameraCancel = useCallback(() => {
@@ -247,26 +266,23 @@ const DiagnoseTab = () => {
     }
   }, [userProfile, uploadedImage, plantInfo, diagnosedDisease, dataSentToExpert, hasActiveSubscription]);
 
-  // AI diagnosis selection con GPT-4 Vision
+  // AI diagnosis selection con GPT-4 Vision - ORA viene chiamata solo quando l'utente sceglie AI
   const handleSelectAI = useCallback(async () => {
     if (!hasAIAccess) {
       toast.error('La diagnosi AI richiede un account Premium');
       return;
     }
 
-    if (!uploadedImage) {
+    if (!plantInfo.uploadedFile) {
       toast.error('Nessuna immagine disponibile per l\'analisi');
       return;
     }
 
     try {
-      // Converti l'immagine in File per la nuova API
-      const response = await fetch(uploadedImage);
-      const blob = await response.blob();
-      const file = new File([blob], 'analysis-image.jpg', { type: 'image/jpeg' });
+      console.log('🤖 Avvio diagnosi AI selezionata dall\'utente...');
       
-      // Usa il nuovo sistema GPT-4 Vision
-      await analyzeUploadedImage(file, plantInfo);
+      // Usa il file salvato precedentemente
+      await analyzeUploadedImage(plantInfo.uploadedFile, plantInfo);
       
       toast.info('🤖 Analisi GPT-4 Vision avviata...', {
         description: 'Utilizzo dell\'AI più avanzata per la diagnosi fitopatologica'
@@ -276,7 +292,7 @@ const DiagnoseTab = () => {
       console.error('❌ Errore analisi GPT-4 Vision:', error);
       toast.error(`Analisi fallita: ${error.message}`);
     }
-  }, [uploadedImage, hasAIAccess, analyzeUploadedImage, plantInfo]);
+  }, [plantInfo, hasAIAccess, analyzeUploadedImage]);
 
   // Expert consultation selection
   const handleSelectExpert = useCallback(async () => {
