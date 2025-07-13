@@ -214,6 +214,7 @@ export class PlantDetectionService {
 
       if (error) {
         console.error("❌ Errore edge function PlantNet:", error);
+        console.error("❌ Dettagli errore PlantNet:", JSON.stringify(error, null, 2));
         // Fallback all'analisi locale
         const analysis = await this.analyzeImageFeatures(imageData);
         return {

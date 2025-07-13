@@ -36,12 +36,18 @@ serve(async (req) => {
       );
     }
 
-    const plantNetApiKey = Deno.env.get('PLANT_NET_KEY');
+    const plantNetApiKey = Deno.env.get('PLANT_NET_KEY') || Deno.env.get('PLANTNET');
+    console.log('🔑 Controllo PLANT_NET_KEY:', plantNetApiKey ? 'PRESENTE' : 'ASSENTE');
+    
     if (!plantNetApiKey) {
       console.error('❌ PLANT_NET_KEY non trovata nei segreti');
       return new Response(
-        JSON.stringify({ error: 'Chiave API PlantNet non configurata' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ 
+          error: 'Chiave API PlantNet non configurata',
+          isPlant: false,
+          confidence: 0
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
