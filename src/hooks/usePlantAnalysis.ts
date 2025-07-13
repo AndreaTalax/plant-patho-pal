@@ -122,16 +122,38 @@ export const usePlantAnalysis = () => {
       let allFeatures: string[] = [];
       let combinedConfidence = 0;
       let servicesUsed: string[] = [];
+      let isHealthy = true; // Default sano, ma cambierà se troviamo malattie
       
-      // GPT-4 Vision results (primary)
+        // GPT-4 Vision results (primary)
       if (gptResult.status === 'fulfilled' && !gptResult.value.error) {
         primaryAnalysis = gptResult.value.data.analysis || {};
-        if (primaryAnalysis.diseases) {
+        console.log('🧠 GPT-4 Vision analysis ricevuta:', primaryAnalysis);
+        
+        if (primaryAnalysis.diseases && primaryAnalysis.diseases.length > 0) {
+          console.log('🏥 Malattie rilevate da GPT-4 Vision:', primaryAnalysis.diseases);
           allDiseases.push(...primaryAnalysis.diseases.map((d: any) => ({ ...d, source: 'GPT-4 Vision' })));
+          isHealthy = false; // Se GPT-4 trova malattie, la pianta NON è sana
         }
+        
+        // Se GPT dice che è malata, rispetta questa valutazione
+        if (primaryAnalysis.healthStatus === 'diseased') {
+          console.log('🚨 GPT-4 Vision ha determinato che la pianta è malata');
+          isHealthy = false;
+        }
+        
+        // Log dei sintomi rilevati
+        if (primaryAnalysis.symptoms && primaryAnalysis.symptoms.length > 0) {
+          console.log('🔍 Sintomi rilevati da GPT-4 Vision:', primaryAnalysis.symptoms);
+          allFeatures.push(...primaryAnalysis.symptoms.map((s: string) => `Sintomo: ${s}`));
+        }
+        
         combinedConfidence = Math.max(combinedConfidence, primaryAnalysis.confidence || 0);
         servicesUsed.push('GPT-4 Vision');
-        allFeatures.push('Analisi GPT-4 Vision completata');
+        allFeatures.push(`GPT-4 Vision: ${primaryAnalysis.healthStatus || 'analizzata'}`);
+        
+      } else {
+        console.error('❌ GPT-4 Vision fallito:', gptResult);
+        allFeatures.push('GPT-4 Vision: fallito');
       }
       
       // Plant.ID results
@@ -176,8 +198,7 @@ export const usePlantAnalysis = () => {
       
       // Estrai informazioni dalla risposta principale (GPT-4 Vision se disponibile)
       const plantSpecies = primaryAnalysis?.species || 'Pianta identificata tramite Multi-AI';
-      const healthStatus = primaryAnalysis?.healthStatus || 'unknown';
-      const isHealthy = healthStatus === 'healthy';
+      const healthStatus = primaryAnalysis?.healthStatus || (isHealthy ? 'healthy' : 'diseased');
       const gptSymptoms = primaryAnalysis?.symptoms || [];
       const gptRecommendations = primaryAnalysis?.recommendations || [];
       

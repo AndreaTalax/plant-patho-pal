@@ -39,34 +39,54 @@ serve(async (req) => {
 
     console.log('🖼️ Analizzando immagine con GPT-4 Vision:', imageUrl);
 
-    // Prompt specializzato per fitopatologia
-    const systemPrompt = `Sei un esperto fitopatologo specializzato nella diagnosi delle malattie delle piante. 
-Analizza l'immagine fornita e fornisci una diagnosi dettagliata in formato JSON con le seguenti informazioni:
+    // Prompt specializzato per fitopatologia con focus sui sintomi visibili
+    const systemPrompt = `Sei un esperto fitopatologo con 20 anni di esperienza nella diagnosi delle malattie delle piante. 
+Analizza ATTENTAMENTE l'immagine fornita e identifica TUTTI i sintomi visibili e le possibili malattie.
+
+IMPORTANTE: Se vedi macchie, decolorazioni, necrosi, muffe, lesioni o qualsiasi anomalia sulle foglie o altre parti della pianta, DEVI identificarle come segni di malattia.
+
+Fornisci una diagnosi dettagliata in formato JSON con le seguenti informazioni:
 
 {
   "species": "Nome scientifico e comune della specie identificata",
-  "healthStatus": "healthy" | "diseased" | "stressed",
-  "confidence": numero da 0 a 1,
+  "healthStatus": "diseased" se ci sono QUALSIASI sintomi visibili, altrimenti "healthy",
+  "confidence": numero da 0.6 a 0.95 (sii conservativo ma accurato),
   "diseases": [
     {
-      "name": "Nome della malattia",
-      "confidence": numero da 0 a 1,
-      "severity": "low" | "medium" | "high",
-      "symptoms": ["lista dei sintomi osservati"],
-      "causes": ["possibili cause (fungo, batterio, virus, carenza, etc.)"],
-      "treatment": "Trattamento raccomandato"
+      "name": "Nome specifico della malattia (es. Oidio, Peronospora, Antracnosi, ecc.)",
+      "confidence": numero da 0.6 a 0.95,
+      "severity": "low", "medium" o "high" basato su estensione dei sintomi,
+      "symptoms": ["descrivi ESATTAMENTE cosa vedi: colore macchie, forma, posizione, etc."],
+      "causes": ["agente patogeno specifico: fungo, batterio, virus, carenza nutrizionale"],
+      "treatment": "Trattamento specifico e dettagliato per questa malattia"
     }
   ],
-  "symptoms": ["tutti i sintomi visibili nell'immagine"],
-  "recommendations": ["raccomandazioni generali per la cura"],
-  "urgency": "low" | "medium" | "high"
+  "symptoms": ["TUTTI i sintomi visibili nell'immagine con dettagli precisi"],
+  "recommendations": ["raccomandazioni specifiche basate sui sintomi osservati"],
+  "urgency": "high" se ci sono molti sintomi gravi, "medium" se sintomi moderati, "low" se sintomi lievi
 }
 
-Concentrati su dettagli come: macchie fogliari, decolorazioni, necrosi, muffe, presenza di parassiti, deformazioni, appassimenti.`;
+ESEMPI DI SINTOMI DA IDENTIFICARE:
+- Macchie bianche/grigiastre = Oidio (Powdery Mildew)
+- Macchie gialle con margini scuri = Peronospora 
+- Macchie brune circolari = Antracnosi
+- Ingiallimento foglie = Carenze nutrizionali o virosi
+- Macchie nere = Fumaggine o malattie batteriche
+- Foglie arricciate = Virus o afidi
+- Necrosi margini = Bruciature da fertilizzanti o stress idrico
+
+CONCENTRATI su: macchie fogliari, decolorazioni, muffe, necrosi, deformazioni, presenza di parassiti, appassimenti.`;
 
     const userPrompt = plantInfo 
-      ? `Analizza questa pianta (${plantInfo.name || 'specie non specificata'}) per malattie o problemi di salute. ${plantInfo.symptoms ? `Sintomi riferiti: ${plantInfo.symptoms}` : ''}`
-      : 'Analizza questa pianta per identificare specie, malattie o problemi di salute.';
+      ? `Analizza questa pianta (${plantInfo.name || 'specie da identificare'}) per malattie o problemi di salute. 
+         ${plantInfo.symptoms ? `Sintomi riferiti dal proprietario: ${plantInfo.symptoms}` : ''}
+         
+         OSSERVA ATTENTAMENTE ogni foglia, stelo e parte visibile della pianta. 
+         Se vedi QUALSIASI macchia, decolorazione o anomalia, identifica la possibile malattia.
+         NON dire che è sana se ci sono sintomi visibili.`
+      : `Analizza questa pianta per identificare specie e TUTTE le malattie o problemi di salute visibili.
+         ESAMINA ogni dettaglio dell'immagine per sintomi di malattie.
+         Se vedi macchie, muffe, decolorazioni o anomalie, identifica la malattia specifica.`;
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -92,8 +112,8 @@ Concentrati su dettagli come: macchie fogliari, decolorazioni, necrosi, muffe, p
             ]
           }
         ],
-        max_tokens: 1500,
-        temperature: 0.3
+        max_tokens: 2000,
+        temperature: 0.1 // Più deterministica per diagnosi accurate
       }),
     });
 
