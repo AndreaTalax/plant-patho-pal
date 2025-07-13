@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -32,6 +32,39 @@ export const PaymentRequiredModal: React.FC<PaymentRequiredModalProps> = ({
   onSubscribed
 }) => {
   const [isCreatingCheckout, setIsCreatingCheckout] = useState(false);
+  const [checkingPayment, setCheckingPayment] = useState(false);
+
+  // Controlla lo stato dell'abbonamento quando la finestra diventa attiva
+  useEffect(() => {
+    if (!open) return;
+
+    const handleFocus = async () => {
+      if (checkingPayment) return;
+      
+      setCheckingPayment(true);
+      try {
+        const hasSubscription = await SubscriptionService.hasActiveSubscription();
+        if (hasSubscription && onSubscribed) {
+          console.log('✅ Abbonamento attivato, eseguendo callback...');
+          onSubscribed();
+        }
+      } catch (error) {
+        console.error('Errore controllo abbonamento:', error);
+      } finally {
+        setCheckingPayment(false);
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    
+    // Controllo periodico ogni 3 secondi quando il modal è aperto
+    const interval = setInterval(handleFocus, 3000);
+
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      clearInterval(interval);
+    };
+  }, [open, onSubscribed, checkingPayment]);
 
   const handleSubscribe = async () => {
     setIsCreatingCheckout(true);

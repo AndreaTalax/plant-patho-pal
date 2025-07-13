@@ -61,8 +61,11 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
       return;
     }
 
-    // Controllo abbonamento prima dell'invio
-    if (!hasActiveSubscription()) {
+    // Controllo ruolo amministratore (accesso libero)
+    const isAdmin = userProfile?.role === 'admin';
+    
+    // Controllo abbonamento per utenti non-admin
+    if (!isAdmin && !hasActiveSubscription()) {
       setShowPaymentModal(true);
       return;
     }
@@ -500,8 +503,11 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
         onClose={() => setShowPaymentModal(false)}
         onSubscribed={() => {
           setShowPaymentModal(false);
-          // Dopo il pagamento, l'utente può provare di nuovo
-          toast.success('Abbonamento attivato! Ora puoi contattare l\'esperto.');
+          toast.success('Abbonamento attivato! Invio dati all\'esperto...');
+          // Dopo il pagamento, invia automaticamente i dati all'esperto
+          setTimeout(() => {
+            handleSendToExpert();
+          }, 1500);
         }}
       />
     </div>
