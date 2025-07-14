@@ -84,8 +84,10 @@ const ProfessionalExpertDashboard = () => {
   const [selectedConversation, setSelectedConversation] = useState<ConversationSummary | null>(null);
   const [activeTab, setActiveTab] = useState('conversations');
   const [deletingConversation, setDeletingConversation] = useState<string | null>(null);
+  const [finishedConversations, setFinishedConversations] = useState<ConversationSummary[]>([]);
   const [stats, setStats] = useState({
     totalConversations: 0,
+    finishedConversations: 0,
     pendingConsultations: 0,
     todayMessages: 0,
     activeUsers: 0
@@ -96,7 +98,7 @@ const ProfessionalExpertDashboard = () => {
       console.log('📊 Loading professional dashboard data...');
       setLoading(true);
       
-      // Load conversations with enhanced data
+      // Load active conversations
       const { data: conversationsData, error: conversationsError } = await supabase
         .from('conversations')
         .select(`
@@ -109,6 +111,23 @@ const ProfessionalExpertDashboard = () => {
           updated_at
         `)
         .eq('expert_id', MARCO_NIGRO_ID)
+        .eq('status', 'active')
+        .order('updated_at', { ascending: false });
+
+      // Load finished conversations
+      const { data: finishedConversationsData, error: finishedError } = await supabase
+        .from('conversations')
+        .select(`
+          id,
+          user_id,
+          last_message_text,
+          last_message_at,
+          status,
+          created_at,
+          updated_at
+        `)
+        .eq('expert_id', MARCO_NIGRO_ID)
+        .eq('status', 'finished')
         .order('updated_at', { ascending: false });
 
       if (conversationsError) {
@@ -136,6 +155,29 @@ const ProfessionalExpertDashboard = () => {
         );
         
         setConversations(conversationsWithProfiles);
+
+        // Process finished conversations
+        const finishedConversationsWithProfiles = await Promise.all(
+          (finishedConversationsData || []).map(async (conversation) => {
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('first_name, last_name, email, is_online, phone, address')
+              .eq('id', conversation.user_id)
+              .single();
+            
+            return {
+              id: conversation.id,
+              user_id: conversation.user_id,
+              last_message_text: conversation.last_message_text || 'Nessun messaggio',
+              last_message_timestamp: conversation.last_message_at,
+              status: conversation.status || 'finished',
+              created_at: conversation.created_at,
+              user_profile: profile
+            };
+          })
+        );
+        
+        setFinishedConversations(finishedConversationsWithProfiles);
         
         // Calculate stats
         const todayStart = new Date();
@@ -148,6 +190,7 @@ const ProfessionalExpertDashboard = () => {
         
         setStats({
           totalConversations: conversationsWithProfiles.length,
+          finishedConversations: finishedConversationsWithProfiles.length,
           pendingConsultations: 0, // Will be updated with consultations
           todayMessages: todayMessagesCount || 0,
           activeUsers: conversationsWithProfiles.filter(c => c.user_profile?.is_online).length
@@ -320,15 +363,27 @@ const ProfessionalExpertDashboard = () => {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
           <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-blue-600 mb-1">Conversazioni Totali</p>
+                  <p className="text-sm font-medium text-blue-600 mb-1">Conversazioni Attive</p>
                   <p className="text-3xl font-bold text-blue-900">{stats.totalConversations}</p>
                 </div>
                 <MessageSquare className="h-8 w-8 text-blue-600" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-br from-red-50 to-red-100 border-red-200">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-red-600 mb-1">Conversazioni Finite</p>
+                  <p className="text-3xl font-bold text-red-900">{stats.finishedConversations}</p>
+                </div>
+                <AlertCircle className="h-8 w-8 text-red-600" />
               </div>
             </CardContent>
           </Card>
@@ -374,13 +429,20 @@ const ProfessionalExpertDashboard = () => {
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <div className="border-b border-gray-200 bg-gray-50">
-              <TabsList className="grid w-full grid-cols-2 bg-transparent h-16">
+              <TabsList className="grid w-full grid-cols-3 bg-transparent h-16">
                 <TabsTrigger 
                   value="conversations" 
                   className="flex items-center gap-3 h-12 text-base data-[state=active]:bg-white data-[state=active]:shadow-sm"
                 >
                   <MessageSquare className="h-5 w-5" />
-                  Conversazioni ({conversations.length})
+                  Conversazioni Attive ({conversations.length})
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="finished" 
+                  className="flex items-center gap-3 h-12 text-base data-[state=active]:bg-white data-[state=active]:shadow-sm"
+                >
+                  <AlertCircle className="h-5 w-5" />
+                  Conversazioni Finite ({finishedConversations.length})
                 </TabsTrigger>
                 <TabsTrigger 
                   value="consultations" 
@@ -403,8 +465,8 @@ const ProfessionalExpertDashboard = () => {
                   {conversations.length === 0 ? (
                     <div className="text-center py-12">
                       <MessageSquare className="h-16 w-16 mx-auto mb-4 text-gray-300" />
-                      <h3 className="text-lg font-medium text-gray-900 mb-2">Nessuna conversazione</h3>
-                      <p className="text-gray-500">Le nuove conversazioni appariranno qui</p>
+                      <h3 className="text-lg font-medium text-gray-900 mb-2">Nessuna conversazione attiva</h3>
+                      <p className="text-gray-500">Le nuove conversazioni attive appariranno qui</p>
                     </div>
                   ) : (
                     conversations.map((conversation) => (
@@ -433,6 +495,9 @@ const ProfessionalExpertDashboard = () => {
                                   </h3>
                                   <Badge variant={conversation.user_profile?.is_online ? "default" : "secondary"}>
                                     {conversation.user_profile?.is_online ? 'Online' : 'Offline'}
+                                  </Badge>
+                                  <Badge variant="outline" className="bg-green-50 text-green-700">
+                                    Attiva
                                   </Badge>
                                 </div>
                                 
@@ -475,56 +540,6 @@ const ProfessionalExpertDashboard = () => {
                                 <Eye className="h-4 w-4 mr-2" />
                                 Visualizza
                               </Button>
-                              
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="outline" size="icon">
-                                    <MoreHorizontal className="h-4 w-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" className="bg-white">
-                                  <AlertDialog>
-                                    <AlertDialogTrigger asChild>
-                                      <DropdownMenuItem 
-                                        className="text-red-600 focus:text-red-600 focus:bg-red-50"
-                                        onSelect={(e) => e.preventDefault()}
-                                      >
-                                        <Trash2 className="h-4 w-4 mr-2" />
-                                        Elimina conversazione
-                                      </DropdownMenuItem>
-                                    </AlertDialogTrigger>
-                                    <AlertDialogContent className="bg-white">
-                                      <AlertDialogHeader>
-                                        <AlertDialogTitle>Elimina conversazione</AlertDialogTitle>
-                                        <AlertDialogDescription>
-                                          Sei sicuro di voler eliminare questa conversazione con {getUserDisplayName(conversation.user_profile)}? 
-                                          Questa azione non può essere annullata e verranno eliminati tutti i messaggi.
-                                        </AlertDialogDescription>
-                                      </AlertDialogHeader>
-                                      <AlertDialogFooter>
-                                        <AlertDialogCancel>Annulla</AlertDialogCancel>
-                                        <AlertDialogAction
-                                          onClick={() => handleForceDeleteConversation(conversation.id)}
-                                          className="bg-red-600 hover:bg-red-700"
-                                          disabled={deletingConversation === conversation.id}
-                                        >
-                                          {deletingConversation === conversation.id ? (
-                                            <>
-                                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                              Eliminando...
-                                            </>
-                                          ) : (
-                                            <>
-                                              <Trash2 className="h-4 w-4 mr-2" />
-                                              Elimina definitivamente
-                                            </>
-                                          )}
-                                        </AlertDialogAction>
-                                      </AlertDialogFooter>
-                                    </AlertDialogContent>
-                                  </AlertDialog>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
                             </div>
                           </div>
                         </CardContent>
@@ -533,6 +548,137 @@ const ProfessionalExpertDashboard = () => {
                   )}
                 </div>
               )}
+            </TabsContent>
+
+            <TabsContent value="finished" className="p-6">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">Conversazioni Finite</h3>
+                    <p className="text-sm text-gray-600">Gestisci le conversazioni completate che possono essere eliminate</p>
+                  </div>
+                  {finishedConversations.length > 0 && (
+                    <div className="text-sm text-gray-500">
+                      {finishedConversations.length} conversazioni finite
+                    </div>
+                  )}
+                </div>
+
+                {finishedConversations.length === 0 ? (
+                  <div className="text-center py-12">
+                    <AlertCircle className="h-16 w-16 mx-auto mb-4 text-gray-300" />
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">Nessuna conversazione finita</h3>
+                    <p className="text-gray-500">Le conversazioni completate appariranno qui</p>
+                  </div>
+                ) : (
+                  finishedConversations.map((conversation) => (
+                    <Card 
+                      key={conversation.id} 
+                      className="hover:shadow-md transition-all duration-200 border-l-4 border-l-red-300 hover:border-l-red-500"
+                    >
+                      <CardContent className="p-6">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-4 flex-1">
+                            <div className="relative">
+                              <Avatar className="h-12 w-12">
+                                <AvatarFallback className="bg-red-50 text-red-700 font-semibold">
+                                  {getInitials(conversation.user_profile?.first_name, conversation.user_profile?.last_name)}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white bg-red-500" />
+                            </div>
+                            
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-3 mb-2">
+                                <h3 className="font-semibold text-gray-900 text-lg">
+                                  {getUserDisplayName(conversation.user_profile)}
+                                </h3>
+                                <Badge variant="destructive">
+                                  Finita
+                                </Badge>
+                              </div>
+                              
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600">
+                                <div className="flex items-center gap-2">
+                                  <Mail className="h-4 w-4" />
+                                  <span className="truncate">{conversation.user_profile?.email || 'N/A'}</span>
+                                </div>
+                                {conversation.user_profile?.phone && (
+                                  <div className="flex items-center gap-2">
+                                    <Phone className="h-4 w-4" />
+                                    <span>{conversation.user_profile.phone}</span>
+                                  </div>
+                                )}
+                                {conversation.user_profile?.address && (
+                                  <div className="flex items-center gap-2">
+                                    <MapPin className="h-4 w-4" />
+                                    <span className="truncate">{conversation.user_profile.address}</span>
+                                  </div>
+                                )}
+                              </div>
+                              
+                              <div className="mt-3 p-3 bg-red-50 rounded-lg">
+                                <p className="text-sm text-gray-700 mb-2">
+                                  <strong>Ultimo messaggio:</strong> {conversation.last_message_text}
+                                </p>
+                                <div className="flex items-center gap-2 text-xs text-gray-500">
+                                  <Calendar className="h-3 w-3" />
+                                  Creato: {formatDate(conversation.created_at)}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div className="flex items-center gap-2 ml-4">
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  variant="destructive"
+                                  size="sm"
+                                  className="bg-red-600 hover:bg-red-700"
+                                  disabled={deletingConversation === conversation.id}
+                                >
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  Elimina Definitivamente
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent className="bg-white">
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Elimina conversazione finita</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Sei sicuro di voler eliminare definitivamente questa conversazione finita con {getUserDisplayName(conversation.user_profile)}? 
+                                    Questa azione non può essere annullata e verranno eliminati tutti i messaggi e i dati associati.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Annulla</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    onClick={() => handleForceDeleteConversation(conversation.id)}
+                                    className="bg-red-600 hover:bg-red-700"
+                                    disabled={deletingConversation === conversation.id}
+                                  >
+                                    {deletingConversation === conversation.id ? (
+                                      <>
+                                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                        Eliminando...
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Trash2 className="h-4 w-4 mr-2" />
+                                        Elimina Definitivamente
+                                      </>
+                                    )}
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))
+                )}
+              </div>
             </TabsContent>
 
             <TabsContent value="consultations" className="p-6">
