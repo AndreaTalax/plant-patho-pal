@@ -5,7 +5,7 @@ import MessageInput from '../MessageInput';
 import { Message, Conversation } from '../types';
 
 interface ConversationBodyProps {
-  conversation: Conversation;
+  conversation: Conversation & { user_id?: string; expertId?: string };
   isSending: boolean;
   onSendMessage: (text: string) => Promise<void>;
   onOpenProductDialog: () => void;
@@ -42,8 +42,8 @@ const ConversationBody = ({
         ) : (
           <MessageInput
             conversationId={conversation.id}
-            senderId="expert"
-            recipientId={conversation.id}
+            senderId={conversation.expertId || "expert"}
+            recipientId={conversation.user_id || conversation.id}
             onSendMessage={async (message: string) => {
               await onSendMessage(message);
             }}

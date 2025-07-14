@@ -72,6 +72,7 @@ export const useExpertConversation = (userId: string) => {
             time: conv.last_message_at ? new Date(conv.last_message_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
             unreadCount: 0, // TODO: Implement unread count
             expertId: conv.expert_id,
+            user_id: conv.user_id,
             username: username,
             blocked: conv.status === "blocked",
             messages: [],
@@ -188,37 +189,43 @@ export const useExpertConversation = (userId: string) => {
   
   // Delete conversation
   /**
-   * Archives a conversation and updates UI state accordingly.
+   * Deletes a conversation completely and updates UI state accordingly.
    * @example
    * sync('conversation-123')
-   * // Archives 'conversation-123' and updates the UI.
-   * @param {string} conversationId - The unique identifier of the conversation to be archived.
+   * // Deletes 'conversation-123' and updates the UI.
+   * @param {string} conversationId - The unique identifier of the conversation to be deleted.
    * @returns {void} Does not return a value.
    * @description
-   *   - Attempts to archive the conversation by updating its status to 'archived'.
-   *   - Displays a toast message indicating success or error in archiving.
-   *   - Updates conversation list to exclude archived conversation.
-   *   - Resets current conversation if it matches the id of the archived conversation.
+   *   - Attempts to delete the conversation using the Supabase edge function.
+   *   - Displays a toast message indicating success or error in deletion.
+   *   - Updates conversation list to exclude deleted conversation.
+   *   - Resets current conversation if it matches the id of the deleted conversation.
    */
   const handleDeleteConversation = async (conversationId: string) => {
     try {
-      // Archive conversation instead of deleting it
-      const success = await updateConversationStatus(conversationId, 'archived');
-        
-      if (!success) {
-        toast("Error archiving conversation");
+      console.log('🗑️ Attempting to delete conversation:', conversationId);
+      
+      // Call Supabase edge function to delete conversation
+      const { data, error } = await supabase.functions.invoke('delete-conversation', {
+        body: { conversationId }
+      });
+      
+      if (error) {
+        console.error('Error deleting conversation:', error);
+        toast.error('Errore nell\'eliminazione della conversazione');
         return;
       }
       
+      // Update UI state
       setConversations(prev => prev.filter(conv => conv.id !== conversationId));
       if (currentConversation?.id === conversationId) {
         setCurrentConversation(null);
       }
       
-      toast("Conversation deleted successfully");
+      toast.success('Conversazione eliminata con successo');
     } catch (error) {
-      console.error("Error in handleDeleteConversation:", error);
-      toast("Error deleting conversation");
+      console.error('Error in handleDeleteConversation:', error);
+      toast.error('Errore nell\'eliminazione della conversazione');
     }
   };
   

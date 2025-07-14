@@ -20,6 +20,7 @@ export interface Conversation {
   time: string;
   unreadCount: number;
   expertId?: string;
+  user_id?: string;
   username?: string;
   blocked?: boolean;
   messages?: Message[];
