@@ -354,11 +354,18 @@ const DiagnoseTab = () => {
   const handleExpertConsultation = useCallback(async () => {
     const sent = await sendDataToExpert(true);
     if (sent) {
+      // Forzare la navigazione al tab chat per gli account master
+      console.log("🔄 Navigating to expert chat after diagnosis...");
       setTimeout(() => {
-        window.dispatchEvent(new CustomEvent('switchTab', { detail: 'chat' }));
+        if (userProfile?.role === 'expert' || userProfile?.role === 'admin') {
+          // Per account master, usa direttamente 'expert' 
+          window.dispatchEvent(new CustomEvent('switchTab', { detail: 'expert' }));
+        } else {
+          window.dispatchEvent(new CustomEvent('switchTab', { detail: 'chat' }));
+        }
       }, 1500);
     }
-  }, [sendDataToExpert]);
+  }, [sendDataToExpert, userProfile?.role]);
 
   // Render based on current stage
   const renderCurrentStage = () => {

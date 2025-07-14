@@ -132,10 +132,16 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
   };
 
   const handleNavigateToChat = () => {
+    console.log("🔄 Navigating from DiagnosisResult to chat...");
     if (onChatWithExpert) {
       onChatWithExpert();
     } else {
-      window.dispatchEvent(new CustomEvent('switchTab', { detail: 'chat' }));
+      // Controlla se è un account master per navigare correttamente
+      if (userProfile?.role === 'expert' || userProfile?.role === 'admin') {
+        window.dispatchEvent(new CustomEvent('switchTab', { detail: 'expert' }));
+      } else {
+        window.dispatchEvent(new CustomEvent('switchTab', { detail: 'chat' }));
+      }
     }
   };
 
@@ -222,14 +228,22 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* Nome pianta */}
-            <div>
-              <h3 className="font-semibold text-lg">
-                {analysisData.plantName || analysisData.name || 'Pianta identificata'}
+            {/* Nome pianta dettagliato */}
+            <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h3 className="font-semibold text-lg text-green-800 flex items-center gap-2">
+                🌱 {analysisData.plantName || analysisDetails?.plantIdentification || analysisData.name || 'Pianta identificata tramite Multi-AI'}
+                {analysisDetails?.eppoPlantIdentification && (
+                  <Badge className="bg-blue-100 text-blue-800">EPPO Verified</Badge>
+                )}
               </h3>
-              {(analysisData.scientificName || analysisData.variety) && (
-                <p className="text-gray-600 italic">
-                  {analysisData.scientificName || analysisData.variety}
+              {(analysisData.scientificName || analysisData.variety || analysisDetails?.scientificName) && (
+                <p className="text-green-700 italic mt-1 font-medium">
+                  {analysisData.scientificName || analysisDetails?.scientificName || analysisData.variety}
+                </p>
+              )}
+              {analysisDetails?.eppoPlantIdentification && (
+                <p className="text-blue-600 text-sm mt-2">
+                  Identificazione confermata tramite database EPPO: {analysisDetails.eppoPlantIdentification}
                 </p>
               )}
             </div>
