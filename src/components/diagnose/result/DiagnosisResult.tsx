@@ -112,13 +112,15 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
           description: 'Analisi AI + dati pianta + foto inviati a Marco Nigro'
         });
 
-        // Naviga alla chat
+        // Naviga alla chat immediatamente
         if (onChatWithExpert) {
-          setTimeout(() => onChatWithExpert(), 1500);
+          onChatWithExpert();
         } else {
-          setTimeout(() => {
+          if (userProfile?.role === 'expert' || userProfile?.role === 'admin') {
+            window.dispatchEvent(new CustomEvent('switchTab', { detail: 'expert' }));
+          } else {
             window.dispatchEvent(new CustomEvent('switchTab', { detail: 'chat' }));
-          }, 1500);
+          }
         }
       } else {
         toast.error('Errore nell\'invio all\'esperto');
@@ -133,15 +135,23 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
 
   const handleNavigateToChat = () => {
     console.log("🔄 Navigating from DiagnosisResult to chat...");
-    if (onChatWithExpert) {
-      onChatWithExpert();
-    } else {
-      // Controlla se è un account master per navigare correttamente
-      if (userProfile?.role === 'expert' || userProfile?.role === 'admin') {
-        window.dispatchEvent(new CustomEvent('switchTab', { detail: 'expert' }));
+    
+    try {
+      if (onChatWithExpert) {
+        onChatWithExpert();
       } else {
-        window.dispatchEvent(new CustomEvent('switchTab', { detail: 'chat' }));
+        // Navigazione diretta senza delay
+        if (userProfile?.role === 'expert' || userProfile?.role === 'admin') {
+          console.log("🎯 Master account - switching to expert tab");
+          window.dispatchEvent(new CustomEvent('switchTab', { detail: 'expert' }));
+        } else {
+          console.log("🎯 Regular user - switching to chat tab");
+          window.dispatchEvent(new CustomEvent('switchTab', { detail: 'chat' }));
+        }
       }
+    } catch (error) {
+      console.error("❌ Navigation error:", error);
+      toast.error("Errore nella navigazione alla chat");
     }
   };
 
@@ -231,14 +241,14 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
             {/* Nome pianta dettagliato */}
             <div className="bg-green-50 p-4 rounded-lg border border-green-200">
               <h3 className="font-semibold text-lg text-green-800 flex items-center gap-2">
-                🌱 {analysisData.plantName || analysisDetails?.plantIdentification || analysisData.name || 'Pianta identificata tramite Multi-AI'}
+                🌱 {analysisData?.plant?.name || analysisData?.plantName || analysisData?.name || analysisDetails?.plantIdentification || analysisDetails?.multiServiceInsights?.plantName || 'Pianta non identificata'}
                 {analysisDetails?.eppoPlantIdentification && (
                   <Badge className="bg-blue-100 text-blue-800">EPPO Verified</Badge>
                 )}
               </h3>
-              {(analysisData.scientificName || analysisData.variety || analysisDetails?.scientificName) && (
+              {(analysisData?.plant?.scientific_name || analysisData?.scientificName || analysisData?.variety || analysisDetails?.scientificName || analysisDetails?.multiServiceInsights?.plantSpecies) && (
                 <p className="text-green-700 italic mt-1 font-medium">
-                  {analysisData.scientificName || analysisDetails?.scientificName || analysisData.variety}
+                  {analysisData?.plant?.scientific_name || analysisData?.scientificName || analysisDetails?.scientificName || analysisDetails?.multiServiceInsights?.plantSpecies || analysisData?.variety}
                 </p>
               )}
               {analysisDetails?.eppoPlantIdentification && (
