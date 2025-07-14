@@ -164,11 +164,72 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
     );
   }
 
+  // Logica robusta per estrarre informazioni sulla pianta
+  const getPlantInfo = () => {
+    const sources = [
+      analysisData?.plant?.name,
+      analysisData?.plantName,
+      analysisData?.name,
+      analysisDetails?.plantIdentification,
+      analysisDetails?.multiServiceInsights?.plantName,
+      analysisDetails?.eppoPlantIdentification?.preferredName,
+      analysisData?.species,
+      analysisData?.label
+    ];
+    
+    const plantName = sources.find(name => name && name.trim() && name !== 'Unknown') || 'Pianta rilevata';
+    
+    const scientificSources = [
+      analysisData?.plant?.scientific_name,
+      analysisData?.scientificName,
+      analysisDetails?.scientificName,
+      analysisDetails?.multiServiceInsights?.plantSpecies,
+      analysisData?.variety,
+      analysisDetails?.eppoPlantIdentification?.scientificName
+    ];
+    
+    const scientificName = scientificSources.find(name => name && name.trim());
+    
+    return { plantName, scientificName };
+  };
+
+  // Logica robusta per estrarre informazioni sulle malattie
+  const getDiseaseInfo = () => {
+    let diseases = [];
+    
+    // Cerca malattie in vari formati
+    if (analysisData?.diseases && Array.isArray(analysisData.diseases)) {
+      diseases = analysisData.diseases;
+    } else if (analysisData?.disease) {
+      diseases = [analysisData.disease];
+    } else if (analysisDetails?.risultatiCompleti?.detectedDiseases) {
+      diseases = analysisDetails.risultatiCompleti.detectedDiseases;
+    } else if (analysisData?.predictions && Array.isArray(analysisData.predictions)) {
+      diseases = analysisData.predictions.map(pred => ({ name: pred.class || pred.label, probability: pred.probability || pred.confidence }));
+    } else if (analysisData?.label && !analysisData.isHealthy) {
+      diseases = [{ name: analysisData.label, probability: analysisData.confidence || 0.5 }];
+    }
+    
+    // Se non trova malattie specifiche ma la pianta non è sana, crea una diagnosi generica
+    if (diseases.length === 0 && analysisData && !isHealthy) {
+      diseases = [{ 
+        name: 'Possibile problema rilevato', 
+        probability: analysisData.confidence || 0.5,
+        description: 'L\'analisi AI ha rilevato possibili anomalie che richiedono ulteriore valutazione'
+      }];
+    }
+    
+    return diseases;
+  };
+
+  const { plantName, scientificName } = getPlantInfo();
+  const diseaseList = getDiseaseInfo();
+
   const confidencePercent = analysisData?.confidence 
     ? Math.round(analysisData.confidence * 100) 
     : analysisDetails?.confidence 
     ? Math.round(analysisDetails.confidence * 100) 
-    : 0;
+    : 50; // Default al 50% invece di 0
 
   const isHealthy = analysisData?.isHealthy || analysisData?.healthy || false;
   const isHighConfidence = (analysisData?.confidence || analysisDetails?.confidence || 0) >= 0.7;
@@ -238,17 +299,17 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* Nome pianta dettagliato */}
+            {/* Nome pianta dettagliato - Usa la logica robusta */}
             <div className="bg-green-50 p-4 rounded-lg border border-green-200">
               <h3 className="font-semibold text-lg text-green-800 flex items-center gap-2">
-                🌱 {analysisData?.plant?.name || analysisData?.plantName || analysisData?.name || analysisDetails?.plantIdentification || analysisDetails?.multiServiceInsights?.plantName || 'Pianta non identificata'}
+                🌱 {plantName}
                 {analysisDetails?.eppoPlantIdentification && (
                   <Badge className="bg-blue-100 text-blue-800">EPPO Verified</Badge>
                 )}
               </h3>
-              {(analysisData?.plant?.scientific_name || analysisData?.scientificName || analysisData?.variety || analysisDetails?.scientificName || analysisDetails?.multiServiceInsights?.plantSpecies) && (
+              {scientificName && (
                 <p className="text-green-700 italic mt-1 font-medium">
-                  {analysisData?.plant?.scientific_name || analysisData?.scientificName || analysisDetails?.scientificName || analysisDetails?.multiServiceInsights?.plantSpecies || analysisData?.variety}
+                  {scientificName}
                 </p>
               )}
               {analysisDetails?.eppoPlantIdentification && (
@@ -258,8 +319,8 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
               )}
             </div>
 
-            {/* Enhanced Malattie/problemi */}
-            {analysisData.diseases && analysisData.diseases.length > 0 && (
+            {/* Enhanced Malattie/problemi - Usa la logica robusta */}
+            {diseaseList && diseaseList.length > 0 && (
               <div className="space-y-2">
                 <h4 className="font-medium flex items-center gap-2">
                   <AlertTriangle className="h-4 w-4 text-amber-600" />
@@ -270,7 +331,7 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
                     </Badge>
                   )}
                 </h4>
-                {analysisData.diseases.map((disease: any, index: number) => (
+                {diseaseList.map((disease: any, index: number) => (
                   <div key={index} className={`border rounded-lg p-3 ${disease.isRegulated ? 'bg-red-50 border-red-200' : 'bg-red-50'}`}>
                     <div className="flex justify-between items-start mb-2">
                       <div className="flex items-center gap-2">
