@@ -341,20 +341,20 @@ const ProfessionalExpertDashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-4 md:p-6">
+      <div className="max-w-7xl mx-auto space-y-4 md:space-y-6">
         {/* Header Section */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">Dashboard Professionale</h1>
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 md:p-6">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="text-center md:text-left">
+              <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">Dashboard Professionale</h1>
               <p className="text-gray-600">Gestione conversazioni e consultazioni - Marco Nigro</p>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center justify-center md:justify-end gap-3">
               <div className="w-12 h-12 bg-drplant-green/10 rounded-full flex items-center justify-center">
                 <Activity className="h-6 w-6 text-drplant-green" />
               </div>
-              <div className="text-right">
+              <div className="text-center md:text-right">
                 <p className="text-sm text-gray-500">Ultimo aggiornamento</p>
                 <p className="font-medium">{new Date().toLocaleTimeString('it-IT')}</p>
               </div>
@@ -363,63 +363,63 @@ const ProfessionalExpertDashboard = () => {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 md:gap-6">
           <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
-            <CardContent className="p-6">
+            <CardContent className="p-3 md:p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-blue-600 mb-1">Conversazioni Attive</p>
-                  <p className="text-3xl font-bold text-blue-900">{stats.totalConversations}</p>
+                  <p className="text-xs md:text-sm font-medium text-blue-600 mb-1">Conversazioni Attive</p>
+                  <p className="text-xl md:text-3xl font-bold text-blue-900">{stats.totalConversations}</p>
                 </div>
-                <MessageSquare className="h-8 w-8 text-blue-600" />
+                <MessageSquare className="h-6 md:h-8 w-6 md:w-8 text-blue-600" />
               </div>
             </CardContent>
           </Card>
 
           <Card className="bg-gradient-to-br from-red-50 to-red-100 border-red-200">
-            <CardContent className="p-6">
+            <CardContent className="p-3 md:p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-red-600 mb-1">Conversazioni Finite</p>
-                  <p className="text-3xl font-bold text-red-900">{stats.finishedConversations}</p>
+                  <p className="text-xs md:text-sm font-medium text-red-600 mb-1">Conversazioni Finite</p>
+                  <p className="text-xl md:text-3xl font-bold text-red-900">{stats.finishedConversations}</p>
                 </div>
-                <AlertCircle className="h-8 w-8 text-red-600" />
+                <AlertCircle className="h-6 md:h-8 w-6 md:w-8 text-red-600" />
               </div>
             </CardContent>
           </Card>
 
           <Card className="bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200">
-            <CardContent className="p-6">
+            <CardContent className="p-3 md:p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-amber-600 mb-1">Consultazioni in Attesa</p>
-                  <p className="text-3xl font-bold text-amber-900">{stats.pendingConsultations}</p>
+                  <p className="text-xs md:text-sm font-medium text-amber-600 mb-1">Consultazioni in Attesa</p>
+                  <p className="text-xl md:text-3xl font-bold text-amber-900">{stats.pendingConsultations}</p>
                 </div>
-                <Clock className="h-8 w-8 text-amber-600" />
+                <Clock className="h-6 md:h-8 w-6 md:w-8 text-amber-600" />
               </div>
             </CardContent>
           </Card>
 
           <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
-            <CardContent className="p-6">
+            <CardContent className="p-3 md:p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-green-600 mb-1">Messaggi Oggi</p>
-                  <p className="text-3xl font-bold text-green-900">{stats.todayMessages}</p>
+                  <p className="text-xs md:text-sm font-medium text-green-600 mb-1">Messaggi Oggi</p>
+                  <p className="text-xl md:text-3xl font-bold text-green-900">{stats.todayMessages}</p>
                 </div>
-                <TrendingUp className="h-8 w-8 text-green-600" />
+                <TrendingUp className="h-6 md:h-8 w-6 md:w-8 text-green-600" />
               </div>
             </CardContent>
           </Card>
 
           <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
-            <CardContent className="p-6">
+            <CardContent className="p-3 md:p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-purple-600 mb-1">Utenti Attivi</p>
-                  <p className="text-3xl font-bold text-purple-900">{stats.activeUsers}</p>
+                  <p className="text-xs md:text-sm font-medium text-purple-600 mb-1">Utenti Attivi</p>
+                  <p className="text-xl md:text-3xl font-bold text-purple-900">{stats.activeUsers}</p>
                 </div>
-                <Users className="h-8 w-8 text-purple-600" />
+                <Users className="h-6 md:h-8 w-6 md:w-8 text-purple-600" />
               </div>
             </CardContent>
           </Card>
@@ -429,32 +429,38 @@ const ProfessionalExpertDashboard = () => {
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <div className="border-b border-gray-200 bg-gray-50">
-              <TabsList className="grid w-full grid-cols-3 bg-transparent h-16">
+              <TabsList className="grid w-full grid-cols-3 bg-transparent h-12 md:h-16">
                 <TabsTrigger 
                   value="conversations" 
-                  className="flex items-center gap-3 h-12 text-base data-[state=active]:bg-white data-[state=active]:shadow-sm"
+                  className="flex items-center gap-1 md:gap-3 h-10 md:h-12 text-sm md:text-base data-[state=active]:bg-white data-[state=active]:shadow-sm"
                 >
-                  <MessageSquare className="h-5 w-5" />
-                  Conversazioni Attive ({conversations.length})
+                  <MessageSquare className="h-4 w-4 md:h-5 md:w-5" />
+                  <span className="hidden sm:inline">Conversazioni Attive</span>
+                  <span className="sm:hidden">Attive</span>
+                  <span className="text-xs">({conversations.length})</span>
                 </TabsTrigger>
                 <TabsTrigger 
                   value="finished" 
-                  className="flex items-center gap-3 h-12 text-base data-[state=active]:bg-white data-[state=active]:shadow-sm"
+                  className="flex items-center gap-1 md:gap-3 h-10 md:h-12 text-sm md:text-base data-[state=active]:bg-white data-[state=active]:shadow-sm"
                 >
-                  <AlertCircle className="h-5 w-5" />
-                  Conversazioni Finite ({finishedConversations.length})
+                  <AlertCircle className="h-4 w-4 md:h-5 md:w-5" />
+                  <span className="hidden sm:inline">Conversazioni Finite</span>
+                  <span className="sm:hidden">Finite</span>
+                  <span className="text-xs">({finishedConversations.length})</span>
                 </TabsTrigger>
                 <TabsTrigger 
                   value="consultations" 
-                  className="flex items-center gap-3 h-12 text-base data-[state=active]:bg-white data-[state=active]:shadow-sm"
+                  className="flex items-center gap-1 md:gap-3 h-10 md:h-12 text-sm md:text-base data-[state=active]:bg-white data-[state=active]:shadow-sm"
                 >
-                  <Clock className="h-5 w-5" />
-                  Consultazioni ({consultations.length})
+                  <Clock className="h-4 w-4 md:h-5 md:w-5" />
+                  <span className="hidden sm:inline">Consultazioni</span>
+                  <span className="sm:hidden">Cons.</span>
+                  <span className="text-xs">({consultations.length})</span>
                 </TabsTrigger>
               </TabsList>
             </div>
 
-            <TabsContent value="conversations" className="p-6">
+            <TabsContent value="conversations" className="p-3 md:p-6">
               {selectedConversation ? (
                 <ExpertChatDetailView
                   conversation={selectedConversation}
@@ -474,71 +480,79 @@ const ProfessionalExpertDashboard = () => {
                         key={conversation.id} 
                         className="hover:shadow-md transition-all duration-200 border-l-4 border-l-drplant-green/30 hover:border-l-drplant-green"
                       >
-                        <CardContent className="p-6">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-4 flex-1">
+                        <CardContent className="p-4 md:p-6">
+                          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                            <div className="flex items-center gap-3 md:gap-4 flex-1 min-w-0">
                               <div className="relative">
-                                <Avatar className="h-12 w-12">
-                                  <AvatarFallback className="bg-drplant-green/10 text-drplant-green font-semibold">
+                                <Avatar className="h-10 md:h-12 w-10 md:w-12">
+                                  <AvatarFallback className="bg-drplant-green/10 text-drplant-green font-semibold text-sm">
                                     {getInitials(conversation.user_profile?.first_name, conversation.user_profile?.last_name)}
                                   </AvatarFallback>
                                 </Avatar>
-                                <div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white ${
+                                <div className={`absolute -bottom-1 -right-1 w-3 md:w-4 h-3 md:h-4 rounded-full border-2 border-white ${
                                   conversation.user_profile?.is_online ? 'bg-green-500' : 'bg-gray-400'
                                 }`} />
                               </div>
                               
                               <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-3 mb-2">
-                                  <h3 className="font-semibold text-gray-900 text-lg">
+                                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 mb-2">
+                                  <h3 className="font-semibold text-gray-900 text-base md:text-lg truncate">
                                     {getUserDisplayName(conversation.user_profile)}
                                   </h3>
-                                  <Badge variant={conversation.user_profile?.is_online ? "default" : "secondary"}>
-                                    {conversation.user_profile?.is_online ? 'Online' : 'Offline'}
-                                  </Badge>
-                                  <Badge variant="outline" className="bg-green-50 text-green-700">
-                                    Attiva
-                                  </Badge>
+                                  <div className="flex gap-2">
+                                    <Badge variant={conversation.user_profile?.is_online ? "default" : "secondary"} className="text-xs">
+                                      {conversation.user_profile?.is_online ? 'Online' : 'Offline'}
+                                    </Badge>
+                                    <Badge variant="outline" className="bg-green-50 text-green-700 text-xs">
+                                      Attiva
+                                    </Badge>
+                                  </div>
                                 </div>
                                 
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 md:gap-4 text-xs md:text-sm text-gray-600">
                                   <div className="flex items-center gap-2">
-                                    <Mail className="h-4 w-4" />
+                                    <Mail className="h-3 md:h-4 w-3 md:w-4 flex-shrink-0" />
                                     <span className="truncate">{conversation.user_profile?.email || 'N/A'}</span>
                                   </div>
                                   {conversation.user_profile?.phone && (
                                     <div className="flex items-center gap-2">
-                                      <Phone className="h-4 w-4" />
-                                      <span>{conversation.user_profile.phone}</span>
+                                      <Phone className="h-3 md:h-4 w-3 md:w-4 flex-shrink-0" />
+                                      <span className="truncate">{conversation.user_profile.phone}</span>
                                     </div>
                                   )}
                                   {conversation.user_profile?.address && (
                                     <div className="flex items-center gap-2">
-                                      <MapPin className="h-4 w-4" />
+                                      <MapPin className="h-3 md:h-4 w-3 md:w-4 flex-shrink-0" />
                                       <span className="truncate">{conversation.user_profile.address}</span>
                                     </div>
                                   )}
                                 </div>
                                 
                                 <div className="mt-3 p-3 bg-gray-50 rounded-lg">
-                                  <p className="text-sm text-gray-700 mb-2">
-                                    <strong>Ultimo messaggio:</strong> {conversation.last_message_text}
+                                  <p className="text-xs md:text-sm text-gray-700 mb-2">
+                                    <strong>Ultimo messaggio:</strong> 
+                                    <span className="break-words block mt-1">
+                                      {conversation.last_message_text && conversation.last_message_text.length > 100 
+                                        ? `${conversation.last_message_text.substring(0, 100)}...` 
+                                        : conversation.last_message_text}
+                                    </span>
                                   </p>
                                   <div className="flex items-center gap-2 text-xs text-gray-500">
-                                    <Calendar className="h-3 w-3" />
-                                    Creato: {formatDate(conversation.created_at)}
+                                    <Calendar className="h-3 w-3 flex-shrink-0" />
+                                    <span className="truncate">Creato: {formatDate(conversation.created_at)}</span>
                                   </div>
                                 </div>
                               </div>
                             </div>
                             
-                            <div className="flex items-center gap-2 ml-4">
+                            <div className="flex items-center justify-center lg:justify-end gap-2">
                               <Button
                                 onClick={() => setSelectedConversation(conversation)}
-                                className="bg-drplant-green hover:bg-drplant-green/90"
+                                className="bg-drplant-green hover:bg-drplant-green/90 w-full lg:w-auto"
+                                size="sm"
                               >
                                 <Eye className="h-4 w-4 mr-2" />
-                                Visualizza
+                                <span className="hidden sm:inline">Visualizza</span>
                               </Button>
                             </div>
                           </div>
@@ -550,7 +564,7 @@ const ProfessionalExpertDashboard = () => {
               )}
             </TabsContent>
 
-            <TabsContent value="finished" className="p-6">
+            <TabsContent value="finished" className="p-3 md:p-6">
               <div className="space-y-4">
                 <div className="flex items-center justify-between mb-6">
                   <div>
@@ -576,70 +590,76 @@ const ProfessionalExpertDashboard = () => {
                       key={conversation.id} 
                       className="hover:shadow-md transition-all duration-200 border-l-4 border-l-red-300 hover:border-l-red-500"
                     >
-                      <CardContent className="p-6">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-4 flex-1">
+                      <CardContent className="p-4 md:p-6">
+                        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                          <div className="flex items-center gap-3 md:gap-4 flex-1 min-w-0">
                             <div className="relative">
-                              <Avatar className="h-12 w-12">
-                                <AvatarFallback className="bg-red-50 text-red-700 font-semibold">
+                              <Avatar className="h-10 md:h-12 w-10 md:w-12">
+                                <AvatarFallback className="bg-red-50 text-red-700 font-semibold text-sm">
                                   {getInitials(conversation.user_profile?.first_name, conversation.user_profile?.last_name)}
                                 </AvatarFallback>
                               </Avatar>
-                              <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white bg-red-500" />
+                              <div className="absolute -bottom-1 -right-1 w-3 md:w-4 h-3 md:h-4 rounded-full border-2 border-white bg-red-500" />
                             </div>
                             
                             <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-3 mb-2">
-                                <h3 className="font-semibold text-gray-900 text-lg">
+                              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 mb-2">
+                                <h3 className="font-semibold text-gray-900 text-base md:text-lg truncate">
                                   {getUserDisplayName(conversation.user_profile)}
                                 </h3>
-                                <Badge variant="destructive">
+                                <Badge variant="destructive" className="text-xs w-fit">
                                   Finita
                                 </Badge>
                               </div>
                               
-                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600">
+                              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 md:gap-4 text-xs md:text-sm text-gray-600">
                                 <div className="flex items-center gap-2">
-                                  <Mail className="h-4 w-4" />
+                                  <Mail className="h-3 md:h-4 w-3 md:w-4 flex-shrink-0" />
                                   <span className="truncate">{conversation.user_profile?.email || 'N/A'}</span>
                                 </div>
                                 {conversation.user_profile?.phone && (
                                   <div className="flex items-center gap-2">
-                                    <Phone className="h-4 w-4" />
-                                    <span>{conversation.user_profile.phone}</span>
+                                    <Phone className="h-3 md:h-4 w-3 md:w-4 flex-shrink-0" />
+                                    <span className="truncate">{conversation.user_profile.phone}</span>
                                   </div>
                                 )}
                                 {conversation.user_profile?.address && (
                                   <div className="flex items-center gap-2">
-                                    <MapPin className="h-4 w-4" />
+                                    <MapPin className="h-3 md:h-4 w-3 md:w-4 flex-shrink-0" />
                                     <span className="truncate">{conversation.user_profile.address}</span>
                                   </div>
                                 )}
                               </div>
                               
                               <div className="mt-3 p-3 bg-red-50 rounded-lg">
-                                <p className="text-sm text-gray-700 mb-2">
-                                  <strong>Ultimo messaggio:</strong> {conversation.last_message_text}
+                                <p className="text-xs md:text-sm text-gray-700 mb-2">
+                                  <strong>Ultimo messaggio:</strong> 
+                                  <span className="break-words block mt-1">
+                                    {conversation.last_message_text && conversation.last_message_text.length > 100 
+                                      ? `${conversation.last_message_text.substring(0, 100)}...` 
+                                      : conversation.last_message_text}
+                                  </span>
                                 </p>
                                 <div className="flex items-center gap-2 text-xs text-gray-500">
-                                  <Calendar className="h-3 w-3" />
-                                  Creato: {formatDate(conversation.created_at)}
+                                  <Calendar className="h-3 w-3 flex-shrink-0" />
+                                  <span className="truncate">Creato: {formatDate(conversation.created_at)}</span>
                                 </div>
                               </div>
                             </div>
                           </div>
                           
-                          <div className="flex items-center gap-2 ml-4">
+                          <div className="flex items-center justify-center lg:justify-end gap-2">
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
                                 <Button
                                   variant="destructive"
                                   size="sm"
-                                  className="bg-red-600 hover:bg-red-700"
+                                  className="bg-red-600 hover:bg-red-700 w-full lg:w-auto"
                                   disabled={deletingConversation === conversation.id}
                                 >
                                   <Trash2 className="h-4 w-4 mr-2" />
-                                  Elimina Definitivamente
+                                  <span className="hidden sm:inline">Elimina Definitivamente</span>
+                                  <span className="sm:hidden">Elimina</span>
                                 </Button>
                               </AlertDialogTrigger>
                               <AlertDialogContent className="bg-white">
