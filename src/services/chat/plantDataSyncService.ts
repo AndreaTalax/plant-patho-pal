@@ -12,6 +12,13 @@ export class PlantDataSyncService {
     try {
       console.log('🔄 Syncing plant data to existing chat...', { userId, plantInfo, imageUrl });
 
+      // Ottieni la sessione per l'autenticazione
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        console.error('❌ No active session for syncing data');
+        return false;
+      }
+
       // Trova la conversazione esistente
       const { data: conversations, error: findError } = await supabase
         .from('conversations')
@@ -29,75 +36,63 @@ export class PlantDataSyncService {
       let conversationId: string;
 
       if (!conversations || conversations.length === 0) {
-        // Crea nuova conversazione se non esiste
-        const { data: newConversation, error: createError } = await supabase
-          .from('conversations')
-          .insert({
-            user_id: userId,
-            expert_id: MARCO_NIGRO_ID,
-            title: `Consulenza per ${plantInfo.name || 'pianta'}`,
-            status: 'active'
-          })
-          .select()
-          .single();
-
-        if (createError) {
-          console.error('❌ Error creating conversation:', createError);
-          return false;
-        }
-
-        conversationId = newConversation.id;
+        // Genera un nuovo ID di conversazione
+        conversationId = crypto.randomUUID();
+        console.log('🆕 Creating new conversation with ID:', conversationId);
       } else {
         conversationId = conversations[0].id;
+        console.log('✅ Using existing conversation:', conversationId);
       }
 
       // Costruisce il messaggio con tutti i dati della pianta
       const plantDataMessage = this.buildPlantDataMessage(plantInfo, imageUrl);
 
-      // Serializza i dati per Supabase (compatibile con Json type)
-      const metadataObject = {
-        type: 'plant_data_sync',
-        plantInfo: JSON.parse(JSON.stringify(plantInfo)), // Ensures proper serialization
-        imageUrl: imageUrl || null,
-        autoSynced: true
-      };
-
-      // Invia il messaggio con i dati della pianta
-      const { error: messageError } = await supabase
-        .from('messages')
-        .insert({
-          conversation_id: conversationId,
-          sender_id: userId,
-          recipient_id: MARCO_NIGRO_ID,
-          content: plantDataMessage,
+      // Invia il messaggio usando l'edge function send-message
+      console.log('📤 Sending plant data message via edge function...');
+      const { data: messageResult, error: messageError } = await supabase.functions.invoke('send-message', {
+        body: {
+          conversationId,
+          recipientId: MARCO_NIGRO_ID,
           text: plantDataMessage,
-          metadata: metadataObject
-        });
+          imageUrl: null,
+          products: null
+        },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
 
       if (messageError) {
         console.error('❌ Error sending plant data message:', messageError);
         return false;
       }
 
+      console.log('✅ Plant data message sent successfully');
+
       // Se c'è un'immagine, inviala come messaggio separato
       if (imageUrl) {
-        const imageMessage = `📸 Immagine della pianta: ${imageUrl}`;
-        const imageMetadata = {
-          type: 'plant_image',
-          imageUrl: imageUrl,
-          autoSynced: true
-        };
-
-        await supabase
-          .from('messages')
-          .insert({
-            conversation_id: conversationId,
-            sender_id: userId,
-            recipient_id: MARCO_NIGRO_ID,
-            content: imageMessage,
+        console.log('📸 Sending plant image...');
+        const imageMessage = `📸 Immagine della pianta`;
+        
+        const { data: imageResult, error: imageError } = await supabase.functions.invoke('send-message', {
+          body: {
+            conversationId,
+            recipientId: MARCO_NIGRO_ID,
             text: imageMessage,
-            metadata: imageMetadata
-          });
+            imageUrl: imageUrl,
+            products: null
+          },
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+        });
+
+        if (imageError) {
+          console.error('❌ Error sending plant image:', imageError);
+          return false;
+        }
+
+        console.log('✅ Plant image sent successfully');
       }
 
       console.log('✅ Plant data synced successfully to chat');
