@@ -135,19 +135,34 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
 
   const handleNavigateToChat = () => {
     console.log("🔄 Navigating from DiagnosisResult to chat...");
+    console.log("🔄 User profile role:", userProfile?.role);
+    console.log("🔄 onChatWithExpert function:", typeof onChatWithExpert);
     
     try {
-      if (onChatWithExpert) {
+      if (onChatWithExpert && typeof onChatWithExpert === 'function') {
+        console.log("🎯 Using onChatWithExpert callback");
         onChatWithExpert();
       } else {
-        // Navigazione diretta senza delay
+        console.log("🎯 Using window event dispatch");
+        // Navigazione diretta senza delay con più logging
         if (userProfile?.role === 'expert' || userProfile?.role === 'admin') {
           console.log("🎯 Master account - switching to expert tab");
-          window.dispatchEvent(new CustomEvent('switchTab', { detail: 'expert' }));
+          console.log("🎯 Dispatching event: switchTab with detail: expert");
+          const event = new CustomEvent('switchTab', { detail: 'expert' });
+          window.dispatchEvent(event);
+          console.log("🎯 Event dispatched successfully");
         } else {
           console.log("🎯 Regular user - switching to chat tab");
-          window.dispatchEvent(new CustomEvent('switchTab', { detail: 'chat' }));
+          console.log("🎯 Dispatching event: switchTab with detail: chat");
+          const event = new CustomEvent('switchTab', { detail: 'chat' });
+          window.dispatchEvent(event);
+          console.log("🎯 Event dispatched successfully");
         }
+        
+        // Aggiungi un toast per confermare
+        toast.success("Navigazione in corso...", {
+          description: "Apertura chat con l'esperto"
+        });
       }
     } catch (error) {
       console.error("❌ Navigation error:", error);
@@ -286,12 +301,87 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
         <PlantInfoCard plantInfo={plantInfo} analysisDetails={analysisDetails} />
       </div>
 
-      {/* Enhanced Risultati diagnosi */}
+      {/* SEZIONE RISULTATI PRINCIPALI - BEN VISIBILE */}
+      <Card className="border-2 border-green-500 bg-gradient-to-r from-green-50 to-blue-50">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-xl font-bold text-center text-gray-800">
+            🔬 Risultati Diagnosi
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Nome pianta - Molto visibile */}
+          <div className="text-center p-4 bg-white rounded-lg border-2 border-green-300 shadow-sm">
+            <h2 className="text-2xl font-bold text-green-800 mb-2">
+              🌱 {plantName}
+            </h2>
+            {scientificName && (
+              <p className="text-lg italic text-green-700 font-medium">
+                {scientificName}
+              </p>
+            )}
+            <div className="flex justify-center items-center gap-2 mt-2">
+              <Badge className="bg-green-100 text-green-800 px-3 py-1">
+                Accuratezza: {confidencePercent}%
+              </Badge>
+              {analysisDetails?.eppoPlantIdentification && (
+                <Badge className="bg-blue-100 text-blue-800 px-3 py-1">
+                  🔬 EPPO Verified
+                </Badge>
+              )}
+            </div>
+          </div>
+
+          {/* Problemi rilevati - Molto visibile */}
+          {diseaseList && diseaseList.length > 0 && (
+            <div className="text-center p-4 bg-white rounded-lg border-2 border-amber-300 shadow-sm">
+              <h3 className="text-xl font-bold text-amber-800 mb-3">
+                ⚠️ Problemi Rilevati
+              </h3>
+              <div className="space-y-3">
+                {diseaseList.slice(0, 3).map((disease: any, index: number) => (
+                  <div key={index} className="border border-amber-200 rounded-lg p-3 bg-amber-50">
+                    <div className="flex justify-between items-center mb-2">
+                      <h4 className="font-bold text-amber-900 text-lg">{disease.name}</h4>
+                      <Badge variant="destructive" className="text-sm px-2 py-1">
+                        {getProbabilityDisplay(disease.probability)}
+                      </Badge>
+                    </div>
+                    {disease.description && (
+                      <p className="text-amber-800 text-sm">{disease.description}</p>
+                    )}
+                    {disease.treatment && (
+                      <p className="text-amber-700 text-sm mt-2">
+                        <strong>💡 Trattamento:</strong> {disease.treatment}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Stato salute generale */}
+          <div className={`text-center p-3 rounded-lg ${isHealthy ? 'bg-green-100 border-2 border-green-300' : 'bg-amber-100 border-2 border-amber-300'}`}>
+            <div className="flex justify-center items-center gap-2">
+              {isHealthy ? (
+                <CheckCircle className="h-6 w-6 text-green-600" />
+              ) : (
+                <AlertTriangle className="h-6 w-6 text-amber-600" />
+              )}
+              <span className={`text-lg font-semibold ${isHealthy ? 'text-green-800' : 'text-amber-800'}`}>
+                {isHealthy ? '✅ Pianta in salute' : '⚠️ Attenzione richiesta'}
+              </span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Enhanced Sezione per analisi AI aggiuntiva */}
       {analysisData && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              🔬 Risultati Diagnosi Avanzata
+              🔬 Dettagli Analisi AI
               {hasEppoData && (
                 <Badge variant="outline" className="text-blue-600">
                   Database EPPO
@@ -300,72 +390,6 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* Nome pianta dettagliato - Usa la logica robusta */}
-            <div className="bg-green-50 p-4 rounded-lg border border-green-200">
-              <h3 className="font-semibold text-lg text-green-800 flex items-center gap-2">
-                🌱 {plantName}
-                {analysisDetails?.eppoPlantIdentification && (
-                  <Badge className="bg-blue-100 text-blue-800">EPPO Verified</Badge>
-                )}
-              </h3>
-              {scientificName && (
-                <p className="text-green-700 italic mt-1 font-medium">
-                  {scientificName}
-                </p>
-              )}
-              {analysisDetails?.eppoPlantIdentification && (
-                <p className="text-blue-600 text-sm mt-2">
-                  Identificazione confermata tramite database EPPO: {analysisDetails.eppoPlantIdentification}
-                </p>
-              )}
-            </div>
-
-            {/* Enhanced Malattie/problemi - Usa la logica robusta */}
-            {diseaseList && diseaseList.length > 0 && (
-              <div className="space-y-2">
-                <h4 className="font-medium flex items-center gap-2">
-                  <AlertTriangle className="h-4 w-4 text-amber-600" />
-                  Problemi Rilevati
-                  {hasEppoData && (
-                    <Badge variant="outline" className="text-xs">
-                      Enhanced
-                    </Badge>
-                  )}
-                </h4>
-                {diseaseList.map((disease: any, index: number) => (
-                  <div key={index} className={`border rounded-lg p-3 ${disease.isRegulated ? 'bg-red-50 border-red-200' : 'bg-red-50'}`}>
-                    <div className="flex justify-between items-start mb-2">
-                      <div className="flex items-center gap-2">
-                        <h5 className="font-medium text-red-800">{disease.name}</h5>
-                        {disease.isRegulated && (
-                          <Badge variant="destructive" className="text-xs">
-                            <Shield className="h-3 w-3 mr-1" />
-                            REGOLAMENTATO
-                          </Badge>
-                        )}
-                        {disease.eppoCode && (
-                          <Badge variant="outline" className="text-xs text-blue-600">
-                            EPPO: {disease.eppoCode}
-                          </Badge>
-                        )}
-                      </div>
-                      <Badge variant="destructive" className="text-xs">
-                        {getProbabilityDisplay(disease.probability)}
-                      </Badge>
-                    </div>
-                    {disease.description && (
-                      <p className="text-sm text-red-700 mb-2">{disease.description}</p>
-                    )}
-                    {disease.treatment && (
-                      <p className="text-sm text-red-600">
-                        <strong>Trattamento:</strong> {disease.treatment}
-                      </p>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-
             {/* Enhanced Raccomandazioni */}
             {analysisData.recommendations && analysisData.recommendations.length > 0 && (
               <div className="space-y-2">
