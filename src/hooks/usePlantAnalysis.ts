@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import type { PlantInfo } from '@/components/diagnose/types';
 import type { AnalysisDetails, DiagnosedDisease } from '@/components/diagnose/types';
 import { supabase } from "@/integrations/supabase/client";
+import { eppoApiService } from '@/utils/eppoApiService';
 
 // Funzione di utilità per garantire percentuali valide
 const ensureValidPercentage = (value: any, fallback: number = 75): number => {
@@ -197,10 +198,38 @@ export const usePlantAnalysis = () => {
       );
       
       // Estrai informazioni dalla risposta principale (GPT-4 Vision se disponibile)
-      const plantSpecies = primaryAnalysis?.species || 'Pianta identificata tramite Multi-AI';
+      let plantSpecies = primaryAnalysis?.species || 'Pianta identificata tramite Multi-AI';
       const healthStatus = primaryAnalysis?.healthStatus || (isHealthy ? 'healthy' : 'diseased');
       const gptSymptoms = primaryAnalysis?.symptoms || [];
       const gptRecommendations = primaryAnalysis?.recommendations || [];
+      
+      // Search EPPO database for better plant identification
+      let eppoPlantData = null;
+      if (plantSpecies && plantSpecies !== 'Pianta identificata tramite Multi-AI') {
+        try {
+          console.log('🔍 Searching EPPO database for plant:', plantSpecies);
+          const eppoPlants = await eppoApiService.searchPlants(plantSpecies);
+          if (eppoPlants && eppoPlants.length > 0) {
+            const bestMatch = eppoPlants[0];
+            eppoPlantData = {
+              eppoCode: bestMatch.eppoCode,
+              preferredName: bestMatch.preferredName,
+              scientificName: bestMatch.scientificName,
+              otherNames: bestMatch.otherNames || [],
+              taxonomy: bestMatch.taxonomy,
+              source: 'EPPO Database'
+            };
+            
+            // Use EPPO name if it's more detailed
+            if (bestMatch.preferredName && bestMatch.preferredName.length > plantSpecies.length) {
+              console.log(`✅ EPPO enhanced plant name: ${plantSpecies} → ${bestMatch.preferredName}`);
+              plantSpecies = bestMatch.preferredName;
+            }
+          }
+        } catch (error) {
+          console.warn('❌ EPPO plant search failed:', error);
+        }
+      }
       
       const diseaseInfo: DiagnosedDisease = {
         id: `diagnosis-${Date.now()}`,
@@ -236,7 +265,8 @@ export const usePlantAnalysis = () => {
             label: plantSpecies,
             score: confidencePercent
           },
-          dataSource: `Analisi combinata: ${servicesUsed.join(', ')}`
+          dataSource: eppoPlantData ? `${servicesUsed.join(', ')} + EPPO Database` : `Analisi combinata: ${servicesUsed.join(', ')}`,
+          eppoPlantIdentification: eppoPlantData
         },
         risultatiCompleti: {
           plantInfo: plantInfo || {
@@ -259,6 +289,12 @@ export const usePlantAnalysis = () => {
           `Servizi utilizzati: ${servicesUsed.join(', ')}`,
           isHealthy ? 'Pianta sana' : `${validatedDiseases.length} problemi rilevati`,
           `Analisi da ${servicesUsed.length} servizi AI specializzati`,
+          ...(eppoPlantData ? [
+            `✅ EPPO Database: ${eppoPlantData.preferredName}`,
+            `Codice EPPO: ${eppoPlantData.eppoCode}`,
+            ...(eppoPlantData.scientificName ? [`Nome scientifico: ${eppoPlantData.scientificName}`] : []),
+            ...(eppoPlantData.otherNames && eppoPlantData.otherNames.length > 0 ? [`Altri nomi: ${eppoPlantData.otherNames.join(', ')}`] : [])
+          ] : []),
           ...allFeatures,
           ...validatedDiseases.map(d => `${d.name}: ${d.confidence}% probabilità (${d.source})`),
           ...gptSymptoms.map(s => `Sintomo rilevato: ${s}`)

@@ -6,13 +6,14 @@ import { isPlantHealthy } from './health-detection';
 import { checkForEppoRelation } from './eppo-utils';
 import { eppoSymptoms } from './eppo-symptoms';
 import { analyzeLeafCharacteristics, enhanceLeafDiseaseClassification } from './leaf-analysis';
+import { eppoApiService } from '@/utils/eppoApiService';
 
 /**
  * Formats the raw analysis result into a more structured format
  * @param result The raw result from Plexi AI or combined APIs
  * @returns A formatted analysis result with additional insights
  */
-export const formatHuggingFaceResult = (result: any) => {
+export const formatHuggingFaceResult = async (result: any) => {
   if (!result) {
     // Never return null - always provide a plant identification
     return createFallbackResult();
@@ -33,6 +34,7 @@ export const formatHuggingFaceResult = (result: any) => {
     // Enhanced plant name detection - always provide a meaningful name
     let plantName = providedPlantName;
     let plantType = result.detectedPlantType || null;
+    let eppoPlantData = null;
     
     if (!plantName && label) {
       // Convert label to lowercase for case-insensitive matching
@@ -50,6 +52,33 @@ export const formatHuggingFaceResult = (result: any) => {
         if (plantName && !plantType) {
           plantType = detectPlantType(plantName);
         }
+      }
+    }
+    
+    // Search EPPO database for plant identification if we have any plant name
+    if (plantName && plantName !== 'Sconosciuta' && plantName !== 'Unknown') {
+      try {
+        console.log('🔍 Searching EPPO database for plant name:', plantName);
+        const eppoPlants = await eppoApiService.searchPlants(plantName);
+        if (eppoPlants && eppoPlants.length > 0) {
+          const bestMatch = eppoPlants[0];
+          eppoPlantData = {
+            eppoCode: bestMatch.eppoCode,
+            preferredName: bestMatch.preferredName,
+            scientificName: bestMatch.scientificName,
+            otherNames: bestMatch.otherNames || [],
+            taxonomy: bestMatch.taxonomy,
+            source: 'EPPO Database'
+          };
+          
+          // Use EPPO name if it seems more accurate
+          if (bestMatch.preferredName && bestMatch.preferredName.length > plantName.length) {
+            console.log(`✅ EPPO enhanced plant name: ${plantName} → ${bestMatch.preferredName}`);
+            plantName = bestMatch.preferredName;
+          }
+        }
+      } catch (error) {
+        console.warn('❌ EPPO plant search failed:', error);
       }
     }
     
@@ -96,10 +125,14 @@ export const formatHuggingFaceResult = (result: any) => {
         suggestedSearch: eppoRelated.term,
         category: eppoRelated.category
       } : null,
+      // Add EPPO plant identification data
+      eppoPlantIdentification: eppoPlantData,
       // Add Sistema Digitale Foglia analysis results if available
       leafAnalysis: leafAnalysisResults,
       // Flag to indicate advanced leaf analysis was performed
-      advancedLeafAnalysis: !!leafAnalysisResults
+      advancedLeafAnalysis: !!leafAnalysisResults,
+      // Enhanced data source information
+      dataSource: eppoPlantData ? 'AI + EPPO Database' : 'AI Analysis'
     };
     
     // If this is a leaf analysis, enhance it with Sistema Digitale Foglia

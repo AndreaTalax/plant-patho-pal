@@ -44,6 +44,14 @@ export interface AnalysisDetails {
       score: number;
     };
     dataSource?: string;
+    eppoPlantIdentification?: {
+      eppoCode: string;
+      preferredName: string;
+      scientificName?: string;
+      otherNames?: string[];
+      taxonomy?: any;
+      source: string;
+    };
   };
   risultatiCompleti?: {
     plantInfo?: PlantInfo;

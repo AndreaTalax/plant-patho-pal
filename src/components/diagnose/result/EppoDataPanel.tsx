@@ -13,7 +13,8 @@ interface EppoDataPanelProps {
 const EppoDataPanel = ({ analysisDetails, userInput, eppoData }: EppoDataPanelProps) => {
   // Extract EPPO results from analysis details
   const eppoResultsCount = analysisDetails?.eppoResultsCount || 0;
-  const hasEppoData = eppoResultsCount > 0 || (eppoData && eppoData.length > 0);
+  const eppoPlantData = analysisDetails?.multiServiceInsights?.eppoPlantIdentification;
+  const hasEppoData = eppoResultsCount > 0 || (eppoData && eppoData.length > 0) || eppoPlantData;
   
   if (!hasEppoData) {
     return null;
@@ -48,6 +49,54 @@ const EppoDataPanel = ({ analysisDetails, userInput, eppoData }: EppoDataPanelPr
       </CardHeader>
       
       <CardContent className="space-y-4">
+        {/* Plant Identification from EPPO */}
+        {eppoPlantData && (
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+            <div className="flex items-start gap-3">
+              <div className="text-green-600 mt-1">
+                <Info className="h-5 w-5" />
+              </div>
+              <div className="flex-1">
+                <h4 className="font-semibold text-green-800 mb-2">
+                  🌿 Identificazione Pianta - Database EPPO
+                </h4>
+                <div className="space-y-2">
+                  <p className="text-green-700">
+                    <strong>Nome preferito:</strong> {eppoPlantData.preferredName}
+                  </p>
+                  {eppoPlantData.scientificName && (
+                    <p className="text-green-700">
+                      <strong>Nome scientifico:</strong> <em>{eppoPlantData.scientificName}</em>
+                    </p>
+                  )}
+                  <p className="text-green-700">
+                    <strong>Codice EPPO:</strong> <code className="bg-green-100 px-1 rounded">{eppoPlantData.eppoCode}</code>
+                  </p>
+                  {eppoPlantData.otherNames && eppoPlantData.otherNames.length > 0 && (
+                    <p className="text-green-700">
+                      <strong>Altri nomi:</strong> {eppoPlantData.otherNames.join(', ')}
+                    </p>
+                  )}
+                  {eppoPlantData.taxonomy && (
+                    <div className="text-green-600 text-sm">
+                      <strong>Tassonomia:</strong>
+                      {eppoPlantData.taxonomy.family && (
+                        <span className="ml-2">Famiglia: {eppoPlantData.taxonomy.family}</span>
+                      )}
+                      {eppoPlantData.taxonomy.genus && (
+                        <span className="ml-2">Genere: {eppoPlantData.taxonomy.genus}</span>
+                      )}
+                    </div>
+                  )}
+                  <Badge variant="secondary" className="bg-green-100 text-green-800">
+                    Verificato EPPO Database
+                  </Badge>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Analysis Enhancement Info */}
         <div className="flex items-center gap-2 p-3 bg-green-50 rounded-lg border border-green-200">
           <Info className="h-4 w-4 text-green-600" />
@@ -55,6 +104,7 @@ const EppoDataPanel = ({ analysisDetails, userInput, eppoData }: EppoDataPanelPr
             <span className="font-medium text-green-800">Diagnosi Potenziata:</span>
             <span className="text-green-700 ml-1">
               {eppoResultsCount} corrispondenze trovate nel database EPPO
+              {eppoPlantData && " + identificazione pianta"}
             </span>
           </div>
         </div>
