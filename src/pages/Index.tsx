@@ -63,6 +63,13 @@ const Index = () => {
         setActiveTab("expert");
         return;
       }
+      
+      // Per il master account, quando viene richiesta la chat, vai al tab expert
+      if (isMasterAccount && newTab === "chat") {
+        setActiveTab("expert");
+        return;
+      }
+      
       if (!isMasterAccount && !canAccessTabs && newTab !== "diagnose" && newTab !== "chat") {
         toast({
           title: t("completeDiagnosisFirst"),
