@@ -46,7 +46,7 @@ serve(async (req) => {
 
     console.log("✅ User authenticated:", user.id);
 
-    // Get conversations for Marco Nigro (expert)
+    // Get conversations for Marco Nigro (expert) - tutte le conversazioni per mostrare utenti unici
     const { data: conversations, error: conversationsError } = await supabaseClient
       .from('conversations')
       .select(`

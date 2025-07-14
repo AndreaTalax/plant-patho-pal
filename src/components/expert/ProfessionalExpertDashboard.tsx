@@ -188,12 +188,19 @@ const ProfessionalExpertDashboard = () => {
           .select('*', { count: 'exact' })
           .gte('sent_at', todayStart.toISOString());
         
+        // Conta utenti unici attivi (basato su user_id unici, non su numero di conversazioni)
+        const uniqueActiveUsers = new Set(
+          conversationsWithProfiles
+            .filter(c => c.user_profile?.is_online)
+            .map(c => c.user_id)
+        ).size;
+
         setStats({
           totalConversations: conversationsWithProfiles.length,
           finishedConversations: finishedConversationsWithProfiles.length,
           pendingConsultations: 0, // Will be updated with consultations
           todayMessages: todayMessagesCount || 0,
-          activeUsers: conversationsWithProfiles.filter(c => c.user_profile?.is_online).length
+          activeUsers: uniqueActiveUsers
         });
       }
 

@@ -8,13 +8,15 @@ export class ConversationService {
     try {
       console.log('🔍 ConversationService: Ricerca conversazione per utente:', userId);
 
-      // Ricerca conversazione esistente con fallback robusto
+      // Ricerca QUALSIASI conversazione esistente per questo utente (attiva o finita)
+      // Se esiste una conversazione finita, la riattiviamo invece di crearne una nuova
       const { data: existing, error: findError } = await supabase
         .from('conversations')
         .select('*')
         .eq('user_id', userId)
         .eq('expert_id', MARCO_NIGRO_ID)
-        .eq('status', 'active')
+        .order('updated_at', { ascending: false })
+        .limit(1)
         .maybeSingle();
 
       if (findError) {
@@ -24,6 +26,29 @@ export class ConversationService {
 
       if (existing) {
         console.log('✅ ConversationService: Conversazione esistente trovata:', existing.id);
+        
+        // Se la conversazione è finita, riattiviamola
+        if (existing.status === 'finished') {
+          console.log('🔄 ConversationService: Riattivazione conversazione finita...');
+          const { data: reactivated, error: updateError } = await supabase
+            .from('conversations')
+            .update({ 
+              status: 'active',
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', existing.id)
+            .select()
+            .single();
+            
+          if (updateError) {
+            console.error('❌ ConversationService: Errore riattivazione conversazione', updateError);
+            return existing; // Ritorna comunque la conversazione originale
+          }
+          
+          console.log('✅ ConversationService: Conversazione riattivata');
+          return reactivated;
+        }
+        
         return existing;
       }
 
