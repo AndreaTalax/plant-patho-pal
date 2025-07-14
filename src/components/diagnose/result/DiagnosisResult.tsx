@@ -164,7 +164,19 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
     );
   }
 
-  // Logica robusta per estrarre informazioni sulla pianta
+  // Prima definisco le variabili base
+  const confidencePercent = analysisData?.confidence 
+    ? Math.round(analysisData.confidence * 100) 
+    : analysisDetails?.confidence 
+    ? Math.round(analysisDetails.confidence * 100) 
+    : 50; // Default al 50% invece di 0
+
+  const isHealthy = analysisData?.isHealthy || analysisData?.healthy || false;
+  const isHighConfidence = (analysisData?.confidence || analysisDetails?.confidence || 0) >= 0.7;
+  const isLowConfidence = (analysisData?.confidence || analysisDetails?.confidence || 0) < 0.5;
+  const hasEppoData = analysisDetails?.eppoResultsCount > 0;
+
+  // Poi definisco le funzioni helper che usano le variabili sopra
   const getPlantInfo = () => {
     const sources = [
       analysisData?.plant?.name,
@@ -193,7 +205,6 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
     return { plantName, scientificName };
   };
 
-  // Logica robusta per estrarre informazioni sulle malattie
   const getDiseaseInfo = () => {
     let diseases = [];
     
@@ -222,19 +233,9 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
     return diseases;
   };
 
+  // Infine chiamo le funzioni
   const { plantName, scientificName } = getPlantInfo();
   const diseaseList = getDiseaseInfo();
-
-  const confidencePercent = analysisData?.confidence 
-    ? Math.round(analysisData.confidence * 100) 
-    : analysisDetails?.confidence 
-    ? Math.round(analysisDetails.confidence * 100) 
-    : 50; // Default al 50% invece di 0
-
-  const isHealthy = analysisData?.isHealthy || analysisData?.healthy || false;
-  const isHighConfidence = (analysisData?.confidence || analysisDetails?.confidence || 0) >= 0.7;
-  const isLowConfidence = (analysisData?.confidence || analysisDetails?.confidence || 0) < 0.5;
-  const hasEppoData = analysisDetails?.eppoResultsCount > 0;
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
