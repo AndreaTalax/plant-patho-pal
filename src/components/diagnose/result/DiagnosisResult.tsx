@@ -179,16 +179,16 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
     );
   }
 
-  // Prima definisco le variabili base
-  const confidencePercent = analysisData?.confidence 
-    ? Math.round(analysisData.confidence * 100) 
-    : analysisDetails?.confidence 
-    ? Math.round(analysisDetails.confidence * 100) 
-    : 50; // Default al 50% invece di 0
+  // Prima definisco le variabili base con correzione accuratezza
+  const rawConfidence = analysisData?.confidence || analysisDetails?.confidence || 0.5;
+  // Assicurati che l'accuratezza sia sempre tra 0-100%
+  const confidencePercent = Math.min(100, Math.max(0, 
+    rawConfidence > 1 ? Math.round(rawConfidence) : Math.round(rawConfidence * 100)
+  ));
 
   const isHealthy = analysisData?.isHealthy || analysisData?.healthy || false;
-  const isHighConfidence = (analysisData?.confidence || analysisDetails?.confidence || 0) >= 0.7;
-  const isLowConfidence = (analysisData?.confidence || analysisDetails?.confidence || 0) < 0.5;
+  const isHighConfidence = rawConfidence >= 0.7;
+  const isLowConfidence = rawConfidence < 0.5;
   const hasEppoData = analysisDetails?.eppoResultsCount > 0;
 
   // Poi definisco le funzioni helper che usano le variabili sopra
@@ -204,7 +204,28 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
       analysisData?.label
     ];
     
-    const plantName = sources.find(name => name && name.trim() && name !== 'Unknown') || 'Pianta rilevata';
+    // Filtra i placeholder generici e cerca nomi più specifici
+    const filteredSources = sources.filter(name => 
+      name && 
+      name.trim() && 
+      name !== 'Unknown' && 
+      name !== 'Pianta identificata tramite Multi-AI' &&
+      name !== 'Plant' &&
+      name !== 'plant' &&
+      !name.toLowerCase().includes('identified') &&
+      !name.toLowerCase().includes('tramite') &&
+      !name.toLowerCase().includes('multi-ai')
+    );
+    
+    let plantName = filteredSources[0] || 'Specie da identificare';
+    
+    // Se il nome contiene codici o è troppo tecnico, prova a pulirlo
+    if (plantName && typeof plantName === 'string') {
+      // Rimuovi codici tra parentesi tipo "(EPPO: ABCDE)"
+      plantName = plantName.replace(/\(EPPO:.*?\)/gi, '').trim();
+      // Capitalizza la prima lettera
+      plantName = plantName.charAt(0).toUpperCase() + plantName.slice(1);
+    }
     
     const scientificSources = [
       analysisData?.plant?.scientific_name,
