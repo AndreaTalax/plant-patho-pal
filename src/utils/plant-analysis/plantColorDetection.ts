@@ -26,10 +26,10 @@ export async function getPlantGreenConfidence(imageFile: File): Promise<number> 
       const g = imageData.data[i + 1];
       const b = imageData.data[i + 2];
 
-      // Condizione: pixel tipico del verde foglia/erba
+      // Condizione più permissiva per rilevare piante
       if (
-        g > 50 && (g > r + 10) && (g > b + 10) && // verde più dominante
-        !(r > 170 && g > 170 && b > 170) // escludi pixel chiari/bianco
+        g > 40 && (g > r + 5) && (g > b + 5) && // verde più dominante (soglia ridotta)
+        !(r > 180 && g > 180 && b > 180) // escludi solo pixel molto chiari
       ) {
         greenishPixelCount++;
       }
