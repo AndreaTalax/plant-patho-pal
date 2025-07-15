@@ -120,19 +120,6 @@ const MessageInput: React.FC<MessageInputProps> = ({
 
   return (
     <div className="bg-white border-t border-gray-200 p-4">
-      {/* Audio Recorder - Abilitato di default */}
-      {enableAudio && (
-        <div className="mb-4">
-          <AudioRecorder 
-            onSendAudio={handleAudioSend}
-            disabled={isSending || isUploading}
-            conversationId={conversationId}
-            senderId={senderId}
-            recipientId={recipientId}
-          />
-        </div>
-      )}
-
       <div className="flex items-end gap-3">
         {/* Message Input Area */}
         <div className="flex-1 relative">
@@ -142,23 +129,13 @@ const MessageInput: React.FC<MessageInputProps> = ({
             onChange={(e) => setMessage(e.target.value)}
             onKeyPress={handleKeyPress}
             placeholder="Scrivi un messaggio..."
-            className="min-h-[50px] max-h-[200px] resize-none pr-12"
+            className="min-h-[50px] max-h-[200px] resize-none"
             disabled={isSending || isUploading}
           />
           
-          {/* Emoji Picker - Abilitato di default */}
+          {/* Emoji Picker */}
           {enableEmoji && (
-            <div className="absolute bottom-2 right-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                disabled={isSending || isUploading}
-                className="h-8 w-8 p-0"
-              >
-                <Smile className="h-4 w-4" />
-              </Button>
-              
+            <div className="absolute top-2 right-2">
               <EmojiPicker
                 onSelect={handleEmojiSelect}
                 open={showEmojiPicker}
@@ -170,6 +147,32 @@ const MessageInput: React.FC<MessageInputProps> = ({
 
         {/* Action Buttons */}
         <div className="flex items-center gap-2">
+          {/* Audio Recorder Button */}
+          {enableAudio && (
+            <div>
+              <AudioRecorder 
+                onSendAudio={handleAudioSend}
+                disabled={isSending || isUploading}
+                conversationId={conversationId}
+                senderId={senderId}
+                recipientId={recipientId}
+              />
+            </div>
+          )}
+
+          {/* Emoji Button */}
+          {enableEmoji && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+              disabled={isSending || isUploading}
+              className="h-10 w-10 p-0"
+            >
+              <Smile className="h-4 w-4" />
+            </Button>
+          )}
+
           {/* Image Upload */}
           <input
             ref={fileInputRef}
