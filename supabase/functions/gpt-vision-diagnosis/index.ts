@@ -21,10 +21,9 @@ serve(async (req) => {
       console.error('❌ OPENAI_API_KEY non configurata');
       return new Response(
         JSON.stringify({ 
-          error: 'OpenAI API key non configurata',
-          fallback: true
+          error: 'OpenAI API key non configurata'
         }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -122,11 +121,9 @@ CONCENTRATI su: macchie fogliari, decolorazioni, muffe, necrosi, deformazioni, p
       console.error('❌ Errore OpenAI API:', response.status, errorText);
       return new Response(
         JSON.stringify({ 
-          error: `OpenAI API non disponibile (${response.status})`,
-          fallback: true,
-          fallbackReason: `OpenAI API error: ${response.status}`
+          error: `OpenAI API non disponibile (${response.status})`
         }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -182,8 +179,7 @@ CONCENTRATI su: macchie fogliari, decolorazioni, muffe, necrosi, deformazioni, p
     return new Response(
       JSON.stringify({ 
         error: 'Errore interno del servizio',
-        details: error.message,
-        fallback: true
+        details: error.message
       }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

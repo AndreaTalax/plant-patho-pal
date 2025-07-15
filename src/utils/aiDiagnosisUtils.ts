@@ -291,8 +291,8 @@ export const analyzeImage = async (
   isVerificationOnly = false
 ) => {
   try {
-    // Simulate a brief delay for analysis
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    // REAL AI ANALYSIS - No simulation
+    console.log('🌿 Starting real AI plant analysis...');
     
     // Verify if the image is a data URL
     if (!imageDataUrl.startsWith('data:')) {

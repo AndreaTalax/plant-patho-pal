@@ -99,21 +99,13 @@ export class PlantIdService {
         };
       }
 
-      return this.getFallbackResult();
+      throw new Error('No plant identification available');
     } catch (error) {
       console.error('Plant.id identification failed:', error);
-      return this.getFallbackResult();
+      throw error;
     }
   }
 
-  private static getFallbackResult(): PlantIdentificationResult {
-    return {
-      plantName: 'Identificazione non disponibile',
-      scientificName: '',
-      confidence: 0,
-      provider: 'plantid'
-    };
-  }
 
   /**
   * Generates care instructions for a specified plant based on its name.
@@ -216,10 +208,10 @@ export class EPPOService {
         };
       }
 
-      return this.getFallbackResult();
+      throw new Error('No EPPO identification available');
     } catch (error) {
       console.error('EPPO identification failed:', error);
-      return this.getFallbackResult();
+      throw error;
     }
   }
 
@@ -494,75 +486,7 @@ export class EPPOService {
   }
 }
 
-// Servizio simulato per test locali (quando le API non sono disponibili)
-export class MockPlantService {
-  /**
-   * Simulates the identification of a plant species based on image data.
-   * @example
-   * identifyPlant("image_data_string")
-   * Returns an object containing details about the identified plant.
-   * @param {string} imageData - Base64 encoded string of image data representing the plant.
-   * @returns {Promise<PlantIdentificationResult>} A promise that resolves to an object containing plant identification details such as name, confidence level, habitat, care instructions, common diseases, and provider.
-   * @description
-   *   - Delays the simulation to mimic the behavior of an actual API call.
-   *   - Returns simulated results with various common plants.
-   *   - Uses a random index to select one of several pre-defined mock results.
-   */
-  static async identifyPlant(imageData: string): Promise<PlantIdentificationResult> {
-    // Simula un delay della chiamata API
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Risultati simulati basati su piante comuni
-    const mockResults = [
-      {
-        plantName: 'Rosa comune',
-        scientificName: 'Rosa gallica',
-        confidence: 0.85,
-        habitat: 'Giardini e aree coltivate',
-        careInstructions: [
-          'Annaffia regolarmente ma evita ristagni d\'acqua',
-          'Esponi alla luce solare diretta per almeno 6 ore al giorno',
-          'Pota i fiori appassiti per stimolare nuove fioriture',
-          'Fertilizza ogni 4-6 settimane durante la stagione di crescita'
-        ],
-        commonDiseases: ['Oidio', 'Ruggine', 'Macchia nera', 'Afidi'],
-        provider: 'plantnet' as const
-      },
-      {
-        plantName: 'Basilico',
-        scientificName: 'Ocimum basilicum',
-        confidence: 0.92,
-        habitat: 'Orti e vasi, zone temperate',
-        careInstructions: [
-          'Annaffia quando il terreno superficiale è asciutto',
-          'Mantieni in luogo luminoso ma evita sole diretto intenso',
-          'Pizzica i fiori per favorire la crescita delle foglie',
-          'Raccogli le foglie regolarmente per stimolare la crescita'
-        ],
-        commonDiseases: ['Peronospora', 'Fusarium', 'Afidi', 'Acari'],
-        provider: 'plantnet' as const
-      },
-      {
-        plantName: 'Geranio',
-        scientificName: 'Pelargonium zonale',
-        confidence: 0.78,
-        habitat: 'Balconi, terrazze, giardini mediterranei',
-        careInstructions: [
-          'Annaffia moderatamente, lascia asciugare tra un\'annaffiatura e l\'altra',
-          'Espone alla luce diretta del sole',
-          'Rimuovi fiori e foglie secche regolarmente',
-          'Proteggi dal gelo in inverno'
-        ],
-        commonDiseases: ['Botrytis', 'Ruggine del geranio', 'Afidi', 'Mosca bianca'],
-        provider: 'plantnet' as const
-      }
-    ];
-
-    // Restituisce un risultato casuale per la simulazione
-    const randomIndex = Math.floor(Math.random() * mockResults.length);
-    return mockResults[randomIndex];
-  }
-}
+// REMOVED: All mock services - Only real AI APIs are used now
 
 // Servizio principale che combina i risultati
 export class CombinedPlantAnalysisService {
@@ -594,7 +518,8 @@ export class CombinedPlantAnalysisService {
           results.push(plantIdResult);
         }
       } catch (error) {
-        console.warn('Plant.id non disponibile, uso servizio mock');
+        console.error('Plant.id failed:', error);
+        throw error;
       }
 
       // Fase 2: EPPO (se Plant.id fallisce o per conferma)
@@ -605,14 +530,12 @@ export class CombinedPlantAnalysisService {
           results.push(eppoResult);
         }
       } catch (error) {
-        console.warn('EPPO non disponibile');
+        console.error('EPPO failed:', error);
+        throw error;
       }
 
-      // Fase 3: Servizio Mock (come fallback)
       if (results.length === 0) {
-        onProgress?.({ stage: 'Servizio locale', percentage: 75, message: 'Usando database locale...' });
-        const mockResult = await MockPlantService.identifyPlant(imageData);
-        results.push(mockResult);
+        throw new Error('All identification services failed');
       }
 
       onProgress?.({ stage: 'Completato', percentage: 100, message: 'Analisi completata!' });
@@ -633,17 +556,7 @@ export class CombinedPlantAnalysisService {
 
     } catch (error) {
       console.error('Errore nell\'analisi combinata:', error);
-      
-      // Fallback finale
-      const fallbackResult = await MockPlantService.identifyPlant(imageData);
-      return {
-        plantIdentification: [fallbackResult],
-        diseaseDetection: [],
-        consensus: {
-          mostLikelyPlant: fallbackResult,
-          confidenceScore: fallbackResult.confidence
-        }
-      };
+      throw error;
     }
   }
 }
@@ -738,14 +651,6 @@ export async function identifyPlantByNameOrImage(
     }
   }
   
-  // Fallback
-  const fallbackResult = await MockPlantService.identifyPlant('');
-  return {
-    plantIdentification: [fallbackResult],
-    diseaseDetection: [],
-    consensus: {
-      mostLikelyPlant: fallbackResult,
-      confidenceScore: fallbackResult.confidence
-    }
-  };
+  // No fallback - if all services fail, throw error
+  throw new Error('Plant identification failed - no valid results from any service');
 }

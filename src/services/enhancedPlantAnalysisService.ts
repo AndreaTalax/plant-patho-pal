@@ -1,4 +1,4 @@
-import { PlantIdService, EPPOService, MockPlantService, type PlantIdentificationResult, type DiseaseDetectionResult } from './aiProviders';
+import { PlantIdService, EPPOService, type PlantIdentificationResult, type DiseaseDetectionResult } from './aiProviders';
 import { PlexiAIService } from './aiProviders/PlexiAIService';
 import { PlantIDService } from './aiProviders/PlantIDService';
 import { PlantDetectionService } from './plantDetectionService';

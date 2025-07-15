@@ -43,12 +43,9 @@ serve(async (req) => {
       console.log('⚠️ PLANT_NET_KEY non trovata nei segreti');
       return new Response(
         JSON.stringify({ 
-          error: 'Chiave API PlantNet non configurata',
-          isPlant: false,
-          confidence: 0,
-          fallback: true
+          error: 'Chiave API PlantNet non configurata'
         }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -90,16 +87,12 @@ serve(async (req) => {
       const errorText = await response.text();
       console.error('Dettagli errore:', errorText);
       
-      // Ritorna un fallback invece di errore per continuare l'analisi
+      // Errore reale - non fallback
       return new Response(
         JSON.stringify({ 
-          error: `PlantNet temporaneamente non disponibile (${response.status})`,
-          isPlant: true, // Assumiamo sia una pianta per continuare l'analisi
-          confidence: 0.3, // Confidenza bassa
-          fallback: true,
-          fallbackReason: `PlantNet API error: ${response.status}`
+          error: `PlantNet non disponibile (${response.status})`
         }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
