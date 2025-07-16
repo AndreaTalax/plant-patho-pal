@@ -187,12 +187,36 @@ export const usePlantAnalysis = () => {
         allFeatures.push('Identificazione PlantNet completata');
       }
       
-      // Fallback if no service worked
-      if (!primaryAnalysis && allDiseases.length === 0) {
-        if (gptResult.status === 'rejected' || (gptResult.status === 'fulfilled' && gptResult.value.error)) {
-          console.error('❌ GPT-4 Vision fallito:', gptResult);
-        }
-        throw new Error('Tutti i servizi AI non sono disponibili. Riprova più tardi.');
+      // Collect all service errors for better debugging
+      const serviceErrors = [];
+      if (gptResult.status === 'rejected' || (gptResult.status === 'fulfilled' && gptResult.value.error)) {
+        serviceErrors.push(`GPT-4 Vision: ${gptResult.status === 'rejected' ? gptResult.reason : gptResult.value.error}`);
+      }
+      if (plantIdResult.status === 'rejected' || (plantIdResult.status === 'fulfilled' && plantIdResult.value.error)) {
+        serviceErrors.push(`Plant.ID: ${plantIdResult.status === 'rejected' ? plantIdResult.reason : plantIdResult.value.error}`);
+      }
+      if (plantNetResult.status === 'rejected' || (plantNetResult.status === 'fulfilled' && plantNetResult.value.error)) {
+        serviceErrors.push(`PlantNet: ${plantNetResult.status === 'rejected' ? plantNetResult.reason : plantNetResult.value.error}`);
+      }
+      
+      // Check if we have at least one working service
+      const workingServices = servicesUsed.length;
+      
+      if (!primaryAnalysis && allDiseases.length === 0 && workingServices === 0) {
+        console.error('❌ Tutti i servizi AI falliti:', serviceErrors);
+        
+        // Provide informative error message about which services failed
+        const errorMessage = serviceErrors.length > 0 
+          ? `Servizi AI temporaneamente non disponibili:\n${serviceErrors.join('\n')}\n\nRiprova più tardi o consulta un esperto.`
+          : 'Tutti i servizi AI non sono disponibili. Riprova più tardi.';
+          
+        throw new Error(errorMessage);
+      }
+      
+      // Warn about partial service availability
+      if (serviceErrors.length > 0) {
+        console.warn(`⚠️ Alcuni servizi AI non funzionanti:`, serviceErrors);
+        console.log(`✅ ${workingServices} servizi AI funzionanti su 3 totali`);
       }
       
       setAnalysisProgress(70);
