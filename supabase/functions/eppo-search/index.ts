@@ -11,33 +11,23 @@ serve(async (req) => {
   }
 
   try {
-    const { plantName } = await req.json()
+    const { plantName, eppoCode, action } = await req.json()
     
-    if (!plantName) {
-      return new Response(
-        JSON.stringify({ error: 'Plant name is required' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
-
-    console.log('🌿 EPPO search for plant:', plantName)
-
     const eppoAuthToken = Deno.env.get('EPPO_AUTH_TOKEN')
     
     if (!eppoAuthToken) {
       console.log('⚠️ EPPO_AUTH_TOKEN not found, using fallback results')
       
-      // Fallback results when API key is not available
       const fallbackResult = {
         pests: [],
-        plants: [{
+        plants: plantName ? [{
           code: 'PLANT_001',
           name: plantName,
           fullname: `${plantName} (identificazione locale)`,
           scientificname: plantName
-        }],
+        }] : [],
         diseases: [],
-        searchTerm: plantName,
+        searchTerm: plantName || eppoCode,
         source: 'fallback'
       }
       
@@ -50,7 +40,50 @@ serve(async (req) => {
       'Content-Type': 'application/json'
     }
 
-    console.log('📡 Making EPPO API calls...')
+    console.log(`🌿 EPPO ${action || 'search'} for:`, plantName || eppoCode)
+
+    // Handle different actions
+    if (action === 'getTaxon' && eppoCode) {
+      try {
+        const url = `https://data.eppo.int/api/rest/1.0/taxon/${eppoCode}?authtoken=${eppoAuthToken}`
+        console.log('📡 Getting taxon details from EPPO:', url)
+        
+        const response = await fetch(url, { headers })
+        
+        if (!response.ok) {
+          console.log('❌ EPPO taxon request failed:', response.status)
+          throw new Error(`EPPO API error: ${response.status}`)
+        }
+        
+        const data = await response.json()
+        console.log('✅ EPPO taxon details received')
+        
+        return new Response(JSON.stringify({
+          taxon: data,
+          source: 'eppo_taxon_api'
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        })
+        
+      } catch (error) {
+        console.error('❌ Error fetching taxon details:', error)
+        return new Response(JSON.stringify({ 
+          error: error.message,
+          source: 'error_fallback'
+        }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        })
+      }
+    }
+
+    // Default search action
+    if (!plantName) {
+      return new Response(
+        JSON.stringify({ error: 'Plant name is required for search' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
     
     const searchQueries = [
       { type: 'pests', url: `https://data.eppo.int/api/rest/1.0/tools/search?kw=${encodeURIComponent(plantName)}&searchfor=pests&authtoken=${eppoAuthToken}` },
@@ -81,7 +114,7 @@ serve(async (req) => {
       plants: [],
       diseases: [],
       searchTerm: plantName,
-      source: 'eppo_api'
+      source: 'eppo_search_api'
     }
 
     results.forEach(result => {
@@ -98,7 +131,7 @@ serve(async (req) => {
     })
 
   } catch (error) {
-    console.error('❌ Error in EPPO search:', error)
+    console.error('❌ Error in EPPO function:', error)
     return new Response(JSON.stringify({ 
       error: error.message,
       pests: [],
