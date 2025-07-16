@@ -106,14 +106,14 @@ export const usePlantAnalysis = () => {
         }),
         // Plant.ID diagnosis
         supabase.functions.invoke('plant-id-diagnosis', {
-          body: { imageData, plantInfo }
+          body: { imageBase64: imageData }
         }).catch(err => {
           console.error('❌ Plant.ID error:', err);
           return { error: err.message };
         }),
         // PlantNet identification
         supabase.functions.invoke('plantnet-identification', {
-          body: { imageData, plantInfo }
+          body: { imageBase64: imageData }
         }).catch(err => {
           console.error('❌ PlantNet error:', err);
           return { error: err.message };

@@ -23,9 +23,7 @@ export class PlantIDService {
       
       const { data, error } = await supabase.functions.invoke('plant-id-diagnosis', {
         body: { 
-          images: [imageBase64],
-          modifiers: ["crops_fast", "similar_images"],
-          plant_details: ["common_names", "edible_parts", "toxicity"]
+          imageBase64: imageBase64
         }
       });
       

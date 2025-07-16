@@ -27,9 +27,7 @@ export class PlexiAIService {
       
       const { data, error } = await supabase.functions.invoke('analyze-plant', {
         body: { 
-          image: imageBase64,
-          comprehensive: true,
-          include_health: true
+          imageBase64: imageBase64
         }
       });
       
