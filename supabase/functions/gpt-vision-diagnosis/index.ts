@@ -16,16 +16,21 @@ serve(async (req) => {
 
   try {
     console.log('🔍 GPT Vision Diagnosis - Inizio analisi');
+    console.log('🔐 Checking OpenAI API Key...');
     
     if (!openAIApiKey) {
-      console.error('❌ OPENAI_API_KEY non configurata');
+      console.error('❌ OPENAI_API_KEY non configurata nel file env');
+      console.log('Available env vars:', Object.keys(Deno.env.toObject()));
       return new Response(
         JSON.stringify({ 
-          error: 'OpenAI API key non configurata'
+          error: 'OpenAI API key non configurata',
+          debug: 'OPENAI_API_KEY non trovata nei secrets'
         }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+    
+    console.log('✅ OpenAI API Key trovata, lunghezza:', openAIApiKey.length);
 
     const { imageUrl, plantInfo } = await req.json();
     
