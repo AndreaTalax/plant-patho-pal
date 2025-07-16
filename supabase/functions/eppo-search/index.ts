@@ -22,10 +22,10 @@ serve(async (req) => {
 
     console.log('🌿 EPPO search for plant:', plantName)
 
-    const eppoApiKey = Deno.env.get('EPPO_API_KEY')
+    const eppoAuthToken = Deno.env.get('EPPO_AUTH_TOKEN')
     
-    if (!eppoApiKey) {
-      console.log('⚠️ EPPO_API_KEY not found, using fallback results')
+    if (!eppoAuthToken) {
+      console.log('⚠️ EPPO_AUTH_TOKEN not found, using fallback results')
       
       // Fallback results when API key is not available
       const fallbackResult = {
@@ -47,16 +47,15 @@ serve(async (req) => {
     }
 
     const headers = {
-      'Authorization': `Bearer ${eppoApiKey}`,
       'Content-Type': 'application/json'
     }
 
     console.log('📡 Making EPPO API calls...')
     
     const searchQueries = [
-      { type: 'pests', url: `https://data.eppo.int/api/rest/1.0/tools/search?kw=${encodeURIComponent(plantName)}&searchfor=pests` },
-      { type: 'plants', url: `https://data.eppo.int/api/rest/1.0/tools/search?kw=${encodeURIComponent(plantName)}&searchfor=plants` },
-      { type: 'diseases', url: `https://data.eppo.int/api/rest/1.0/tools/search?kw=${encodeURIComponent(plantName)}&searchfor=diseases` }
+      { type: 'pests', url: `https://data.eppo.int/api/rest/1.0/tools/search?kw=${encodeURIComponent(plantName)}&searchfor=pests&authtoken=${eppoAuthToken}` },
+      { type: 'plants', url: `https://data.eppo.int/api/rest/1.0/tools/search?kw=${encodeURIComponent(plantName)}&searchfor=plants&authtoken=${eppoAuthToken}` },
+      { type: 'diseases', url: `https://data.eppo.int/api/rest/1.0/tools/search?kw=${encodeURIComponent(plantName)}&searchfor=diseases&authtoken=${eppoAuthToken}` }
     ]
 
     const results = await Promise.allSettled(
