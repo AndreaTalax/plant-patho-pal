@@ -58,6 +58,22 @@ verify_jwt = false
 [functions.upload-audio]
 verify_jwt = false
 
+[functions.test-secrets]
+verify_jwt = false
+
+[functions.gpt-vision-diagnosis]
+verify_jwt = false
+
+[functions.plant-id-diagnosis]
+verify_jwt = false
+
+[functions.plantnet-identification]
+verify_jwt = false
+
+[auth.hooks.send_email]
+enabled = true
+uri = "{{PROJECT_REF}}/functions/v1/send-registration-confirmation"
+
 [auth.hooks.send_email]
 enabled = true
 uri = "{{PROJECT_REF}}/functions/v1/send-registration-confirmation"
