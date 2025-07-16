@@ -100,14 +100,23 @@ export const usePlantAnalysis = () => {
         // GPT-4 Vision diagnosis
         supabase.functions.invoke('gpt-vision-diagnosis', {
           body: { imageUrl: imageData, plantInfo }
+        }).catch(err => {
+          console.error('❌ GPT-4 Vision error:', err);
+          return { error: err.message };
         }),
         // Plant.ID diagnosis
         supabase.functions.invoke('plant-id-diagnosis', {
           body: { imageData, plantInfo }
+        }).catch(err => {
+          console.error('❌ Plant.ID error:', err);
+          return { error: err.message };
         }),
         // PlantNet identification
         supabase.functions.invoke('plantnet-identification', {
           body: { imageData, plantInfo }
+        }).catch(err => {
+          console.error('❌ PlantNet error:', err);
+          return { error: err.message };
         })
       ]);
       
@@ -126,7 +135,7 @@ export const usePlantAnalysis = () => {
       let isHealthy = true; // Default sano, ma cambierà se troviamo malattie
       
         // GPT-4 Vision results (primary)
-      if (gptResult.status === 'fulfilled' && !gptResult.value.error) {
+      if (gptResult.status === 'fulfilled' && !gptResult.value.error && 'data' in gptResult.value) {
         primaryAnalysis = gptResult.value.data.analysis || {};
         console.log('🧠 GPT-4 Vision analysis ricevuta:', primaryAnalysis);
         
@@ -158,7 +167,7 @@ export const usePlantAnalysis = () => {
       }
       
       // Plant.ID results
-      if (plantIdResult.status === 'fulfilled' && !plantIdResult.value.error) {
+      if (plantIdResult.status === 'fulfilled' && !plantIdResult.value.error && 'data' in plantIdResult.value) {
         const plantIdData = plantIdResult.value.data;
         if (plantIdData.diseases) {
           allDiseases.push(...plantIdData.diseases.map((d: any) => ({ ...d, source: 'Plant.ID' })));
@@ -169,7 +178,7 @@ export const usePlantAnalysis = () => {
       }
       
       // PlantNet results
-      if (plantNetResult.status === 'fulfilled' && !plantNetResult.value.error) {
+      if (plantNetResult.status === 'fulfilled' && !plantNetResult.value.error && 'data' in plantNetResult.value) {
         const plantNetData = plantNetResult.value.data;
         if (plantNetData.species) {
           allFeatures.push(`PlantNet: ${plantNetData.species} identificata`);
