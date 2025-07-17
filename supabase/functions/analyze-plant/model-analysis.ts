@@ -314,3 +314,109 @@ export async function testHuggingFaceConnection(token: string) {
     return false;
   }
 }
+
+// Format model result for standardization
+/**
+ * Formats a model result into a standardized structure for plant analysis
+ * @param {any} result - The raw result from a model
+ * @param {string} source - The source/model name that generated this result
+ * @returns {object} Formatted result with standardized properties
+ */
+export function formatModelResult(result: any, source: string) {
+  if (!result) return null;
+  
+  return {
+    plantName: result.label || result.plantName || 'Unknown',
+    scientificName: result.scientificName || result.label || 'Unknown',
+    confidence: result.score || result.confidence || 0,
+    source: source,
+    isReliable: (result.score || result.confidence || 0) > 0.7
+  };
+}
+
+// Format final analysis result
+/**
+ * Formats the final analysis result combining multiple sources
+ * @param {any} analysisData - Combined analysis data from multiple sources
+ * @returns {object} Formatted final result
+ */
+export function formatAnalysisResult(analysisData: any) {
+  const {
+    plantVerification,
+    plantIdResult,
+    floraIncognitaResult,
+    plantSnapResult,
+    modelConsensus,
+    isLeaf,
+    eppoCheck
+  } = analysisData;
+
+  // Determine the best identification result
+  let bestResult = null;
+  let allResults = [];
+
+  if (plantIdResult) {
+    allResults.push({
+      ...plantIdResult,
+      source: 'Plant.id API'
+    });
+  }
+
+  if (floraIncognitaResult) {
+    allResults.push({
+      ...floraIncognitaResult,
+      source: 'Flora Incognita'
+    });
+  }
+
+  if (plantSnapResult) {
+    allResults.push({
+      ...plantSnapResult,
+      source: 'PlantSnap'
+    });
+  }
+
+  if (modelConsensus) {
+    allResults.push({
+      plantName: modelConsensus.label,
+      scientificName: modelConsensus.label,
+      confidence: modelConsensus.score,
+      source: 'AI Models Consensus',
+      isReliable: modelConsensus.isReliable
+    });
+  }
+
+  // Find the most reliable result
+  bestResult = allResults
+    .filter(r => r.isReliable)
+    .sort((a, b) => (b.confidence || 0) - (a.confidence || 0))[0] ||
+    allResults.sort((a, b) => (b.confidence || 0) - (a.confidence || 0))[0];
+
+  return {
+    success: true,
+    plantVerification,
+    identification: bestResult,
+    allResults,
+    analysis: {
+      isLeaf,
+      eppoCheck,
+      totalSources: allResults.length,
+      reliableSources: allResults.filter(r => r.isReliable).length
+    },
+    metadata: {
+      timestamp: new Date().toISOString(),
+      processingTime: Date.now()
+    }
+  };
+}
+
+// Simple capitalize function
+/**
+ * Capitalizes the first letter of a string
+ * @param {string} str - String to capitalize
+ * @returns {string} Capitalized string
+ */
+export function capitalize(str: string): string {
+  if (!str) return '';
+  return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+}
