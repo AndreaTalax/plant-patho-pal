@@ -315,6 +315,24 @@ const ProfessionalExpertDashboard = () => {
     setDateFilterOpen(false);
   };
 
+  // Close calendar when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dateFilterOpen) {
+        const target = event.target as Element;
+        if (!target.closest('[data-radix-popper-content-wrapper]') && 
+            !target.closest('button[data-state]')) {
+          setDateFilterOpen(false);
+        }
+      }
+    };
+
+    if (dateFilterOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [dateFilterOpen]);
+
   useEffect(() => {
     loadExpertData();
     
@@ -544,7 +562,7 @@ const ProfessionalExpertDashboard = () => {
                       {selectedDate ? format(selectedDate, "PPP", { locale: it }) : <span>Seleziona una data</span>}
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
+                  <PopoverContent className="w-auto p-0 z-50 bg-white" align="start">
                     <Calendar
                       mode="single"
                       selected={selectedDate}
@@ -553,7 +571,7 @@ const ProfessionalExpertDashboard = () => {
                         setDateFilterOpen(false);
                       }}
                       initialFocus
-                      className={cn("p-3 pointer-events-auto")}
+                      className="p-3 pointer-events-auto"
                     />
                   </PopoverContent>
                 </Popover>
