@@ -225,37 +225,80 @@ serve(async (req) => {
       });
     }
 
-    // Get the request body
-    logWithTimestamp('INFO', 'Parsing form data', { requestId });
-    const formData = await req.formData();
-    const imageFile = formData.get('image');
-    const imageBase64 = formData.get('imageBase64') as string || null;
+    // Get the request body - accept both JSON and FormData
+    logWithTimestamp('INFO', 'Parsing request body', { requestId });
+    
+    let imageBase64: string | null = null;
+    let imageFile: File | null = null;
+    
+    const contentType = req.headers.get('content-type') || '';
+    
+    if (contentType.includes('application/json')) {
+      // Handle JSON body
+      const body = await req.json();
+      imageBase64 = body.imageBase64 || body.imageUrl || null;
+      logWithTimestamp('INFO', 'JSON body parsed', { requestId, hasImageBase64: !!imageBase64 });
+    } else if (contentType.includes('multipart/form-data')) {
+      // Handle FormData
+      const formData = await req.formData();
+      imageFile = formData.get('image') as File;
+      imageBase64 = formData.get('imageBase64') as string || null;
+      logWithTimestamp('INFO', 'FormData parsed', { requestId, hasImageFile: !!imageFile, hasImageBase64: !!imageBase64 });
+    } else {
+      throw new Error(`Unsupported content type: ${contentType}`);
+    }
 
-    logWithTimestamp('INFO', 'Form data parsed', {
+    logWithTimestamp('INFO', 'Request data parsed', {
       requestId,
       hasImageFile: !!imageFile,
       hasImageBase64: !!imageBase64,
-      imageFileName: imageFile instanceof File ? imageFile.name : 'N/A',
+      imageFileName: imageFile instanceof File ? imageFile.name : 'uploaded_image.jpg',
       imageFileSize: imageFile instanceof File ? imageFile.size : 'N/A'
     });
 
-    if (!imageFile || !(imageFile instanceof File)) {
-      logWithTimestamp('ERROR', 'No valid image file provided', { requestId });
-      return new Response(JSON.stringify({ error: 'No image file provided' }), {
+    if (!imageFile && !imageBase64) {
+      logWithTimestamp('ERROR', 'No valid image data provided', { requestId });
+      return new Response(JSON.stringify({ error: 'No image file or base64 data provided' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
 
-    logWithTimestamp('INFO', `Processing plant image: ${imageFile.name} (${imageFile.size} bytes)`, { requestId });
+    let imageArrayBuffer: ArrayBuffer;
+    let fileName = 'uploaded_image.jpg';
 
-    // Read the image file as an ArrayBuffer
-    const imageProcessingStart = Date.now();
-    const imageArrayBuffer = await imageFile.arrayBuffer();
-    logWithTimestamp('INFO', `Image converted to ArrayBuffer in ${Date.now() - imageProcessingStart}ms`, {
-      requestId,
-      bufferSize: imageArrayBuffer.byteLength
-    });
+    if (imageFile && imageFile instanceof File) {
+      logWithTimestamp('INFO', `Processing plant image file: ${imageFile.name} (${imageFile.size} bytes)`, { requestId });
+      fileName = imageFile.name;
+      
+      // Read the image file as an ArrayBuffer
+      const imageProcessingStart = Date.now();
+      imageArrayBuffer = await imageFile.arrayBuffer();
+      logWithTimestamp('INFO', `Image file converted to ArrayBuffer in ${Date.now() - imageProcessingStart}ms`, {
+        requestId,
+        bufferSize: imageArrayBuffer.byteLength
+      });
+    } else if (imageBase64) {
+      logWithTimestamp('INFO', `Processing base64 image data`, { requestId });
+      
+      // Convert base64 to ArrayBuffer
+      const imageProcessingStart = Date.now();
+      
+      // Remove data URL prefix if present
+      const base64Data = imageBase64.replace(/^data:image\/[a-z]+;base64,/, '');
+      
+      // Convert base64 to binary
+      const binaryString = atob(base64Data);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      imageArrayBuffer = bytes.buffer;
+      logWithTimestamp('INFO', `Image converted to ArrayBuffer in ${Date.now() - imageProcessingStart}ms`, {
+        requestId,
+        bufferSize: imageArrayBuffer.byteLength
+      });
+    }
     
     // First, verify that the image contains a plant
     logWithTimestamp('INFO', 'Starting plant verification', { requestId });
@@ -654,7 +697,7 @@ serve(async (req) => {
     const { error: insertError } = await supabase
       .from('diagnosi_piante')
       .insert({
-        immagine_nome: imageFile.name,
+        immagine_nome: fileName,
         malattia: finalAnalysisResult.healthy ? 'Healthy' : finalAnalysisResult.label,
         accuratezza: formattedData.primaryConfidence || finalAnalysisResult.score,
         data: new Date().toISOString(),
