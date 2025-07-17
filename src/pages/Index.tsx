@@ -57,20 +57,32 @@ const Index = () => {
 
   useEffect(() => {
     const handleSwitchTab = (event: CustomEvent) => {
+      console.log("🎧 Index.tsx - handleSwitchTab called");
+      console.log("🎧 Event received:", event);
+      console.log("🎧 Event detail:", event.detail);
+      console.log("🎧 Event type:", event.type);
+      console.log("🎧 Current state - isMasterAccount:", isMasterAccount);
+      console.log("🎧 Current state - canAccessTabs:", canAccessTabs);
+      console.log("🎧 Current state - activeTab:", activeTab);
+      
       const newTab = event.detail;
+      console.log("🎧 New tab requested:", newTab);
 
       if (isMasterAccount && newTab === "diagnose") {
+        console.log("🎧 Master account + diagnose -> Setting to expert");
         setActiveTab("expert");
         return;
       }
       
       // Per il master account, quando viene richiesta la chat, vai al tab expert
       if (isMasterAccount && newTab === "chat") {
+        console.log("🎧 Master account + chat -> Setting to expert");
         setActiveTab("expert");
         return;
       }
       
       if (!isMasterAccount && !canAccessTabs && newTab !== "diagnose" && newTab !== "chat") {
+        console.log("🎧 Access denied - showing toast and setting to diagnose");
         toast({
           title: t("completeDiagnosisFirst"),
           description: t("afterUploadChoose"),
@@ -80,15 +92,20 @@ const Index = () => {
         setActiveTab("diagnose");
         return;
       }
+      
+      console.log("🎧 Setting active tab to:", newTab);
       setActiveTab(newTab);
+      console.log("🎧 Tab switch completed");
     };
 
+    console.log("🎧 Adding switchTab event listener");
     window.addEventListener('switchTab', handleSwitchTab as EventListener);
 
     return () => {
+      console.log("🎧 Removing switchTab event listener");
       window.removeEventListener('switchTab', handleSwitchTab as EventListener);
     };
-  }, [isMasterAccount, canAccessTabs, toast, t]);
+  }, [isMasterAccount, canAccessTabs, toast, t, activeTab]);
 
   const handleSetActiveTab = (tab: string) => {
     if (isMasterAccount && tab === "diagnose") {

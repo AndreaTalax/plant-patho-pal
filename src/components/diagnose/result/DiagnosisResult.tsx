@@ -135,8 +135,10 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
 
   const handleNavigateToChat = () => {
     console.log("🔄 Navigating from DiagnosisResult to chat...");
+    console.log("🔄 User profile:", userProfile);
     console.log("🔄 User profile role:", userProfile?.role);
     console.log("🔄 onChatWithExpert function:", typeof onChatWithExpert);
+    console.log("🔄 Window object available:", typeof window);
     
     try {
       if (onChatWithExpert && typeof onChatWithExpert === 'function') {
@@ -147,22 +149,32 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
         // Navigazione diretta senza delay con più logging
         if (userProfile?.role === 'expert' || userProfile?.role === 'admin') {
           console.log("🎯 Master account - switching to expert tab");
-          console.log("🎯 Dispatching event: switchTab with detail: expert");
+          console.log("🎯 Creating event: switchTab with detail: expert");
           const event = new CustomEvent('switchTab', { detail: 'expert' });
+          console.log("🎯 Event created:", event);
+          console.log("🎯 Event detail:", event.detail);
           window.dispatchEvent(event);
-          console.log("🎯 Event dispatched successfully");
+          console.log("🎯 Event dispatched successfully to window");
         } else {
           console.log("🎯 Regular user - switching to chat tab");
-          console.log("🎯 Dispatching event: switchTab with detail: chat");
+          console.log("🎯 Creating event: switchTab with detail: chat");
           const event = new CustomEvent('switchTab', { detail: 'chat' });
+          console.log("🎯 Event created:", event);
+          console.log("🎯 Event detail:", event.detail);
           window.dispatchEvent(event);
-          console.log("🎯 Event dispatched successfully");
+          console.log("🎯 Event dispatched successfully to window");
         }
         
-        // Aggiungi un toast per confermare
+        // Aggiungi un toast per confermare e delay per debug
+        console.log("🎯 Adding success toast");
         toast.success("Navigazione in corso...", {
           description: "Apertura chat con l'esperto"
         });
+        
+        // Aggiungi un console log aggiuntivo dopo un delay per verificare
+        setTimeout(() => {
+          console.log("🎯 Navigation attempt completed after 1 second");
+        }, 1000);
       }
     } catch (error) {
       console.error("❌ Navigation error:", error);
