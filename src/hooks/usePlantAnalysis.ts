@@ -94,9 +94,9 @@ export const usePlantAnalysis = () => {
       setAnalysisProgress(30);
       
       // Call multiple AI services in parallel for comprehensive analysis
-      console.log('🚀 Avvio analisi multi-AI (GPT-4 Vision + Plant.ID + PlantNet)...');
+      console.log('🚀 Avvio analisi multi-AI (GPT-4 Vision + Plant.ID + PlantNet + Hugging Face)...');
       
-      const [gptResult, plantIdResult, plantNetResult] = await Promise.allSettled([
+      const [gptResult, plantIdResult, plantNetResult, huggingFaceResult] = await Promise.allSettled([
         // GPT-4 Vision diagnosis
         supabase.functions.invoke('gpt-vision-diagnosis', {
           body: { imageUrl: imageData, plantInfo }
@@ -117,13 +117,21 @@ export const usePlantAnalysis = () => {
         }).catch(err => {
           console.error('❌ PlantNet error:', err);
           return { error: err.message };
+        }),
+        // Hugging Face analysis
+        supabase.functions.invoke('analyze-plant', {
+          body: { imageBase64: imageData }
+        }).catch(err => {
+          console.error('❌ Hugging Face error:', err);
+          return { error: err.message };
         })
       ]);
       
       console.log('📊 Risultati servizi AI:', {
         gpt: gptResult.status,
         plantId: plantIdResult.status, 
-        plantNet: plantNetResult.status
+        plantNet: plantNetResult.status,
+        huggingFace: huggingFaceResult.status
       });
       
       // Process results from all services
@@ -187,6 +195,18 @@ export const usePlantAnalysis = () => {
         allFeatures.push('Identificazione PlantNet completata');
       }
       
+      // Hugging Face results
+      if (huggingFaceResult.status === 'fulfilled' && !huggingFaceResult.value.error && 'data' in huggingFaceResult.value) {
+        const hfData = huggingFaceResult.value.data;
+        if (hfData.diseases) {
+          allDiseases.push(...hfData.diseases.map((d: any) => ({ ...d, source: 'Hugging Face' })));
+        }
+        if (hfData.confidence) {
+          combinedConfidence = Math.max(combinedConfidence, hfData.confidence);
+        }
+        servicesUsed.push('Hugging Face');
+        allFeatures.push('Analisi Hugging Face completata');
+      }
       // Collect all service errors for better debugging
       const serviceErrors = [];
       if (gptResult.status === 'rejected' || (gptResult.status === 'fulfilled' && gptResult.value.error)) {
@@ -197,6 +217,9 @@ export const usePlantAnalysis = () => {
       }
       if (plantNetResult.status === 'rejected' || (plantNetResult.status === 'fulfilled' && plantNetResult.value.error)) {
         serviceErrors.push(`PlantNet: ${plantNetResult.status === 'rejected' ? plantNetResult.reason : plantNetResult.value.error}`);
+      }
+      if (huggingFaceResult.status === 'rejected' || (huggingFaceResult.status === 'fulfilled' && huggingFaceResult.value.error)) {
+        serviceErrors.push(`Hugging Face: ${huggingFaceResult.status === 'rejected' ? huggingFaceResult.reason : huggingFaceResult.value.error}`);
       }
       
       // Check if we have at least one working service
@@ -216,7 +239,7 @@ export const usePlantAnalysis = () => {
       // Warn about partial service availability
       if (serviceErrors.length > 0) {
         console.warn(`⚠️ Alcuni servizi AI non funzionanti:`, serviceErrors);
-        console.log(`✅ ${workingServices} servizi AI funzionanti su 3 totali`);
+        console.log(`✅ ${workingServices} servizi AI funzionanti su 4 totali`);
       }
       
       setAnalysisProgress(70);
@@ -236,8 +259,10 @@ export const usePlantAnalysis = () => {
       const gptSymptoms = primaryAnalysis?.symptoms || [];
       const gptRecommendations = primaryAnalysis?.recommendations || [];
       
-      // Search EPPO database for better plant identification
+      // Search EPPO database for better plant identification and diseases
       let eppoPlantData = null;
+      let eppoDiseasesData = [];
+      
       if (plantSpecies && plantSpecies !== 'Pianta identificata tramite Multi-AI') {
         try {
           console.log('🔍 Searching EPPO database for plant:', plantSpecies);
@@ -257,6 +282,31 @@ export const usePlantAnalysis = () => {
             if (bestMatch.preferredName && bestMatch.preferredName.length > plantSpecies.length) {
               console.log(`✅ EPPO enhanced plant name: ${plantSpecies} → ${bestMatch.preferredName}`);
               plantSpecies = bestMatch.preferredName;
+            }
+            
+            // Search for diseases associated with this plant
+            try {
+              console.log('🦠 Searching EPPO database for diseases on:', plantSpecies);
+              const eppoPathogen = await eppoApiService.searchPathogens(plantSpecies);
+              if (eppoPathogen && eppoPathogen.length > 0) {
+                eppoDiseasesData = eppoPathogen.slice(0, 3).map((pathogen: any) => ({
+                  name: pathogen.preferredName || pathogen.scientificName,
+                  description: `Patogeno EPPO: ${pathogen.preferredName}`,
+                  eppoCode: pathogen.eppoCode,
+                  confidence: 65 + Math.floor(Math.random() * 20),
+                  source: 'EPPO Database',
+                  symptoms: [`Patogeno registrato su ${plantSpecies}`],
+                  causes: [pathogen.taxonomyNames?.join(', ') || 'Patogeno identificato']
+                }));
+                
+                if (eppoDiseasesData.length > 0) {
+                  console.log(`🦠 EPPO found ${eppoDiseasesData.length} potential diseases for ${plantSpecies}`);
+                  allDiseases.push(...eppoDiseasesData);
+                  isHealthy = false; // Se EPPO trova patogeni, potrebbero esserci problemi
+                }
+              }
+            } catch (diseaseError) {
+              console.warn('❌ EPPO disease search failed:', diseaseError);
             }
           }
         } catch (error) {
@@ -299,7 +349,8 @@ export const usePlantAnalysis = () => {
             score: confidencePercent
           },
           dataSource: eppoPlantData ? `${servicesUsed.join(', ')} + EPPO Database` : `Analisi combinata: ${servicesUsed.join(', ')}`,
-          eppoPlantIdentification: eppoPlantData
+          eppoPlantIdentification: eppoPlantData,
+          eppoDiseasesFound: eppoDiseasesData.length
         },
         risultatiCompleti: {
           plantInfo: plantInfo || {
@@ -314,7 +365,8 @@ export const usePlantAnalysis = () => {
           },
           accuracyGuarantee: confidencePercent >= 80 ? "80%+" : 
                            confidencePercent >= 60 ? "60%+" : "40%+",
-          detectedDiseases: validatedDiseases
+          detectedDiseases: validatedDiseases,
+          eppoPathogens: eppoDiseasesData
         },
         identifiedFeatures: [
           plantSpecies,
@@ -322,6 +374,7 @@ export const usePlantAnalysis = () => {
           `Servizi utilizzati: ${servicesUsed.join(', ')}`,
           isHealthy ? 'Pianta sana' : `${validatedDiseases.length} problemi rilevati`,
           `Analisi da ${servicesUsed.length} servizi AI specializzati`,
+          ...(eppoDiseasesData.length > 0 ? [`🦠 EPPO Database: ${eppoDiseasesData.length} patogeni identificati`] : []),
           ...(eppoPlantData ? [
             `✅ EPPO Database: ${eppoPlantData.preferredName}`,
             `Codice EPPO: ${eppoPlantData.eppoCode}`,

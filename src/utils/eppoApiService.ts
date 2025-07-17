@@ -253,5 +253,39 @@ export const eppoApiService = {
       console.error('EPPO API connection error:', err);
       return null;
     }
+  },
+
+  /**
+   * Search for pathogens (diseases/pests) associated with a plant
+   * @param plantName The plant name to search for
+   * @returns Promise with pathogen results
+   */
+  async searchPathogens(plantName: string): Promise<EppoDiseases[]> {
+    try {
+      const { data, error } = await supabase.functions.invoke('eppo-api', {
+        body: {
+          endpoint: 'pathogens/search',
+          query: `host=${encodeURIComponent(plantName)}`
+        }
+      });
+
+      if (error) {
+        console.warn('EPPO API pathogen search error:', error);
+        return [];
+      }
+
+      return data.map((pathogen: any) => ({
+        eppoCode: pathogen.eppoCode,
+        preferredName: pathogen.preferredName,
+        scientificName: pathogen.scientificName,
+        causalAgents: pathogen.causalAgents || [],
+        hosts: pathogen.hosts || [plantName],
+        symptoms: pathogen.symptoms || [],
+        regulatoryStatus: pathogen.regulatoryStatus || []
+      }));
+    } catch (err) {
+      console.warn('EPPO API pathogen connection error:', err);
+      return [];
+    }
   }
 };

@@ -52,12 +52,14 @@ export interface AnalysisDetails {
       taxonomy?: any;
       source: string;
     };
+    eppoDiseasesFound?: number;
   };
   risultatiCompleti?: {
     plantInfo?: PlantInfo;
     accuracyGuarantee?: string;
     plantIdResult?: any;
     detectedDiseases?: any[];
+    eppoPathogens?: any[];
   };
   identifiedFeatures?: string[];
   sistemaDigitaleFoglia?: boolean;
