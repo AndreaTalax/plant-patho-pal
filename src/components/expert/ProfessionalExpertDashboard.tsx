@@ -27,7 +27,8 @@ import {
   MapPin,
   ArrowLeft,
   Filter,
-  X
+  X,
+  ArrowUpDown
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -99,6 +100,9 @@ const ProfessionalExpertDashboard = () => {
   const [dateFilterOpen, setDateFilterOpen] = useState(false);
   const [filteredConversations, setFilteredConversations] = useState<ConversationSummary[]>([]);
   const [filteredFinishedConversations, setFilteredFinishedConversations] = useState<ConversationSummary[]>([]);
+  
+  // Sort order state
+  const [sortOrder, setSortOrder] = useState<'recent' | 'oldest'>('recent');
   
   const [stats, setStats] = useState({
     totalConversations: 0,
@@ -263,29 +267,47 @@ const ProfessionalExpertDashboard = () => {
     }
   }, []);
 
-  // Filter conversations by date
+  // Sort conversations by date
+  const sortConversations = useCallback((convs: ConversationSummary[], order: 'recent' | 'oldest') => {
+    return [...convs].sort((a, b) => {
+      const dateA = new Date(a.created_at).getTime();
+      const dateB = new Date(b.created_at).getTime();
+      return order === 'recent' ? dateB - dateA : dateA - dateB;
+    });
+  }, []);
+
+  // Filter and sort conversations by date
   const filterConversationsByDate = useCallback((date: Date | undefined) => {
-    if (!date) {
-      setFilteredConversations(conversations);
-      setFilteredFinishedConversations(finishedConversations);
-      return;
+    let activeConvs = conversations;
+    let finishedConvs = finishedConversations;
+
+    if (date) {
+      const filterByDate = (convs: ConversationSummary[]) => {
+        return convs.filter(conv => {
+          const convDate = new Date(conv.created_at);
+          return convDate.toDateString() === date.toDateString();
+        });
+      };
+
+      activeConvs = filterByDate(conversations);
+      finishedConvs = filterByDate(finishedConversations);
     }
 
-    const filterByDate = (convs: ConversationSummary[]) => {
-      return convs.filter(conv => {
-        const convDate = new Date(conv.created_at);
-        return convDate.toDateString() === date.toDateString();
-      });
-    };
+    // Apply sorting
+    setFilteredConversations(sortConversations(activeConvs, sortOrder));
+    setFilteredFinishedConversations(sortConversations(finishedConvs, sortOrder));
+  }, [conversations, finishedConversations, sortOrder, sortConversations]);
 
-    setFilteredConversations(filterByDate(conversations));
-    setFilteredFinishedConversations(filterByDate(finishedConversations));
-  }, [conversations, finishedConversations]);
-
-  // Apply date filter when selectedDate or conversations change
+  // Apply date filter when selectedDate, conversations, or sortOrder change
   useEffect(() => {
     filterConversationsByDate(selectedDate);
   }, [selectedDate, filterConversationsByDate]);
+
+  // Toggle sort order
+  const toggleSortOrder = () => {
+    const newOrder = sortOrder === 'recent' ? 'oldest' : 'recent';
+    setSortOrder(newOrder);
+  };
 
   // Clear date filter
   const clearDateFilter = () => {
@@ -546,6 +568,22 @@ const ProfessionalExpertDashboard = () => {
                     <X className="h-4 w-4" />
                   </Button>
                 )}
+                
+                {/* Sort Order Button */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={toggleSortOrder}
+                  className="flex items-center gap-2"
+                >
+                  <ArrowUpDown className="h-4 w-4" />
+                  <span className="hidden sm:inline">
+                    {sortOrder === 'recent' ? 'Più recenti' : 'Più vecchie'}
+                  </span>
+                  <span className="sm:hidden">
+                    {sortOrder === 'recent' ? 'Recenti' : 'Vecchie'}
+                  </span>
+                </Button>
               </div>
             </div>
             
