@@ -74,10 +74,10 @@ const Index = () => {
         return;
       }
       
-      // Per il master account, quando viene richiesta la chat, vai al tab expert
-      if (isMasterAccount && newTab === "chat") {
-        console.log("🎧 Master account + chat -> Setting to expert");
-        setActiveTab("expert");
+      // Per utenti normali, la chat è accessibile se hanno accesso premium
+      if (newTab === "chat") {
+        console.log("🎧 Chat requested - allowing access");
+        setActiveTab("chat");
         return;
       }
       
