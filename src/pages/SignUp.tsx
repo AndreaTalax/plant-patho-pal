@@ -9,6 +9,7 @@ import { SignUpForm, SignUpFormValues } from "@/components/signup/SignUpForm";
 import { AuthPageLayout } from "@/components/auth/AuthPageLayout";
 import { Link } from "react-router-dom";
 import { useTheme } from "@/context/ThemeContext";
+import { ArrowLeft } from "lucide-react";
 
 const SignUp = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -57,6 +58,19 @@ const SignUp = () => {
   if (emailSent) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-drplant-green/5 flex items-center justify-center p-4">
+        {/* Back Button */}
+        <div className="absolute top-4 left-4">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate("/login")}
+            className="flex items-center gap-2 text-drplant-blue hover:text-drplant-blue-dark"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Torna al Login
+          </Button>
+        </div>
+        
         <Card className="w-full max-w-md p-6 text-center">
           <div className="flex justify-center mb-4">
             <div className="h-16 w-16 bg-green-100 rounded-full flex items-center justify-center">
@@ -103,9 +117,24 @@ const SignUp = () => {
   }
 
   return (
-    <AuthPageLayout>
-      <SignUpForm isLoading={isLoading} onSubmit={onSubmit} />
-    </AuthPageLayout>
+    <div className="relative">
+      {/* Back Button */}
+      <div className="absolute top-4 left-4 z-10">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => navigate("/login")}
+          className="flex items-center gap-2 text-drplant-blue hover:text-drplant-blue-dark"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Torna al Login
+        </Button>
+      </div>
+      
+      <AuthPageLayout>
+        <SignUpForm isLoading={isLoading} onSubmit={onSubmit} />
+      </AuthPageLayout>
+    </div>
   );
 };
 

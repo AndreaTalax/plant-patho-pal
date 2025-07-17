@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { User } from "lucide-react";
+import { User, ArrowLeft } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/context/ThemeContext";
 import { 
@@ -76,6 +76,19 @@ const CompleteProfile = () => {
     <div className="h-screen w-full bg-gradient-to-b from-drplant-blue-light via-white to-drplant-green/10 flex flex-col items-center justify-center px-4">
       <div className="absolute top-0 left-0 w-full h-64 bg-drplant-blue-light/30 -z-10 rounded-b-[50%]" />
       <div className="absolute bottom-0 right-0 w-full h-64 bg-drplant-green/20 -z-10 rounded-t-[30%]" />
+      
+      {/* Back Button */}
+      <div className="absolute top-4 left-4">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => navigate("/login")}
+          className="flex items-center gap-2 text-drplant-blue hover:text-drplant-blue-dark"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Esci
+        </Button>
+      </div>
       
       <div className="w-full max-w-md">
         <Card className="border-none shadow-xl bg-white/80 backdrop-blur-sm">

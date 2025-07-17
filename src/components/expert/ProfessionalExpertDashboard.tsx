@@ -5,6 +5,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { format } from 'date-fns';
+import { it } from 'date-fns/locale';
+import { cn } from '@/lib/utils';
 import { 
   MessageSquare, 
   Clock, 
@@ -13,13 +18,16 @@ import {
   Users, 
   TrendingUp,
   Activity,
-  Calendar,
+  CalendarIcon,
   Trash2,
   Eye,
   MoreHorizontal,
   Phone,
   Mail,
-  MapPin
+  MapPin,
+  ArrowLeft,
+  Filter,
+  X
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -85,6 +93,13 @@ const ProfessionalExpertDashboard = () => {
   const [activeTab, setActiveTab] = useState('conversations');
   const [deletingConversation, setDeletingConversation] = useState<string | null>(null);
   const [finishedConversations, setFinishedConversations] = useState<ConversationSummary[]>([]);
+  
+  // Date filter states
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>();
+  const [dateFilterOpen, setDateFilterOpen] = useState(false);
+  const [filteredConversations, setFilteredConversations] = useState<ConversationSummary[]>([]);
+  const [filteredFinishedConversations, setFilteredFinishedConversations] = useState<ConversationSummary[]>([]);
+  
   const [stats, setStats] = useState({
     totalConversations: 0,
     finishedConversations: 0,
@@ -155,6 +170,7 @@ const ProfessionalExpertDashboard = () => {
         );
         
         setConversations(conversationsWithProfiles);
+        setFilteredConversations(conversationsWithProfiles); // Initialize filtered data
 
         // Process finished conversations
         const finishedConversationsWithProfiles = await Promise.all(
@@ -178,6 +194,7 @@ const ProfessionalExpertDashboard = () => {
         );
         
         setFinishedConversations(finishedConversationsWithProfiles);
+        setFilteredFinishedConversations(finishedConversationsWithProfiles); // Initialize filtered data
         
         // Calculate stats
         const todayStart = new Date();
@@ -245,6 +262,36 @@ const ProfessionalExpertDashboard = () => {
       setLoading(false);
     }
   }, []);
+
+  // Filter conversations by date
+  const filterConversationsByDate = useCallback((date: Date | undefined) => {
+    if (!date) {
+      setFilteredConversations(conversations);
+      setFilteredFinishedConversations(finishedConversations);
+      return;
+    }
+
+    const filterByDate = (convs: ConversationSummary[]) => {
+      return convs.filter(conv => {
+        const convDate = new Date(conv.created_at);
+        return convDate.toDateString() === date.toDateString();
+      });
+    };
+
+    setFilteredConversations(filterByDate(conversations));
+    setFilteredFinishedConversations(filterByDate(finishedConversations));
+  }, [conversations, finishedConversations]);
+
+  // Apply date filter when selectedDate or conversations change
+  useEffect(() => {
+    filterConversationsByDate(selectedDate);
+  }, [selectedDate, filterConversationsByDate]);
+
+  // Clear date filter
+  const clearDateFilter = () => {
+    setSelectedDate(undefined);
+    setDateFilterOpen(false);
+  };
 
   useEffect(() => {
     loadExpertData();
@@ -336,6 +383,11 @@ const ProfessionalExpertDashboard = () => {
     });
   };
 
+  // Back to main dashboard
+  const goBackToMain = () => {
+    window.dispatchEvent(new CustomEvent('switchTab', { detail: 'profile' }));
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -353,9 +405,23 @@ const ProfessionalExpertDashboard = () => {
         {/* Header Section */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 md:p-6">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="text-center md:text-left">
-              <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">Dashboard Professionale</h1>
-              <p className="text-gray-600">Gestione conversazioni e consultazioni - Marco Nigro</p>
+            <div className="flex items-center gap-4">
+              {/* Back Button */}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={goBackToMain}
+                className="flex items-center gap-2 text-drplant-blue hover:text-drplant-blue-dark"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                <span className="hidden sm:inline">Torna alla Dashboard</span>
+                <span className="sm:hidden">Indietro</span>
+              </Button>
+              
+              <div className="text-center md:text-left">
+                <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">Dashboard Professionale</h1>
+                <p className="text-gray-600">Gestione conversazioni e consultazioni - Marco Nigro</p>
+              </div>
             </div>
             <div className="flex items-center justify-center md:justify-end gap-3">
               <div className="w-12 h-12 bg-drplant-green/10 rounded-full flex items-center justify-center">
@@ -434,6 +500,62 @@ const ProfessionalExpertDashboard = () => {
 
         {/* Main Content */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+          {/* Date Filter Section */}
+          <div className="border-b border-gray-200 bg-gray-50 p-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-2">
+                <Filter className="h-5 w-5 text-gray-500" />
+                <span className="text-sm font-medium text-gray-700">Filtra per data:</span>
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <Popover open={dateFilterOpen} onOpenChange={setDateFilterOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-[240px] justify-start text-left font-normal",
+                        !selectedDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {selectedDate ? format(selectedDate, "PPP", { locale: it }) : <span>Seleziona una data</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={selectedDate}
+                      onSelect={(date) => {
+                        setSelectedDate(date);
+                        setDateFilterOpen(false);
+                      }}
+                      initialFocus
+                      className={cn("p-3 pointer-events-auto")}
+                    />
+                  </PopoverContent>
+                </Popover>
+                
+                {selectedDate && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={clearDateFilter}
+                    className="h-8 w-8 p-0"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+            </div>
+            
+            {selectedDate && (
+              <div className="mt-3 text-sm text-gray-600">
+                Mostrando conversazioni del: <span className="font-medium">{format(selectedDate, "PPP", { locale: it })}</span>
+              </div>
+            )}
+          </div>
+
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <div className="border-b border-gray-200 bg-gray-50">
               <TabsList className="grid w-full grid-cols-3 bg-transparent h-12 md:h-16">
@@ -444,7 +566,7 @@ const ProfessionalExpertDashboard = () => {
                   <MessageSquare className="h-4 w-4 md:h-5 md:w-5" />
                   <span className="hidden sm:inline">Conversazioni Attive</span>
                   <span className="sm:hidden">Attive</span>
-                  <span className="text-xs">({conversations.length})</span>
+                  <span className="text-xs">({filteredConversations.length})</span>
                 </TabsTrigger>
                 <TabsTrigger 
                   value="finished" 
@@ -453,7 +575,7 @@ const ProfessionalExpertDashboard = () => {
                   <AlertCircle className="h-4 w-4 md:h-5 md:w-5" />
                   <span className="hidden sm:inline">Conversazioni Finite</span>
                   <span className="sm:hidden">Finite</span>
-                  <span className="text-xs">({finishedConversations.length})</span>
+                  <span className="text-xs">({filteredFinishedConversations.length})</span>
                 </TabsTrigger>
                 <TabsTrigger 
                   value="consultations" 
@@ -475,14 +597,14 @@ const ProfessionalExpertDashboard = () => {
                 />
               ) : (
                 <div className="space-y-4">
-                  {conversations.length === 0 ? (
+                  {filteredConversations.length === 0 ? (
                     <div className="text-center py-12">
                       <MessageSquare className="h-16 w-16 mx-auto mb-4 text-gray-300" />
                       <h3 className="text-lg font-medium text-gray-900 mb-2">Nessuna conversazione attiva</h3>
                       <p className="text-gray-500">Le nuove conversazioni attive appariranno qui</p>
                     </div>
                   ) : (
-                    conversations.map((conversation) => (
+                    filteredConversations.map((conversation) => (
                       <Card 
                         key={conversation.id} 
                         className="hover:shadow-md transition-all duration-200 border-l-4 border-l-drplant-green/30 hover:border-l-drplant-green"
@@ -578,21 +700,21 @@ const ProfessionalExpertDashboard = () => {
                     <h3 className="text-lg font-semibold text-gray-900">Conversazioni Finite</h3>
                     <p className="text-sm text-gray-600">Gestisci le conversazioni completate che possono essere eliminate</p>
                   </div>
-                  {finishedConversations.length > 0 && (
+                  {filteredFinishedConversations.length > 0 && (
                     <div className="text-sm text-gray-500">
-                      {finishedConversations.length} conversazioni finite
+                      {filteredFinishedConversations.length} conversazioni finite
                     </div>
                   )}
                 </div>
 
-                {finishedConversations.length === 0 ? (
+                {filteredFinishedConversations.length === 0 ? (
                   <div className="text-center py-12">
                     <AlertCircle className="h-16 w-16 mx-auto mb-4 text-gray-300" />
                     <h3 className="text-lg font-medium text-gray-900 mb-2">Nessuna conversazione finita</h3>
                     <p className="text-gray-500">Le conversazioni completate appariranno qui</p>
                   </div>
                 ) : (
-                  finishedConversations.map((conversation) => (
+                  filteredFinishedConversations.map((conversation) => (
                     <Card 
                       key={conversation.id} 
                       className="hover:shadow-md transition-all duration-200 border-l-4 border-l-red-300 hover:border-l-red-500"
