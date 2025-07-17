@@ -549,7 +549,7 @@ const ProfessionalExpertDashboard = () => {
               </div>
               
               <div className="flex items-center gap-2">
-                <Popover open={dateFilterOpen} onOpenChange={setDateFilterOpen}>
+                <Popover modal={true}>
                   <PopoverTrigger asChild>
                     <Button
                       variant="outline"
@@ -562,16 +562,15 @@ const ProfessionalExpertDashboard = () => {
                       {selectedDate ? format(selectedDate, "PPP", { locale: it }) : <span>Seleziona una data</span>}
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0 z-50 bg-white" align="start">
+                  <PopoverContent className="w-auto p-0" align="start" sideOffset={5}>
                     <Calendar
                       mode="single"
                       selected={selectedDate}
                       onSelect={(date) => {
                         setSelectedDate(date);
-                        setDateFilterOpen(false);
                       }}
                       initialFocus
-                      className="p-3 pointer-events-auto"
+                      className="p-3"
                     />
                   </PopoverContent>
                 </Popover>
@@ -733,11 +732,24 @@ const ProfessionalExpertDashboard = () => {
                             <div className="flex items-center justify-center lg:justify-end gap-2">
                               <Button
                                 onClick={() => setSelectedConversation(conversation)}
-                                className="bg-drplant-green hover:bg-drplant-green/90 w-full lg:w-auto"
+                                className="bg-drplant-green hover:bg-drplant-green/90"
                                 size="sm"
                               >
                                 <Eye className="h-4 w-4 mr-2" />
                                 <span className="hidden sm:inline">Visualizza</span>
+                              </Button>
+                              <Button
+                                onClick={() => handleForceDeleteConversation(conversation.id)}
+                                variant="destructive"
+                                size="sm"
+                                disabled={deletingConversation === conversation.id}
+                              >
+                                {deletingConversation === conversation.id ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <Trash2 className="h-4 w-4" />
+                                )}
+                                <span className="hidden sm:inline ml-2">Elimina</span>
                               </Button>
                             </div>
                           </div>
