@@ -8,8 +8,8 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
 };
 
-// La chiave API dell'EPPO (salvata come segreto su Supabase)
-const eppoApiKey = Deno.env.get('EPPO_API_KEY');
+// L'auth token dell'EPPO (salvato come segreto su Supabase)
+const eppoAuthToken = Deno.env.get('EPPO_AUTH_TOKEN');
 const eppoBaseUrl = 'https://data.eppo.int/api/rest/1.0';
 
 serve(async (req) => {
@@ -20,11 +20,11 @@ serve(async (req) => {
 
   try {
     // Ottieni parametri dalla richiesta
-    const { endpoint, query, userInput } = await req.json();
+    const { searchTerm, searchType = 'general' } = await req.json();
     
-    if (!endpoint) {
+    if (!searchTerm) {
       return new Response(
-        JSON.stringify({ error: 'Endpoint parameter is required' }),
+        JSON.stringify({ error: 'searchTerm parameter is required' }),
         { 
           status: 400, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -32,30 +32,34 @@ serve(async (req) => {
       );
     }
     
-    // Costruisci l'URL per l'API EPPO
-    let eppoUrl = `${eppoBaseUrl}/${endpoint}`;
+    // Costruisci l'URL per l'API EPPO usando l'endpoint di ricerca generale
+    let eppoUrl = `${eppoBaseUrl}/tools/search`;
     
-    // Add search parameters based on user input if provided
-    let searchQuery = query || '';
-    if (userInput && endpoint === 'pests') {
-      // Try to extract symptoms or keywords from user input
-      const symptoms = extractSymptoms(userInput);
-      if (symptoms.length > 0) {
-        searchQuery = `name=${encodeURIComponent(symptoms.join(' OR '))}`;
-      }
+    // Parametri di ricerca per l'API EPPO
+    const searchParams = new URLSearchParams({
+      kw: searchTerm,
+      searchfor: '1', // Names or EPPO codes
+      searchmode: '3', // Containing the word
+      authtoken: eppoAuthToken || ''
+    });
+    
+    // Se è specificato un tipo di ricerca, filtra per categoria
+    if (searchType === 'plants') {
+      searchParams.append('typeorg', '1'); // Plant (Species level)
+    } else if (searchType === 'pests') {
+      searchParams.append('typeorg', '2'); // Animal (Species level) 
+    } else if (searchType === 'diseases') {
+      searchParams.append('typeorg', '3'); // Microorganism (Species level)
     }
     
-    if (searchQuery) {
-      eppoUrl += `?${searchQuery}`;
-    }
+    eppoUrl += `?${searchParams.toString()}`;
     
     console.log(`Calling EPPO API: ${eppoUrl}`);
     
     // Effettua la chiamata all'API EPPO
     const response = await fetch(eppoUrl, {
       headers: {
-        'Accept': 'application/json',
-        'Authorization': `Bearer ${eppoApiKey}`
+        'Accept': 'application/json'
       }
     });
     
@@ -78,17 +82,11 @@ serve(async (req) => {
     // Ottieni i dati dalla risposta
     const data = await response.json();
     
-    // Se è stata fornita una descrizione del problema dall'utente, elabora i risultati
-    // per generare una spiegazione comprensibile
-    let explanation = null;
-    if (userInput && data) {
-      explanation = generateExplanation(data, userInput, endpoint);
-    }
-    
     return new Response(
       JSON.stringify({
         data,
-        explanation
+        searchType,
+        searchTerm
       }),
       { 
         status: 200, 
@@ -107,65 +105,3 @@ serve(async (req) => {
   }
 });
 
-// Funzione per estrarre possibili sintomi dalla descrizione dell'utente
-function extractSymptoms(userInput: string): string[] {
-  const input = userInput.toLowerCase();
-  
-  const symptomKeywords = [
-    'macchie', 'gialle', 'ruggine', 'appassimento', 'foglie', 'secche', 'marciume',
-    'muffe', 'bianco', 'nero', 'marrone', 'insetti', 'afidi', 'larve', 'buchi',
-    'decolorazione', 'caduta', 'spotting', 'ingiallimento', 'oidio', 'cocciniglia'
-  ];
-  
-  return symptomKeywords.filter(keyword => input.includes(keyword));
-}
-
-// Funzione per generare spiegazioni basate sui risultati dell'API e l'input dell'utente
-/**
- * Generates an explanation based on EPPO database data, user input, and endpoint type.
- * @example
- * generateExplanation([{ preferredname: 'Parassita1', description: 'Descrizione parassita 1' }], 'foglie gialle', 'pests')
- * returns "In base ai sintomi descritti ("foglie gialle"), ho trovato 1 possibili cause nel database EPPO..."
- * @param {any} data - Data retrieved from the EPPO database, can be an array or a single object.
- * @param {string} userInput - String containing user-described symptoms or input.
- * @param {string} endpoint - Endpoint type determining explanation context; can be 'pests', 'hosts', or other.
- * @returns {string} Explanation string generated from the provided data and context.
- * @description
- *   - Handles empty data gracefully, returning a default message.
- *   - Differentiates the explanation based on the endpoint type.
- *   - Processes up to top 3 results for 'pests' endpoint and provides relevant pest names and descriptions.
- *   - Provides generic information for unrecognized endpoint types.
- */
-function generateExplanation(data: any, userInput: string, endpoint: string): string {
-  if (!data || (Array.isArray(data) && data.length === 0)) {
-    return "Non sono stati trovati risultati rilevanti nel database EPPO per i sintomi descritti.";
-  }
-  
-  // Genera spiegazione in base al tipo di endpoint
-  switch (endpoint) {
-    case 'pests':
-      if (Array.isArray(data)) {
-        if (data.length === 0) {
-          return "Non ho trovato parassiti nel database EPPO che corrispondano ai sintomi descritti.";
-        }
-        
-        const topResults = data.slice(0, 3);
-        
-        const explanation = 
-          `In base ai sintomi descritti ("${userInput}"), ho trovato ${data.length} possibili cause nel database EPPO. ` +
-          `Le più rilevanti potrebbero essere: \n\n` +
-          topResults.map((pest, index) => 
-            `${index + 1}. ${pest.preferredname || pest.name}: ${pest.description || 'Parassita/malattia delle piante che può causare i sintomi descritti.'}`
-          ).join('\n\n');
-          
-        return explanation;
-      } else {
-        return `Ho trovato informazioni su ${data.preferredname || data.name} nel database EPPO. ` +
-               `Questo ${data.type || 'organismo'} può causare i sintomi come quelli descritti.`;
-      }
-    case 'hosts':
-      return `In base all'analisi del database EPPO, ho trovato informazioni sulle piante ospiti che potrebbero essere colpite dai sintomi descritti.`;
-    default:
-      return `Ho consultato il database EPPO e ho trovato delle informazioni che potrebbero essere utili per diagnosticare il problema della tua pianta.`;
-  }
-}

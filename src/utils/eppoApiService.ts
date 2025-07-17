@@ -49,7 +49,7 @@ export interface EppoDiseases {
  */
 export const eppoApiService = {
   /**
-   * Search for a pest or disease in the EPPO database
+   * Search for pests in the EPPO database
    * @param searchTerm The term to search for
    * @returns Promise with search results
    */
@@ -57,66 +57,32 @@ export const eppoApiService = {
     try {
       const { data, error } = await supabase.functions.invoke('eppo-api', {
         body: {
-          endpoint: 'pests/search',
-          query: `q=${encodeURIComponent(searchTerm)}`
+          searchTerm,
+          searchType: 'pests'
         }
       });
 
       if (error) {
-        toast.error(`Error searching EPPO database: ${error.message}`);
         console.error('EPPO API search error:', error);
         return [];
       }
 
-      return data.map((pest: any) => ({
-        eppoCode: pest.eppoCode,
-        preferredName: pest.preferredName,
-        otherNames: pest.otherNames || [],
-        category: pest.category,
-        regulatoryStatus: pest.regulatoryStatus || []
+      if (!data?.data || !Array.isArray(data.data)) {
+        return [];
+      }
+
+      return data.data.map((item: any) => ({
+        eppoCode: item.codeid || item.eppocode,
+        preferredName: item.fullname || item.prefname,
+        otherNames: [],
+        category: 'pest'
       }));
     } catch (err) {
-      toast.error(`Error connecting to EPPO database: ${(err as Error).message}`);
       console.error('EPPO API connection error:', err);
       return [];
     }
   },
 
-  /**
-   * Get details for a specific pest by EPPO code
-   * @param eppoCode The EPPO code of the pest
-   * @returns Promise with pest details
-   */
-  async getPestDetails(eppoCode: string): Promise<EppoPest | null> {
-    try {
-      const { data, error } = await supabase.functions.invoke('eppo-api', {
-        body: {
-          endpoint: `pests/${eppoCode}`
-        }
-      });
-
-      if (error) {
-        toast.error(`Error getting pest details: ${error.message}`);
-        console.error('EPPO API pest details error:', error);
-        return null;
-      }
-
-      return {
-        eppoCode: data.eppoCode,
-        preferredName: data.preferredName,
-        otherNames: data.otherNames || [],
-        category: data.category,
-        taxonomy: data.taxonomy || {},
-        hosts: data.hosts || [],
-        regulatoryStatus: data.regulatoryStatus || [],
-        images: data.images || []
-      };
-    } catch (err) {
-      toast.error(`Error connecting to EPPO database: ${(err as Error).message}`);
-      console.error('EPPO API connection error:', err);
-      return null;
-    }
-  },
 
   /**
    * Search for plants in the EPPO database
@@ -127,66 +93,34 @@ export const eppoApiService = {
     try {
       const { data, error } = await supabase.functions.invoke('eppo-api', {
         body: {
-          endpoint: 'plants/search',
-          query: `q=${encodeURIComponent(searchTerm)}`
+          searchTerm,
+          searchType: 'plants'
         }
       });
 
       if (error) {
-        toast.error(`Error searching EPPO plant database: ${error.message}`);
         console.error('EPPO API plant search error:', error);
         return [];
       }
 
-      return data.map((plant: any) => ({
-        eppoCode: plant.eppoCode,
-        preferredName: plant.preferredName,
-        scientificName: plant.scientificName,
-        otherNames: plant.otherNames || []
+      if (!data?.data || !Array.isArray(data.data)) {
+        return [];
+      }
+
+      return data.data.map((item: any) => ({
+        eppoCode: item.codeid || item.eppocode,
+        preferredName: item.fullname || item.prefname,
+        scientificName: item.fullname || item.prefname,
+        otherNames: []
       }));
     } catch (err) {
-      toast.error(`Error connecting to EPPO database: ${(err as Error).message}`);
       console.error('EPPO API connection error:', err);
       return [];
     }
   },
 
   /**
-   * Get details for a specific plant by EPPO code
-   * @param eppoCode The EPPO code of the plant
-   * @returns Promise with plant details
-   */
-  async getPlantDetails(eppoCode: string): Promise<EppoPlant | null> {
-    try {
-      const { data, error } = await supabase.functions.invoke('eppo-api', {
-        body: {
-          endpoint: `plants/${eppoCode}`
-        }
-      });
-
-      if (error) {
-        toast.error(`Error getting plant details: ${error.message}`);
-        console.error('EPPO API plant details error:', error);
-        return null;
-      }
-
-      return {
-        eppoCode: data.eppoCode,
-        preferredName: data.preferredName,
-        scientificName: data.scientificName,
-        otherNames: data.otherNames || [],
-        taxonomy: data.taxonomy || {},
-        images: data.images || []
-      };
-    } catch (err) {
-      toast.error(`Error connecting to EPPO database: ${(err as Error).message}`);
-      console.error('EPPO API connection error:', err);
-      return null;
-    }
-  },
-
-  /**
-   * Get diseases information from EPPO database
+   * Search for diseases in the EPPO database
    * @param searchTerm The term to search for
    * @returns Promise with search results
    */
@@ -194,64 +128,30 @@ export const eppoApiService = {
     try {
       const { data, error } = await supabase.functions.invoke('eppo-api', {
         body: {
-          endpoint: 'diseases/search',
-          query: `q=${encodeURIComponent(searchTerm)}`
+          searchTerm,
+          searchType: 'diseases'
         }
       });
 
       if (error) {
-        toast.error(`Error searching EPPO disease database: ${error.message}`);
         console.error('EPPO API disease search error:', error);
         return [];
       }
 
-      return data.map((disease: any) => ({
-        eppoCode: disease.eppoCode,
-        preferredName: disease.preferredName,
-        scientificName: disease.scientificName,
-        causalAgents: disease.causalAgents || [],
-        regulatoryStatus: disease.regulatoryStatus || []
-      }));
-    } catch (err) {
-      toast.error(`Error connecting to EPPO database: ${(err as Error).message}`);
-      console.error('EPPO API connection error:', err);
-      return [];
-    }
-  },
-
-  /**
-   * Get details for a specific disease by EPPO code
-   * @param eppoCode The EPPO code of the disease
-   * @returns Promise with disease details
-   */
-  async getDiseaseDetails(eppoCode: string): Promise<EppoDiseases | null> {
-    try {
-      const { data, error } = await supabase.functions.invoke('eppo-api', {
-        body: {
-          endpoint: `diseases/${eppoCode}`
-        }
-      });
-
-      if (error) {
-        toast.error(`Error getting disease details: ${error.message}`);
-        console.error('EPPO API disease details error:', error);
-        return null;
+      if (!data?.data || !Array.isArray(data.data)) {
+        return [];
       }
 
-      return {
-        eppoCode: data.eppoCode,
-        preferredName: data.preferredName,
-        scientificName: data.scientificName,
-        causalAgents: data.causalAgents || [],
-        hosts: data.hosts || [],
-        symptoms: data.symptoms || [],
-        regulatoryStatus: data.regulatoryStatus || [],
-        images: data.images || []
-      };
+      return data.data.map((item: any) => ({
+        eppoCode: item.codeid || item.eppocode,
+        preferredName: item.fullname || item.prefname,
+        scientificName: item.fullname || item.prefname,
+        causalAgents: [],
+        regulatoryStatus: []
+      }));
     } catch (err) {
-      toast.error(`Error connecting to EPPO database: ${(err as Error).message}`);
       console.error('EPPO API connection error:', err);
-      return null;
+      return [];
     }
   },
 
@@ -262,27 +162,24 @@ export const eppoApiService = {
    */
   async searchPathogens(plantName: string): Promise<EppoDiseases[]> {
     try {
-      const { data, error } = await supabase.functions.invoke('eppo-api', {
-        body: {
-          endpoint: 'pathogens/search',
-          query: `host=${encodeURIComponent(plantName)}`
-        }
-      });
+      // Cerca sia malattie che parassiti
+      const [diseases, pests] = await Promise.all([
+        this.searchDiseases(plantName),
+        this.searchPests(plantName)
+      ]);
 
-      if (error) {
-        console.warn('EPPO API pathogen search error:', error);
-        return [];
-      }
-
-      return data.map((pathogen: any) => ({
-        eppoCode: pathogen.eppoCode,
-        preferredName: pathogen.preferredName,
-        scientificName: pathogen.scientificName,
-        causalAgents: pathogen.causalAgents || [],
-        hosts: pathogen.hosts || [plantName],
-        symptoms: pathogen.symptoms || [],
-        regulatoryStatus: pathogen.regulatoryStatus || []
+      // Converte i parassiti in formato malattie
+      const pestsAsDiseases: EppoDiseases[] = pests.map(pest => ({
+        eppoCode: pest.eppoCode,
+        preferredName: pest.preferredName,
+        scientificName: pest.preferredName,
+        causalAgents: ['pest'],
+        hosts: [plantName],
+        symptoms: [],
+        regulatoryStatus: pest.regulatoryStatus || []
       }));
+
+      return [...diseases, ...pestsAsDiseases];
     } catch (err) {
       console.warn('EPPO API pathogen connection error:', err);
       return [];
