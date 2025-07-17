@@ -45,7 +45,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // Computed properties
   const isAuthenticated = !!user;
   const isProfileComplete = !!(userProfile?.firstName && userProfile?.lastName && userProfile?.birthDate && userProfile?.birthPlace);
-  const isMasterAccount = userProfile?.email === 'agrotecnicomarconigro@gmail.com' || userProfile?.email === 'premium@gmail.com';
+  const isMasterAccount = userProfile?.email === 'agrotecnicomarconigro@gmail.com' || userProfile?.email === 'premium@gmail.com' || userProfile?.role === 'admin' || userProfile?.role === 'expert';
 
   // Funzione per garantire che i dati utente siano sempre completi
   const ensureCompleteUserData = async (userId: string) => {
