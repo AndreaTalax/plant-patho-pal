@@ -44,11 +44,10 @@ export const verifyImageContainsPlant = async (imageFile: File): Promise<{
         
         totalPixels++;
         
-        // Rileva verde naturale delle piante (CRITERI PIÙ RIGOROSI)
-        const isNaturalGreen = g > r && g > b && 
-                              g > 80 && g < 220 && 
-                              (g - r) > 15 && (g - b) > 10 &&
-                              r < 180 && b < 180;
+        // Rileva verde naturale delle piante (CRITERI PIÙ FLESSIBILI)
+        const isNaturalGreen = (g > r && g > b && g > 50) || // Verde classico
+                              (g > 40 && r < 100 && b < 100 && g > (r + b) / 2) || // Verde scuro
+                              (g > 60 && Math.abs(g - r) > 10 && Math.abs(g - b) > 10); // Verde variegate
         
         // Rileva marroni naturali (tronchi, terra, vasi)
         const isNaturalBrown = r > 60 && r < 180 && 
@@ -84,11 +83,11 @@ export const verifyImageContainsPlant = async (imageFile: File): Promise<{
       const naturalPercentage = (naturalPixels / totalPixels) * 100;
       const artificialPercentage = (artificialPixels / totalPixels) * 100;
       
-      // Criteri RIGOROSI per identificare una pianta reale
-      const hasMinimumGreen = greenPercentage > 5; // Almeno 5% di verde naturale
-      const hasNaturalColors = naturalPercentage > 15; // Almeno 15% di colori naturali
-      const hasPlantIndicators = (greenPercentage + brownPercentage) > 8; // Verde + marrone > 8%
-      const tooMuchArtificial = artificialPercentage > 60; // Troppo artificiale se > 60%
+      // Criteri FLESSIBILI per identificare una pianta reale
+      const hasMinimumGreen = greenPercentage > 1; // Almeno 1% di verde naturale
+      const hasNaturalColors = naturalPercentage > 8; // Almeno 8% di colori naturali
+      const hasPlantIndicators = (greenPercentage + brownPercentage) > 3; // Verde + marrone > 3%
+      const tooMuchArtificial = artificialPercentage > 80; // Troppo artificiale se > 80%
       
       let isPlant = false;
       let confidence = 0;
@@ -109,7 +108,7 @@ export const verifyImageContainsPlant = async (imageFile: File): Promise<{
       } else if (!hasMinimumGreen) {
         isPlant = false;
         confidence = Math.max(0, greenPercentage * 10);
-        reason = `Verde insufficiente (${greenPercentage.toFixed(1)}%). Serve almeno 5% di verde naturale per identificare una pianta.`;
+        reason = `Verde insufficiente (${greenPercentage.toFixed(1)}%). Serve almeno 1% di verde naturale per identificare una pianta.`;
         toast.error('Pianta non rilevata', {
           description: 'L\'immagine non contiene abbastanza verde naturale. Assicurati che la pianta sia ben visibile.',
           duration: 5000
@@ -117,7 +116,7 @@ export const verifyImageContainsPlant = async (imageFile: File): Promise<{
       } else if (!hasNaturalColors) {
         isPlant = false;
         confidence = Math.max(0, naturalPercentage * 4);
-        reason = `Colori naturali insufficienti (${naturalPercentage.toFixed(1)}%). Serve almeno 15% di colori naturali.`;
+        reason = `Colori naturali insufficienti (${naturalPercentage.toFixed(1)}%). Serve almeno 8% di colori naturali.`;
         toast.error('Immagine non naturale', {
           description: 'L\'immagine non contiene abbastanza colori naturali tipici delle piante.',
           duration: 5000
