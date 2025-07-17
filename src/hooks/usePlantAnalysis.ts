@@ -94,9 +94,9 @@ export const usePlantAnalysis = () => {
       setAnalysisProgress(30);
       
       // Call multiple AI services in parallel for comprehensive analysis
-      console.log('🚀 Avvio analisi multi-AI (GPT-4 Vision + Plant.ID + PlantNet + Hugging Face)...');
+      console.log('🚀 Avvio analisi multi-AI (GPT-4 Vision + Plant.ID + PlantNet + Hugging Face + EPPO Database)...');
       
-      const [gptResult, plantIdResult, plantNetResult, huggingFaceResult] = await Promise.allSettled([
+      const [gptResult, plantIdResult, plantNetResult, huggingFaceResult, eppoGeneralResult] = await Promise.allSettled([
         // GPT-4 Vision diagnosis
         supabase.functions.invoke('gpt-vision-diagnosis', {
           body: { imageUrl: imageData, plantInfo }
@@ -104,26 +104,31 @@ export const usePlantAnalysis = () => {
           console.error('❌ GPT-4 Vision error:', err);
           return { error: err.message };
         }),
-        // Plant.ID diagnosis
+        // Plant.ID diagnosis - Primary service for plant identification
         supabase.functions.invoke('plant-id-diagnosis', {
           body: { imageBase64: imageData }
         }).catch(err => {
           console.error('❌ Plant.ID error:', err);
           return { error: err.message };
         }),
-        // PlantNet identification
+        // PlantNet identification - Secondary plant identification
         supabase.functions.invoke('plantnet-identification', {
           body: { imageBase64: imageData }
         }).catch(err => {
           console.error('❌ PlantNet error:', err);
           return { error: err.message };
         }),
-        // Hugging Face analysis
+        // Hugging Face analysis - Disease classification
         supabase.functions.invoke('analyze-plant', {
           body: { imageBase64: imageData }
         }).catch(err => {
           console.error('❌ Hugging Face error:', err);
           return { error: err.message };
+        }),
+        // EPPO Database general search for context
+        eppoApiService.searchDiseases('plant disease').catch(err => {
+          console.error('❌ EPPO General search error:', err);
+          return [];
         })
       ]);
       
@@ -131,7 +136,8 @@ export const usePlantAnalysis = () => {
         gpt: gptResult.status,
         plantId: plantIdResult.status, 
         plantNet: plantNetResult.status,
-        huggingFace: huggingFaceResult.status
+        huggingFace: huggingFaceResult.status,
+        eppoGeneral: eppoGeneralResult.status
       });
       
       // Process results from all services
@@ -141,6 +147,7 @@ export const usePlantAnalysis = () => {
       let combinedConfidence = 0;
       let servicesUsed: string[] = [];
       let isHealthy = true; // Default sano, ma cambierà se troviamo malattie
+      let plantSpecies = 'Pianta identificata tramite Multi-AI'; // Initialize here
       
         // GPT-4 Vision results (primary)
       if (gptResult.status === 'fulfilled' && !gptResult.value.error && 'data' in gptResult.value) {
@@ -174,38 +181,131 @@ export const usePlantAnalysis = () => {
         allFeatures.push('GPT-4 Vision: fallito');
       }
       
-      // Plant.ID results
+      // Plant.ID results - Primary plant identification service
       if (plantIdResult.status === 'fulfilled' && !plantIdResult.value.error && 'data' in plantIdResult.value) {
         const plantIdData = plantIdResult.value.data;
-        if (plantIdData.diseases) {
-          allDiseases.push(...plantIdData.diseases.map((d: any) => ({ ...d, source: 'Plant.ID' })));
+        console.log('🌱 Plant.ID data received:', plantIdData);
+        
+        // Extract plant identification
+        if (plantIdData.plant) {
+          console.log('🆔 Plant.ID identified plant:', plantIdData.plant.name);
+          if (!primaryAnalysis || !primaryAnalysis.species) {
+            plantSpecies = plantIdData.plant.name || plantSpecies;
+          }
+          allFeatures.push(`Plant.ID: ${plantIdData.plant.name} identificata (${Math.round((plantIdData.plant.probability || 0) * 100)}%)`);
         }
-        combinedConfidence = Math.max(combinedConfidence, plantIdData.confidence || 0);
+        
+        // Extract disease information  
+        if (plantIdData.diseases && plantIdData.diseases.length > 0) {
+          console.log('🦠 Plant.ID diseases found:', plantIdData.diseases);
+          const plantIdDiseases = plantIdData.diseases.map((d: any) => ({
+            name: d.name || d.disease_name || 'Malattia non specificata',
+            description: d.description || 'Nessuna descrizione disponibile',
+            confidence: Math.round((d.probability || d.confidence || 0.6) * 100),
+            source: 'Plant.ID',
+            symptoms: d.symptoms || [],
+            treatment: d.treatment || d.treatment_suggestion,
+            causes: d.causes || []
+          }));
+          allDiseases.push(...plantIdDiseases);
+          isHealthy = false;
+        }
+        
+        // Extract health assessment
+        if (plantIdData.isHealthy !== undefined) {
+          if (plantIdData.isHealthy === false) {
+            isHealthy = false;
+            console.log('🚨 Plant.ID determined plant is diseased');
+          }
+        }
+        
+        combinedConfidence = Math.max(combinedConfidence, (plantIdData.plant?.probability || 0.7) * 100);
         servicesUsed.push('Plant.ID');
         allFeatures.push('Analisi Plant.ID completata');
+      } else {
+        console.warn('⚠️ Plant.ID service unavailable:', plantIdResult);
+        allFeatures.push('Plant.ID: non disponibile');
       }
       
-      // PlantNet results
+      // PlantNet results - Secondary plant identification
       if (plantNetResult.status === 'fulfilled' && !plantNetResult.value.error && 'data' in plantNetResult.value) {
         const plantNetData = plantNetResult.value.data;
-        if (plantNetData.species) {
-          allFeatures.push(`PlantNet: ${plantNetData.species} identificata`);
+        console.log('🌿 PlantNet data received:', plantNetData);
+        
+        if (plantNetData.species && plantNetData.species.length > 0) {
+          const topSpecies = plantNetData.species[0];
+          console.log('🆔 PlantNet identified species:', topSpecies.scientificNameWithoutAuthor);
+          
+          // Use PlantNet identification as fallback or to enhance existing identification
+          if (!primaryAnalysis?.species && (!plantSpecies || plantSpecies === 'Pianta identificata tramite Multi-AI')) {
+            plantSpecies = topSpecies.scientificNameWithoutAuthor || plantSpecies;
+          }
+          
+          allFeatures.push(`PlantNet: ${topSpecies.scientificNameWithoutAuthor} (${Math.round(topSpecies.score * 100)}% confidenza)`);
+          if (topSpecies.family) {
+            allFeatures.push(`Famiglia: ${topSpecies.family.scientificNameWithoutAuthor}`);
+          }
+          if (topSpecies.genus) {
+            allFeatures.push(`Genere: ${topSpecies.genus.scientificNameWithoutAuthor}`);
+          }
         }
+        
         servicesUsed.push('PlantNet');
         allFeatures.push('Identificazione PlantNet completata');
+      } else {
+        console.warn('⚠️ PlantNet service unavailable:', plantNetResult);
+        allFeatures.push('PlantNet: non disponibile');
       }
       
-      // Hugging Face results
+      // Hugging Face results - Advanced disease classification
       if (huggingFaceResult.status === 'fulfilled' && !huggingFaceResult.value.error && 'data' in huggingFaceResult.value) {
         const hfData = huggingFaceResult.value.data;
-        if (hfData.diseases) {
-          allDiseases.push(...hfData.diseases.map((d: any) => ({ ...d, source: 'Hugging Face' })));
+        console.log('🤖 Hugging Face data received:', hfData);
+        
+        // Extract plant classification from Hugging Face
+        if (hfData.plantName && (!primaryAnalysis?.species && (!plantSpecies || plantSpecies === 'Pianta identificata tramite Multi-AI'))) {
+          plantSpecies = hfData.plantName;
+          console.log('🆔 Hugging Face identified plant:', hfData.plantName);
         }
+        
+        // Extract disease information
+        if (hfData.diseases && hfData.diseases.length > 0) {
+          console.log('🦠 Hugging Face diseases found:', hfData.diseases);
+          const hfDiseases = hfData.diseases.map((d: any) => ({
+            name: d.name || d.disease || 'Malattia rilevata',
+            description: d.description || `Malattia rilevata da Hugging Face con ${Math.round(d.confidence * 100)}% confidenza`,
+            confidence: Math.round((d.confidence || d.score || 0.65) * 100),
+            source: 'Hugging Face',
+            symptoms: d.symptoms || [],
+            treatment: d.treatment,
+            causes: d.causes || []
+          }));
+          allDiseases.push(...hfDiseases);
+          isHealthy = false;
+        }
+        
+        // Extract health status
+        if (hfData.isHealthy !== undefined && hfData.isHealthy === false) {
+          isHealthy = false;
+          console.log('🚨 Hugging Face determined plant has issues');
+        }
+        
         if (hfData.confidence) {
-          combinedConfidence = Math.max(combinedConfidence, hfData.confidence);
+          combinedConfidence = Math.max(combinedConfidence, hfData.confidence * 100);
         }
+        
         servicesUsed.push('Hugging Face');
         allFeatures.push('Analisi Hugging Face completata');
+      } else {
+        console.warn('⚠️ Hugging Face service unavailable:', huggingFaceResult);
+        allFeatures.push('Hugging Face: non disponibile');
+      }
+      
+      // Process EPPO General results for additional context
+      if (eppoGeneralResult.status === 'fulfilled' && Array.isArray(eppoGeneralResult.value) && eppoGeneralResult.value.length > 0) {
+        console.log('📚 EPPO general disease database accessed');
+        allFeatures.push(`EPPO Database: ${eppoGeneralResult.value.length} malattie nel database`);
+        servicesUsed.push('EPPO Database');
       }
       // Collect all service errors for better debugging
       const serviceErrors = [];
@@ -254,7 +354,7 @@ export const usePlantAnalysis = () => {
       );
       
       // Estrai informazioni dalla risposta principale (GPT-4 Vision se disponibile)
-      let plantSpecies = primaryAnalysis?.species || 'Pianta identificata tramite Multi-AI';
+      plantSpecies = primaryAnalysis?.species || plantSpecies;
       const healthStatus = primaryAnalysis?.healthStatus || (isHealthy ? 'healthy' : 'diseased');
       const gptSymptoms = primaryAnalysis?.symptoms || [];
       const gptRecommendations = primaryAnalysis?.recommendations || [];
