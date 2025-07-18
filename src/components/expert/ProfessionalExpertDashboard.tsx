@@ -385,11 +385,16 @@ const ProfessionalExpertDashboard = () => {
       
       console.log('✅ Conversation deleted successfully');
       
+      // Aggiorna immediatamente l'UI rimuovendo la conversazione dalle liste
+      setConversations(prev => prev.filter(conv => conv.id !== conversationId));
+      setFilteredConversations(prev => prev.filter(conv => conv.id !== conversationId));
+      setFinishedConversations(prev => prev.filter(conv => conv.id !== conversationId));
+      setFilteredFinishedConversations(prev => prev.filter(conv => conv.id !== conversationId));
+      
       if (selectedConversation?.id === conversationId) {
         setSelectedConversation(null);
       }
       
-      await loadExpertData();
       toast.success('Conversazione eliminata con successo');
       
     } catch (error: any) {
