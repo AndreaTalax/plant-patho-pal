@@ -569,6 +569,30 @@ export type Database = {
         }
         Relationships: []
       }
+      user_diagnosis_usage: {
+        Row: {
+          created_at: string
+          diagnoses_used: number
+          id: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          diagnoses_used?: number
+          id?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          diagnoses_used?: number
+          id?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           granted_at: string | null

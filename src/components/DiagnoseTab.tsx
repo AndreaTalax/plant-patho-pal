@@ -21,11 +21,21 @@ import { usePremiumStatus } from '@/services/premiumService';
 import { verifyImageContainsPlant, analyzeImageQuality } from '@/utils/plant-analysis/plantImageVerification';
 import { PaymentRequiredModal } from './subscription/PaymentRequiredModal';
 import DiagnosisResult from './diagnose/result/DiagnosisResult';
+import { useDiagnosisLimits } from '@/hooks/useDiagnosisLimits';
 
 const DiagnoseTab = () => {
   const { userProfile, hasActiveSubscription } = useAuth();
   const { plantInfo, setPlantInfo } = usePlantInfo();
   const { hasAIAccess } = usePremiumStatus();
+  
+  // Hook per gestione limiti diagnosi gratuite
+  const {
+    canUseFreeDiagnosis,
+    getRemainingFreeDiagnoses,
+    incrementDiagnosisUsage,
+    isLoading: isDiagnosisLoading,
+    FREE_DIAGNOSES_LIMIT
+  } = useDiagnosisLimits();
   
   // Utilizzo del nuovo hook per la diagnosi GPT-4 Vision
   const {
@@ -266,10 +276,22 @@ const DiagnoseTab = () => {
     }
   }, [userProfile, uploadedImage, plantInfo, diagnosedDisease, dataSentToExpert, hasActiveSubscription]);
 
-  // AI diagnosis selection con GPT-4 Vision - ORA viene chiamata solo quando l'utente sceglie AI
+  // AI diagnosis selection con controllo limiti
   const handleSelectAI = useCallback(async () => {
-    if (!hasAIAccess) {
-      toast.error('La diagnosi AI richiede un account Premium');
+    // Controllo se è un utente guest o senza abbonamento
+    if (!userProfile?.id) {
+      toast.error('Accesso richiesto per la diagnosi AI');
+      return;
+    }
+
+    // Controllo limiti diagnosi gratuite
+    if (!canUseFreeDiagnosis() && !hasActiveSubscription()) {
+      const remaining = getRemainingFreeDiagnoses();
+      toast.error(`Hai esaurito le tue ${FREE_DIAGNOSES_LIMIT} diagnosi gratuite!`, {
+        description: 'Acquista un abbonamento per continuare ad usare la diagnosi AI.',
+        duration: 8000
+      });
+      setShowPaymentModal(true);
       return;
     }
 
@@ -281,18 +303,46 @@ const DiagnoseTab = () => {
     try {
       console.log('🤖 Avvio diagnosi AI selezionata dall\'utente...');
       
+      // Incrementa il contatore di diagnosi usate (solo se non è abbonato)
+      if (!hasActiveSubscription()) {
+        const incremented = await incrementDiagnosisUsage();
+        if (!incremented) {
+          toast.error('Errore nel tracciamento delle diagnosi. Riprova.');
+          return;
+        }
+        
+        const remaining = getRemainingFreeDiagnoses();
+        if (remaining > 0) {
+          toast.info(`Diagnosi gratuita utilizzata. Ne rimangono ${remaining}`, {
+            duration: 4000
+          });
+        } else {
+          toast.warning('Ultima diagnosi gratuita utilizzata! Prossima volta dovrai abbonarti.', {
+            duration: 6000
+          });
+        }
+      }
+      
       // Usa il file salvato precedentemente
       await analyzeUploadedImage(plantInfo.uploadedFile, plantInfo);
       
-      toast.info('🤖 Analisi GPT-4 Vision avviata...', {
+      toast.info('🤖 Analisi AI avviata...', {
         description: 'Utilizzo dell\'AI più avanzata per la diagnosi fitopatologica'
       });
       
     } catch (error) {
-      console.error('❌ Errore analisi GPT-4 Vision:', error);
+      console.error('❌ Errore analisi AI:', error);
       toast.error(`Analisi fallita: ${error.message}`);
     }
-  }, [plantInfo, hasAIAccess, analyzeUploadedImage]);
+  }, [
+    plantInfo, 
+    userProfile?.id,
+    canUseFreeDiagnosis, 
+    getRemainingFreeDiagnoses,
+    incrementDiagnosisUsage,
+    hasActiveSubscription,
+    analyzeUploadedImage
+  ]);
 
   // Expert consultation selection
   const handleSelectExpert = useCallback(async () => {
@@ -476,6 +526,9 @@ const DiagnoseTab = () => {
               onSelectAI={handleSelectAI}
               onSelectExpert={handleSelectExpert}
               hasAIAccess={hasAIAccess}
+              canUseFreeDiagnosis={canUseFreeDiagnosis()}
+              remainingFreeDiagnoses={getRemainingFreeDiagnoses()}
+              hasActiveSubscription={hasActiveSubscription()}
             />
           </div>
         );

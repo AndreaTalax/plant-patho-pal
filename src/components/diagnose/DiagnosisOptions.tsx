@@ -14,12 +14,18 @@ interface DiagnosisOptionsProps {
   onSelectAI: () => void;
   onSelectExpert: () => void;
   hasAIAccess: boolean;
+  canUseFreeDiagnosis?: boolean;
+  remainingFreeDiagnoses?: number;
+  hasActiveSubscription?: boolean;
 }
 
 const DiagnosisOptions: React.FC<DiagnosisOptionsProps> = ({
   onSelectAI,
   onSelectExpert,
-  hasAIAccess
+  hasAIAccess,
+  canUseFreeDiagnosis = true,
+  remainingFreeDiagnoses = 3,
+  hasActiveSubscription = false
 }) => {
   const { hasExpertChatAccess, upgradeMessage } = usePremiumStatus();
   const [paywallOpen, setPaywallOpen] = useState(false);
@@ -45,9 +51,15 @@ const DiagnosisOptions: React.FC<DiagnosisOptionsProps> = ({
                 <Brain className="h-5 w-5 text-drplant-blue" />
                 Diagnosi AI
               </CardTitle>
-              <Badge variant="secondary" className="bg-green-100 text-green-800">
-                Gratuito
-              </Badge>
+              {hasActiveSubscription ? (
+                <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+                  Premium
+                </Badge>
+              ) : (
+                <Badge variant="secondary" className="bg-green-100 text-green-800">
+                  {canUseFreeDiagnosis ? `${remainingFreeDiagnoses}/3 Gratis` : 'Limite Raggiunto'}
+                </Badge>
+              )}
             </div>
             <CardDescription>
               Analisi immediata con intelligenza artificiale avanzata
@@ -72,12 +84,25 @@ const DiagnosisOptions: React.FC<DiagnosisOptionsProps> = ({
             <Button 
               onClick={onSelectAI}
               className="w-full"
+              disabled={!canUseFreeDiagnosis && !hasActiveSubscription}
+              variant={!canUseFreeDiagnosis && !hasActiveSubscription ? "outline" : "default"}
             >
+              {!canUseFreeDiagnosis && !hasActiveSubscription && <Lock className="h-4 w-4 mr-2" />}
               Analizza con AI
             </Button>
             
-            <p className="text-xs text-green-600 text-center">
-              Sempre disponibile e gratuito
+            <p className="text-xs text-center">
+              {hasActiveSubscription ? (
+                <span className="text-blue-600">Illimitato con Premium</span>
+              ) : canUseFreeDiagnosis ? (
+                <span className="text-green-600">
+                  {remainingFreeDiagnoses} diagnosi gratuite rimanenti
+                </span>
+              ) : (
+                <span className="text-red-600">
+                  Limite raggiunto - Richiede Premium
+                </span>
+              )}
             </p>
           </CardContent>
         </Card>
