@@ -315,23 +315,6 @@ const ProfessionalExpertDashboard = () => {
     setDateFilterOpen(false);
   };
 
-  // Close calendar when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dateFilterOpen) {
-        const target = event.target as Element;
-        if (!target.closest('[data-radix-popper-content-wrapper]') && 
-            !target.closest('button[data-state]')) {
-          setDateFilterOpen(false);
-        }
-      }
-    };
-
-    if (dateFilterOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
-    }
-  }, [dateFilterOpen]);
 
   useEffect(() => {
     loadExpertData();
