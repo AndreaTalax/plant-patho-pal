@@ -376,8 +376,16 @@ const ProfessionalExpertDashboard = () => {
       setDeletingConversation(conversationId);
       console.log('💪 Force deleting conversation:', conversationId);
       
-      // Usa ConversationService per eliminare la conversazione
-      const success = await ConversationService.deleteConversation(conversationId);
+      // Usa force-delete-conversation endpoint per eliminazione forzata
+      const { data, error } = await supabase.functions.invoke('force-delete-conversation', {
+        body: { conversationId }
+      });
+
+      if (error) {
+        throw new Error(error.message || 'Errore durante l\'eliminazione della conversazione');
+      }
+
+      const success = data?.success;
       
       if (!success) {
         throw new Error('Errore durante l\'eliminazione della conversazione');
