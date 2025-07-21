@@ -26,6 +26,7 @@ const ChatTab = () => {
       }
 
       try {
+        console.log('🔍 ChatTab: Controllo conversazione attiva per utente:', user.id);
         const { data: conversation, error } = await supabase
           .from('conversations')
           .select('id, status')
@@ -36,13 +37,14 @@ const ChatTab = () => {
           .maybeSingle();
 
         if (error) {
-          console.error('Errore nel controllo conversazione:', error);
+          console.error('❌ ChatTab: Errore nel controllo conversazione:', error);
           setHasActiveConversation(false);
         } else {
+          console.log('✅ ChatTab: Conversazione trovata:', conversation);
           setHasActiveConversation(!!conversation);
         }
       } catch (error) {
-        console.error('Errore nel controllo conversazione:', error);
+        console.error('❌ ChatTab: Errore nel controllo conversazione:', error);
         setHasActiveConversation(false);
       } finally {
         setIsLoading(false);
@@ -58,10 +60,21 @@ const ChatTab = () => {
       setTimeout(checkActiveConversation, 1000); // Piccolo delay per assicurarsi che la conversazione sia stata creata
     };
 
+    // Ascolta quando viene fatto il switch al tab chat
+    const handleTabSwitch = (event: CustomEvent) => {
+      if (event.detail === 'chat') {
+        console.log('🔄 ChatTab: Forzo ricontrollo conversazione per switch tab');
+        setIsLoading(true);
+        setTimeout(checkActiveConversation, 500);
+      }
+    };
+
     window.addEventListener('plantDataSynced', handlePlantDataSynced);
+    window.addEventListener('switchTab', handleTabSwitch as EventListener);
     
     return () => {
       window.removeEventListener('plantDataSynced', handlePlantDataSynced);
+      window.removeEventListener('switchTab', handleTabSwitch as EventListener);
     };
   }, [isAuthenticated, user?.id]);
 
