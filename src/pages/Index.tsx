@@ -74,7 +74,7 @@ const Index = () => {
         return;
       }
       
-      // Per utenti normali, la chat è accessibile se hanno accesso premium
+      // Per utenti normali, la chat è sempre accessibile
       if (newTab === "chat") {
         console.log("🎧 Chat requested - allowing access");
         setActiveTab("chat");
