@@ -65,10 +65,10 @@ const DiagnoseTab = () => {
   useEffect(() => {
     if (isAnalyzing) {
       setCurrentStage('analyzing');
-    } else if (diagnosedDisease && currentStage === 'analyzing') {
+    } else if ((diagnosedDisease || diagnosisResult) && currentStage === 'analyzing') {
       setCurrentStage('result');
     }
-  }, [isAnalyzing, diagnosedDisease, currentStage]);
+  }, [isAnalyzing, diagnosedDisease, diagnosisResult, currentStage]);
 
   // Verifica che l'immagine contenga una pianta prima di procedere
   const verifyPlantInImage = async (file: File): Promise<boolean> => {
@@ -543,7 +543,7 @@ const DiagnoseTab = () => {
         );
 
       case 'result':
-        if (diagnosedDisease && uploadedImage) {
+        if (uploadedImage && (diagnosedDisease || diagnosisResult)) {
           return (
             <DiagnosisResult
               imageSrc={uploadedImage}
