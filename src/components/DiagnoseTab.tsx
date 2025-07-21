@@ -404,16 +404,31 @@ const DiagnoseTab = () => {
   const handleExpertConsultation = useCallback(async () => {
     const sent = await sendDataToExpert(true);
     if (sent) {
-      // Forzare la navigazione al tab chat per gli account master
       console.log("🔄 Navigating to expert chat after diagnosis...");
+      
+      // Aspetta che l'evento plantDataSynced venga processato
+      const handleDataSynced = () => {
+        setTimeout(() => {
+          if (userProfile?.role === 'expert' || userProfile?.role === 'admin') {
+            window.dispatchEvent(new CustomEvent('switchTab', { detail: 'expert' }));
+          } else {
+            window.dispatchEvent(new CustomEvent('switchTab', { detail: 'chat' }));
+          }
+        }, 500);
+        window.removeEventListener('plantDataSynced', handleDataSynced);
+      };
+      
+      window.addEventListener('plantDataSynced', handleDataSynced);
+      
+      // Fallback nel caso l'evento non venga emesso
       setTimeout(() => {
         if (userProfile?.role === 'expert' || userProfile?.role === 'admin') {
-          // Per account master, usa direttamente 'expert' 
           window.dispatchEvent(new CustomEvent('switchTab', { detail: 'expert' }));
         } else {
           window.dispatchEvent(new CustomEvent('switchTab', { detail: 'chat' }));
         }
-      }, 1500);
+        window.removeEventListener('plantDataSynced', handleDataSynced);
+      }, 3000);
     }
   }, [sendDataToExpert, userProfile?.role]);
 
