@@ -50,6 +50,19 @@ const ChatTab = () => {
     };
 
     checkActiveConversation();
+
+    // Ascolta per aggiornamenti dopo la sincronizzazione dei dati della pianta
+    const handlePlantDataSynced = () => {
+      console.log('🔄 ChatTab: Ricontrollo conversazione dopo sincronizzazione dati');
+      setIsLoading(true);
+      setTimeout(checkActiveConversation, 1000); // Piccolo delay per assicurarsi che la conversazione sia stata creata
+    };
+
+    window.addEventListener('plantDataSynced', handlePlantDataSynced);
+    
+    return () => {
+      window.removeEventListener('plantDataSynced', handlePlantDataSynced);
+    };
   }, [isAuthenticated, user?.id]);
 
   if (!isAuthenticated || !user) {

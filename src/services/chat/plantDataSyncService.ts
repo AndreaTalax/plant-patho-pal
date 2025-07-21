@@ -96,6 +96,10 @@ export class PlantDataSyncService {
       }
 
       console.log('✅ Plant data synced successfully to chat');
+      
+      // Emetti evento per notificare che i dati sono stati sincronizzati
+      window.dispatchEvent(new CustomEvent('plantDataSynced'));
+      
       return true;
 
     } catch (error) {
