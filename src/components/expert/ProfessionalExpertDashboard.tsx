@@ -549,7 +549,7 @@ const ProfessionalExpertDashboard = () => {
               </div>
               
               <div className="flex items-center gap-2">
-                <Popover modal={true}>
+                <Popover open={dateFilterOpen} onOpenChange={setDateFilterOpen} modal={true}>
                   <PopoverTrigger asChild>
                     <Button
                       variant="outline"
@@ -568,9 +568,10 @@ const ProfessionalExpertDashboard = () => {
                       selected={selectedDate}
                       onSelect={(date) => {
                         setSelectedDate(date);
+                        setDateFilterOpen(false); // Chiude il popover dopo la selezione
                       }}
                       initialFocus
-                      className="p-3"
+                      className={cn("p-3 pointer-events-auto")}
                     />
                   </PopoverContent>
                 </Popover>
