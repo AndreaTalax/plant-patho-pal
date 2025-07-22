@@ -22,6 +22,7 @@ export class AutoExpertNotificationService {
       console.log('📨 Sending diagnosis automatically to expert...');
       console.log('👤 User ID:', userId);
       console.log('🌿 Diagnosis data:', diagnosisData);
+      console.log('🖼️ Image URL ricevuto:', diagnosisData.imageUrl);
 
       // Get current user to include their info
       const { data: { user } } = await supabase.auth.getUser();

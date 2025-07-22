@@ -10,6 +10,8 @@ export const ImageDisplay = ({ imageUrl }: ImageDisplayProps) => {
   const [imageError, setImageError] = useState(false);
   const [imageLoading, setImageLoading] = useState(true);
 
+  console.log('🖼️ ImageDisplay - URL ricevuto:', imageUrl);
+
   const handleImageLoad = () => {
     setImageLoading(false);
     setImageError(false);
