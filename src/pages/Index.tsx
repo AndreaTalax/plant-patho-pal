@@ -50,7 +50,7 @@ const Index = () => {
   }, [isMasterAccount, activeTab]);
 
   useEffect(() => {
-    if (!canAccessTabs && activeTab !== "diagnose" && !isMasterAccount) {
+    if (!canAccessTabs && activeTab !== "diagnose" && activeTab !== "chat" && !isMasterAccount) {
       setActiveTab("diagnose");
     }
   }, [canAccessTabs, activeTab, isMasterAccount]);
