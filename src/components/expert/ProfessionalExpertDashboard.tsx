@@ -76,6 +76,7 @@ interface ConversationSummary {
   last_message_timestamp?: string;
   status: string;
   created_at: string;
+  updated_at: string;
   user_profile?: {
     first_name: string;
     last_name: string;
@@ -168,6 +169,7 @@ const ProfessionalExpertDashboard = () => {
               last_message_timestamp: conversation.last_message_at,
               status: conversation.status || 'active',
               created_at: conversation.created_at,
+              updated_at: conversation.updated_at,
               user_profile: profile
             };
           })
@@ -192,6 +194,7 @@ const ProfessionalExpertDashboard = () => {
               last_message_timestamp: conversation.last_message_at,
               status: conversation.status || 'finished',
               created_at: conversation.created_at,
+              updated_at: conversation.updated_at,
               user_profile: profile
             };
           })
@@ -284,7 +287,8 @@ const ProfessionalExpertDashboard = () => {
     if (date) {
       const filterByDate = (convs: ConversationSummary[]) => {
         return convs.filter(conv => {
-          const convDate = new Date(conv.created_at);
+          // Use updated_at instead of created_at to show conversations active on a specific date
+          const convDate = new Date(conv.updated_at);
           return convDate.toDateString() === date.toDateString();
         });
       };
