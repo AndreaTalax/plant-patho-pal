@@ -249,7 +249,7 @@ async function analyzeWithEPPO(plantName: string): Promise<any> {
   }
 }
 
-// Hugging Face Image Analysis
+// Hugging Face Image Analysis - Enhanced with plant validation
 async function analyzeWithHuggingFace(imageBase64: string): Promise<any> {
   const huggingFaceToken = Deno.env.get('HUGGINGFACE_ACCESS_TOKEN');
   
@@ -269,7 +269,59 @@ async function analyzeWithHuggingFace(imageBase64: string): Promise<any> {
       bytes[i] = binaryString.charCodeAt(i);
     }
 
-    // Plant disease classification
+    // First, validate if the image contains a plant using general image classification
+    const validationResponse = await fetch(
+      "https://api-inference.huggingface.co/models/google/vit-base-patch16-224",
+      {
+        headers: {
+          Authorization: `Bearer ${huggingFaceToken}`,
+          "Content-Type": "application/json",
+        },
+        method: "POST",
+        body: JSON.stringify({
+          inputs: imageBase64,
+        }),
+        signal: AbortSignal.timeout(15000),
+      }
+    );
+
+    let isPlantImage = false;
+    if (validationResponse.ok) {
+      const validationData = await validationResponse.json();
+      logWithTimestamp('INFO', 'Image classification result', validationData);
+      
+      // Check if the image contains plant-related content
+      if (Array.isArray(validationData)) {
+        const plantRelatedLabels = validationData.filter(item => 
+          item.label && (
+            item.label.toLowerCase().includes('plant') ||
+            item.label.toLowerCase().includes('leaf') ||
+            item.label.toLowerCase().includes('flower') ||
+            item.label.toLowerCase().includes('tree') ||
+            item.label.toLowerCase().includes('grass') ||
+            item.label.toLowerCase().includes('herb') ||
+            item.label.toLowerCase().includes('botanical') ||
+            item.label.toLowerCase().includes('garden') ||
+            item.label.toLowerCase().includes('vegetation') ||
+            item.label.toLowerCase().includes('foliage')
+          )
+        );
+        
+        isPlantImage = plantRelatedLabels.length > 0 && plantRelatedLabels[0].score > 0.1;
+        logWithTimestamp('INFO', `Plant validation result: ${isPlantImage}`, plantRelatedLabels);
+      }
+    }
+
+    // If not a plant image, return validation error
+    if (!isPlantImage) {
+      logWithTimestamp('WARN', 'Image does not appear to contain a plant');
+      return { 
+        isNotPlant: true, 
+        message: "L'immagine caricata non sembra contenere una pianta. Per favore carica un'immagine di una pianta per ottenere una diagnosi accurata." 
+      };
+    }
+
+    // Continue with plant disease classification if it's a plant
     const diseaseResponse = await fetch(
       "https://api-inference.huggingface.co/models/microsoft/resnet-50",
       {
@@ -291,7 +343,7 @@ async function analyzeWithHuggingFace(imageBase64: string): Promise<any> {
       logWithTimestamp('INFO', 'Hugging Face disease analysis successful');
     }
 
-    return { diseases: diseaseData };
+    return { diseases: diseaseData, isValidPlant: true };
 
   } catch (error) {
     logWithTimestamp('ERROR', 'Hugging Face analysis failed', { error: error.message });
@@ -520,6 +572,40 @@ serve(async (req) => {
     const plantId = plantIdResult.status === 'fulfilled' ? plantIdResult.value : null;
     const plantNet = plantNetResult.status === 'fulfilled' ? plantNetResult.value : null;
     const huggingFace = huggingFaceResult.status === 'fulfilled' ? huggingFaceResult.value : null;
+
+    // Check if Hugging Face detected that this is not a plant image
+    if (huggingFace?.isNotPlant) {
+      logWithTimestamp('WARN', 'Image validation failed - not a plant');
+      return new Response(JSON.stringify({
+        error: 'NOT_A_PLANT',
+        message: huggingFace.message,
+        plantName: "Non è una pianta",
+        scientificName: "Immagine non valida",
+        confidence: 0,
+        isHealthy: false,
+        diseases: [{
+          name: "Validazione fallita",
+          probability: 1.0,
+          description: huggingFace.message,
+          treatment: "Carica un'immagine che contenga chiaramente una pianta per ottenere una diagnosi accurata."
+        }],
+        recommendations: [
+          "Assicurati che l'immagine contenga una pianta chiaramente visibile",
+          "Usa una buona illuminazione per fotografare la pianta",
+          "Evita sfondi confusi o altri oggetti nell'inquadratura",
+          "Prova con diverse angolazioni della stessa pianta"
+        ],
+        analysisDetails: {
+          source: "Image Validation",
+          fallback: false,
+          reason: "Image does not contain plant content",
+          timestamp: new Date().toISOString()
+        }
+      }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
 
     // Get plant name for EPPO search
     let plantNameForEPPO = "";

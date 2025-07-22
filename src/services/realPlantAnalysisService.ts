@@ -53,11 +53,10 @@ export class RealPlantAnalysisService {
         throw new Error('Image too large - please use a smaller image (max 10MB)');
       }
       
-      // Call the plant diagnosis edge function with better error handling
-      const { data, error } = await supabase.functions.invoke('plant-diagnosis', {
+      // Call the comprehensive plant diagnosis edge function
+      const { data, error } = await supabase.functions.invoke('comprehensive-plant-diagnosis', {
         body: {
-          image: base64,
-          plantInfo: plantInfo
+          imageBase64: base64
         }
       });
       
@@ -70,38 +69,53 @@ export class RealPlantAnalysisService {
         throw new Error('No analysis data received from service');
       }
       
-      // Validate response structure
-      if (!data.plantName || typeof data.confidence !== 'number') {
-        console.warn('⚠️ Invalid response structure, using fallback');
-        throw new Error('Invalid response from analysis service');
+      // Handle plant validation error
+      if (data.error === 'NOT_A_PLANT') {
+        console.warn('❌ Image validation failed - not a plant');
+        return {
+          plantName: data.plantName,
+          scientificName: data.scientificName,
+          confidence: 0,
+          isHealthy: false,
+          diseases: data.diseases,
+          recommendations: data.recommendations,
+          analysisDetails: data.analysisDetails
+        };
       }
       
-      // Enhance confidence scoring
-      const enhancedResult = {
-        ...data,
-        confidence: Math.max(0, Math.min(1, data.confidence)), // Ensure 0-1 range
+      // Transform comprehensive diagnosis result to expected format
+      const transformedResult = {
+        plantName: data.plantIdentification?.name || 'Pianta sconosciuta',
+        scientificName: data.plantIdentification?.scientificName || 'Species unknown',
+        confidence: data.confidence || 0,
+        isHealthy: data.healthAssessment?.isHealthy !== false,
+        diseases: data.healthAssessment?.diseases || [],
+        recommendations: data.recommendations || [],
         analysisDetails: {
-          ...data.analysisDetails,
-          timestamp: new Date().toISOString(),
-          imageSize: base64.length
+          ...data.metadata,
+          plantId: data.plantIdentification,
+          sources: data.sources,
+          source: 'Comprehensive AI Analysis',
+          fallback: false,
+          timestamp: new Date().toISOString()
         }
       };
       
-      console.log('✅ Enhanced analysis completed successfully:', enhancedResult);
+      console.log('✅ Enhanced analysis completed successfully:', transformedResult);
       
       // Provide user feedback based on confidence
-      const confidencePercent = Math.round(enhancedResult.confidence * 100);
-      if (enhancedResult.confidence >= 0.8) {
+      const confidencePercent = Math.round(transformedResult.confidence * 100);
+      if (transformedResult.confidence >= 0.8) {
         console.log(`🎯 High confidence analysis: ${confidencePercent}%`);
-      } else if (enhancedResult.confidence >= 0.6) {
+      } else if (transformedResult.confidence >= 0.6) {
         console.log(`✅ Good confidence analysis: ${confidencePercent}%`);
-      } else if (enhancedResult.confidence >= 0.4) {
+      } else if (transformedResult.confidence >= 0.4) {
         console.log(`⚠️ Moderate confidence analysis: ${confidencePercent}%`);
       } else {
         console.log(`❌ Low confidence analysis: ${confidencePercent}%`);
       }
       
-      return enhancedResult;
+      return transformedResult;
       
     } catch (error) {
       console.error('❌ Analysis failed:', error);

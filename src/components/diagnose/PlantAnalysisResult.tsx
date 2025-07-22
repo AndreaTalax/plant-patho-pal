@@ -182,21 +182,51 @@ const PlantAnalysisResultComponent: React.FC<PlantAnalysisResultComponentProps> 
           
           {analysisResult.diseases && analysisResult.diseases.length > 0 && (
             <div className="space-y-2">
-              <h4 className="font-medium">Problemi Rilevati:</h4>
+              <h4 className="font-medium">
+                {analysisResult.plantName === "Non è una pianta" ? "Problema di Validazione:" : "Problemi Rilevati:"}
+              </h4>
               {analysisResult.diseases.map((disease, index) => (
-                <div key={index} className="border rounded-lg p-3 bg-red-50">
+                <div 
+                  key={index} 
+                  className={`border rounded-lg p-3 ${
+                    analysisResult.plantName === "Non è una pianta" 
+                      ? "bg-yellow-50 border-yellow-300" 
+                      : "bg-red-50 border-red-300"
+                  }`}
+                >
                   <div className="flex justify-between items-start mb-2">
-                    <h5 className="font-medium text-red-800">{disease.name}</h5>
-                    <Badge variant="destructive" className="text-xs">
+                    <h5 className={`font-medium ${
+                      analysisResult.plantName === "Non è una pianta" 
+                        ? "text-yellow-800" 
+                        : "text-red-800"
+                    }`}>
+                      {disease.name}
+                    </h5>
+                    <Badge 
+                      variant={analysisResult.plantName === "Non è una pianta" ? "secondary" : "destructive"} 
+                      className="text-xs"
+                    >
                       {getProbabilityDisplay(disease.probability)}
                     </Badge>
                   </div>
                   {disease.description && (
-                    <p className="text-sm text-red-700 mb-2">{disease.description}</p>
+                    <p className={`text-sm mb-2 ${
+                      analysisResult.plantName === "Non è una pianta" 
+                        ? "text-yellow-700" 
+                        : "text-red-700"
+                    }`}>
+                      {disease.description}
+                    </p>
                   )}
                   {disease.treatment && (
-                    <p className="text-sm text-red-600">
-                      <strong>Trattamento:</strong> {disease.treatment}
+                    <p className={`text-sm ${
+                      analysisResult.plantName === "Non è una pianta" 
+                        ? "text-yellow-600" 
+                        : "text-red-600"
+                    }`}>
+                      <strong>
+                        {analysisResult.plantName === "Non è una pianta" ? "Suggerimento:" : "Trattamento:"}
+                      </strong> {disease.treatment}
                     </p>
                   )}
                 </div>
