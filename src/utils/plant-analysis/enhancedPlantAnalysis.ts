@@ -22,10 +22,35 @@ export interface ImageValidationResult {
 }
 
 /**
- * Enhanced image validation before plant analysis
+ * Advanced image validation with enhanced plant detection
  */
 const validatePlantImage = async (imageFile: File): Promise<ImageValidationResult> => {
   return new Promise((resolve) => {
+    // First validate file type and size
+    if (!imageFile.type.startsWith('image/')) {
+      resolve({
+        isValid: false,
+        hasPlantContent: false,
+        quality: 0,
+        issues: ['Il file non è un\'immagine valida'],
+        suggestions: ['Carica un file immagine (JPG, PNG, WebP)']
+      });
+      return;
+    }
+
+    // Check file size (max 10MB)
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    if (imageFile.size > maxSize) {
+      resolve({
+        isValid: false,
+        hasPlantContent: false,
+        quality: 0,
+        issues: ['File troppo grande (max 10MB)'],
+        suggestions: ['Comprimi l\'immagine o usa una qualità inferiore']
+      });
+      return;
+    }
+
     const img = new Image();
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
@@ -33,19 +58,34 @@ const validatePlantImage = async (imageFile: File): Promise<ImageValidationResul
     img.onload = () => {
       canvas.width = img.width;
       canvas.height = img.height;
-      ctx.drawImage(img, 0, 0);
+      ctx?.drawImage(img, 0, 0);
       
+      if (!ctx) {
+        resolve({
+          isValid: false,
+          hasPlantContent: false,
+          quality: 0,
+          issues: ['Errore nell\'elaborazione dell\'immagine'],
+          suggestions: ['Riprova con un\'altra immagine']
+        });
+        return;
+      }
+
       // Get image data for analysis
       const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
       const data = imageData.data;
       
       let greenPixels = 0;
       let brownPixels = 0;
+      let yellowPixels = 0;
+      let darkPixels = 0;
+      let brightPixels = 0;
       let totalPixels = data.length / 4;
       let averageBrightness = 0;
       let colorVariance = 0;
+      let edgePixels = 0;
       
-      // Analyze color composition
+      // Enhanced color analysis for plant detection
       for (let i = 0; i < data.length; i += 4) {
         const r = data[i];
         const g = data[i + 1];
@@ -54,63 +94,139 @@ const validatePlantImage = async (imageFile: File): Promise<ImageValidationResul
         const brightness = (r + g + b) / 3;
         averageBrightness += brightness;
         
-        // Check for green tones (typical of healthy plants)
-        if (g > r && g > b && g > 80) {
+        // Detect various plant colors
+        // Green tones (healthy plants)
+        if (g > r && g > b && g > 60 && (g - Math.max(r, b)) > 20) {
           greenPixels++;
         }
         
-        // Check for brown tones (might indicate diseased plants or soil)
-        if (r > 100 && g > 60 && b < 80 && Math.abs(r - g) < 50) {
+        // Brown/earth tones (soil, bark, diseased parts)
+        if (r > 80 && g > 50 && b < 80 && Math.abs(r - g) < 60 && r > b) {
           brownPixels++;
+        }
+        
+        // Yellow tones (flowers, autumn leaves)
+        if (r > 120 && g > 120 && b < 100 && Math.abs(r - g) < 50) {
+          yellowPixels++;
+        }
+        
+        // Dark areas (shadows, deep greens)
+        if (brightness < 60) {
+          darkPixels++;
+        }
+        
+        // Bright areas (highlights, flowers)
+        if (brightness > 200) {
+          brightPixels++;
+        }
+        
+        // Edge detection for texture analysis
+        if (i > canvas.width * 4 && i < data.length - canvas.width * 4) {
+          const topPixel = (data[i - canvas.width * 4] + data[i - canvas.width * 4 + 1] + data[i - canvas.width * 4 + 2]) / 3;
+          const bottomPixel = (data[i + canvas.width * 4] + data[i + canvas.width * 4 + 1] + data[i + canvas.width * 4 + 2]) / 3;
+          if (Math.abs(topPixel - bottomPixel) > 30) {
+            edgePixels++;
+          }
         }
       }
       
       averageBrightness /= totalPixels;
       const greenRatio = greenPixels / totalPixels;
       const brownRatio = brownPixels / totalPixels;
+      const yellowRatio = yellowPixels / totalPixels;
+      const darkRatio = darkPixels / totalPixels;
+      const brightRatio = brightPixels / totalPixels;
+      const edgeRatio = edgePixels / totalPixels;
       
-      // Calculate quality metrics
-      const hasGoodLighting = averageBrightness > 50 && averageBrightness < 200;
-      const hasPlantColors = greenRatio > 0.05 || brownRatio > 0.02;
+      // Enhanced plant detection algorithm
+      const hasPlantColors = greenRatio > 0.03 || brownRatio > 0.02 || yellowRatio > 0.01;
+      const hasNaturalVariance = darkRatio > 0.1 && darkRatio < 0.7;
+      const hasTexture = edgeRatio > 0.05; // Natural objects have more texture
+      const hasGoodColorBalance = brightRatio < 0.3; // Not overexposed
+      
+      // Quality metrics
       const imageSize = img.width * img.height;
-      const hasGoodResolution = imageSize > 50000; // At least ~224x224
+      const hasGoodResolution = imageSize > 100000; // At least ~316x316
+      const hasExcellentResolution = imageSize > 400000; // At least ~632x632
+      const hasGoodLighting = averageBrightness > 40 && averageBrightness < 220;
+      const hasOptimalLighting = averageBrightness > 80 && averageBrightness < 180;
       
       const issues: string[] = [];
       const suggestions: string[] = [];
       
+      // Lighting analysis
       if (!hasGoodLighting) {
-        if (averageBrightness <= 50) {
+        if (averageBrightness <= 40) {
           issues.push('Immagine troppo scura');
-          suggestions.push('Scatta la foto con più luce naturale');
+          suggestions.push('Usa più luce naturale o artificiale');
+          suggestions.push('Evita ombre eccessive sulla pianta');
         } else {
-          issues.push('Immagine troppo luminosa');
-          suggestions.push('Evita luce diretta troppo forte');
+          issues.push('Immagine sovraesposta');
+          suggestions.push('Riduci la luce diretta');
+          suggestions.push('Scatta in ombra o con luce diffusa');
         }
       }
       
+      // Resolution analysis
       if (!hasGoodResolution) {
-        issues.push('Risoluzione troppo bassa');
-        suggestions.push('Usa una risoluzione più alta (minimo 500x500 pixel)');
+        issues.push('Risoluzione insufficiente');
+        suggestions.push('Usa una risoluzione più alta (minimo 500x500)');
+        suggestions.push('Avvicinati alla pianta per più dettagli');
       }
       
+      // Plant content analysis
       if (!hasPlantColors) {
-        issues.push('Non rilevati colori tipici delle piante');
+        issues.push('Colori vegetali non rilevati');
         suggestions.push('Assicurati che la pianta sia ben visibile');
-        suggestions.push('Includi foglie, fiori o parti verdi della pianta');
+        suggestions.push('Includi foglie, fiori o parti verdi/marroni');
+        suggestions.push('Evita sfondi che dominano l\'inquadratura');
       }
       
-      const quality = (
-        (hasGoodLighting ? 0.3 : 0) +
-        (hasPlantColors ? 0.4 : 0) +
-        (hasGoodResolution ? 0.3 : 0)
-      );
+      if (!hasTexture) {
+        issues.push('Texture naturale insufficiente');
+        suggestions.push('Avvicinati per catturare più dettagli');
+        suggestions.push('Metti a fuoco la superficie della pianta');
+      }
+      
+      if (!hasNaturalVariance) {
+        issues.push('Contrasto colori inadeguato');
+        suggestions.push('Migliora l\'illuminazione per evidenziare i dettagli');
+      }
+      
+      // Calculate comprehensive quality score
+      let quality = 0;
+      
+      // Plant content detection (40% of score)
+      if (hasPlantColors) quality += 0.25;
+      if (hasNaturalVariance) quality += 0.10;
+      if (hasTexture) quality += 0.05;
+      
+      // Image quality (40% of score)
+      if (hasGoodLighting) quality += 0.20;
+      if (hasOptimalLighting) quality += 0.10;
+      if (hasGoodResolution) quality += 0.10;
+      
+      // Technical excellence (20% of score)
+      if (hasExcellentResolution) quality += 0.10;
+      if (hasGoodColorBalance) quality += 0.10;
+      
+      // Determine if image is valid for plant analysis
+      const isValid = quality > 0.6 && hasPlantColors;
+      const hasPlantContent = hasPlantColors && hasNaturalVariance;
+      
+      // Add quality-specific suggestions
+      if (quality > 0.8) {
+        suggestions.unshift('Immagine di ottima qualità per l\'analisi!');
+      } else if (quality > 0.6) {
+        suggestions.unshift('Qualità sufficiente, ma migliorabile');
+      }
       
       resolve({
-        isValid: quality > 0.5,
-        hasPlantContent: hasPlantColors,
-        quality: quality,
-        issues: issues,
-        suggestions: suggestions
+        isValid,
+        hasPlantContent,
+        quality: Math.min(quality, 1.0),
+        issues,
+        suggestions
       });
     };
     
@@ -120,7 +236,7 @@ const validatePlantImage = async (imageFile: File): Promise<ImageValidationResul
         hasPlantContent: false,
         quality: 0,
         issues: ['Impossibile caricare l\'immagine'],
-        suggestions: ['Verifica che il file sia un\'immagine valida (JPG, PNG)']
+        suggestions: ['Verifica che il file sia un\'immagine valida (JPG, PNG, WebP)', 'Prova con un\'immagine diversa']
       });
     };
     
@@ -128,8 +244,8 @@ const validatePlantImage = async (imageFile: File): Promise<ImageValidationResul
     const objectUrl = URL.createObjectURL(imageFile);
     img.src = objectUrl;
     
-    // Cleanup
-    setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+    // Cleanup after processing
+    setTimeout(() => URL.revokeObjectURL(objectUrl), 2000);
   });
 };
 
@@ -158,16 +274,16 @@ export const performEnhancedPlantAnalysis = async (
     // Step 2: Convert image to base64 for API calls
     const base64Image = await convertToBase64(imageFile);
     
-    // Step 3: Call the plant diagnosis API with retry logic
+    // Step 3: Call the comprehensive plant diagnosis API with retry logic
     let diagnosisData;
     let apiError;
     
     for (let attempt = 1; attempt <= 3; attempt++) {
-      console.log(`🔄 Attempt ${attempt}/3 - Calling plant diagnosis API...`);
+      console.log(`🔄 Attempt ${attempt}/3 - Calling comprehensive plant diagnosis API...`);
       
-      const { data, error } = await supabase.functions.invoke('plant-diagnosis', {
+      const { data, error } = await supabase.functions.invoke('comprehensive-plant-diagnosis', {
         body: {
-          image: base64Image,
+          imageBase64: base64Image,
           plantInfo: {
             ...plantInfo,
             imageQuality: validation.quality,
@@ -177,6 +293,10 @@ export const performEnhancedPlantAnalysis = async (
       });
       
       if (!error && data) {
+        // Handle the case where the API returns NOT_A_PLANT error
+        if (data.error === 'NOT_A_PLANT') {
+          throw new Error('NOT_A_PLANT');
+        }
         diagnosisData = data;
         break;
       }
@@ -184,14 +304,17 @@ export const performEnhancedPlantAnalysis = async (
       apiError = error;
       console.warn(`⚠️ Attempt ${attempt} failed:`, error?.message);
       
+      // Progressive backoff: wait longer between retries
       if (attempt < 3) {
-        await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+        const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000); // Exponential backoff, max 5s
+        console.log(`⏱️ Waiting ${delay}ms before retry...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
       }
     }
     
     if (!diagnosisData) {
       console.error('❌ All API attempts failed:', apiError);
-      throw new Error(`API_ERROR: ${apiError?.message || 'Service unavailable'}`);
+      throw new Error(`API_ERROR: ${apiError?.message || 'Service unavailable after 3 attempts'}`);
     }
     
     console.log('✅ Initial diagnosis completed:', diagnosisData.plantName);
@@ -297,7 +420,21 @@ export const performEnhancedPlantAnalysis = async (
       recommendations = [
         'Riprova tra qualche minuto',
         'Verifica la connessione internet',
-        'Se il problema persiste, contatta il supporto'
+        'Se il problema persiste, contatta il supporto',
+        'Il sistema ha tentato automaticamente 3 volte'
+      ];
+    } else if (error.message.includes('File too large')) {
+      errorMessage = 'File immagine troppo grande';
+      recommendations = [
+        'Comprimi l\'immagine sotto i 10MB',
+        'Riduci la qualità o risoluzione',
+        'Usa un formato più efficiente (JPG invece di PNG)'
+      ];
+    } else if (error.message.includes('File is not an image')) {
+      errorMessage = 'Tipo di file non supportato';
+      recommendations = [
+        'Carica solo file immagine (JPG, PNG, WebP)',
+        'Verifica che l\'estensione del file sia corretta'
       ];
     }
     

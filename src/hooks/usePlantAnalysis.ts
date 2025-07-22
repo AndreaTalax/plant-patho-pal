@@ -18,62 +18,55 @@ export const usePlantAnalysis = () => {
     setAnalysisDetails(null);
 
     try {
-      console.log('🔬 Avvio diagnosi completa con AI integrata...');
+      console.log('🔬 Avvio analisi avanzata con validazione migliorata...');
       
-      // Importa il servizio diagnosi completo
-      const { comprehensivePlantDiagnosisService } = await import('@/services/comprehensivePlantDiagnosisService');
+      // Usa il nuovo sistema di validazione avanzato
+      const { performEnhancedPlantAnalysis } = await import('@/utils/plant-analysis/enhancedPlantAnalysis');
       
-      // Avvia la diagnosi completa con progress tracking
-      const diagnosis = await comprehensivePlantDiagnosisService.diagnosePlant(
-        imageFile,
-        (progress) => {
-          setAnalysisProgress(progress.progress);
-          console.log(`📊 ${progress.step}: ${progress.message}`);
-        }
-      );
+      setAnalysisProgress(10);
+      console.log('📋 Validazione immagine in corso...');
       
-      console.log('✅ Diagnosi completa ricevuta:', diagnosis);
+      // Esegui l'analisi con il nuovo sistema
+      const diagnosis = await performEnhancedPlantAnalysis(imageFile, plantInfo);
       
-      // Estrai le informazioni principali
-      const plantName = diagnosis.plantIdentification?.name || 'Pianta non identificata';
-      const scientificName = diagnosis.plantIdentification?.scientificName || '';
-      const isHealthy = diagnosis.healthAssessment?.isHealthy || false;
-      const overallScore = diagnosis.healthAssessment?.overallHealthScore || 0.5;
-      const diseases = diagnosis.healthAssessment?.diseases || [];
-      const pests = diagnosis.healthAssessment?.pests || [];
+      setAnalysisProgress(50);
+      
+      if (!diagnosis.success) {
+        throw new Error(diagnosis.error || 'Analisi fallita');
+      }
+      
+      console.log('✅ Analisi avanzata completata:', diagnosis);
+      
+      // Usa direttamente i dati dal nuovo sistema di validazione
+      const plantName = diagnosis.plantName;
+      const scientificName = diagnosis.scientificName || '';
+      const isHealthy = diagnosis.isHealthy;
+      const diseases = diagnosis.diseases || [];
       const recommendations = diagnosis.recommendations || [];
-      
-      // Crea il risultato della diagnosi
-      const plantHealthStatus = isHealthy ? 'healthy' : 'diseased';
       const confidence = Math.round(diagnosis.confidence * 100);
+      
+      setAnalysisProgress(75);
       
       let diagnosisText = `**Pianta identificata:** ${plantName}`;
       if (scientificName && scientificName !== plantName) {
         diagnosisText += ` (${scientificName})`;
       }
-      diagnosisText += `\n**Confidenza identificazione:** ${Math.round(diagnosis.plantIdentification?.confidence * 100)}%`;
+      diagnosisText += `\n**Confidenza identificazione:** ${confidence}%`;
       
       if (isHealthy) {
-        diagnosisText += `\n\n🌿 **Stato di salute:** Sana (Score: ${Math.round(overallScore * 100)}%)`;
+        diagnosisText += `\n\n🌿 **Stato di salute:** Sana`;
       } else {
-        diagnosisText += `\n\n🚨 **Stato di salute:** Problemi rilevati (Score: ${Math.round(overallScore * 100)}%)`;
+        diagnosisText += `\n\n🚨 **Stato di salute:** Problemi rilevati`;
         
         if (diseases.length > 0) {
-          diagnosisText += `\n\n**Malattie rilevate:**`;
+          diagnosisText += `\n\n**Problemi rilevati:**`;
           diseases.forEach((disease, index) => {
-            diagnosisText += `\n${index + 1}. **${disease.name}** (${Math.round(disease.probability * 100)}%)`;
+            diagnosisText += `\n${index + 1}. **${disease.name}** (${Math.round((disease.probability || 0) * 100)}%)`;
             if (disease.description) {
               diagnosisText += `\n   ${disease.description}`;
             }
-          });
-        }
-        
-        if (pests.length > 0) {
-          diagnosisText += `\n\n**Parassiti rilevati:**`;
-          pests.forEach((pest, index) => {
-            diagnosisText += `\n${index + 1}. **${pest.name}** (${Math.round(pest.probability * 100)}%)`;
-            if (pest.description) {
-              diagnosisText += `\n   ${pest.description}`;
+            if (disease.treatment) {
+              diagnosisText += `\n   **Trattamento:** ${disease.treatment}`;
             }
           });
         }
@@ -86,38 +79,29 @@ export const usePlantAnalysis = () => {
         });
       }
       
-      // Ottieni raccomandazioni di trattamento specifiche
-      const treatmentRecommendations = comprehensivePlantDiagnosisService.getTreatmentRecommendations(diagnosis);
-      if (treatmentRecommendations.length > 0) {
-        diagnosisText += `\n\n**Trattamenti suggeriti:**`;
-        treatmentRecommendations.forEach((treatment, index) => {
-          diagnosisText += `\n${index + 1}. ${treatment}`;
-        });
-      }
-      
-      // Aggiungi informazioni sulle fonti
-      if (diagnosis.sources.length > 0) {
-        diagnosisText += `\n\n**Fonti:** ${diagnosis.sources.join(', ')}`;
+      // Aggiungi informazioni sulla qualità dell'analisi
+      if (diagnosis.analysisDetails?.source) {
+        diagnosisText += `\n\n**Fonte:** ${diagnosis.analysisDetails.source}`;
       }
       
       setDiagnosisResult(diagnosisText);
       
-      // Crea l'oggetto disease per compatibilità
-      if (!isHealthy && (diseases.length > 0 || pests.length > 0)) {
-        const primaryIssue = diseases.length > 0 ? diseases[0] : pests[0];
+      // Crea l'oggetto disease per compatibilità se ci sono problemi
+      if (!isHealthy && diseases.length > 0) {
+        const primaryIssue = diseases[0];
         const diagnosedIssue: DiagnosedDisease = {
           id: crypto.randomUUID(),
           name: primaryIssue.name,
           description: primaryIssue.description || 'Nessuna descrizione disponibile',
-          causes: 'Cause non specificate',
+          causes: 'Determinato attraverso analisi AI avanzata',
           symptoms: [],
-          treatments: treatmentRecommendations,
-          confidence: Math.round(primaryIssue.probability * 100),
+          treatments: primaryIssue.treatment ? [primaryIssue.treatment] : recommendations,
+          confidence: Math.round((primaryIssue.probability || 0) * 100),
           healthy: false,
           products: [],
-          disclaimer: 'Questa è una diagnosi AI. Consulta un esperto per conferma.',
-          recommendExpertConsultation: true,
-          resources: diagnosis.sources,
+          disclaimer: 'Questa è una diagnosi AI con validazione avanzata. Consulta un esperto per conferma.',
+          recommendExpertConsultation: confidence < 80,
+          resources: [diagnosis.analysisDetails?.source || 'Analisi AI'],
           label: primaryIssue.name,
           disease: {
             name: primaryIssue.name
@@ -129,17 +113,13 @@ export const usePlantAnalysis = () => {
       // Crea i dettagli dell'analisi
       const analysisFeatures = [
         `Identificazione: ${plantName}`,
-        `Confidenza: ${Math.round(diagnosis.plantIdentification?.confidence * 100)}%`,
+        `Confidenza: ${confidence}%`,
         `Stato: ${isHealthy ? 'Sana' : 'Problemi rilevati'}`,
-        `Score salute: ${Math.round(overallScore * 100)}%`,
-        `Fonti: ${diagnosis.sources.join(', ')}`
+        `Qualità immagine: ${Math.round((diagnosis.analysisDetails?.imageQuality || 0) * 100)}%`
       ];
       
       if (diseases.length > 0) {
-        analysisFeatures.push(`Malattie: ${diseases.length} rilevate`);
-      }
-      if (pests.length > 0) {
-        analysisFeatures.push(`Parassiti: ${pests.length} rilevati`);
+        analysisFeatures.push(`Problemi rilevati: ${diseases.length}`);
       }
       
       const detailsObj: AnalysisDetails = {
@@ -148,12 +128,12 @@ export const usePlantAnalysis = () => {
           plantSpecies: scientificName,
           isHealthy: isHealthy,
           isValidPlantImage: true,
-          primaryService: 'Comprehensive AI Analysis',
+          primaryService: diagnosis.analysisDetails?.source || 'Enhanced Analysis',
           agreementScore: confidence / 100,
-          dataSource: diagnosis.sources.join(', ')
+          dataSource: diagnosis.analysisDetails?.source || 'Enhanced AI Analysis'
         },
         identifiedFeatures: analysisFeatures,
-        analysisTechnology: 'Multi-AI Comprehensive Analysis',
+        analysisTechnology: 'Enhanced AI Analysis with Advanced Validation',
         originalConfidence: confidence,
         enhancedConfidence: confidence
       };
@@ -161,16 +141,31 @@ export const usePlantAnalysis = () => {
       setAnalysisDetails(detailsObj);
       setAnalysisProgress(100);
       
-      toast.success(`✅ Diagnosi completata: ${plantName} ${isHealthy ? '(Sana)' : '(Problemi rilevati)'}`);
+      toast.success(`✅ Analisi completata: ${plantName} ${isHealthy ? '(Sana)' : '(Problemi rilevati)'}`);
       
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Errore durante l\'analisi:', error);
-      toast.error('Errore durante l\'analisi', {
-        description: 'Si è verificato un errore. Riprova o consulta un esperto.',
+      
+      let errorMessage = 'Errore durante l\'analisi';
+      let errorDescription = 'Si è verificato un errore. Riprova o consulta un esperto.';
+      
+      if (error.message?.includes('NOT_A_PLANT')) {
+        errorMessage = 'Immagine non valida';
+        errorDescription = 'L\'immagine caricata non sembra contenere una pianta. Carica un\'immagine con una pianta chiaramente visibile.';
+      } else if (error.message?.includes('INVALID_IMAGE')) {
+        errorMessage = 'Qualità immagine insufficiente';
+        errorDescription = 'La qualità dell\'immagine non è sufficiente per l\'analisi. Usa un\'immagine più chiara e nitida.';
+      } else if (error.message?.includes('API_ERROR')) {
+        errorMessage = 'Servizio temporaneamente non disponibile';
+        errorDescription = 'Il servizio di analisi è temporaneamente non disponibile. Riprova tra qualche minuto.';
+      }
+      
+      toast.error(errorMessage, {
+        description: errorDescription,
         duration: 6000
       });
       
-      setDiagnosisResult('Errore durante l\'analisi');
+      setDiagnosisResult(`Errore: ${errorMessage}`);
       setAnalysisProgress(0);
     } finally {
       setIsAnalyzing(false);
