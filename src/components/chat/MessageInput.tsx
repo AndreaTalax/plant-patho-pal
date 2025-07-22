@@ -118,8 +118,11 @@ const MessageInput: React.FC<MessageInputProps> = ({
     // L'AudioRecorder gestisce già l'upload tramite la funzione edge
   };
 
+  console.log('📧 MessageInput render:', { enableAudio, enableEmoji, isMasterAccount });
+  
   return (
     <div className="bg-white border-t border-gray-200 p-4">
+      
       <div className="flex items-end gap-3">
         {/* Message Input Area */}
         <div className="flex-1 relative">

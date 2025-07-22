@@ -458,10 +458,10 @@ export const ExpertRealTimeChat: React.FC = () => {
                     conversationId={selectedConversationId}
                     senderId={userProfile.id}
                     recipientId={selectedConversation.user_profile?.id || ''}
-                    onSendMessage={async (text: string) => {
+                    onSendMessage={async (text: string, imageUrl?: string) => {
                       const recipientId = selectedConversation.user_profile?.id;
                       if (recipientId) {
-                        await sendMessage(recipientId, text);
+                        await sendMessage(recipientId, text, imageUrl);
                       }
                     }}
                     isMasterAccount={true}
