@@ -231,20 +231,21 @@ const DiagnoseTab = () => {
       const synced = await PlantDataSyncService.syncPlantDataToChat(
         userProfile.id,
         plantInfo,
-        uploadedImage
+        uploadedImage,
+        plantInfo.uploadedFile // Pass the uploaded file for storage upload
       );
 
-      if (synced) {
+      if (synced.success) {
         console.log('✅ Dati sincronizzati con successo alla chat');
         setDataSentToExpert(true);
         
-        // Se c'è un'analisi AI, invia anche quella
-        if (includeAnalysis && diagnosedDisease) {
+        // Se c'è un'analisi AI, usa l'URL finale dell'immagine di Storage
+        if (includeAnalysis && diagnosedDisease && synced.finalImageUrl) {
           const diagnosisData = {
             plantType: plantInfo.name || diagnosedDisease.name || 'Pianta non specificata',
             plantVariety: diagnosedDisease.name,
             symptoms: plantInfo.symptoms || diagnosedDisease.description,
-            imageUrl: uploadedImage,
+            imageUrl: synced.finalImageUrl, // Use the Storage URL returned by sync
             analysisResult: diagnosedDisease,
             confidence: diagnosedDisease.confidence || 0,
             isHealthy: diagnosedDisease.healthy || false,

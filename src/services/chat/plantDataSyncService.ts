@@ -8,7 +8,7 @@ export class PlantDataSyncService {
   /**
    * Sincronizza automaticamente i dati della pianta con la chat esistente
    */
-  static async syncPlantDataToChat(userId: string, plantInfo: PlantInfo, imageUrl?: string): Promise<boolean> {
+  static async syncPlantDataToChat(userId: string, plantInfo: PlantInfo, imageUrl?: string, uploadedFile?: File): Promise<{ success: boolean; finalImageUrl?: string }> {
     try {
       console.log('🔄 Syncing plant data to existing chat...', { userId, plantInfo, imageUrl });
 
@@ -16,7 +16,35 @@ export class PlantDataSyncService {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         console.error('❌ No active session for syncing data');
-        return false;
+        return { success: false };
+      }
+
+      // Upload image to Supabase Storage if it's a blob URL
+      let finalImageUrl = imageUrl;
+      if (imageUrl && imageUrl.startsWith('blob:') && uploadedFile) {
+        console.log('📸 Uploading image to Supabase Storage...');
+        const fileName = `${Date.now()}.jpg`;
+        const filePath = `${userId}/${fileName}`;
+        
+        const { data: storageData, error: storageError } = await supabase.storage
+          .from('plant-images')
+          .upload(filePath, uploadedFile, {
+            cacheControl: '3600',
+            upsert: false
+          });
+
+        if (storageError) {
+          console.error('❌ Error uploading image to storage:', storageError);
+          finalImageUrl = undefined; // Continue without image if upload fails
+        } else {
+          // Get public URL
+          const { data: urlData } = supabase.storage
+            .from('plant-images')
+            .getPublicUrl(filePath);
+          
+          finalImageUrl = urlData.publicUrl;
+          console.log('✅ Image uploaded to storage:', finalImageUrl);
+        }
       }
 
       // Trova la conversazione esistente
@@ -30,7 +58,7 @@ export class PlantDataSyncService {
 
       if (findError) {
         console.error('❌ Error finding conversation:', findError);
-        return false;
+        return { success: false };
       }
 
       let conversationId: string;
@@ -45,7 +73,7 @@ export class PlantDataSyncService {
       }
 
       // Costruisce il messaggio con tutti i dati della pianta
-      const plantDataMessage = this.buildPlantDataMessage(plantInfo, imageUrl);
+      const plantDataMessage = this.buildPlantDataMessage(plantInfo, finalImageUrl);
 
       // Invia il messaggio usando l'edge function send-message
       console.log('📤 Sending plant data message via edge function...');
@@ -64,13 +92,13 @@ export class PlantDataSyncService {
 
       if (messageError) {
         console.error('❌ Error sending plant data message:', messageError);
-        return false;
+        return { success: false };
       }
 
       console.log('✅ Plant data message sent successfully');
 
       // Se c'è un'immagine, inviala come messaggio separato
-      if (imageUrl) {
+      if (finalImageUrl) {
         console.log('📸 Sending plant image...');
         const imageMessage = `📸 Immagine della pianta`;
         
@@ -79,7 +107,7 @@ export class PlantDataSyncService {
             conversationId,
             recipientId: MARCO_NIGRO_ID,
             text: imageMessage,
-            imageUrl: imageUrl,
+            imageUrl: finalImageUrl, // Use the Supabase Storage URL
             products: null
           },
           headers: {
@@ -89,7 +117,7 @@ export class PlantDataSyncService {
 
         if (imageError) {
           console.error('❌ Error sending plant image:', imageError);
-          return false;
+          return { success: false };
         }
 
         console.log('✅ Plant image sent successfully');
@@ -100,11 +128,11 @@ export class PlantDataSyncService {
       // Emetti evento per notificare che i dati sono stati sincronizzati
       window.dispatchEvent(new CustomEvent('plantDataSynced'));
       
-      return true;
+      return { success: true, finalImageUrl };
 
     } catch (error) {
       console.error('❌ Error syncing plant data to chat:', error);
-      return false;
+      return { success: false };
     }
   }
 
