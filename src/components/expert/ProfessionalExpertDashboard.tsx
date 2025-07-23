@@ -15,17 +15,15 @@ import {
   Users, 
   TrendingUp,
   Activity,
-  
-  Trash2,
-  Eye,
-  MoreHorizontal,
+  Archive,
   Phone,
   Mail,
   MapPin,
   ArrowLeft,
   Filter,
   X,
-  ArrowUpDown
+  ArrowUpDown,
+  Search
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -90,8 +88,9 @@ const ProfessionalExpertDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [selectedConversation, setSelectedConversation] = useState<ConversationSummary | null>(null);
   const [activeTab, setActiveTab] = useState('conversations');
-  const [deletingConversation, setDeletingConversation] = useState<string | null>(null);
-  const [finishedConversations, setFinishedConversations] = useState<ConversationSummary[]>([]);
+  const [archivingConversation, setArchivingConversation] = useState<string | null>(null);
+  const [archivedConversations, setArchivedConversations] = useState<ConversationSummary[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
   
   
   // Sort order state
@@ -99,8 +98,7 @@ const ProfessionalExpertDashboard = () => {
   
   const [stats, setStats] = useState({
     totalConversations: 0,
-    finishedConversations: 0,
-    pendingConsultations: 0,
+    archivedConversations: 0,
     todayMessages: 0,
     activeUsers: 0
   });
@@ -126,8 +124,8 @@ const ProfessionalExpertDashboard = () => {
         .eq('status', 'active')
         .order('updated_at', { ascending: false });
 
-      // Load finished conversations
-      const { data: finishedConversationsData, error: finishedError } = await supabase
+      // Load archived conversations
+      const { data: archivedConversationsData, error: archivedError } = await supabase
         .from('conversations')
         .select(`
           id,
@@ -169,9 +167,9 @@ const ProfessionalExpertDashboard = () => {
         
         setConversations(conversationsWithProfiles);
 
-        // Process finished conversations
-        const finishedConversationsWithProfiles = await Promise.all(
-          (finishedConversationsData || []).map(async (conversation) => {
+        // Process archived conversations
+        const archivedConversationsWithProfiles = await Promise.all(
+          (archivedConversationsData || []).map(async (conversation) => {
             const { data: profile } = await supabase
               .from('profiles')
               .select('first_name, last_name, email, is_online, phone, address')
@@ -191,7 +189,7 @@ const ProfessionalExpertDashboard = () => {
           })
         );
         
-        setFinishedConversations(finishedConversationsWithProfiles);
+        setArchivedConversations(archivedConversationsWithProfiles);
         
         // Calculate stats
         const todayStart = new Date();
@@ -211,46 +209,12 @@ const ProfessionalExpertDashboard = () => {
 
         setStats({
           totalConversations: conversationsWithProfiles.length,
-          finishedConversations: finishedConversationsWithProfiles.length,
-          pendingConsultations: 0, // Will be updated with consultations
+          archivedConversations: archivedConversationsWithProfiles.length,
           todayMessages: todayMessagesCount || 0,
           activeUsers: uniqueActiveUsers
         });
       }
 
-      // Load consultations
-      const { data: consultationsData, error: consultationsError } = await supabase
-        .from('expert_consultations')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (consultationsError) {
-        console.error('❌ Error loading consultations:', consultationsError);
-        toast.error('Errore nel caricamento delle consultazioni');
-      } else {
-        const consultationsWithProfiles = await Promise.all(
-          (consultationsData || []).map(async (consultation) => {
-            const { data: profile } = await supabase
-              .from('profiles')
-              .select('first_name, last_name, email')
-              .eq('id', consultation.user_id)
-              .single();
-            
-            return {
-              ...consultation,
-              user_profile: profile
-            };
-          })
-        );
-        
-        setConsultations(consultationsWithProfiles);
-        
-        // Update pending consultations count
-        setStats(prev => ({
-          ...prev,
-          pendingConsultations: consultationsWithProfiles.filter(c => c.status === 'pending').length
-        }));
-      }
 
     } catch (error) {
       console.error('❌ Error in loadExpertData:', error);
@@ -314,45 +278,43 @@ const ProfessionalExpertDashboard = () => {
     };
   }, [loadExpertData]);
 
-  const handleForceDeleteConversation = useCallback(async (conversationId: string) => {
+  const handleArchiveConversation = useCallback(async (conversationId: string) => {
     try {
-      setDeletingConversation(conversationId);
-      console.log('💪 Force deleting conversation:', conversationId);
+      setArchivingConversation(conversationId);
+      console.log('📁 Archiving conversation:', conversationId);
       
-      // Usa force-delete-conversation endpoint per eliminazione forzata
-      const { data, error } = await supabase.functions.invoke('force-delete-conversation', {
-        body: { conversationId }
-      });
+      // Update conversation status to finished (archived)
+      const { error } = await supabase
+        .from('conversations')
+        .update({ status: 'finished' })
+        .eq('id', conversationId);
 
       if (error) {
-        throw new Error(error.message || 'Errore durante l\'eliminazione della conversazione');
-      }
-
-      const success = data?.success;
-      
-      if (!success) {
-        throw new Error('Errore durante l\'eliminazione della conversazione');
+        throw new Error(error.message || 'Errore durante l\'archiviazione della conversazione');
       }
       
-      console.log('✅ Conversation deleted successfully');
+      console.log('✅ Conversation archived successfully');
       
-      // Aggiorna immediatamente l'UI rimuovendo la conversazione dalle liste
-      setConversations(prev => prev.filter(conv => conv.id !== conversationId));
-      setFinishedConversations(prev => prev.filter(conv => conv.id !== conversationId));
+      // Move conversation from active to archived
+      const conversationToArchive = conversations.find(conv => conv.id === conversationId);
+      if (conversationToArchive) {
+        setConversations(prev => prev.filter(conv => conv.id !== conversationId));
+        setArchivedConversations(prev => [...prev, { ...conversationToArchive, status: 'finished' }]);
+      }
       
       if (selectedConversation?.id === conversationId) {
         setSelectedConversation(null);
       }
       
-      toast.success('Conversazione eliminata con successo');
+      toast.success('Conversazione archiviata con successo');
       
     } catch (error: any) {
-      console.error('❌ Error deleting conversation:', error);
-      toast.error(error.message || 'Errore durante l\'eliminazione della conversazione');
+      console.error('❌ Error archiving conversation:', error);
+      toast.error(error.message || 'Errore durante l\'archiviazione della conversazione');
     } finally {
-      setDeletingConversation(null);
+      setArchivingConversation(null);
     }
-  }, [selectedConversation?.id, loadExpertData]);
+  }, [conversations, selectedConversation?.id]);
 
   const getInitials = (firstName?: string, lastName?: string) => {
     if (!firstName && !lastName) return 'U';
@@ -375,6 +337,36 @@ const ProfessionalExpertDashboard = () => {
       hour: '2-digit',
       minute: '2-digit'
     });
+  };
+
+  // Filter conversations based on search term
+  const filteredActiveConversations = conversations.filter(conv => {
+    const displayName = getUserDisplayName(conv.user_profile).toLowerCase();
+    return displayName.includes(searchTerm.toLowerCase());
+  });
+
+  const filteredArchivedConversations = archivedConversations.filter(conv => {
+    const displayName = getUserDisplayName(conv.user_profile).toLowerCase();
+    return displayName.includes(searchTerm.toLowerCase());
+  });
+
+  // Get priority badge for conversation
+  const getPriorityBadge = (conversation: ConversationSummary) => {
+    const lastMessageTime = conversation.last_message_timestamp ? new Date(conversation.last_message_timestamp) : null;
+    const now = new Date();
+    const hoursDiff = lastMessageTime ? Math.abs(now.getTime() - lastMessageTime.getTime()) / (1000 * 60 * 60) : 0;
+    
+    if (!lastMessageTime) {
+      return <Badge variant="secondary" className="text-xs">Nuovo</Badge>;
+    }
+    
+    if (hoursDiff > 24) {
+      return <Badge variant="destructive" className="text-xs">Urgente</Badge>;
+    } else if (hoursDiff > 12) {
+      return <Badge variant="outline" className="text-xs border-yellow-500 text-yellow-700">Attesa risposta</Badge>;
+    }
+    
+    return <Badge variant="default" className="text-xs bg-green-100 text-green-700">Recente</Badge>;
   };
 
   // Back to main dashboard
@@ -430,7 +422,7 @@ const ProfessionalExpertDashboard = () => {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 md:gap-6">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
           <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
             <CardContent className="p-3 md:p-6">
               <div className="flex items-center justify-between">
@@ -443,26 +435,14 @@ const ProfessionalExpertDashboard = () => {
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-red-50 to-red-100 border-red-200">
+          <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
             <CardContent className="p-3 md:p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs md:text-sm font-medium text-red-600 mb-1">Conversazioni Finite</p>
-                  <p className="text-xl md:text-3xl font-bold text-red-900">{stats.finishedConversations}</p>
+                  <p className="text-xs md:text-sm font-medium text-purple-600 mb-1">Archivio</p>
+                  <p className="text-xl md:text-3xl font-bold text-purple-900">{stats.archivedConversations}</p>
                 </div>
-                <AlertCircle className="h-6 md:h-8 w-6 md:w-8 text-red-600" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200">
-            <CardContent className="p-3 md:p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs md:text-sm font-medium text-amber-600 mb-1">Consultazioni in Attesa</p>
-                  <p className="text-xl md:text-3xl font-bold text-amber-900">{stats.pendingConsultations}</p>
-                </div>
-                <Clock className="h-6 md:h-8 w-6 md:w-8 text-amber-600" />
+                <Archive className="h-6 md:h-8 w-6 md:w-8 text-purple-600" />
               </div>
             </CardContent>
           </Card>
@@ -479,7 +459,7 @@ const ProfessionalExpertDashboard = () => {
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
+          <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200">
             <CardContent className="p-3 md:p-6">
               <div className="flex items-center justify-between">
                 <div>
@@ -524,9 +504,23 @@ const ProfessionalExpertDashboard = () => {
             </div>
           </div>
 
+          {/* Search bar */}
+          <div className="p-4 border-b border-gray-200 bg-gray-50">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Cerca per nome utente..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+          </div>
+
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <div className="border-b border-gray-200 bg-gray-50">
-              <TabsList className="grid w-full grid-cols-3 bg-transparent h-12 md:h-16">
+              <TabsList className="grid w-full grid-cols-2 bg-transparent h-12 md:h-16">
                 <TabsTrigger 
                   value="conversations" 
                   className="flex items-center gap-1 md:gap-3 h-10 md:h-12 text-sm md:text-base data-[state=active]:bg-white data-[state=active]:shadow-sm"
@@ -534,25 +528,16 @@ const ProfessionalExpertDashboard = () => {
                   <MessageSquare className="h-4 w-4 md:h-5 md:w-5" />
                   <span className="hidden sm:inline">Conversazioni Attive</span>
                   <span className="sm:hidden">Attive</span>
-                  <span className="text-xs">({conversations.length})</span>
+                  <span className="text-xs">({filteredActiveConversations.length})</span>
                 </TabsTrigger>
                 <TabsTrigger 
-                  value="finished" 
+                  value="archived" 
                   className="flex items-center gap-1 md:gap-3 h-10 md:h-12 text-sm md:text-base data-[state=active]:bg-white data-[state=active]:shadow-sm"
                 >
-                  <AlertCircle className="h-4 w-4 md:h-5 md:w-5" />
-                  <span className="hidden sm:inline">Conversazioni Finite</span>
-                  <span className="sm:hidden">Finite</span>
-                  <span className="text-xs">({finishedConversations.length})</span>
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="consultations" 
-                  className="flex items-center gap-1 md:gap-3 h-10 md:h-12 text-sm md:text-base data-[state=active]:bg-white data-[state=active]:shadow-sm"
-                >
-                  <Clock className="h-4 w-4 md:h-5 md:w-5" />
-                  <span className="hidden sm:inline">Consultazioni</span>
-                  <span className="sm:hidden">Cons.</span>
-                  <span className="text-xs">({consultations.length})</span>
+                  <Archive className="h-4 w-4 md:h-5 md:w-5" />
+                  <span className="hidden sm:inline">Archivio</span>
+                  <span className="sm:hidden">Archivio</span>
+                  <span className="text-xs">({filteredArchivedConversations.length})</span>
                 </TabsTrigger>
               </TabsList>
             </div>
@@ -565,14 +550,18 @@ const ProfessionalExpertDashboard = () => {
                 />
               ) : (
                 <div className="space-y-4">
-                  {conversations.length === 0 ? (
+                  {filteredActiveConversations.length === 0 ? (
                     <div className="text-center py-12">
                       <MessageSquare className="h-16 w-16 mx-auto mb-4 text-gray-300" />
-                      <h3 className="text-lg font-medium text-gray-900 mb-2">Nessuna conversazione attiva</h3>
-                      <p className="text-gray-500">Le nuove conversazioni attive appariranno qui</p>
+                      <h3 className="text-lg font-medium text-gray-900 mb-2">
+                        {searchTerm ? 'Nessuna conversazione trovata' : 'Nessuna conversazione attiva'}
+                      </h3>
+                      <p className="text-gray-500">
+                        {searchTerm ? 'Prova a modificare i termini di ricerca' : 'Le nuove conversazioni attive appariranno qui'}
+                      </p>
                     </div>
                   ) : (
-                    conversations.map((conversation) => (
+                    filteredActiveConversations.map((conversation) => (
                       <Card 
                         key={conversation.id} 
                         className="hover:shadow-md transition-all duration-200 border-l-4 border-l-drplant-green/30 hover:border-l-drplant-green"
@@ -603,6 +592,7 @@ const ProfessionalExpertDashboard = () => {
                                     <Badge variant="outline" className="bg-green-50 text-green-700 text-xs">
                                       Attiva
                                     </Badge>
+                                    {getPriorityBadge(conversation)}
                                   </div>
                                 </div>
                                 
@@ -648,21 +638,22 @@ const ProfessionalExpertDashboard = () => {
                                 className="bg-drplant-green hover:bg-drplant-green/90"
                                 size="sm"
                               >
-                                <Eye className="h-4 w-4 mr-2" />
+                                <MessageSquare className="h-4 w-4 mr-2" />
                                 <span className="hidden sm:inline">Visualizza</span>
                               </Button>
                               <Button
-                                onClick={() => handleForceDeleteConversation(conversation.id)}
-                                variant="destructive"
+                                onClick={() => handleArchiveConversation(conversation.id)}
+                                variant="outline"
                                 size="sm"
-                                disabled={deletingConversation === conversation.id}
+                                disabled={archivingConversation === conversation.id}
+                                className="border-purple-200 text-purple-700 hover:bg-purple-50"
                               >
-                                {deletingConversation === conversation.id ? (
+                                {archivingConversation === conversation.id ? (
                                   <Loader2 className="h-4 w-4 animate-spin" />
                                 ) : (
-                                  <Trash2 className="h-4 w-4" />
+                                  <Archive className="h-4 w-4" />
                                 )}
-                                <span className="hidden sm:inline ml-2">Elimina</span>
+                                <span className="hidden sm:inline ml-2">Concludi + Archivia</span>
                               </Button>
                             </div>
                           </div>
@@ -674,53 +665,57 @@ const ProfessionalExpertDashboard = () => {
               )}
             </TabsContent>
 
-            <TabsContent value="finished" className="p-3 md:p-6">
+            <TabsContent value="archived" className="p-3 md:p-6">
               <div className="space-y-4">
                 <div className="flex items-center justify-between mb-6">
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-900">Conversazioni Finite</h3>
-                    <p className="text-sm text-gray-600">Gestisci le conversazioni completate che possono essere eliminate</p>
+                    <h3 className="text-lg font-semibold text-gray-900">Archivio Conversazioni</h3>
+                    <p className="text-sm text-gray-600">Conversazioni archiviate e completate</p>
                   </div>
-                   {finishedConversations.length > 0 && (
+                   {filteredArchivedConversations.length > 0 && (
                      <div className="text-sm text-gray-500">
-                       {finishedConversations.length} conversazioni finite
+                       {filteredArchivedConversations.length} conversazioni archiviate
                     </div>
                   )}
                 </div>
 
-                 {finishedConversations.length === 0 ? (
+                 {filteredArchivedConversations.length === 0 ? (
                    <div className="text-center py-12">
-                     <AlertCircle className="h-16 w-16 mx-auto mb-4 text-gray-300" />
-                     <h3 className="text-lg font-medium text-gray-900 mb-2">Nessuna conversazione finita</h3>
-                     <p className="text-gray-500">Le conversazioni completate appariranno qui</p>
+                     <Archive className="h-16 w-16 mx-auto mb-4 text-gray-300" />
+                     <h3 className="text-lg font-medium text-gray-900 mb-2">
+                       {searchTerm ? 'Nessuna conversazione archiviata trovata' : 'Nessuna conversazione archiviata'}
+                     </h3>
+                     <p className="text-gray-500">
+                       {searchTerm ? 'Prova a modificare i termini di ricerca' : 'Le conversazioni archiviate appariranno qui'}
+                     </p>
                    </div>
                  ) : (
-                   finishedConversations.map((conversation) => (
-                    <Card 
-                      key={conversation.id} 
-                      className="hover:shadow-md transition-all duration-200 border-l-4 border-l-red-300 hover:border-l-red-500"
-                    >
-                      <CardContent className="p-4 md:p-6">
-                        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                          <div className="flex items-center gap-3 md:gap-4 flex-1 min-w-0">
-                            <div className="relative">
-                              <Avatar className="h-10 md:h-12 w-10 md:w-12">
-                                <AvatarFallback className="bg-red-50 text-red-700 font-semibold text-sm">
-                                  {getInitials(conversation.user_profile?.first_name, conversation.user_profile?.last_name)}
-                                </AvatarFallback>
-                              </Avatar>
-                              <div className="absolute -bottom-1 -right-1 w-3 md:w-4 h-3 md:h-4 rounded-full border-2 border-white bg-red-500" />
-                            </div>
-                            
-                            <div className="flex-1 min-w-0">
-                              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 mb-2">
-                                <h3 className="font-semibold text-gray-900 text-base md:text-lg truncate">
-                                  {getUserDisplayName(conversation.user_profile)}
-                                </h3>
-                                <Badge variant="destructive" className="text-xs w-fit">
-                                  Finita
-                                </Badge>
-                              </div>
+                   filteredArchivedConversations.map((conversation) => (
+                     <Card 
+                       key={conversation.id} 
+                       className="hover:shadow-md transition-all duration-200 border-l-4 border-l-purple-300 hover:border-l-purple-500"
+                     >
+                       <CardContent className="p-4 md:p-6">
+                         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                           <div className="flex items-center gap-3 md:gap-4 flex-1 min-w-0">
+                             <div className="relative">
+                               <Avatar className="h-10 md:h-12 w-10 md:w-12">
+                                 <AvatarFallback className="bg-purple-50 text-purple-700 font-semibold text-sm">
+                                   {getInitials(conversation.user_profile?.first_name, conversation.user_profile?.last_name)}
+                                 </AvatarFallback>
+                               </Avatar>
+                               <div className="absolute -bottom-1 -right-1 w-3 md:w-4 h-3 md:h-4 rounded-full border-2 border-white bg-purple-500" />
+                             </div>
+                             
+                             <div className="flex-1 min-w-0">
+                               <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 mb-2">
+                                 <h3 className="font-semibold text-gray-900 text-base md:text-lg truncate">
+                                   {getUserDisplayName(conversation.user_profile)}
+                                 </h3>
+                                 <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200 text-xs w-fit">
+                                   Archiviata
+                                 </Badge>
+                               </div>
                               
                               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 md:gap-4 text-xs md:text-sm text-gray-600">
                                 <div className="flex items-center gap-2">
@@ -741,7 +736,7 @@ const ProfessionalExpertDashboard = () => {
                                 )}
                               </div>
                               
-                              <div className="mt-3 p-3 bg-red-50 rounded-lg">
+                              <div className="mt-3 p-3 bg-purple-50 rounded-lg">
                                 <p className="text-xs md:text-sm text-gray-700 mb-2">
                                   <strong>Ultimo messaggio:</strong> 
                                   <span className="break-words block mt-1">
@@ -758,51 +753,17 @@ const ProfessionalExpertDashboard = () => {
                             </div>
                           </div>
                           
-                          <div className="flex items-center justify-center lg:justify-end gap-2">
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button
-                                  variant="destructive"
-                                  size="sm"
-                                  className="bg-red-600 hover:bg-red-700 w-full lg:w-auto"
-                                  disabled={deletingConversation === conversation.id}
-                                >
-                                  <Trash2 className="h-4 w-4 mr-2" />
-                                  <span className="hidden sm:inline">Elimina Definitivamente</span>
-                                  <span className="sm:hidden">Elimina</span>
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent className="bg-white">
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>Elimina conversazione finita</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    Sei sicuro di voler eliminare definitivamente questa conversazione finita con {getUserDisplayName(conversation.user_profile)}? 
-                                    Questa azione non può essere annullata e verranno eliminati tutti i messaggi e i dati associati.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Annulla</AlertDialogCancel>
-                                  <AlertDialogAction
-                                    onClick={() => handleForceDeleteConversation(conversation.id)}
-                                    className="bg-red-600 hover:bg-red-700"
-                                    disabled={deletingConversation === conversation.id}
-                                  >
-                                    {deletingConversation === conversation.id ? (
-                                      <>
-                                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                        Eliminando...
-                                      </>
-                                    ) : (
-                                      <>
-                                        <Trash2 className="h-4 w-4 mr-2" />
-                                        Elimina Definitivamente
-                                      </>
-                                    )}
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
-                          </div>
+                           <div className="flex items-center justify-center lg:justify-end gap-2">
+                             <Button
+                               onClick={() => setSelectedConversation(conversation)}
+                               variant="outline"
+                               size="sm"
+                               className="border-purple-200 text-purple-700 hover:bg-purple-50"
+                             >
+                               <MessageSquare className="h-4 w-4 mr-2" />
+                               <span className="hidden sm:inline">Visualizza</span>
+                             </Button>
+                           </div>
                         </div>
                       </CardContent>
                     </Card>
@@ -811,34 +772,6 @@ const ProfessionalExpertDashboard = () => {
               </div>
             </TabsContent>
 
-            <TabsContent value="consultations" className="p-6">
-              <div className="space-y-4">
-                {consultations.length === 0 ? (
-                  <div className="text-center py-12">
-                    <Clock className="h-16 w-16 mx-auto mb-4 text-gray-300" />
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">Nessuna consultazione</h3>
-                    <p className="text-gray-500">Le nuove consultazioni appariranno qui</p>
-                  </div>
-                ) : (
-                  consultations.map((consultation) => (
-                    <ConsultationCard
-                      key={consultation.id}
-                      consultation={consultation}
-                      getInitials={getInitials}
-                      getUserDisplayName={(profile) => getUserDisplayName(profile)}
-                      getStatusBadge={(status) => (
-                        <Badge variant={status === 'pending' ? 'destructive' : status === 'completed' ? 'default' : 'secondary'}>
-                          {status === 'pending' ? 'In attesa' : status === 'completed' ? 'Completato' : status}
-                        </Badge>
-                      )}
-                      updateConsultationStatus={() => {}}
-                      deletingConsultation={null}
-                      handleDeleteConsultation={() => {}}
-                    />
-                  ))
-                )}
-              </div>
-            </TabsContent>
           </Tabs>
         </div>
       </div>

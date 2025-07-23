@@ -2,7 +2,8 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { MessageSquare, Trash2, Circle } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { MessageSquare, Archive, Circle } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { it } from 'date-fns/locale';
 import {
@@ -22,8 +23,8 @@ interface ConversationCardProps {
   getInitials: (firstName?: string, lastName?: string) => string;
   getUserDisplayName: (userProfile?: { first_name: string; last_name: string; email: string } | null) => string;
   handleOpenChat: (conv: any) => void;
-  onDeleteConversation: (conversationId: string) => void;
-  deletingConversation: string | null;
+  onArchiveConversation: (conversationId: string) => void;
+  archivingConversation: string | null;
 }
 
 export default function ConversationCard({
@@ -31,11 +32,30 @@ export default function ConversationCard({
   getInitials,
   getUserDisplayName,
   handleOpenChat,
-  onDeleteConversation,
-  deletingConversation,
+  onArchiveConversation,
+  archivingConversation,
 }: ConversationCardProps) {
   // Usa lo stato online reale dal profilo utente
   const isUserOnline = conversation.user_profile?.is_online || false;
+
+  // Get priority badge for conversation
+  const getPriorityBadge = () => {
+    const lastMessageTime = conversation.last_message_timestamp ? new Date(conversation.last_message_timestamp) : null;
+    const now = new Date();
+    const hoursDiff = lastMessageTime ? Math.abs(now.getTime() - lastMessageTime.getTime()) / (1000 * 60 * 60) : 0;
+    
+    if (!lastMessageTime) {
+      return <Badge variant="secondary" className="text-xs">Nuovo</Badge>;
+    }
+    
+    if (hoursDiff > 24) {
+      return <Badge variant="destructive" className="text-xs">Urgente</Badge>;
+    } else if (hoursDiff > 12) {
+      return <Badge variant="outline" className="text-xs border-yellow-500 text-yellow-700">Attesa risposta</Badge>;
+    }
+    
+    return <Badge variant="default" className="text-xs bg-green-100 text-green-700">Recente</Badge>;
+  };
 
   return (
     <Card className="w-full">
@@ -60,13 +80,16 @@ export default function ConversationCard({
                 <div className="font-medium text-sm truncate min-w-0">
                   {getUserDisplayName(conversation.user_profile)}
                 </div>
-                <span className={`text-xs px-2 py-1 rounded-full whitespace-nowrap flex-shrink-0 ${
-                  isUserOnline 
-                    ? 'bg-green-100 text-green-700' 
-                    : 'bg-gray-100 text-gray-500'
-                }`}>
-                  {isUserOnline ? 'Online' : 'Offline'}
-                </span>
+                <div className="flex gap-2">
+                  <span className={`text-xs px-2 py-1 rounded-full whitespace-nowrap flex-shrink-0 ${
+                    isUserOnline 
+                      ? 'bg-green-100 text-green-700' 
+                      : 'bg-gray-100 text-gray-500'
+                  }`}>
+                    {isUserOnline ? 'Online' : 'Offline'}
+                  </span>
+                  {getPriorityBadge()}
+                </div>
               </div>
               <div className="text-sm text-gray-500 break-words overflow-wrap-anywhere line-clamp-2">
                 {conversation.last_message_text || 'Nessun messaggio'}
@@ -98,31 +121,31 @@ export default function ConversationCard({
                 <Button 
                   size="sm" 
                   variant="outline" 
-                  className="text-red-500 hover:text-red-700 border-red-200 hover:border-red-300 px-2"
-                  disabled={deletingConversation === conversation.id}
+                  className="text-purple-700 hover:text-purple-800 border-purple-200 hover:border-purple-300 px-2"
+                  disabled={archivingConversation === conversation.id}
                 >
-                  <Trash2 className="h-3 w-3" />
+                  <Archive className="h-3 w-3" />
                 </Button>
               </AlertDialogTrigger>
               <AlertDialogContent>
                 <AlertDialogHeader>
-                  <AlertDialogTitle>Elimina Conversazione</AlertDialogTitle>
+                  <AlertDialogTitle>Concludi e Archivia Conversazione</AlertDialogTitle>
                   <AlertDialogDescription>
-                    Sei sicuro di voler eliminare questa conversazione con {getUserDisplayName(conversation.user_profile)}? 
-                    Questa azione eliminerà anche tutti i messaggi associati e non può essere annullata.
+                    Sei sicuro di voler concludere e archiviare questa conversazione con {getUserDisplayName(conversation.user_profile)}? 
+                    La conversazione sarà spostata nell'archivio e marcata come completata.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                   <AlertDialogCancel>Annulla</AlertDialogCancel>
                   <AlertDialogAction
-                    onClick={() => onDeleteConversation(conversation.id)}
-                    className="bg-red-600 hover:bg-red-700"
-                    disabled={deletingConversation === conversation.id}
+                    onClick={() => onArchiveConversation(conversation.id)}
+                    className="bg-purple-600 hover:bg-purple-700"
+                    disabled={archivingConversation === conversation.id}
                   >
-                    {deletingConversation === conversation.id ? 'Eliminazione...' : 'Elimina'}
+                    {archivingConversation === conversation.id ? 'Archiviazione...' : 'Concludi + Archivia'}
                   </AlertDialogAction>
                 </AlertDialogFooter>
-              </AlertDialogContent>
+                </AlertDialogContent>
             </AlertDialog>
           </div>
         </div>

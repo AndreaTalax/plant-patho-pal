@@ -310,8 +310,8 @@ const OptimizedExpertDashboard = () => {
                   getInitials={getInitials}
                   getUserDisplayName={getUserDisplayName}
                   handleOpenChat={handleOpenChat}
-                  onDeleteConversation={handleDeleteConversation}
-                  deletingConversation={deletingConversation}
+                  onArchiveConversation={handleDeleteConversation}
+                  archivingConversation={deletingConversation}
                 />
               ))
             )
