@@ -1,10 +1,12 @@
-
 import React, { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { DatabaseMessage } from "@/services/chat/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Loader2, Send, AlertCircle, RefreshCw, MessageCircleOff } from "lucide-react";
+import {
+  ArrowLeft, Loader2, Send, AlertCircle,
+  RefreshCw, MessageCircleOff
+} from "lucide-react";
 import { toast } from "sonner";
 import { useRealtimeChat } from "@/hooks/useRealtimeChat";
 import { MARCO_NIGRO_ID } from "@/components/phytopathologist";
@@ -12,9 +14,6 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ConversationService } from "@/services/chat/conversationService";
 import { MessageService } from "@/services/chat/messageService";
 
-/**
- * Dettaglio Chat Esperto (singola conversazione) con messaggistica real-time
- */
 const ExpertChatDetailView = ({ conversation, onBack }: {
   conversation: any;
   onBack: () => void;
@@ -25,22 +24,19 @@ const ExpertChatDetailView = ({ conversation, onBack }: {
   const [newMessage, setNewMessage] = useState("");
   const [sending, setSending] = useState(false);
   const [conversationDeleted, setConversationDeleted] = useState(false);
+  const [conversationArchived, setConversationArchived] = useState(false);
 
-  // Setup real-time chat
   const { isConnected, sendMessage } = useRealtimeChat({
     conversationId: conversation?.id,
     userId: MARCO_NIGRO_ID,
     onNewMessage: useCallback((message) => {
       setMessages(prev => {
-        // Avoid duplicates
-        const exists = prev.some(msg => msg.id === message.id);
-        if (exists) return prev;
+        if (prev.some(msg => msg.id === message.id)) return prev;
         return [...prev, message];
       });
     }, [])
   });
 
-  // Carica messaggi della conversazione
   useEffect(() => {
     let isMounted = true;
 
@@ -54,74 +50,53 @@ const ExpertChatDetailView = ({ conversation, onBack }: {
       setLoading(true);
       setError(null);
       setConversationDeleted(false);
-      
+      setConversationArchived(false);
+
       try {
-        console.log('🔄 Loading conversation messages for:', conversation.id);
-        
-        // Verifica che la conversazione esista usando il servizio diretto
         const conversationData = await ConversationService.getConversation(conversation.id);
-        
+
         if (!conversationData) {
-          console.log('🗑️ Conversation not found');
           setConversationDeleted(true);
-          setError('Questa conversazione è stata eliminata');
+          setError("Questa conversazione è stata eliminata");
           return;
         }
-        
-        console.log('✅ Conversation found, loading messages...');
-        
-        // Carica i messaggi usando il servizio diretto
-        const messagesData = await MessageService.loadMessages(conversation.id);
-        
-        // Controlla se il componente è ancora montato prima di aggiornare lo stato
-        if (!isMounted) return;
 
-        if (messagesData && messagesData.length > 0) {
-          console.log('✅ Messages loaded:', messagesData.length);
-          setMessages(messagesData);
-        } else {
-          console.log('📭 No messages found');
-          setMessages([]);
+        if (conversationData?.is_archived) {
+          setConversationArchived(true);
         }
 
-      } catch (e: any) {
-        console.error('❌ Error in loadMessages:', e);
-        
-        // Controlla se il componente è ancora montato prima di aggiornare lo stato
+        const messagesData = await MessageService.loadMessages(conversation.id);
+
         if (!isMounted) return;
-        
-        // Gestisce specificamente l'errore "conversazione non trovata"
-        if (e?.message?.includes("PGRST116") || 
-            e?.message?.includes("0 rows") ||
-            e?.message?.includes("not found") ||
-            e?.message?.includes("deleted") ||
-            e?.message?.includes("404")) {
-          console.log('🗑️ Conversation not found, probably deleted');
+
+        setMessages(messagesData || []);
+      } catch (e: any) {
+        if (!isMounted) return;
+
+        if (e?.message?.includes("not found") || e?.message?.includes("deleted")) {
           setConversationDeleted(true);
-          setError('Conversazione non trovata o eliminata');
+          setError("Conversazione non trovata o eliminata");
         } else {
           setError(e?.message || "Errore nel caricamento della chat");
         }
       } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
+        if (isMounted) setLoading(false);
       }
     };
 
     loadMessages();
 
-    // Cleanup function per prevenire memory leaks
     return () => {
       isMounted = false;
     };
   }, [conversation?.id]);
 
   const handleSendMessage = useCallback(async () => {
-    // Blocca l'invio se la conversazione è eliminata
-    if (!newMessage.trim() || sending || conversationDeleted) {
+    if (!newMessage.trim() || sending || conversationDeleted || conversationArchived) {
       if (conversationDeleted) {
         toast.error("Impossibile inviare messaggi: conversazione eliminata");
+      } else if (conversationArchived) {
+        toast.warning("Questa conversazione è archiviata: non puoi inviare nuovi messaggi");
       }
       return;
     }
@@ -132,12 +107,11 @@ const ExpertChatDetailView = ({ conversation, onBack }: {
       setNewMessage("");
       toast.success("Messaggio inviato!");
     } catch (error: any) {
-      console.error("Error sending message:", error);
       toast.error("Errore nell'invio del messaggio");
     } finally {
       setSending(false);
     }
-  }, [newMessage, sending, sendMessage, conversation.user_id, conversationDeleted]);
+  }, [newMessage, sending, sendMessage, conversation.user_id, conversationDeleted, conversationArchived]);
 
   const handleKeyPress = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -146,21 +120,17 @@ const ExpertChatDetailView = ({ conversation, onBack }: {
     }
   }, [handleSendMessage]);
 
-  const handleRetry = useCallback(() => {
-    console.log('🔄 Retry button clicked - reloading messages...');
-    // Forza il reload resettando lo stato e richiamando useEffect
+  const handleRetry = () => {
     setLoading(true);
     setError(null);
     setConversationDeleted(false);
-    // useEffect si riattiva automaticamente quando cambia lo stato
-  }, []);
+    setConversationArchived(false);
+  };
 
-  const handleGoBack = useCallback(() => {
-    console.log('🔙 Going back to conversations list');
+  const handleGoBack = () => {
     onBack();
-  }, [onBack]);
+  };
 
-  // Se non abbiamo un ID conversazione valido
   if (!conversation?.id) {
     return (
       <div className="max-w-2xl mx-auto mt-6 bg-white/95 rounded-2xl p-6 shadow-lg">
@@ -188,28 +158,46 @@ const ExpertChatDetailView = ({ conversation, onBack }: {
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
-            <h2 className="text-xl font-bold">Chat con: {conversation.user_profile
-              ? `${conversation.user_profile.first_name || ""} ${conversation.user_profile.last_name || ""}`.trim()
-              : "Utente"}</h2>
+            <h2 className="text-xl font-bold">
+              Chat con: {conversation.user_profile
+                ? `${conversation.user_profile.first_name || ""} ${conversation.user_profile.last_name || ""}`.trim()
+                : "Utente"}
+            </h2>
             <div className="flex items-center gap-2 mt-1">
-              <div className={`w-2 h-2 rounded-full ${isConnected && !conversationDeleted ? 'bg-green-500' : 'bg-red-500'}`} />
+              <div className={`w-2 h-2 rounded-full ${!conversationDeleted && isConnected ? 'bg-green-500' : 'bg-red-500'}`} />
               <span className="text-sm text-gray-500">
-                {conversationDeleted ? 'Conversazione eliminata' : (isConnected ? 'Connesso' : 'Non connesso')}
+                {conversationDeleted
+                  ? 'Conversazione eliminata'
+                  : conversationArchived
+                    ? 'Conversazione archiviata'
+                    : isConnected
+                      ? 'Connesso'
+                      : 'Non connesso'}
               </span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Messaggio di avviso per conversazione eliminata */}
       {conversationDeleted && (
         <Alert variant="destructive" className="mb-4">
           <MessageCircleOff className="h-4 w-4" />
           <AlertDescription>
             <div className="font-medium">Conversazione eliminata</div>
             <div className="text-sm mt-1">
-              Questa conversazione è stata eliminata e non è più disponibile per nuove interazioni. 
-              I messaggi precedenti potrebbero non essere più accessibili.
+              Questa conversazione è stata eliminata e non è più disponibile per nuove interazioni.
+            </div>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {conversationArchived && !conversationDeleted && (
+        <Alert variant="default" className="mb-4">
+          <MessageCircleOff className="h-4 w-4" />
+          <AlertDescription>
+            <div className="font-medium">Conversazione archiviata</div>
+            <div className="text-sm mt-1">
+              Non è possibile inviare nuovi messaggi in una conversazione archiviata.
             </div>
           </AlertDescription>
         </Alert>
@@ -217,21 +205,14 @@ const ExpertChatDetailView = ({ conversation, onBack }: {
 
       {loading ? (
         <div className="flex justify-center items-center h-40">
-          <div className="flex items-center gap-2">
-            <Loader2 className="h-6 w-6 animate-spin text-drplant-green" />
-            <span className="text-gray-600">Caricamento messaggi...</span>
-          </div>
+          <Loader2 className="h-6 w-6 animate-spin text-drplant-green" />
+          <span className="ml-2 text-gray-600">Caricamento messaggi...</span>
         </div>
       ) : error ? (
         <div className="flex flex-col justify-center items-center h-40 gap-4">
           <Alert variant={conversationDeleted ? "destructive" : "default"} className="w-full">
             <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              {conversationDeleted ? 
-                "Questa conversazione è stata eliminata e non è più disponibile." : 
-                error
-              }
-            </AlertDescription>
+            <AlertDescription>{error}</AlertDescription>
           </Alert>
           <div className="flex gap-2">
             {!conversationDeleted && (
@@ -253,16 +234,16 @@ const ExpertChatDetailView = ({ conversation, onBack }: {
               <div
                 key={m.id}
                 className={`p-3 rounded-xl max-w-[80%] ${m.sender_id === conversation.user_id
-                    ? "bg-drplant-green/10 text-left ml-0 mr-auto"
-                    : "bg-blue-100/80 text-right ml-auto mr-0"
+                  ? "bg-drplant-green/10 text-left ml-0 mr-auto"
+                  : "bg-blue-100/80 text-right ml-auto mr-0"
                   }`}
               >
                 <div className="text-xs text-gray-500 mb-1">
                   {m.sender_id === conversation.user_id ? "Utente" : "Marco Nigro"}
                   <span className="ml-2">
-                    {new Date(m.sent_at).toLocaleTimeString('it-IT', { 
-                      hour: '2-digit', 
-                      minute: '2-digit' 
+                    {new Date(m.sent_at).toLocaleTimeString('it-IT', {
+                      hour: '2-digit',
+                      minute: '2-digit'
                     })}
                   </span>
                 </div>
@@ -273,40 +254,52 @@ const ExpertChatDetailView = ({ conversation, onBack }: {
               </div>
             )) : (
               <div className="text-center text-gray-400">
-                {conversationDeleted ? "Conversazione eliminata" : "Nessun messaggio"}
+                {conversationDeleted
+                  ? "Conversazione eliminata"
+                  : conversationArchived
+                    ? "Conversazione archiviata - nessun messaggio disponibile"
+                    : "Nessun messaggio"}
               </div>
             )}
           </div>
 
-          {/* Input dei messaggi - disabilitato se conversazione eliminata */}
           <div className="flex gap-2">
             <Input
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
               onKeyPress={handleKeyPress}
-              placeholder={conversationDeleted ? "Conversazione eliminata - impossibile inviare messaggi" : "Scrivi un messaggio..."}
-              disabled={sending || !isConnected || conversationDeleted}
-              className={`flex-1 ${conversationDeleted ? 'bg-red-50 border-red-200 text-red-600 placeholder-red-400' : ''}`}
+              placeholder={
+                conversationDeleted
+                  ? "Conversazione eliminata"
+                  : conversationArchived
+                    ? "Conversazione archiviata"
+                    : "Scrivi un messaggio..."
+              }
+              disabled={sending || !isConnected || conversationDeleted || conversationArchived}
+              className={`flex-1 ${conversationDeleted || conversationArchived
+                ? 'bg-gray-100 border-gray-200 text-gray-500 placeholder-gray-400'
+                : ''}`}
             />
-            <Button 
+            <Button
               onClick={handleSendMessage}
-              disabled={!newMessage.trim() || sending || !isConnected || conversationDeleted}
+              disabled={!newMessage.trim() || sending || !isConnected || conversationDeleted || conversationArchived}
               size="icon"
-              className={conversationDeleted ? 'bg-gray-400 hover:bg-gray-400 cursor-not-allowed' : ''}
+              className={(conversationDeleted || conversationArchived)
+                ? 'bg-gray-400 hover:bg-gray-400 cursor-not-allowed'
+                : ''}
             >
-              {sending ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Send className="h-4 w-4" />
-              )}
+              {sending
+                ? <Loader2 className="h-4 w-4 animate-spin" />
+                : <Send className="h-4 w-4" />}
             </Button>
           </div>
 
-          {/* Messaggio di stato per input disabilitato */}
-          {conversationDeleted && (
+          {(conversationDeleted || conversationArchived) && (
             <div className="mt-2 text-center">
-              <span className="text-sm text-red-600 bg-red-50 px-3 py-1 rounded-full">
-                ⚠️ Impossibile inviare messaggi in una conversazione eliminata
+              <span className="text-sm text-yellow-700 bg-yellow-50 px-3 py-1 rounded-full">
+                ⚠️ {conversationDeleted
+                  ? "Impossibile inviare messaggi in una conversazione eliminata"
+                  : "Impossibile inviare messaggi in una conversazione archiviata"}
               </span>
             </div>
           )}
