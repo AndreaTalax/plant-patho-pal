@@ -400,7 +400,7 @@ const ProfessionalExpertDashboard = () => {
                 className="flex items-center gap-2 text-drplant-blue hover:text-drplant-blue-dark"
               >
                 <ArrowLeft className="h-4 w-4" />
-                <span className="hidden sm:inline">Torna alla Dashboard</span>
+                <span className="hidden sm:hidden">Torna alla Dashboard</span>
                 <span className="sm:hidden">Indietro</span>
               </Button>
               
