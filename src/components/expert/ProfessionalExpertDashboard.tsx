@@ -1,3 +1,4 @@
+
 import { useEffect, useState, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -90,7 +91,6 @@ const ProfessionalExpertDashboard = () => {
   const [archivingConversation, setArchivingConversation] = useState<string | null>(null);
   const [archivedConversations, setArchivedConversations] = useState<ConversationSummary[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'week' | 'month'>('all');
   
   
   // Sort order state
@@ -339,35 +339,13 @@ const ProfessionalExpertDashboard = () => {
     });
   };
 
-  // Filter conversations based on search term and date
-  const filterConversationsByDate = useCallback((convs: ConversationSummary[]) => {
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const oneWeekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
-    const oneMonthAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
-
-    return convs.filter(conv => {
-      const createdDate = new Date(conv.created_at);
-      
-      switch (dateFilter) {
-        case 'today':
-          return createdDate >= today;
-        case 'week':
-          return createdDate >= oneWeekAgo;
-        case 'month':
-          return createdDate >= oneMonthAgo;
-        default:
-          return true;
-      }
-    });
-  }, [dateFilter]);
-
-  const filteredActiveConversations = filterConversationsByDate(conversations).filter(conv => {
+  // Filter conversations based on search term
+  const filteredActiveConversations = conversations.filter(conv => {
     const displayName = getUserDisplayName(conv.user_profile).toLowerCase();
     return displayName.includes(searchTerm.toLowerCase());
   });
 
-  const filteredArchivedConversations = filterConversationsByDate(archivedConversations).filter(conv => {
+  const filteredArchivedConversations = archivedConversations.filter(conv => {
     const displayName = getUserDisplayName(conv.user_profile).toLowerCase();
     return displayName.includes(searchTerm.toLowerCase());
   });
@@ -422,7 +400,7 @@ const ProfessionalExpertDashboard = () => {
                 className="flex items-center gap-2 text-drplant-blue hover:text-drplant-blue-dark"
               >
                 <ArrowLeft className="h-4 w-4" />
-                <span className="hidden sm:inline">Torna alla Dashboard</span>
+                <span className="hidden sm:hidden">Torna alla Dashboard</span>
                 <span className="sm:hidden">Indietro</span>
               </Button>
               
@@ -505,52 +483,7 @@ const ProfessionalExpertDashboard = () => {
               </div>
               
               <div className="flex items-center gap-2">
-                {/* Date Filter Dropdown */}
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="flex items-center gap-2">
-                      <Filter className="h-4 w-4" />
-                      <span className="hidden sm:inline">
-                        {dateFilter === 'all' && 'Tutte le date'}
-                        {dateFilter === 'today' && 'Oggi'}
-                        {dateFilter === 'week' && 'Ultima settimana'}
-                        {dateFilter === 'month' && 'Ultimo mese'}
-                      </span>
-                      <span className="sm:hidden">
-                        {dateFilter === 'all' && 'Tutte'}
-                        {dateFilter === 'today' && 'Oggi'}
-                        {dateFilter === 'week' && 'Settimana'}
-                        {dateFilter === 'month' && 'Mese'}
-                      </span>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => setDateFilter('all')}>
-                      <div className="flex items-center gap-2">
-                        {dateFilter === 'all' && <div className="w-2 h-2 bg-blue-500 rounded-full" />}
-                        <span>Tutte le date</span>
-                      </div>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setDateFilter('today')}>
-                      <div className="flex items-center gap-2">
-                        {dateFilter === 'today' && <div className="w-2 h-2 bg-blue-500 rounded-full" />}
-                        <span>Oggi</span>
-                      </div>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setDateFilter('week')}>
-                      <div className="flex items-center gap-2">
-                        {dateFilter === 'week' && <div className="w-2 h-2 bg-blue-500 rounded-full" />}
-                        <span>Ultima settimana</span>
-                      </div>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setDateFilter('month')}>
-                      <div className="flex items-center gap-2">
-                        {dateFilter === 'month' && <div className="w-2 h-2 bg-blue-500 rounded-full" />}
-                        <span>Ultimo mese</span>
-                      </div>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                {/* Calendario filtro rimosso su richiesta dell'utente */}
                 
                 {/* Sort Order Button */}
                 <Button
@@ -567,22 +500,6 @@ const ProfessionalExpertDashboard = () => {
                     {sortOrder === 'recent' ? 'Recenti' : 'Vecchie'}
                   </span>
                 </Button>
-                
-                {/* Clear filters button */}
-                {(dateFilter !== 'all' || searchTerm) && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      setDateFilter('all');
-                      setSearchTerm('');
-                    }}
-                    className="flex items-center gap-2 text-gray-500 hover:text-gray-700"
-                  >
-                    <X className="h-4 w-4" />
-                    <span className="hidden sm:inline">Rimuovi filtri</span>
-                  </Button>
-                )}
               </div>
             </div>
           </div>
@@ -637,10 +554,10 @@ const ProfessionalExpertDashboard = () => {
                     <div className="text-center py-12">
                       <MessageSquare className="h-16 w-16 mx-auto mb-4 text-gray-300" />
                       <h3 className="text-lg font-medium text-gray-900 mb-2">
-                        {searchTerm || dateFilter !== 'all' ? 'Nessuna conversazione trovata' : 'Nessuna conversazione attiva'}
+                        {searchTerm ? 'Nessuna conversazione trovata' : 'Nessuna conversazione attiva'}
                       </h3>
                       <p className="text-gray-500">
-                        {searchTerm || dateFilter !== 'all' ? 'Prova a modificare i filtri di ricerca' : 'Le nuove conversazioni attive appariranno qui'}
+                        {searchTerm ? 'Prova a modificare i termini di ricerca' : 'Le nuove conversazioni attive appariranno qui'}
                       </p>
                     </div>
                   ) : (
@@ -665,3 +582,201 @@ const ProfessionalExpertDashboard = () => {
                               
                               <div className="flex-1 min-w-0">
                                 <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 mb-2">
+                                  <h3 className="font-semibold text-gray-900 text-base md:text-lg truncate">
+                                    {getUserDisplayName(conversation.user_profile)}
+                                  </h3>
+                                  <div className="flex gap-2">
+                                    <Badge variant={conversation.user_profile?.is_online ? "default" : "secondary"} className="text-xs">
+                                      {conversation.user_profile?.is_online ? 'Online' : 'Offline'}
+                                    </Badge>
+                                    <Badge variant="outline" className="bg-green-50 text-green-700 text-xs">
+                                      Attiva
+                                    </Badge>
+                                    {getPriorityBadge(conversation)}
+                                  </div>
+                                </div>
+                                
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 md:gap-4 text-xs md:text-sm text-gray-600">
+                                  <div className="flex items-center gap-2">
+                                    <Mail className="h-3 md:h-4 w-3 md:w-4 flex-shrink-0" />
+                                    <span className="truncate">{conversation.user_profile?.email || 'N/A'}</span>
+                                  </div>
+                                  {conversation.user_profile?.phone && (
+                                    <div className="flex items-center gap-2">
+                                      <Phone className="h-3 md:h-4 w-3 md:w-4 flex-shrink-0" />
+                                      <span className="truncate">{conversation.user_profile.phone}</span>
+                                    </div>
+                                  )}
+                                  {conversation.user_profile?.address && (
+                                    <div className="flex items-center gap-2">
+                                      <MapPin className="h-3 md:h-4 w-3 md:w-4 flex-shrink-0" />
+                                      <span className="truncate">{conversation.user_profile.address}</span>
+                                    </div>
+                                  )}
+                                </div>
+                                
+                                <div className="mt-3 p-3 bg-gray-50 rounded-lg">
+                                  <p className="text-xs md:text-sm text-gray-700 mb-2">
+                                    <strong>Ultimo messaggio:</strong> 
+                                    <span className="break-words block mt-1">
+                                      {conversation.last_message_text && conversation.last_message_text.length > 100 
+                                        ? `${conversation.last_message_text.substring(0, 100)}...` 
+                                        : conversation.last_message_text}
+                                    </span>
+                                  </p>
+                                  <div className="flex items-center gap-2 text-xs text-gray-500">
+                                     <Clock className="h-3 w-3 flex-shrink-0" />
+                                    <span className="truncate">Creato: {formatDate(conversation.created_at)}</span>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                            
+                            <div className="flex items-center justify-center lg:justify-end gap-2">
+                              <Button
+                                onClick={() => setSelectedConversation(conversation)}
+                                className="bg-drplant-green hover:bg-drplant-green/90"
+                                size="sm"
+                              >
+                                <MessageSquare className="h-4 w-4 mr-2" />
+                                <span className="hidden sm:inline">Visualizza</span>
+                              </Button>
+                              <Button
+                                onClick={() => handleArchiveConversation(conversation.id)}
+                                variant="outline"
+                                size="sm"
+                                disabled={archivingConversation === conversation.id}
+                                className="border-purple-200 text-purple-700 hover:bg-purple-50"
+                              >
+                                {archivingConversation === conversation.id ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <Archive className="h-4 w-4" />
+                                )}
+                                <span className="hidden sm:inline ml-2">Concludi + Archivia</span>
+                              </Button>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))
+                  )}
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="archived" className="p-3 md:p-6">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">Archivio Conversazioni</h3>
+                    <p className="text-sm text-gray-600">Conversazioni archiviate e completate</p>
+                  </div>
+                   {filteredArchivedConversations.length > 0 && (
+                     <div className="text-sm text-gray-500">
+                       {filteredArchivedConversations.length} conversazioni archiviate
+                    </div>
+                  )}
+                </div>
+
+                 {filteredArchivedConversations.length === 0 ? (
+                   <div className="text-center py-12">
+                     <Archive className="h-16 w-16 mx-auto mb-4 text-gray-300" />
+                     <h3 className="text-lg font-medium text-gray-900 mb-2">
+                       {searchTerm ? 'Nessuna conversazione archiviata trovata' : 'Nessuna conversazione archiviata'}
+                     </h3>
+                     <p className="text-gray-500">
+                       {searchTerm ? 'Prova a modificare i termini di ricerca' : 'Le conversazioni archiviate appariranno qui'}
+                     </p>
+                   </div>
+                 ) : (
+                   filteredArchivedConversations.map((conversation) => (
+                     <Card 
+                       key={conversation.id} 
+                       className="hover:shadow-md transition-all duration-200 border-l-4 border-l-purple-300 hover:border-l-purple-500"
+                     >
+                       <CardContent className="p-4 md:p-6">
+                         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                           <div className="flex items-center gap-3 md:gap-4 flex-1 min-w-0">
+                             <div className="relative">
+                               <Avatar className="h-10 md:h-12 w-10 md:w-12">
+                                 <AvatarFallback className="bg-purple-50 text-purple-700 font-semibold text-sm">
+                                   {getInitials(conversation.user_profile?.first_name, conversation.user_profile?.last_name)}
+                                 </AvatarFallback>
+                               </Avatar>
+                               <div className="absolute -bottom-1 -right-1 w-3 md:w-4 h-3 md:h-4 rounded-full border-2 border-white bg-purple-500" />
+                             </div>
+                             
+                             <div className="flex-1 min-w-0">
+                               <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 mb-2">
+                                 <h3 className="font-semibold text-gray-900 text-base md:text-lg truncate">
+                                   {getUserDisplayName(conversation.user_profile)}
+                                 </h3>
+                                 <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200 text-xs w-fit">
+                                   Archiviata
+                                 </Badge>
+                               </div>
+                              
+                              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 md:gap-4 text-xs md:text-sm text-gray-600">
+                                <div className="flex items-center gap-2">
+                                  <Mail className="h-3 md:h-4 w-3 md:w-4 flex-shrink-0" />
+                                  <span className="truncate">{conversation.user_profile?.email || 'N/A'}</span>
+                                </div>
+                                {conversation.user_profile?.phone && (
+                                  <div className="flex items-center gap-2">
+                                    <Phone className="h-3 md:h-4 w-3 md:w-4 flex-shrink-0" />
+                                    <span className="truncate">{conversation.user_profile.phone}</span>
+                                  </div>
+                                )}
+                                {conversation.user_profile?.address && (
+                                  <div className="flex items-center gap-2">
+                                    <MapPin className="h-3 md:h-4 w-3 md:w-4 flex-shrink-0" />
+                                    <span className="truncate">{conversation.user_profile.address}</span>
+                                  </div>
+                                )}
+                              </div>
+                              
+                              <div className="mt-3 p-3 bg-purple-50 rounded-lg">
+                                <p className="text-xs md:text-sm text-gray-700 mb-2">
+                                  <strong>Ultimo messaggio:</strong> 
+                                  <span className="break-words block mt-1">
+                                    {conversation.last_message_text && conversation.last_message_text.length > 100 
+                                      ? `${conversation.last_message_text.substring(0, 100)}...` 
+                                      : conversation.last_message_text}
+                                  </span>
+                                </p>
+                                <div className="flex items-center gap-2 text-xs text-gray-500">
+                                  <Clock className="h-3 w-3 flex-shrink-0" />
+                                  <span className="truncate">Creato: {formatDate(conversation.created_at)}</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                          
+                           <div className="flex items-center justify-center lg:justify-end gap-2">
+                             <Button
+                               onClick={() => setSelectedConversation(conversation)}
+                               variant="outline"
+                               size="sm"
+                               className="border-purple-200 text-purple-700 hover:bg-purple-50"
+                             >
+                               <MessageSquare className="h-4 w-4 mr-2" />
+                               <span className="hidden sm:inline">Visualizza</span>
+                             </Button>
+                           </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))
+                )}
+              </div>
+            </TabsContent>
+
+          </Tabs>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default ProfessionalExpertDashboard;
