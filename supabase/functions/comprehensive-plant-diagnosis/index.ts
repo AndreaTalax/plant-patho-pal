@@ -261,8 +261,13 @@ async function analyzeWithHuggingFace(imageBase64: string): Promise<any> {
   try {
     logWithTimestamp('INFO', 'Starting Hugging Face analysis');
     
+    // Aggiungi check per il formato immagine base64
+    if (!imageBase64 || !imageBase64.includes(',')) {
+      throw new Error("Formato immagine non valido o mancante (base64)");
+    }
+    
     // Convert base64 to blob
-    const base64Data = imageBase64.includes(',') ? imageBase64.split(',')[1] : imageBase64;
+    const base64Data = imageBase64.split(',')[1];
     const binaryString = atob(base64Data);
     const bytes = new Uint8Array(binaryString.length);
     for (let i = 0; i < binaryString.length; i++) {
@@ -275,12 +280,10 @@ async function analyzeWithHuggingFace(imageBase64: string): Promise<any> {
       {
         headers: {
           Authorization: `Bearer ${huggingFaceToken}`,
-          "Content-Type": "application/json",
+          "Content-Type": "application/octet-stream",
         },
         method: "POST",
-        body: JSON.stringify({
-          inputs: imageBase64,
-        }),
+        body: bytes,
         signal: AbortSignal.timeout(15000),
       }
     );
@@ -327,12 +330,10 @@ async function analyzeWithHuggingFace(imageBase64: string): Promise<any> {
       {
         headers: {
           Authorization: `Bearer ${huggingFaceToken}`,
-          "Content-Type": "application/json",
+          "Content-Type": "application/octet-stream",
         },
         method: "POST",
-        body: JSON.stringify({
-          inputs: imageBase64,
-        }),
+        body: bytes,
         signal: AbortSignal.timeout(15000),
       }
     );

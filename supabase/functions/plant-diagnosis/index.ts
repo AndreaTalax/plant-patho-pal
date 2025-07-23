@@ -23,17 +23,20 @@ serve(async (req) => {
     if (huggingFaceToken) {
       console.log("🤖 Attempting HuggingFace classification...")
       try {
+        // Aggiungi check per il formato immagine base64
+        if (!imageData || !imageData.includes(',')) {
+          throw new Error("Formato immagine non valido o mancante (base64)");
+        }
+        
         const imageBuffer = Uint8Array.from(atob(imageData.split(',')[1]), c => c.charCodeAt(0))
         
         const response = await fetch('https://api-inference.huggingface.co/models/google/vit-base-patch16-224', {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${huggingFaceToken}`,
-            'Content-Type': 'application/json',
+            'Content-Type': 'application/octet-stream',
           },
-          body: JSON.stringify({
-            inputs: imageData
-          })
+          body: imageBuffer
         })
         
         if (response.ok) {

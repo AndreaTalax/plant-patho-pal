@@ -281,6 +281,11 @@ serve(async (req) => {
     } else if (imageBase64) {
       logWithTimestamp('INFO', `Processing base64 image data`, { requestId });
       
+      // Aggiungi check per il formato immagine base64
+      if (!imageBase64 || !imageBase64.includes(',')) {
+        throw new Error("Formato immagine non valido o mancante (base64)");
+      }
+      
       // Convert base64 to ArrayBuffer
       const imageProcessingStart = Date.now();
       
