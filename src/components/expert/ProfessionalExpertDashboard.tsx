@@ -750,23 +750,23 @@ const ProfessionalExpertDashboard = () => {
                                   <span className="truncate">Creato: {formatDate(conversation.created_at)}</span>
                                 </div>
                               </div>
+                             </div>
+                            </div>
+                            
+                            <div className="flex items-center justify-center lg:justify-end gap-2">
+                              <Button
+                                onClick={() => setSelectedConversation(conversation)}
+                                variant="outline"
+                                size="sm"
+                                className="border-purple-200 text-purple-700 hover:bg-purple-50"
+                              >
+                                <MessageSquare className="h-4 w-4 mr-2" />
+                                <span className="hidden sm:inline">Visualizza</span>
+                              </Button>
                             </div>
                           </div>
-                          
-                           <div className="flex items-center justify-center lg:justify-end gap-2">
-                             <Button
-                               onClick={() => setSelectedConversation(conversation)}
-                               variant="outline"
-                               size="sm"
-                               className="border-purple-200 text-purple-700 hover:bg-purple-50"
-                             >
-                               <MessageSquare className="h-4 w-4 mr-2" />
-                               <span className="hidden sm:inline">Visualizza</span>
-                             </Button>
-                           </div>
-                        </div>
-                      </CardContent>
-                    </Card>
+                        </CardContent>
+                      </Card>
                   ))
                 )}
               </div>
