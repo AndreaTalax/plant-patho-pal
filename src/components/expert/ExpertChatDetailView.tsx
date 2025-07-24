@@ -25,6 +25,7 @@ const ExpertChatDetailView = ({ conversation, onBack }: {
   const [newMessage, setNewMessage] = useState("");
   const [sending, setSending] = useState(false);
   const [conversationDeleted, setConversationDeleted] = useState(false);
+  const [isArchivedConversation, setIsArchivedConversation] = useState(false);
 
   // Setup real-time chat
   const { isConnected, sendMessage } = useRealtimeChat({
@@ -54,6 +55,7 @@ const ExpertChatDetailView = ({ conversation, onBack }: {
       setLoading(true);
       setError(null);
       setConversationDeleted(false);
+      setIsArchivedConversation(false);
       
       try {
         console.log('🔄 Loading conversation messages for:', conversation.id);
@@ -66,6 +68,12 @@ const ExpertChatDetailView = ({ conversation, onBack }: {
           setConversationDeleted(true);
           setError('Questa conversazione è stata eliminata');
           return;
+        }
+        
+        // Controlla se la conversazione è archiviata
+        if (conversationData.status === 'finished') {
+          console.log('📁 Conversation is archived');
+          setIsArchivedConversation(true);
         }
         
         console.log('✅ Conversation found, loading messages...');
@@ -118,10 +126,12 @@ const ExpertChatDetailView = ({ conversation, onBack }: {
   }, [conversation?.id]);
 
   const handleSendMessage = useCallback(async () => {
-    // Blocca l'invio se la conversazione è eliminata
-    if (!newMessage.trim() || sending || conversationDeleted) {
+    // Blocca l'invio se la conversazione è eliminata o archiviata
+    if (!newMessage.trim() || sending || conversationDeleted || isArchivedConversation) {
       if (conversationDeleted) {
         toast.error("Impossibile inviare messaggi: conversazione eliminata");
+      } else if (isArchivedConversation) {
+        toast.error("Impossibile inviare messaggi: conversazione archiviata");
       }
       return;
     }
@@ -137,7 +147,7 @@ const ExpertChatDetailView = ({ conversation, onBack }: {
     } finally {
       setSending(false);
     }
-  }, [newMessage, sending, sendMessage, conversation.user_id, conversationDeleted]);
+  }, [newMessage, sending, sendMessage, conversation.user_id, conversationDeleted, isArchivedConversation]);
 
   const handleKeyPress = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -192,10 +202,21 @@ const ExpertChatDetailView = ({ conversation, onBack }: {
               ? `${conversation.user_profile.first_name || ""} ${conversation.user_profile.last_name || ""}`.trim()
               : "Utente"}</h2>
             <div className="flex items-center gap-2 mt-1">
-              <div className={`w-2 h-2 rounded-full ${isConnected && !conversationDeleted ? 'bg-green-500' : 'bg-red-500'}`} />
+              <div className={`w-2 h-2 rounded-full ${
+                conversationDeleted ? 'bg-red-500' : 
+                isArchivedConversation ? 'bg-gray-500' : 
+                isConnected ? 'bg-green-500' : 'bg-yellow-500'
+              }`} />
               <span className="text-sm text-gray-500">
-                {conversationDeleted ? 'Conversazione eliminata' : (isConnected ? 'Connesso' : 'Non connesso')}
+                {conversationDeleted ? 'Conversazione eliminata' : 
+                 isArchivedConversation ? 'Conversazione archiviata' :
+                 isConnected ? 'Connesso' : 'Non connesso'}
               </span>
+              {isArchivedConversation && (
+                <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">
+                  Solo lettura
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -284,15 +305,27 @@ const ExpertChatDetailView = ({ conversation, onBack }: {
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
               onKeyPress={handleKeyPress}
-              placeholder={conversationDeleted ? "Conversazione eliminata - impossibile inviare messaggi" : "Scrivi un messaggio..."}
-              disabled={sending || !isConnected || conversationDeleted}
-              className={`flex-1 ${conversationDeleted ? 'bg-red-50 border-red-200 text-red-600 placeholder-red-400' : ''}`}
+              placeholder={
+                conversationDeleted ? "Conversazione eliminata - impossibile inviare messaggi" :
+                isArchivedConversation ? "Conversazione archiviata - solo lettura" :
+                "Scrivi un messaggio..."
+              }
+              disabled={sending || !isConnected || conversationDeleted || isArchivedConversation}
+              className={`flex-1 ${
+                conversationDeleted ? 'bg-red-50 border-red-200 text-red-600 placeholder-red-400' : 
+                isArchivedConversation ? 'bg-gray-50 border-gray-300 text-gray-500 placeholder-gray-400' : 
+                ''
+              }`}
             />
             <Button 
               onClick={handleSendMessage}
-              disabled={!newMessage.trim() || sending || !isConnected || conversationDeleted}
+              disabled={!newMessage.trim() || sending || !isConnected || conversationDeleted || isArchivedConversation}
               size="icon"
-              className={conversationDeleted ? 'bg-gray-400 hover:bg-gray-400 cursor-not-allowed' : ''}
+              className={`${
+                conversationDeleted ? 'bg-gray-400 hover:bg-gray-400 cursor-not-allowed' : 
+                isArchivedConversation ? 'bg-gray-400 hover:bg-gray-400 cursor-not-allowed' : 
+                ''
+              }`}
             >
               {sending ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -307,6 +340,14 @@ const ExpertChatDetailView = ({ conversation, onBack }: {
             <div className="mt-2 text-center">
               <span className="text-sm text-red-600 bg-red-50 px-3 py-1 rounded-full">
                 ⚠️ Impossibile inviare messaggi in una conversazione eliminata
+              </span>
+            </div>
+          )}
+          
+          {isArchivedConversation && !conversationDeleted && (
+            <div className="mt-2 text-center">
+              <span className="text-sm text-gray-600 bg-gray-50 px-3 py-1 rounded-full">
+                📁 Conversazione archiviata - modalità solo lettura
               </span>
             </div>
           )}

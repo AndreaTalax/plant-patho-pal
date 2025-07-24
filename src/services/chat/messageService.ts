@@ -21,7 +21,7 @@ export class MessageService {
         .from('conversations')
         .select('id, status')
         .eq('id', conversationId)
-        .single();
+        .maybeSingle();
 
       if (convError) {
         console.error('❌ MessageService: Conversazione non trovata', convError);
@@ -95,11 +95,18 @@ export class MessageService {
         .from('conversations')
         .select('id, status, user_id, expert_id')
         .eq('id', conversationId)
-        .single();
+        .maybeSingle();
 
       if (convError || !conversation) {
         console.error('❌ MessageService: Conversazione non trovata per invio', convError);
         toast.error('Conversazione non disponibile');
+        return false;
+      }
+
+      // Verifica che la conversazione non sia archiviata
+      if (conversation.status === 'finished') {
+        console.error('❌ MessageService: Tentativo di inviare messaggio a conversazione archiviata');
+        toast.error('Impossibile inviare messaggi a una conversazione archiviata');
         return false;
       }
 

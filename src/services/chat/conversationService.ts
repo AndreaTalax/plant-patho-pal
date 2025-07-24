@@ -86,7 +86,7 @@ export class ConversationService {
         .from('conversations')
         .select('*')
         .eq('id', conversationId)
-        .single();
+        .maybeSingle();
 
       if (error) {
         console.error('❌ ConversationService: Errore caricamento conversazione', error);
