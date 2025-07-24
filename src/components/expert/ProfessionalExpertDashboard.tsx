@@ -755,7 +755,10 @@ const ProfessionalExpertDashboard = () => {
                             
                             <div className="flex items-center justify-center lg:justify-end gap-2">
                               <Button
-                                onClick={() => setSelectedConversation(conversation)}
+                                onClick={() => {
+                                  console.log('🔍 Opening archived conversation:', conversation.id);
+                                  setSelectedConversation(conversation);
+                                }}
                                 variant="outline"
                                 size="sm"
                                 className="border-purple-200 text-purple-700 hover:bg-purple-50"
