@@ -87,6 +87,7 @@ const ProfessionalExpertDashboard = () => {
   const [conversations, setConversations] = useState<ConversationSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedConversation, setSelectedConversation] = useState<ConversationSummary | null>(null);
+  const [selectedConversationType, setSelectedConversationType] = useState<'active' | 'archived'>('active');
   const [activeTab, setActiveTab] = useState('conversations');
   const [archivingConversation, setArchivingConversation] = useState<string | null>(null);
   const [archivedConversations, setArchivedConversations] = useState<ConversationSummary[]>([]);
@@ -543,10 +544,13 @@ const ProfessionalExpertDashboard = () => {
             </div>
 
             <TabsContent value="conversations" className="p-3 md:p-6">
-              {selectedConversation ? (
+              {selectedConversation && selectedConversationType === 'active' ? (
                 <ExpertChatDetailView
                   conversation={selectedConversation}
-                  onBack={() => setSelectedConversation(null)}
+                  onBack={() => {
+                    setSelectedConversation(null);
+                    setSelectedConversationType('active');
+                  }}
                 />
               ) : (
                 <div className="space-y-4">
@@ -634,7 +638,10 @@ const ProfessionalExpertDashboard = () => {
                             
                             <div className="flex items-center justify-center lg:justify-end gap-2">
                               <Button
-                                onClick={() => setSelectedConversation(conversation)}
+                                onClick={() => {
+                                  setSelectedConversation(conversation);
+                                  setSelectedConversationType('active');
+                                }}
                                 className="bg-drplant-green hover:bg-drplant-green/90"
                                 size="sm"
                               >
@@ -666,18 +673,27 @@ const ProfessionalExpertDashboard = () => {
             </TabsContent>
 
             <TabsContent value="archived" className="p-3 md:p-6">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between mb-6">
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900">Archivio Conversazioni</h3>
-                    <p className="text-sm text-gray-600">Conversazioni archiviate e completate</p>
-                  </div>
-                   {filteredArchivedConversations.length > 0 && (
-                     <div className="text-sm text-gray-500">
-                       {filteredArchivedConversations.length} conversazioni archiviate
+              {selectedConversation && selectedConversationType === 'archived' ? (
+                <ExpertChatDetailView
+                  conversation={selectedConversation}
+                  onBack={() => {
+                    setSelectedConversation(null);
+                    setSelectedConversationType('active');
+                  }}
+                />
+              ) : (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between mb-6">
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900">Archivio Conversazioni</h3>
+                      <p className="text-sm text-gray-600">Conversazioni archiviate e completate</p>
                     </div>
-                  )}
-                </div>
+                     {filteredArchivedConversations.length > 0 && (
+                       <div className="text-sm text-gray-500">
+                         {filteredArchivedConversations.length} conversazioni archiviate
+                      </div>
+                    )}
+                  </div>
 
                  {filteredArchivedConversations.length === 0 ? (
                    <div className="text-center py-12">
@@ -754,15 +770,16 @@ const ProfessionalExpertDashboard = () => {
                             </div>
                             
                             <div className="flex items-center justify-center lg:justify-end gap-2">
-                              <Button
-                                onClick={() => {
-                                  console.log('🔍 Opening archived conversation:', conversation.id);
-                                  setSelectedConversation(conversation);
-                                }}
-                                variant="outline"
-                                size="sm"
-                                className="border-purple-200 text-purple-700 hover:bg-purple-50"
-                              >
+                               <Button
+                                 onClick={() => {
+                                   console.log('🔍 Opening archived conversation:', conversation.id);
+                                   setSelectedConversation(conversation);
+                                   setSelectedConversationType('archived');
+                                 }}
+                                 variant="outline"
+                                 size="sm"
+                                 className="border-purple-200 text-purple-700 hover:bg-purple-50"
+                               >
                                 <MessageSquare className="h-4 w-4 mr-2" />
                                 <span className="hidden sm:inline">Visualizza</span>
                               </Button>
@@ -773,6 +790,7 @@ const ProfessionalExpertDashboard = () => {
                   ))
                 )}
               </div>
+              )}
             </TabsContent>
 
           </Tabs>
