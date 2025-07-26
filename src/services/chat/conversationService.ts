@@ -82,19 +82,37 @@ export class ConversationService {
     try {
       console.log('🔍 ConversationService: Caricamento conversazione:', conversationId);
       
-      const { data, error } = await supabase
-        .from('conversations')
-        .select('*')
-        .eq('id', conversationId)
-        .maybeSingle();
+      // Use edge function for better handling of archived/finished conversations
+      const { data, error } = await supabase.functions.invoke('get-conversation', {
+        body: { conversationId }
+      });
 
       if (error) {
-        console.error('❌ ConversationService: Errore caricamento conversazione', error);
+        console.error('❌ ConversationService: Errore edge function:', error);
+        
+        // Fallback to direct database query
+        console.log('🔄 ConversationService: Fallback query diretta...');
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .from('conversations')
+          .select('*')
+          .eq('id', conversationId)
+          .maybeSingle();
+
+        if (fallbackError) {
+          console.error('❌ ConversationService: Errore fallback query:', fallbackError);
+          return null;
+        }
+
+        return fallbackData;
+      }
+
+      if (!data || !data.conversation) {
+        console.warn('⚠️ ConversationService: Conversazione non trovata:', conversationId);
         return null;
       }
 
-      console.log('✅ ConversationService: Conversazione caricata:', data.id);
-      return data;
+      console.log('✅ ConversationService: Conversazione caricata via edge function:', data.conversation.id);
+      return data.conversation;
     } catch (error: any) {
       console.error('❌ ConversationService: Errore getConversation:', error);
       return null;
