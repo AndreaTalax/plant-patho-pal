@@ -392,23 +392,9 @@ const ProfessionalExpertDashboard = () => {
         {/* Header Section */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 md:p-6">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
-              {/* Back Button */}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={goBackToMain}
-                className="flex items-center gap-2 text-drplant-blue hover:text-drplant-blue-dark"
-              >
-                <ArrowLeft className="h-4 w-4" />
-                <span className="hidden sm:hidden">Torna alla Dashboard</span>
-                <span className="sm:hidden">Indietro</span>
-              </Button>
-              
-              <div className="text-center md:text-left">
-                <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">Dashboard Professionale</h1>
-                <p className="text-gray-600">Gestione conversazioni e consultazioni - Marco Nigro</p>
-              </div>
+            <div className="text-center md:text-left">
+              <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">Dashboard Professionale</h1>
+              <p className="text-gray-600">Gestione conversazioni e consultazioni - Marco Nigro</p>
             </div>
             <div className="flex items-center justify-center md:justify-end gap-3">
               <div className="w-12 h-12 bg-drplant-green/10 rounded-full flex items-center justify-center">
