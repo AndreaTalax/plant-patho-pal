@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 import type { PlantInfo } from '@/components/diagnose/types';
 import type { AnalysisDetails, DiagnosedDisease } from '@/components/diagnose/types';
 
@@ -19,6 +20,14 @@ export const usePlantAnalysis = () => {
 
     try {
       console.log('🔬 Avvio analisi avanzata con validazione migliorata...');
+      
+      // Prima controlla se le API sono configurate
+      setAnalysisProgress(5);
+      const { data: apiStatus } = await supabase.functions.invoke('check-api-status');
+      
+      if (!apiStatus || (!apiStatus.openai && !apiStatus.plantid && !apiStatus.eppo)) {
+        throw new Error('API_NOT_CONFIGURED: Nessuna API di diagnosi configurata. Configura almeno OpenAI, Plant.ID o EPPO per abilitare la diagnosi AI.');
+      }
       
       // Usa il nuovo sistema di validazione avanzato
       const { performEnhancedPlantAnalysis } = await import('@/utils/plant-analysis/enhancedPlantAnalysis');

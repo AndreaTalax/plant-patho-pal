@@ -22,6 +22,9 @@ import { verifyImageContainsPlant, analyzeImageQuality } from '@/utils/plant-ana
 import { PaymentRequiredModal } from './subscription/PaymentRequiredModal';
 import DiagnosisResult from './diagnose/result/DiagnosisResult';
 import { useDiagnosisLimits } from '@/hooks/useDiagnosisLimits';
+import { AIApiSetup } from './diagnose/AIApiSetup';
+import { ApiKeyManager } from './diagnose/ApiKeyManager';
+import { supabase } from '@/integrations/supabase/client';
 
 const DiagnoseTab = () => {
   const { userProfile, hasActiveSubscription } = useAuth();
@@ -53,13 +56,37 @@ const DiagnoseTab = () => {
   } = usePlantDiagnosis();
   
   // Component states
-  const [currentStage, setCurrentStage] = useState<'info' | 'capture' | 'options' | 'analyzing' | 'result'>('info');
+  const [currentStage, setCurrentStage] = useState<'info' | 'capture' | 'options' | 'analyzing' | 'result' | 'api-setup'>('info');
   const [showCamera, setShowCamera] = useState(false);
   const [dataSentToExpert, setDataSentToExpert] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [cameraStoppedByUser, setCameraStoppedByUser] = useState(false);
+  const [apiStatus, setApiStatus] = useState<any>(null);
+  const [checkingApis, setCheckingApis] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Check API status on mount
+  useEffect(() => {
+    const checkApiStatus = async () => {
+      setCheckingApis(true);
+      try {
+        const { data } = await supabase.functions.invoke('check-api-status');
+        setApiStatus(data);
+        
+        // Se nessuna API è configurata, mostra la configurazione
+        if (data && !data.openai && !data.plantid && !data.eppo) {
+          setCurrentStage('api-setup');
+        }
+      } catch (error) {
+        console.error('❌ Errore verifica API:', error);
+      } finally {
+        setCheckingApis(false);
+      }
+    };
+    
+    checkApiStatus();
+  }, []);
 
   // Monitor analysis state
   useEffect(() => {
@@ -593,6 +620,36 @@ const DiagnoseTab = () => {
             </div>
           );
         }
+
+      case 'api-setup':
+        const missingApis = apiStatus?.summary?.missing || [];
+        return (
+          <div className="space-y-6">
+            <div className="text-center mb-6">
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                🔧 Configurazione API per Diagnosi AI
+              </h2>
+              <p className="text-gray-600">
+                Per abilitare la diagnosi AI delle piante, configura almeno una delle API seguenti.
+              </p>
+            </div>
+            
+            <ApiKeyManager 
+              missingApis={missingApis}
+              onConfigured={async () => {
+                // Ricontrolla stato API dopo configurazione
+                const { data } = await supabase.functions.invoke('check-api-status');
+                setApiStatus(data);
+                
+                // Se almeno una API è configurata, passa alla fase info
+                if (data && (data.openai || data.plantid || data.eppo)) {
+                  setCurrentStage('info');
+                  toast.success('API configurate! Ora puoi iniziare la diagnosi.');
+                }
+              }}
+            />
+          </div>
+        );
 
       default:
         return null;
