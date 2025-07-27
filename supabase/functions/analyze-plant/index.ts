@@ -318,23 +318,43 @@ serve(async (req) => {
     
     // If the image doesn't appear to contain a plant with sufficient confidence, return an error
     if (!plantVerification.isPlant) {
+      const preliminaryClass = plantVerification.preliminaryClassification;
+      let errorMessage = "Immagine non valida. Assicurati che ci sia una pianta visibile e riprova.";
+      
+      if (preliminaryClass?.topLabel) {
+        const detectedLabel = preliminaryClass.topLabel;
+        if (detectedLabel === "animal") {
+          errorMessage = "È stato rilevato un animale nell'immagine. Carica un'immagine che contenga una pianta.";
+        } else if (detectedLabel === "person") {
+          errorMessage = "È stata rilevata una persona nell'immagine. Carica un'immagine che contenga una pianta.";
+        } else if (detectedLabel === "food") {
+          errorMessage = "È stato rilevato del cibo nell'immagine. Carica un'immagine di una pianta viva.";
+        } else if (detectedLabel === "wall" || detectedLabel === "background") {
+          errorMessage = "L'immagine sembra contenere solo sfondo. Carica un'immagine con una pianta chiaramente visibile.";
+        } else if (detectedLabel === "nothing" || detectedLabel === "object") {
+          errorMessage = "Nessuna pianta rilevata nell'immagine. Prova a scattare una nuova foto di una pianta.";
+        }
+      }
+      
       logWithTimestamp('WARN', 'Image verification failed - not a plant', {
         requestId,
         confidence: plantVerification.confidence,
-        threshold: 0.7
+        detectedType: preliminaryClass?.topLabel || 'unknown',
+        preliminaryConfidence: preliminaryClass?.confidence || 0
       });
       
       return new Response(JSON.stringify({
-        error: false,
+        error: errorMessage,
         plantVerification: {
           isPlant: false,
           confidence: plantVerification.confidence,
+          detectedType: preliminaryClass?.topLabel || 'unknown',
           aiServices: plantVerification.aiServices,
-          message: "The image does not appear to contain a plant. Please upload a valid plant photo."
+          message: errorMessage
         },
         isValidPlantImage: false
       }), {
-        status: 200,
+        status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }

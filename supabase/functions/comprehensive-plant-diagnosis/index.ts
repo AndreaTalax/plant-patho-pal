@@ -249,7 +249,78 @@ async function analyzeWithEPPO(plantName: string): Promise<any> {
   }
 }
 
-// Hugging Face Image Analysis - Enhanced with plant validation
+// Preliminary image classification using CLIP model
+async function classifyImageContentWithCLIP(imageBase64: string): Promise<{ isValidPlant: boolean; topLabel: string; confidence: number; allLabels?: any[] }> {
+  const huggingFaceToken = Deno.env.get('HUGGINGFACE_ACCESS_TOKEN');
+  
+  if (!huggingFaceToken) {
+    logWithTimestamp('WARN', 'Hugging Face token not available, skipping preliminary classification');
+    return { isValidPlant: true, topLabel: "plant", confidence: 0.5 };
+  }
+
+  try {
+    logWithTimestamp('INFO', 'Starting preliminary CLIP classification');
+    
+    if (!imageBase64 || !imageBase64.includes(',')) {
+      throw new Error("Formato immagine non valido o mancante (base64)");
+    }
+    
+    // Convert base64 to bytes
+    const base64Data = imageBase64.split(',')[1];
+    const binaryString = atob(base64Data);
+    const bytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
+    }
+
+    const labels = ["plant", "leaf", "tree", "flower", "soil", "nothing", "animal", "background", "wall", "person", "food", "object"];
+    
+    const response = await fetch('https://api-inference.huggingface.co/models/openai/clip-vit-base-patch16', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${huggingFaceToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        inputs: {
+          image: Array.from(bytes)
+        },
+        parameters: {
+          candidate_labels: labels
+        }
+      }),
+      signal: AbortSignal.timeout(10000)
+    });
+
+    if (!response.ok) {
+      logWithTimestamp('ERROR', `CLIP classification failed with status: ${response.status}`);
+      return { isValidPlant: true, topLabel: "plant", confidence: 0.5 };
+    }
+
+    const result = await response.json();
+    logWithTimestamp('INFO', 'CLIP classification result', result);
+    
+    const topLabel = result?.[0]?.label?.toLowerCase() || "unknown";
+    const confidence = result?.[0]?.score || 0;
+    
+    const isValidPlant = ["plant", "leaf", "tree", "flower"].includes(topLabel);
+    
+    logWithTimestamp('INFO', `CLIP result: ${topLabel} (${Math.round(confidence * 100)}%) - isValidPlant: ${isValidPlant}`);
+    
+    return {
+      isValidPlant,
+      topLabel,
+      confidence,
+      allLabels: result
+    };
+    
+  } catch (error) {
+    logWithTimestamp('ERROR', 'Error in CLIP classification:', error);
+    return { isValidPlant: true, topLabel: "plant", confidence: 0.5 };
+  }
+}
+
+// Hugging Face Image Analysis - Enhanced with CLIP preliminary validation
 async function analyzeWithHuggingFace(imageBase64: string): Promise<any> {
   const huggingFaceToken = Deno.env.get('HUGGINGFACE_ACCESS_TOKEN');
   
@@ -259,69 +330,44 @@ async function analyzeWithHuggingFace(imageBase64: string): Promise<any> {
   }
 
   try {
-    logWithTimestamp('INFO', 'Starting Hugging Face analysis');
+    logWithTimestamp('INFO', 'Starting Hugging Face analysis with CLIP validation');
     
-    // Aggiungi check per il formato immagine base64
-    if (!imageBase64 || !imageBase64.includes(',')) {
-      throw new Error("Formato immagine non valido o mancante (base64)");
+    // First, perform preliminary CLIP classification
+    const clipResult = await classifyImageContentWithCLIP(imageBase64);
+    
+    // If CLIP says it's not a plant, return early with specific error
+    if (!clipResult.isValidPlant) {
+      let errorMessage = "Immagine non valida. Assicurati che ci sia una pianta visibile e riprova.";
+      
+      if (clipResult.topLabel === "animal") {
+        errorMessage = "È stato rilevato un animale nell'immagine. Carica un'immagine che contenga una pianta.";
+      } else if (clipResult.topLabel === "person") {
+        errorMessage = "È stata rilevata una persona nell'immagine. Carica un'immagine che contenga una pianta.";
+      } else if (clipResult.topLabel === "food") {
+        errorMessage = "È stato rilevato del cibo nell'immagine. Carica un'immagine di una pianta viva.";
+      } else if (clipResult.topLabel === "wall" || clipResult.topLabel === "background") {
+        errorMessage = "L'immagine sembra contenere solo sfondo. Carica un'immagine con una pianta chiaramente visibile.";
+      } else if (clipResult.topLabel === "nothing" || clipResult.topLabel === "object") {
+        errorMessage = "Nessuna pianta rilevata nell'immagine. Prova a scattare una nuova foto di una pianta.";
+      }
+      
+      logWithTimestamp('WARN', `CLIP validation failed: ${clipResult.topLabel} (${Math.round(clipResult.confidence * 100)}%)`);
+      return { 
+        isNotPlant: true, 
+        detectedType: clipResult.topLabel,
+        confidence: clipResult.confidence,
+        message: errorMessage 
+      };
     }
     
-    // Convert base64 to blob
+    logWithTimestamp('INFO', `CLIP validation passed: ${clipResult.topLabel} (${Math.round(clipResult.confidence * 100)}%)`);
+    
+    // Continue with detailed analysis if CLIP validation passed
     const base64Data = imageBase64.split(',')[1];
     const binaryString = atob(base64Data);
     const bytes = new Uint8Array(binaryString.length);
     for (let i = 0; i < binaryString.length; i++) {
       bytes[i] = binaryString.charCodeAt(i);
-    }
-
-    // First, validate if the image contains a plant using general image classification
-    const validationResponse = await fetch(
-      "https://api-inference.huggingface.co/models/google/vit-base-patch16-224",
-      {
-        headers: {
-          Authorization: `Bearer ${huggingFaceToken}`,
-          "Content-Type": "application/octet-stream",
-        },
-        method: "POST",
-        body: bytes,
-        signal: AbortSignal.timeout(15000),
-      }
-    );
-
-    let isPlantImage = false;
-    if (validationResponse.ok) {
-      const validationData = await validationResponse.json();
-      logWithTimestamp('INFO', 'Image classification result', validationData);
-      
-      // Check if the image contains plant-related content
-      if (Array.isArray(validationData)) {
-        const plantRelatedLabels = validationData.filter(item => 
-          item.label && (
-            item.label.toLowerCase().includes('plant') ||
-            item.label.toLowerCase().includes('leaf') ||
-            item.label.toLowerCase().includes('flower') ||
-            item.label.toLowerCase().includes('tree') ||
-            item.label.toLowerCase().includes('grass') ||
-            item.label.toLowerCase().includes('herb') ||
-            item.label.toLowerCase().includes('botanical') ||
-            item.label.toLowerCase().includes('garden') ||
-            item.label.toLowerCase().includes('vegetation') ||
-            item.label.toLowerCase().includes('foliage')
-          )
-        );
-        
-        isPlantImage = plantRelatedLabels.length > 0 && plantRelatedLabels[0].score > 0.1;
-        logWithTimestamp('INFO', `Plant validation result: ${isPlantImage}`, plantRelatedLabels);
-      }
-    }
-
-    // If not a plant image, return validation error
-    if (!isPlantImage) {
-      logWithTimestamp('WARN', 'Image does not appear to contain a plant');
-      return { 
-        isNotPlant: true, 
-        message: "L'immagine caricata non sembra contenere una pianta. Per favore carica un'immagine di una pianta per ottenere una diagnosi accurata." 
-      };
     }
 
     // Continue with plant disease classification if it's a plant
@@ -344,7 +390,11 @@ async function analyzeWithHuggingFace(imageBase64: string): Promise<any> {
       logWithTimestamp('INFO', 'Hugging Face disease analysis successful');
     }
 
-    return { diseases: diseaseData, isValidPlant: true };
+    return { 
+      diseases: diseaseData, 
+      isValidPlant: true,
+      clipValidation: clipResult
+    };
 
   } catch (error) {
     logWithTimestamp('ERROR', 'Hugging Face analysis failed', { error: error.message });
@@ -576,9 +626,14 @@ serve(async (req) => {
 
     // Check if Hugging Face detected that this is not a plant image
     if (huggingFace?.isNotPlant) {
-      logWithTimestamp('WARN', 'Image validation failed - not a plant');
+      logWithTimestamp('WARN', 'Image validation failed - not a plant', {
+        detectedType: huggingFace.detectedType,
+        confidence: huggingFace.confidence
+      });
       return new Response(JSON.stringify({
-        error: 'NOT_A_PLANT',
+        error: huggingFace.message,
+        detectedType: huggingFace.detectedType,
+        confidence: huggingFace.confidence,
         message: huggingFace.message,
         plantName: "Non è una pianta",
         scientificName: "Immagine non valida",

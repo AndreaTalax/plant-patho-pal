@@ -41,6 +41,11 @@ export const usePlantAnalysis = () => {
       setAnalysisProgress(50);
       
       if (!diagnosis.success) {
+        // Check if it's an image validation error (status 400)
+        if (diagnosis.error?.includes('non valida') || diagnosis.error?.includes('rilevato')) {
+          // This is a specific image validation error, show appropriate message
+          throw new Error(`INVALID_IMAGE: ${diagnosis.error}`);
+        }
         throw new Error(diagnosis.error || 'Analisi fallita');
       }
       
@@ -158,15 +163,17 @@ export const usePlantAnalysis = () => {
       let errorMessage = 'Errore durante l\'analisi';
       let errorDescription = 'Si è verificato un errore. Riprova o consulta un esperto.';
       
-      if (error.message?.includes('NOT_A_PLANT')) {
+      if (error.message?.includes('NOT_A_PLANT') || error.message?.includes('INVALID_IMAGE')) {
         errorMessage = 'Immagine non valida';
-        errorDescription = 'L\'immagine caricata non sembra contenere una pianta. Carica un\'immagine con una pianta chiaramente visibile.';
-      } else if (error.message?.includes('INVALID_IMAGE')) {
-        errorMessage = 'Qualità immagine insufficiente';
-        errorDescription = 'La qualità dell\'immagine non è sufficiente per l\'analisi. Usa un\'immagine più chiara e nitida.';
+        // Extract the specific error message if available
+        const specificError = error.message.split('INVALID_IMAGE: ')[1] || error.message.split('NOT_A_PLANT: ')[1];
+        errorDescription = specificError || 'L\'immagine caricata non sembra contenere una pianta. Carica un\'immagine con una pianta chiaramente visibile.';
       } else if (error.message?.includes('API_ERROR')) {
         errorMessage = 'Servizio temporaneamente non disponibile';
         errorDescription = 'Il servizio di analisi è temporaneamente non disponibile. Riprova tra qualche minuto.';
+      } else if (error.message?.includes('API_NOT_CONFIGURED')) {
+        errorMessage = 'Servizio non configurato';
+        errorDescription = 'Il servizio di diagnosi non è ancora configurato. Contatta l\'amministratore.';
       }
       
       toast.error(errorMessage, {

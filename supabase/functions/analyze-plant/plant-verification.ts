@@ -1,40 +1,123 @@
-
 // Import required libraries
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
 
-// Function to verify if the image contains a plant
-/**
- * Verifies if the given image contains a plant using AI-based analysis.
- * @example
- * sync(imageArrayBuffer, huggingFaceToken)
- * { isPlant: true, confidence: 0.85, detectedPlantType: "flowering", aiServices: [...] }
- * @param {ArrayBuffer} imageArrayBuffer - Image data buffer to be analyzed.
- * @param {string | undefined} huggingFaceToken - Authorization token for accessing Hugging Face API.
- * @returns {Promise<{ isPlant: boolean; confidence: number; detectedPlantType?: string; aiServices?: {serviceName: string; result: boolean; confidence: number}[] }>} - Analysis results including plant verification status and confidence level.
- * @description
- *   - The function defaults to assuming the image contains a plant if the Hugging Face token is not provided.
- *   - If the API model fails, it defaults the plant verification to true with reduced confidence.
- *   - High-confidence results are filtered out only with minimum score threshold of 0.1.
- */
+// Preliminary image classification using CLIP model
+export async function classifyImageContent(imageArrayBuffer: ArrayBuffer, huggingFaceToken: string | undefined): Promise<{ isValidPlant: boolean; topLabel: string; confidence: number; allLabels?: any[] }> {
+  if (!huggingFaceToken) {
+    console.log('⚠️ Hugging Face token not available, skipping preliminary classification');
+    return { isValidPlant: true, topLabel: "plant", confidence: 0.5 };
+  }
+
+  try {
+    console.log('🔍 Starting preliminary image classification with CLIP...');
+    
+    const imageBytes = new Uint8Array(imageArrayBuffer);
+    const labels = ["plant", "leaf", "tree", "flower", "soil", "nothing", "animal", "background", "wall", "person", "food", "object"];
+    
+    const response = await fetch('https://api-inference.huggingface.co/models/openai/clip-vit-base-patch16', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${huggingFaceToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        inputs: {
+          image: Array.from(imageBytes)
+        },
+        parameters: {
+          candidate_labels: labels
+        }
+      }),
+      signal: AbortSignal.timeout(10000)
+    });
+
+    if (!response.ok) {
+      console.error(`❌ CLIP classification failed with status: ${response.status}`);
+      // Fallback: assume it's a plant
+      return { isValidPlant: true, topLabel: "plant", confidence: 0.5 };
+    }
+
+    const result = await response.json();
+    console.log('📊 CLIP classification result:', result);
+    
+    const topLabel = result?.[0]?.label?.toLowerCase() || "unknown";
+    const confidence = result?.[0]?.score || 0;
+    
+    const isValidPlant = ["plant", "leaf", "tree", "flower"].includes(topLabel);
+    
+    console.log(`🏷️ Top classification: ${topLabel} (confidence: ${Math.round(confidence * 100)}%)`);
+    console.log(`🌿 Is valid plant: ${isValidPlant}`);
+    
+    return {
+      isValidPlant,
+      topLabel,
+      confidence,
+      allLabels: result
+    };
+    
+  } catch (error) {
+    console.error('❌ Error in preliminary classification:', error);
+    // Fallback: assume it's a plant
+    return { isValidPlant: true, topLabel: "plant", confidence: 0.5 };
+  }
+}
+
+// Enhanced plant verification that includes preliminary classification
 export const verifyImageContainsPlant = async (imageArrayBuffer: ArrayBuffer, huggingFaceToken: string | undefined): Promise<{
   isPlant: boolean;
   confidence: number;
   detectedPlantType?: string;
   aiServices?: {serviceName: string; result: boolean; confidence: number}[];
+  preliminaryClassification?: any;
 }> => {
-  try {
-    // Check if the token is provided
-    if (!huggingFaceToken) {
-      console.log("No Hugging Face token provided. Assuming image contains a plant.");
-      return { isPlant: true, confidence: 1.0 };
-    }
+  console.log('🔍 Starting enhanced plant verification...');
+  
+  // First, do preliminary classification with CLIP
+  const preliminaryResult = await classifyImageContent(imageArrayBuffer, huggingFaceToken);
+  
+  // If preliminary classification says it's not a plant, return early
+  if (!preliminaryResult.isValidPlant) {
+    console.log(`❌ Preliminary classification failed: ${preliminaryResult.topLabel} (${Math.round(preliminaryResult.confidence * 100)}%)`);
+    return {
+      isPlant: false,
+      confidence: preliminaryResult.confidence,
+      detectedPlantType: preliminaryResult.topLabel,
+      aiServices: [{
+        serviceName: 'CLIP Preliminary Classification',
+        result: false,
+        confidence: preliminaryResult.confidence
+      }],
+      preliminaryClassification: preliminaryResult
+    };
+  }
+  
+  console.log(`✅ Preliminary classification passed: ${preliminaryResult.topLabel} (${Math.round(preliminaryResult.confidence * 100)}%)`);
+  
+  // If no token provided for detailed verification, use preliminary result
+  if (!huggingFaceToken) {
+    console.log('⚠️ No Hugging Face token provided, using preliminary classification only');
+    return {
+      isPlant: preliminaryResult.isValidPlant,
+      confidence: preliminaryResult.confidence,
+      detectedPlantType: preliminaryResult.topLabel,
+      aiServices: [{
+        serviceName: 'CLIP Preliminary Classification',
+        result: preliminaryResult.isValidPlant,
+        confidence: preliminaryResult.confidence
+      }],
+      preliminaryClassification: preliminaryResult
+    };
+  }
 
+  try {
+    console.log('🔍 Proceeding with detailed plant verification...');
+    
     // Create request with image data
     const formData = new FormData();
     const blob = new Blob([imageArrayBuffer], { type: 'image/jpeg' });
     formData.append('image', blob, 'image.jpg');
 
-    // Send request to the Hugging Face model
+    // Send request to the Hugging Face model for detailed analysis
     const response = await fetch(
       "https://api-inference.huggingface.co/models/onnx-community/vit-plant-verification",
       {
@@ -45,89 +128,104 @@ export const verifyImageContainsPlant = async (imageArrayBuffer: ArrayBuffer, hu
       }
     );
 
-    if (!response.ok) {
-      console.error(`Error verifying plant: ${response.statusText}`);
-      // Default to true if the model fails - allow processing to continue
-      return { isPlant: true, confidence: 0.6 };
+    let detailedResult = null;
+    let aiServices = [{
+      serviceName: 'CLIP Preliminary Classification',
+      result: preliminaryResult.isValidPlant,
+      confidence: preliminaryResult.confidence
+    }];
+
+    if (response.ok) {
+      const data = await response.json();
+      const results = data.map(res => ({ 
+        label: res.label, 
+        score: res.score 
+      })).filter(res => res.score > 0.1);
+
+      // Get the top result
+      const topResult = results[0];
+      
+      // Check if it's a plant with high confidence
+      const isPlant = topResult && (
+        topResult.label.includes('plant') || 
+        topResult.label.includes('flower') || 
+        topResult.label.includes('tree') || 
+        topResult.label.includes('leaf')
+      );
+      
+      detailedResult = {
+        isPlant: isPlant || topResult.score > 0.6,
+        confidence: topResult ? topResult.score : 0.5,
+        topResult
+      };
+
+      aiServices.push({
+        serviceName: 'VIT Plant Verification',
+        result: detailedResult.isPlant,
+        confidence: detailedResult.confidence
+      });
+    } else {
+      console.error(`❌ Detailed verification failed: ${response.statusText}`);
     }
 
-    const data = await response.json();
-    const results = data.map(res => ({ 
-      label: res.label, 
-      score: res.score 
-    })).filter(res => res.score > 0.1);
-
-    // Get the top result
-    const topResult = results[0];
+    // Determine plant type from preliminary results
+    let detectedPlantType = preliminaryResult.topLabel;
     
-    // Check if it's a plant with high confidence
-    const isPlant = topResult && (
-      topResult.label.includes('plant') || 
-      topResult.label.includes('flower') || 
-      topResult.label.includes('tree') || 
-      topResult.label.includes('leaf')
-    );
-    
-    // Determine plant type from results if possible
-    let detectedPlantType = undefined;
-    
-    if (isPlant) {
-      // Check for specific plant types in the labels
-      const plantTypes = [
-        { type: 'succulent', keywords: ['succulent', 'cactus', 'aloe'] },
-        { type: 'houseplant', keywords: ['houseplant', 'indoor plant', 'potted plant'] },
-        { type: 'herb', keywords: ['herb', 'basil', 'mint', 'parsley', 'cilantro', 'thyme'] },
-        { type: 'flowering', keywords: ['flower', 'bloom', 'rose', 'tulip', 'orchid'] },
-        { type: 'palm', keywords: ['palm'] },
-        { type: 'vegetable', keywords: ['vegetable', 'tomato', 'lettuce', 'pepper'] },
-        { type: 'tree', keywords: ['tree', 'shrub'] }
-      ];
+    if (preliminaryResult.isValidPlant) {
+      // Check for specific plant types based on CLIP classification
+      const plantTypes = {
+        'succulent': ['succulent', 'cactus', 'aloe'],
+        'houseplant': ['houseplant', 'indoor', 'potted'],
+        'herb': ['herb', 'basil', 'mint', 'parsley', 'cilantro', 'thyme'],
+        'flowering': ['flower', 'bloom', 'rose', 'tulip', 'orchid'],
+        'palm': ['palm'],
+        'vegetable': ['vegetable', 'tomato', 'lettuce', 'pepper'],
+        'tree': ['tree', 'shrub']
+      };
       
-      for (const result of results) {
-        const label = result.label.toLowerCase();
-        for (const plantType of plantTypes) {
-          if (plantType.keywords.some(keyword => label.includes(keyword))) {
-            detectedPlantType = plantType.type;
-            break;
-          }
+      const label = preliminaryResult.topLabel.toLowerCase();
+      for (const [type, keywords] of Object.entries(plantTypes)) {
+        if (keywords.some(keyword => label.includes(keyword))) {
+          detectedPlantType = type;
+          break;
         }
-        if (detectedPlantType) break;
       }
     }
 
-    return { 
-      isPlant: isPlant || topResult.score > 0.6,
-      confidence: topResult ? topResult.score : 0.5,
-      detectedPlantType,
-      aiServices: [
-        {
-          serviceName: 'Plexi AI Plant Verification',
-          result: isPlant || topResult.score > 0.6,
-          confidence: topResult ? topResult.score : 0.5
-        }
-      ]
+    // Combine preliminary and detailed results
+    const isPlant = preliminaryResult.isValidPlant && (detailedResult?.isPlant !== false);
+    const confidence = detailedResult ? 
+      Math.max(preliminaryResult.confidence, detailedResult.confidence) : 
+      preliminaryResult.confidence;
+
+    console.log(`✅ Final verification result: ${isPlant} (confidence: ${Math.round(confidence * 100)}%)`);
+
+    // Return the results with preliminary classification
+    return {
+      isPlant: isPlant,
+      confidence: confidence,
+      detectedPlantType: detectedPlantType,
+      aiServices: aiServices,
+      preliminaryClassification: preliminaryResult
     };
   } catch (error) {
-    console.error("Error in plant verification:", error);
-    // Default to true if there's an error - allow processing to continue
-    return { isPlant: true, confidence: 0.5 };
+    console.error("❌ Error in detailed plant verification:", error);
+    // Fall back to preliminary classification result
+    return {
+      isPlant: preliminaryResult.isValidPlant,
+      confidence: preliminaryResult.confidence,
+      detectedPlantType: preliminaryResult.topLabel,
+      aiServices: [{
+        serviceName: 'CLIP Preliminary Classification',
+        result: preliminaryResult.isValidPlant,
+        confidence: preliminaryResult.confidence
+      }],
+      preliminaryClassification: preliminaryResult
+    };
   }
 };
 
 // Function to check if the image is specifically of a leaf
-/**
- * Sends image data to a Hugging Face model to detect plant parts and verifies presence of leaves.
- * @example
- * sync(imageArrayBuffer, huggingFaceToken)
- * returns true if leaf parts are detected with sufficient confidence.
- * @param {ArrayBuffer} imageArrayBuffer - Contains the binary data of the image to be analyzed.
- * @param {string | undefined} huggingFaceToken - Optional authorization token for Hugging Face API access.
- * @returns {Promise<boolean>} Indicates whether leaf parts are detected with a confidence score higher than 0.3.
- * @description
- *   - The function initiates a fetch request to Hugging Face API using FormData to send the image.
- *   - A Blob is constructed from the input buffer and appended to the FormData as JPEG.
- *   - Timeout is set to 10 seconds for the API request.
- */
 export const isLeafImage = async (imageArrayBuffer: ArrayBuffer, huggingFaceToken: string | undefined): Promise<boolean> => {
   try {
     if (!huggingFaceToken) {
@@ -170,20 +268,6 @@ export const isLeafImage = async (imageArrayBuffer: ArrayBuffer, huggingFaceToke
 };
 
 // Function to check if the plant might be an EPPO regulated pest/disease concern
-/**
- * Analyzes an image for EPPO regulated pests or diseases using Hugging Face API.
- * @example
- * sync(imageArrayBuffer, huggingFaceToken)
- * // returns { hasEppoConcern: true, concernName: 'Xylella fastidiosa', concernType: 'bacteria', eppoCode: 'XYLEFA', regulatoryStatus: 'Quarantine pest/disease', confidenceScore: 0.85 }
- * @param {ArrayBuffer} imageArrayBuffer - The image data in ArrayBuffer format to be analyzed.
- * @param {string | undefined} huggingFaceToken - The authentication token for accessing Hugging Face API.
- * @returns {Promise<Object>} Resolves with an object indicating EPPO concern presence and details.
- * @description
- *   - Utilizes Hugging Face model to predict pest/disease concerns in the image.
- *   - Applies a 10-second timeout for API requests using AbortSignal.
- *   - Filters results with a confidence score greater than 0.7 and matches keywords like 'xylella', 'regulated', or 'quarantine'.
- *   - Determines the EPPO code based on the detected pest/disease label.
- */
 export const checkForEppoConcerns = async (
   imageArrayBuffer: ArrayBuffer, 
   huggingFaceToken: string | undefined
