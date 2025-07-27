@@ -15,9 +15,11 @@ import { MARCO_NIGRO_ID } from '@/components/phytopathologist';
 
 interface UserChatViewRealtimeProps {
   userId: string;
+  conversationId?: string;
+  onBackToList?: () => void;
 }
 
-export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ userId }) => {
+export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ userId, conversationId, onBackToList }) => {
   const [autoDataSent, setAutoDataSent] = useState(false);
   const [showComprehensiveData, setShowComprehensiveData] = useState(false);
   
@@ -71,8 +73,12 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
 
   // Gestione click pulsante indietro
   const handleBackClick = () => {
-    const event = new CustomEvent('switchTab', { detail: 'diagnose' });
-    window.dispatchEvent(event);
+    if (onBackToList) {
+      onBackToList();
+    } else {
+      const event = new CustomEvent('switchTab', { detail: 'diagnose' });
+      window.dispatchEvent(event);
+    }
   };
 
   // Gestione retry con reset completo
