@@ -42,7 +42,28 @@ serve(async (req) => {
         if (response.ok) {
           const result = await response.json()
           console.log("✅ HuggingFace result:", result)
-          
+          // 🛡️ Verifica se il risultato riguarda una pianta
+const resultLabels = (Array.isArray(result) ? result.map(r => r.label.toLowerCase()) : [result.label.toLowerCase()])
+const containsPlant = resultLabels.some(label =>
+  label.includes("plant") ||
+  label.includes("leaf") ||
+  label.includes("flower") ||
+  label.includes("tree") ||
+  label.includes("foliage") ||
+  label.includes("vegetation")
+)
+
+if (!containsPlant) {
+  console.warn("🚫 Nessuna pianta rilevata nell'immagine. Invita l'utente a riprovare.")
+  return new Response(JSON.stringify({
+    error: "L'immagine non contiene una pianta riconoscibile. Riprova con una foto chiara di una foglia o della pianta.",
+    code: "NO_PLANT_DETECTED"
+  }), {
+    status: 400,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+  })
+}
+
           // Convert HuggingFace result to our format with enhanced analysis
           const enhancedResult = await enhanceHuggingFaceResult(result, plantInfo)
           console.log("📊 Enhanced result:", JSON.stringify(enhancedResult, null, 2))
@@ -110,7 +131,24 @@ async function enhanceHuggingFaceResult(huggingFaceResult: any, plantInfo: any) 
 
 async function performEnhancedVisualAnalysis(plantInfo: any, imageData: string) {
   console.log("👀 Analyzing visual symptoms...")
-  
+  // 🛡️ Verifica se l'immagine è plausibilmente vegetale (mock check per ora)
+if (!imageData.includes("green") && !plantInfo?.symptoms) {
+  console.warn("🚫 Immagine sospetta: nessun indizio che si tratti di una pianta")
+  return {
+    error: "L'immagine non sembra contenere una pianta. Scatta una nuova foto con la pianta ben visibile.",
+    code: "NO_PLANT_LIKELY",
+    confidence: 0,
+    isHealthy: false,
+    diseases: [],
+    recommendations: ["Scatta una nuova foto con la pianta ben visibile"],
+    detectedSymptoms: [],
+    analysisDetails: {
+      fallback: true,
+      reason: "Contenuto visivo non identificabile come vegetale"
+    }
+  }
+}
+
   // Extract symptoms from plant info
   const symptoms = extractSymptomsFromPlantInfo(plantInfo)
   console.log("🔍 Extracted symptoms:", symptoms)
