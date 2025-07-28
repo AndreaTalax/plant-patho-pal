@@ -40,11 +40,11 @@ const ChatTab = () => {
         console.log('🔍 ChatTab: Controllo conversazioni per utente:', user.id);
         const { data: conversations, error } = await supabase
           .from('conversations')
-          .select('id, status, last_message_text, last_message_at, created_at')
+          .select('id, status, last_message_text, last_message_at, created_at, updated_at')
           .eq('user_id', user.id)
           .eq('expert_id', MARCO_NIGRO_ID)
           .eq('status', 'active') // Solo conversazioni attive
-          .order('updated_at', { ascending: false });
+          .order('last_message_at', { ascending: false });
 
         if (error) {
           console.error('❌ ChatTab: Errore nel controllo conversazioni:', error);
