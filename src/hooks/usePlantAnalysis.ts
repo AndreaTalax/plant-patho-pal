@@ -29,93 +29,135 @@ export const usePlantAnalysis = () => {
         throw new Error('API_NOT_CONFIGURED: Nessuna API di diagnosi configurata. Configura almeno OpenAI, Plant.ID o EPPO per abilitare la diagnosi AI.');
       }
       
-      // Usa il nuovo sistema di validazione avanzato
-      const { performEnhancedPlantAnalysis } = await import('@/utils/plant-analysis/enhancedPlantAnalysis');
-      
+      // Usa il nuovo sistema di diagnosi avanzata con GPT-4o
       setAnalysisProgress(10);
-      console.log('📋 Validazione immagine in corso...');
+      console.log('📋 Conversione immagine per analisi avanzata...');
       
-      // Esegui l'analisi con il nuovo sistema
-      const diagnosis = await performEnhancedPlantAnalysis(imageFile, plantInfo);
+      // Converti l'immagine in base64
+      const arrayBuffer = await imageFile.arrayBuffer();
+      const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
       
-      setAnalysisProgress(50);
+      setAnalysisProgress(20);
+      console.log('🔬 Chiamando diagnosi avanzata con AI...');
       
-      if (!diagnosis.success) {
-        // Check if it's an image validation error (status 400)
-        if (diagnosis.error?.includes('non valida') || diagnosis.error?.includes('rilevato')) {
-          // This is a specific image validation error, show appropriate message
-          throw new Error(`INVALID_IMAGE: ${diagnosis.error}`);
+      const advancedResponse = await supabase.functions.invoke('advanced-plant-diagnosis', {
+        body: { 
+          imageBase64: base64, 
+          plantInfo: {
+            symptoms: plantInfo?.symptoms,
+            plantName: plantInfo?.name,
+            isIndoor: plantInfo?.isIndoor,
+            wateringFrequency: plantInfo?.wateringFrequency,
+            lightExposure: plantInfo?.lightExposure
+          }
         }
-        throw new Error(diagnosis.error || 'Analisi fallita');
+      });
+
+      if (advancedResponse.error) {
+        throw new Error(advancedResponse.error.message);
       }
+
+      if (!advancedResponse.data?.success) {
+        throw new Error(advancedResponse.data?.error || 'Errore nella diagnosi avanzata');
+      }
+
+      const { diagnosis } = advancedResponse.data;
+      console.log('✅ Diagnosi avanzata completata:', diagnosis);
       
-      console.log('✅ Analisi avanzata completata:', diagnosis);
-      
-      // Usa direttamente i dati dal nuovo sistema di validazione
-      const plantName = diagnosis.plantName;
-      const scientificName = diagnosis.scientificName || '';
-      const isHealthy = diagnosis.isHealthy;
-      const diseases = diagnosis.diseases || [];
-      const recommendations = diagnosis.recommendations || [];
-      const confidence = Math.round(diagnosis.confidence * 100);
+      // Estrai dati dalla nuova struttura di diagnosi avanzata
+      const plantName = diagnosis.plantIdentification.name;
+      const scientificName = diagnosis.plantIdentification.scientificName;
+      const family = diagnosis.plantIdentification.family;
+      const isHealthy = diagnosis.healthAnalysis.isHealthy;
+      const issues = diagnosis.healthAnalysis.issues || [];
+      const recommendations = [
+        ...diagnosis.recommendations.immediate,
+        ...diagnosis.recommendations.longTerm
+      ];
+      const confidence = Math.round(diagnosis.plantIdentification.confidence * 100);
+      const healthScore = Math.round(diagnosis.healthAnalysis.overallScore * 100);
       
       setAnalysisProgress(75);
       
-      let diagnosisText = `**Pianta identificata:** ${plantName}`;
+      let diagnosisText = `**🌿 Pianta identificata:** ${plantName}`;
       if (scientificName && scientificName !== plantName) {
-        diagnosisText += ` (${scientificName})`;
+        diagnosisText += ` (*${scientificName}*)`;
       }
-      diagnosisText += `\n**Confidenza identificazione:** ${confidence}%`;
+      if (family) {
+        diagnosisText += `\n**📚 Famiglia:** ${family}`;
+      }
+      diagnosisText += `\n**🎯 Confidenza identificazione:** ${confidence}%`;
+      diagnosisText += `\n**💚 Punteggio salute:** ${healthScore}%`;
       
       if (isHealthy) {
-        diagnosisText += `\n\n🌿 **Stato di salute:** Sana`;
+        diagnosisText += `\n\n✅ **Stato di salute:** Pianta sana!`;
       } else {
-        diagnosisText += `\n\n🚨 **Stato di salute:** Problemi rilevati`;
+        diagnosisText += `\n\n⚠️ **Stato di salute:** Problemi rilevati`;
         
-        if (diseases.length > 0) {
-          diagnosisText += `\n\n**Problemi rilevati:**`;
-          diseases.forEach((disease, index) => {
-            diagnosisText += `\n${index + 1}. **${disease.name}** (${Math.round((disease.probability || 0) * 100)}%)`;
-            if (disease.description) {
-              diagnosisText += `\n   ${disease.description}`;
+        if (issues.length > 0) {
+          diagnosisText += `\n\n**🔍 Problemi identificati:**`;
+          issues.forEach((issue, index) => {
+            const severityIcon = issue.severity === 'high' ? '🔴' : issue.severity === 'medium' ? '🟡' : '🟢';
+            diagnosisText += `\n\n${index + 1}. ${severityIcon} **${issue.name}** (${issue.type})`;
+            diagnosisText += `\n   **Gravità:** ${issue.severity} - **Confidenza:** ${Math.round(issue.confidence * 100)}%`;
+            if (issue.description) {
+              diagnosisText += `\n   **Descrizione:** ${issue.description}`;
             }
-            if (disease.treatment) {
-              diagnosisText += `\n   **Trattamento:** ${disease.treatment}`;
+            if (issue.symptoms && issue.symptoms.length > 0) {
+              diagnosisText += `\n   **Sintomi:** ${issue.symptoms.join(', ')}`;
+            }
+            if (issue.treatment && issue.treatment.length > 0) {
+              diagnosisText += `\n   **Trattamento:** ${issue.treatment.join(', ')}`;
             }
           });
         }
       }
       
       if (recommendations.length > 0) {
-        diagnosisText += `\n\n**Raccomandazioni:**`;
+        diagnosisText += `\n\n**📋 Raccomandazioni:**`;
         recommendations.forEach((rec, index) => {
           diagnosisText += `\n${index + 1}. ${rec}`;
         });
       }
       
-      // Aggiungi informazioni sulla qualità dell'analisi
-      if (diagnosis.analysisDetails?.source) {
-        diagnosisText += `\n\n**Fonte:** ${diagnosis.analysisDetails.source}`;
+      // Aggiungi istruzioni di cura specifiche
+      const { careInstructions } = diagnosis;
+      if (careInstructions) {
+        diagnosisText += `\n\n**🌱 Istruzioni di cura specifiche:**`;
+        if (careInstructions.watering) {
+          diagnosisText += `\n💧 **Irrigazione:** ${careInstructions.watering}`;
+        }
+        if (careInstructions.light) {
+          diagnosisText += `\n☀️ **Luce:** ${careInstructions.light}`;
+        }
+        if (careInstructions.temperature) {
+          diagnosisText += `\n🌡️ **Temperatura:** ${careInstructions.temperature}`;
+        }
+        if (careInstructions.fertilization) {
+          diagnosisText += `\n🌿 **Fertilizzazione:** ${careInstructions.fertilization}`;
+        }
       }
+      
+      diagnosisText += `\n\n**🔬 Fonte:** Analisi AI avanzata con GPT-4o Vision`;
       
       setDiagnosisResult(diagnosisText);
       
       // Crea l'oggetto disease per compatibilità se ci sono problemi
-      if (!isHealthy && diseases.length > 0) {
-        const primaryIssue = diseases[0];
+      if (!isHealthy && issues.length > 0) {
+        const primaryIssue = issues[0];
         const diagnosedIssue: DiagnosedDisease = {
           id: crypto.randomUUID(),
           name: primaryIssue.name,
           description: primaryIssue.description || 'Nessuna descrizione disponibile',
           causes: 'Determinato attraverso analisi AI avanzata',
-          symptoms: [],
-          treatments: primaryIssue.treatment ? [primaryIssue.treatment] : recommendations,
-          confidence: Math.round((primaryIssue.probability || 0) * 100),
+          symptoms: primaryIssue.symptoms || [],
+          treatments: primaryIssue.treatment || recommendations,
+          confidence: Math.round(primaryIssue.confidence * 100),
           healthy: false,
           products: [],
-          disclaimer: 'Questa è una diagnosi AI con validazione avanzata. Consulta un esperto per conferma.',
+          disclaimer: 'Questa è una diagnosi AI avanzata con GPT-4o Vision. Consulta un esperto per conferma.',
           recommendExpertConsultation: confidence < 80,
-          resources: [diagnosis.analysisDetails?.source || 'Analisi AI'],
+          resources: ['Analisi AI Avanzata'],
           label: primaryIssue.name,
           disease: {
             name: primaryIssue.name
@@ -132,8 +174,8 @@ export const usePlantAnalysis = () => {
         `Qualità immagine: ${Math.round((diagnosis.analysisDetails?.imageQuality || 0) * 100)}%`
       ];
       
-      if (diseases.length > 0) {
-        analysisFeatures.push(`Problemi rilevati: ${diseases.length}`);
+      if (issues.length > 0) {
+        analysisFeatures.push(`Problemi rilevati: ${issues.length}`);
       }
       
       const detailsObj: AnalysisDetails = {
