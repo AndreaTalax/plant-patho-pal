@@ -1,5 +1,6 @@
 
 import { toast } from 'sonner';
+import { useTheme } from '@/context/ThemeContext';
 
 interface ErrorToastOptions {
   title: string;

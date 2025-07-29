@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast"; // Updated import path
 import { useAuth } from "@/context/AuthContext";
+import { useTheme } from "@/context/ThemeContext";
 
 interface ChangeCredentialsModalProps {
   open: boolean;
@@ -31,6 +32,7 @@ const ChangeCredentialsModal = ({ open, onOpenChange }: ChangeCredentialsModalPr
   const [confirmPassword, setConfirmPassword] = useState("");
   const { toast } = useToast();
   const { updateUsername, updatePassword } = useAuth();
+  const { t } = useTheme();
 
   /**
    * Handles the validation and updating of username and password credentials.
@@ -53,8 +55,8 @@ const ChangeCredentialsModal = ({ open, onOpenChange }: ChangeCredentialsModalPr
     if (username && username.length < 3) {
       toast({
         variant: "destructive",
-        title: "Username non valido",
-        description: "L'username deve essere di almeno 3 caratteri.",
+        title: t("invalidUsername"),
+        description: t("usernameMinLength"),
       });
       hasError = true;
     }
@@ -62,8 +64,8 @@ const ChangeCredentialsModal = ({ open, onOpenChange }: ChangeCredentialsModalPr
     if (password && password.length < 5) {
       toast({
         variant: "destructive",
-        title: "Password non valida",
-        description: "La password deve essere di almeno 5 caratteri.",
+        title: t("invalidPassword"),
+        description: t("passwordMinLength"),
       });
       hasError = true;
     }
@@ -71,8 +73,8 @@ const ChangeCredentialsModal = ({ open, onOpenChange }: ChangeCredentialsModalPr
     if (password && password !== confirmPassword) {
       toast({
         variant: "destructive",
-        title: "Le password non coincidono",
-        description: "La password e la conferma password devono essere identiche.",
+        title: t("passwordsDontMatchTitle"),
+        description: t("passwordsDontMatchDesc"),
       });
       hasError = true;
     }
@@ -87,8 +89,8 @@ const ChangeCredentialsModal = ({ open, onOpenChange }: ChangeCredentialsModalPr
       }
 
       toast({
-        title: "Credenziali aggiornate",
-        description: "Le tue credenziali sono state aggiornate con successo.",
+        title: t("credentialsUpdated"),
+        description: t("credentialsUpdatedDesc"),
       });
 
       // Reset form
@@ -103,45 +105,45 @@ const ChangeCredentialsModal = ({ open, onOpenChange }: ChangeCredentialsModalPr
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Cambia credenziali</DialogTitle>
+          <DialogTitle>{t("changeCredentials")}</DialogTitle>
           <DialogDescription>
-            Aggiorna il tuo username o password. Lascia vuoto il campo che non vuoi modificare.
+            {t("updateCredentials")}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">
           <div className="space-y-2">
-            <Label htmlFor="username">Nuovo Username</Label>
+            <Label htmlFor="username">{t("newUsername")}</Label>
             <Input 
               id="username" 
               value={username} 
               onChange={(e) => setUsername(e.target.value)} 
-              placeholder="Inserisci nuovo username"
+              placeholder={t("enterNewUsername")}
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="password">Nuova Password</Label>
+            <Label htmlFor="password">{t("newPasswordLabel")}</Label>
             <Input 
               id="password" 
               type="password" 
               value={password} 
               onChange={(e) => setPassword(e.target.value)} 
-              placeholder="Minimo 5 caratteri"
+              placeholder={t("minCharacters")}
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="confirm-password">Conferma Password</Label>
+            <Label htmlFor="confirm-password">{t("confirmPasswordLabel")}</Label>
             <Input 
               id="confirm-password" 
               type="password" 
               value={confirmPassword} 
               onChange={(e) => setConfirmPassword(e.target.value)} 
-              placeholder="Conferma la nuova password"
+              placeholder={t("confirmNewPasswordPlaceholder")}
             />
           </div>
         </div>
         <div className="flex justify-end gap-3">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Annulla</Button>
-          <Button onClick={handleSave}>Salva</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>{t("cancel")}</Button>
+          <Button onClick={handleSave}>{t("save")}</Button>
         </div>
       </DialogContent>
     </Dialog>

@@ -39,7 +39,7 @@ const BottomNavigation = ({
   const tabs = [
     ...(!isMasterAccount ? [{ id: 'diagnose', icon: Leaf, label: t("diagnose") }] : []),
     ...(showExpertTab ? [{ id: 'expert', icon: Stethoscope, label: t("dashboard") }] : []),
-    ...(!isMasterAccount ? [{ id: 'chat', icon: MessageCircle, label: 'Chat' }] : []),
+    ...(!isMasterAccount ? [{ id: 'chat', icon: MessageCircle, label: t("chat") }] : []),
     ...(!isMasterAccount ? [{ id: 'library', icon: BookOpen, label: t("library") }] : []),
     { id: 'shop', icon: ShoppingBag, label: t("shop") },
     { id: 'profile', icon: User, label: t("profile") }
