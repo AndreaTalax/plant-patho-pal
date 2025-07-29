@@ -35,6 +35,7 @@ export interface AnalysisDetails {
     plantName?: string;
     plantSpecies?: string;
     plantPart?: string;
+    family?: string;
     isHealthy?: boolean;
     isValidPlantImage?: boolean;
     primaryService?: string;

@@ -32,11 +32,13 @@ const PlantInfoCard: React.FC<PlantInfoCardProps> = ({
   analysisDetails,
   standardizedData 
 }) => {
-  // Utilizziamo sia plantName che plantSpecies per una migliore visualizzazione
+  // Utilizziamo i nuovi dati dalla diagnosi avanzata
   const plantName = analysisDetails?.multiServiceInsights?.plantName || 
                     standardizedData?.name ||
                     'Pianta sconosciuta';
   const plantSpecies = analysisDetails?.multiServiceInsights?.plantSpecies || plantName;
+  const scientificName = analysisDetails?.multiServiceInsights?.plantSpecies;
+  const family = analysisDetails?.multiServiceInsights?.family;
   
   // Check for Plant.id specific data
   const plantIdData = analysisDetails?.risultatiCompleti?.plantIdResult;
@@ -45,7 +47,17 @@ const PlantInfoCard: React.FC<PlantInfoCardProps> = ({
   return (
     <Card className="mb-4">
       <CardHeader className="pb-2">
-        <CardTitle className="text-lg">{plantName}</CardTitle>
+        <CardTitle className="text-lg font-bold text-green-800">{plantName}</CardTitle>
+        {scientificName && scientificName !== plantName && (
+          <div className="text-sm italic text-green-700 font-medium">
+            {scientificName}
+          </div>
+        )}
+        {family && (
+          <div className="text-sm text-muted-foreground">
+            Famiglia: {family}
+          </div>
+        )}
         {hasPlantIdData && plantIdData.commonNames && plantIdData.commonNames.length > 0 && (
           <div className="text-sm text-muted-foreground">
             Nomi comuni: {plantIdData.commonNames.slice(0, 3).join(", ")}

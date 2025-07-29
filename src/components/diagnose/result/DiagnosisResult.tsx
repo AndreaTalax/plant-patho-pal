@@ -409,12 +409,168 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
         </CardContent>
       </Card>
 
+      {/* Sezione Istruzioni di Cura Specifiche */}
+      {analysisData?.careInstructions && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              🌱 Istruzioni di Cura Specifiche
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {analysisData.careInstructions.watering && (
+                <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                  <h4 className="font-medium text-blue-800 mb-2">💧 Irrigazione</h4>
+                  <p className="text-sm text-blue-700">{analysisData.careInstructions.watering}</p>
+                </div>
+              )}
+              {analysisData.careInstructions.light && (
+                <div className="p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+                  <h4 className="font-medium text-yellow-800 mb-2">☀️ Luce</h4>
+                  <p className="text-sm text-yellow-700">{analysisData.careInstructions.light}</p>
+                </div>
+              )}
+              {analysisData.careInstructions.temperature && (
+                <div className="p-3 bg-purple-50 rounded-lg border border-purple-200">
+                  <h4 className="font-medium text-purple-800 mb-2">🌡️ Temperatura</h4>
+                  <p className="text-sm text-purple-700">{analysisData.careInstructions.temperature}</p>
+                </div>
+              )}
+              {analysisData.careInstructions.fertilization && (
+                <div className="p-3 bg-green-50 rounded-lg border border-green-200">
+                  <h4 className="font-medium text-green-800 mb-2">🌿 Fertilizzazione</h4>
+                  <p className="text-sm text-green-700">{analysisData.careInstructions.fertilization}</p>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Sezione Raccomandazioni Dettagliate */}
+      {(analysisData?.recommendations?.immediate?.length > 0 || analysisData?.recommendations?.longTerm?.length > 0) && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Lightbulb className="h-5 w-5 text-yellow-600" />
+              Raccomandazioni Dettagliate
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {analysisData.recommendations.immediate && analysisData.recommendations.immediate.length > 0 && (
+                <div>
+                  <h4 className="font-medium text-orange-800 mb-3 flex items-center gap-2">
+                    <Clock className="h-4 w-4" />
+                    Azioni Immediate
+                  </h4>
+                  <ul className="space-y-2">
+                    {analysisData.recommendations.immediate.map((rec: string, index: number) => (
+                      <li key={index} className="flex items-start gap-2">
+                        <span className="w-2 h-2 bg-orange-500 rounded-full mt-2 flex-shrink-0"></span>
+                        <span className="text-sm text-gray-700">{rec}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              
+              {analysisData.recommendations.longTerm && analysisData.recommendations.longTerm.length > 0 && (
+                <div>
+                  <h4 className="font-medium text-blue-800 mb-3 flex items-center gap-2">
+                    <Shield className="h-4 w-4" />
+                    Cura Lungo Termine
+                  </h4>
+                  <ul className="space-y-2">
+                    {analysisData.recommendations.longTerm.map((rec: string, index: number) => (
+                      <li key={index} className="flex items-start gap-2">
+                        <span className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></span>
+                        <span className="text-sm text-gray-700">{rec}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Sezione Problemi Specifici con Dettagli */}
+      {analysisData?.healthAnalysis?.issues && analysisData.healthAnalysis.issues.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-600" />
+              Analisi Problemi Specifici
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {analysisData.healthAnalysis.issues.map((issue: any, index: number) => (
+                <div key={index} className="border rounded-lg p-4 bg-gradient-to-r from-amber-50 to-red-50">
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="font-semibold text-amber-900">{issue.name}</h4>
+                    <div className="flex gap-2">
+                      <Badge variant="outline" className="text-xs">
+                        {issue.type}
+                      </Badge>
+                      <Badge 
+                        variant={issue.severity === 'high' ? 'destructive' : issue.severity === 'medium' ? 'secondary' : 'default'}
+                        className="text-xs"
+                      >
+                        {issue.severity === 'high' ? 'Alta' : issue.severity === 'medium' ? 'Media' : 'Bassa'}
+                      </Badge>
+                      <Badge variant="outline" className="text-xs">
+                        {Math.round((issue.confidence || 0) * 100)}%
+                      </Badge>
+                    </div>
+                  </div>
+                  
+                  {issue.description && (
+                    <p className="text-sm text-gray-700 mb-3">{issue.description}</p>
+                  )}
+                  
+                  {issue.symptoms && issue.symptoms.length > 0 && (
+                    <div className="mb-3">
+                      <h5 className="font-medium text-sm text-gray-800 mb-1">Sintomi:</h5>
+                      <div className="flex flex-wrap gap-1">
+                        {issue.symptoms.map((symptom: string, idx: number) => (
+                          <Badge key={idx} variant="outline" className="text-xs">
+                            {symptom}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {issue.treatment && issue.treatment.length > 0 && (
+                    <div>
+                      <h5 className="font-medium text-sm text-green-800 mb-2">Trattamenti Consigliati:</h5>
+                      <ul className="space-y-1">
+                        {issue.treatment.map((treatment: string, idx: number) => (
+                          <li key={idx} className="text-sm text-green-700 flex items-start gap-2">
+                            <span className="w-1.5 h-1.5 bg-green-600 rounded-full mt-2 flex-shrink-0"></span>
+                            {treatment}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Enhanced Sezione per analisi AI aggiuntiva */}
       {analysisData && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              🔬 Dettagli Analisi AI
+              🔬 Dettagli Tecnici Analisi
               {hasEppoData && (
                 <Badge variant="outline" className="text-blue-600">
                   Database EPPO
@@ -423,25 +579,29 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* Enhanced Raccomandazioni */}
-            {analysisData.recommendations && analysisData.recommendations.length > 0 && (
-              <div className="space-y-2">
-                <h4 className="font-medium flex items-center gap-2">
-                  <Lightbulb className="h-4 w-4 text-yellow-600" />
-                  Raccomandazioni Avanzate
-                </h4>
-                <ul className="space-y-1">
-                  {analysisData.recommendations.map((rec: string, index: number) => (
-                    <li key={index} className="flex items-start gap-2">
-                      <Shield className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                      <span className={`text-sm ${rec.includes('ATTENZIONE') || rec.includes('URGENTE') ? 'font-medium text-red-700' : ''}`}>
-                        {rec}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
+            {/* Informazioni tecniche */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+              <div className="p-3 bg-gray-50 rounded-lg">
+                <div className="font-medium text-gray-800 mb-1">Modello AI</div>
+                <div className="text-gray-600">GPT-4o Vision</div>
               </div>
-            )}
+              
+              {analysisData.analysisDetails?.imageQuality && (
+                <div className="p-3 bg-gray-50 rounded-lg">
+                  <div className="font-medium text-gray-800 mb-1">Qualità Immagine</div>
+                  <div className="text-gray-600">
+                    {Math.round((analysisData.analysisDetails.imageQuality || 0) * 100)}%
+                  </div>
+                </div>
+              )}
+              
+              <div className="p-3 bg-gray-50 rounded-lg">
+                <div className="font-medium text-gray-800 mb-1">Punteggio Salute</div>
+                <div className="text-gray-600">
+                  {Math.round((analysisData.healthAnalysis?.overallScore || 0) * 100)}%
+                </div>
+              </div>
+            </div>
           </CardContent>
         </Card>
       )}
