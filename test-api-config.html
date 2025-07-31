@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test API Configuration</title>
+</head>
+<body>
+    <h1>Testing API Configuration</h1>
+    <div id="results"></div>
+    
+    <script>
+        async function testAPIs() {
+            const results = document.getElementById('results');
+            
+            // Test check-api-status
+            try {
+                const response = await fetch('https://otdmqmpxukifoxjlgzmq.supabase.co/functions/v1/check-api-status', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im90ZG1xbXB4dWtpZm94amxnem1xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDY2NDQ5ODksImV4cCI6MjA2MjIyMDk4OX0.re4vu-banv0K-hBFNRYZGy5VucPkk141Pa--x-QiGr4'
+                    }
+                });
+                
+                const data = await response.json();
+                results.innerHTML += '<h2>API Status Check:</h2>';
+                results.innerHTML += '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+            } catch (error) {
+                results.innerHTML += '<h2>API Status Check Error:</h2>';
+                results.innerHTML += '<p>' + error.message + '</p>';
+            }
+            
+            // Test test-secrets  
+            try {
+                const response = await fetch('https://otdmqmpxukifoxjlgzmq.supabase.co/functions/v1/test-secrets', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im90ZG1xbXB4dWtpZm94amxnem1xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDY2NDQ5ODksImV4cCI6MjA2MjIyMDk4OX0.re4vu-banv0K-hBFNRYZGy5VucPkk141Pa--x-QiGr4'
+                    }
+                });
+                
+                const data = await response.json();
+                results.innerHTML += '<h2>Test Secrets:</h2>';
+                results.innerHTML += '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+            } catch (error) {
+                results.innerHTML += '<h2>Test Secrets Error:</h2>';
+                results.innerHTML += '<p>' + error.message + '</p>';
+            }
+        }
+        
+        // Auto-run on load
+        window.onload = testAPIs;
+    </script>
+</body>
+</html>
