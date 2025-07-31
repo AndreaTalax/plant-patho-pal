@@ -46,10 +46,19 @@ verify_jwt = false
 [functions.delete-conversation]
 verify_jwt = false
 
+[functions.delete-consultation]
+verify_jwt = false
+
 [functions.get-conversation]
 verify_jwt = false
 
 [functions.get-conversations]
+verify_jwt = false
+
+[functions.get-user-orders]
+verify_jwt = false
+
+[functions.verify-payment]
 verify_jwt = false
 
 [functions.send-message]

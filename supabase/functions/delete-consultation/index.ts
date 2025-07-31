@@ -1,98 +1,50 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
 
-const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
-
-// Marco Nigro UUID fisso
-const MARCO_NIGRO_ID = "07c7fe19-33c3-4782-b9a0-4e87c8aa7044";
-
-const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
-    return new Response(null, { 
-      headers: corsHeaders,
-      status: 200 
-    });
-  }
-
-  if (req.method !== "POST") {
-    return new Response(JSON.stringify({ error: "Method not allowed" }), {
-      status: 405,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { consultationId } = await req.json();
+    const supabaseClient = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_ANON_KEY") ?? ""
+    );
 
-    // Verifica autenticazione
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: "Authorization header required" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
+    const authHeader = req.headers.get("Authorization")!;
     const token = authHeader.replace("Bearer ", "");
-    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
-    
-    if (authError || !user) {
-      return new Response(JSON.stringify({ error: "Invalid authentication" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    const { data } = await supabaseClient.auth.getUser(token);
+    const user = data.user;
+    if (!user) throw new Error("User not authenticated");
 
-    // Verifica che l'utente sia Marco Nigro (admin)
-    if (user.id !== MARCO_NIGRO_ID) {
-      return new Response(JSON.stringify({ error: "Unauthorized: Admin access required" }), {
-        status: 403,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    const { id } = await req.json();
+    if (!id) throw new Error("Consultation ID is required");
 
-    if (!consultationId) {
-      return new Response(JSON.stringify({ error: "consultationId is required" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    console.log(`🗑️ Deleting consultation ${id} for user ${user.id}`);
 
-    // Elimina la consultazione
-    const { error: consultationError } = await supabaseAdmin
-      .from("expert_consultations")
+    // Delete the consultation (RLS will ensure user can only delete their own)
+    const { error } = await supabaseClient
+      .from("consultations")
       .delete()
-      .eq("id", consultationId);
+      .eq("id", id)
+      .eq("user_id", user.id);
 
-    if (consultationError) {
-      console.error("Error deleting consultation:", consultationError);
-      return new Response(JSON.stringify({ error: "Failed to delete consultation" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    if (error) {
+      console.error("❌ Error deleting consultation:", error);
+      throw error;
     }
 
-    console.log(`Consultation ${consultationId} deleted successfully`);
+    console.log("✅ Consultation deleted successfully");
 
-    return new Response(JSON.stringify({ 
-      success: true,
-      message: "Consultation deleted successfully"
-    }), {
+    return new Response(JSON.stringify({ success: true }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,
     });
-
   } catch (error) {
-    console.error("Error in delete-consultation:", error);
-    return new Response(JSON.stringify({ 
-      error: error.message || "Internal server error" 
-    }), {
+    console.error("❌ Delete consultation error:", error);
+    return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 500,
     });
