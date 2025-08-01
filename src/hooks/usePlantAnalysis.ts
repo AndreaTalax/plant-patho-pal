@@ -1,10 +1,13 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { FirebaseDiagnosisService } from '@/services/firebaseDiagnosisService';
+import { useAuth } from '@/context/AuthContext';
 import type { PlantInfo } from '@/components/diagnose/types';
 import type { AnalysisDetails, DiagnosedDisease } from '@/components/diagnose/types';
 
 export const usePlantAnalysis = () => {
+  const { user } = useAuth();
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [diagnosisResult, setDiagnosisResult] = useState<string | null>(null);
   const [diagnosedDisease, setDiagnosedDisease] = useState<DiagnosedDisease | null>(null);
@@ -19,9 +22,9 @@ export const usePlantAnalysis = () => {
     setAnalysisDetails(null);
 
     try {
-      console.log('🔬 Avvio analisi avanzata con validazione migliorata...');
+      console.log('🔬 Avvio diagnosi unificata AI avanzata...');
       
-      // Prima controlla se le API sono configurate
+      // Controlla se le API sono configurate
       setAnalysisProgress(5);
       const { data: apiStatus } = await supabase.functions.invoke('check-api-status');
       
@@ -29,20 +32,26 @@ export const usePlantAnalysis = () => {
         throw new Error('API_NOT_CONFIGURED: Nessuna API di diagnosi configurata. Configura almeno OpenAI, Plant.ID o EPPO per abilitare la diagnosi AI.');
       }
       
-      // Usa il nuovo sistema di diagnosi avanzata con GPT-4o
       setAnalysisProgress(10);
-      console.log('📋 Conversione immagine per analisi avanzata...');
+      console.log('📋 Preparazione immagine per diagnosi unificata...');
       
-      // Converti l'immagine in base64
+      // Converti l'immagine in base64 con formato corretto
       const arrayBuffer = await imageFile.arrayBuffer();
-      const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+      const uint8Array = new Uint8Array(arrayBuffer);
+      let binary = '';
+      for (let i = 0; i < uint8Array.byteLength; i++) {
+        binary += String.fromCharCode(uint8Array[i]);
+      }
+      const base64 = btoa(binary);
+      const imageBase64 = `data:${imageFile.type};base64,${base64}`;
       
       setAnalysisProgress(20);
-      console.log('🔬 Chiamando diagnosi avanzata con AI...');
+      console.log('🔬 Chiamando diagnosi unificata con AI avanzata...');
       
-      const advancedResponse = await supabase.functions.invoke('advanced-plant-diagnosis', {
+      // Usa la nuova edge function unificata
+      const diagnosisResponse = await supabase.functions.invoke('unified-plant-diagnosis', {
         body: { 
-          imageBase64: base64, 
+          imageBase64,
           plantInfo: {
             symptoms: plantInfo?.symptoms,
             plantName: plantInfo?.name,
@@ -53,16 +62,22 @@ export const usePlantAnalysis = () => {
         }
       });
 
-      if (advancedResponse.error) {
-        throw new Error(advancedResponse.error.message);
+      console.log('📊 Risposta diagnosi:', diagnosisResponse);
+
+      if (diagnosisResponse.error) {
+        throw new Error(diagnosisResponse.error.message || 'Errore nella chiamata alla diagnosi');
       }
 
-      if (!advancedResponse.data?.success) {
-        throw new Error(advancedResponse.data?.error || 'Errore nella diagnosi avanzata');
+      if (!diagnosisResponse.data?.success) {
+        const errorMsg = diagnosisResponse.data?.error || 'Errore nella diagnosi unificata';
+        if (errorMsg.includes('non valida') || errorMsg.includes('not valid')) {
+          throw new Error('INVALID_IMAGE: ' + errorMsg);
+        }
+        throw new Error('API_ERROR: ' + errorMsg);
       }
 
-      const { diagnosis } = advancedResponse.data;
-      console.log('✅ Diagnosi avanzata completata:', diagnosis);
+      const { diagnosis, validation } = diagnosisResponse.data;
+      console.log('✅ Diagnosi unificata completata:', diagnosis);
       
       // Estrai dati dalla nuova struttura di diagnosi avanzata
       const plantName = diagnosis.plantIdentification.name;
@@ -195,10 +210,36 @@ export const usePlantAnalysis = () => {
       };
       
       setAnalysisDetails(detailsObj);
+      setAnalysisProgress(95);
+      
+      // Salva la diagnosi su Firebase per backup e analisi future
+      try {
+        const firebaseId = await FirebaseDiagnosisService.saveDiagnosisResult(
+          diagnosis, 
+          imageFile, 
+          user?.id
+        );
+        console.log('💾 Diagnosi salvata su Firebase:', firebaseId);
+      } catch (error) {
+        console.warn('⚠️ Errore salvataggio Firebase (non critico):', error);
+      }
+      
       setAnalysisProgress(100);
       
       toast.success(`✅ Analisi completata: ${plantName} ${isHealthy ? '(Sana)' : '(Problemi rilevati)'}`);
       
+      // Suggerisci diagnosi simili se disponibili
+      try {
+        const similarDiagnoses = await FirebaseDiagnosisService.findSimilarDiagnoses(plantName, 3);
+        if (similarDiagnoses.length > 0) {
+          console.log('🎯 Trovate diagnosi simili:', similarDiagnoses.length);
+          toast.info(`Trovate ${similarDiagnoses.length} diagnosi simili nel database`, {
+            description: 'Questo migliora l\'accuratezza della diagnosi'
+          });
+        }
+      } catch (error) {
+        console.warn('⚠️ Errore ricerca diagnosi simili:', error);
+      }
     } catch (error: any) {
       console.error('❌ Errore durante l\'analisi:', error);
       

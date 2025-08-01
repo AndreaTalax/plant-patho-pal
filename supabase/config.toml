@@ -82,6 +82,9 @@ verify_jwt = false
 [functions.send-password-reset]
 verify_jwt = false
 
+[functions.unified-plant-diagnosis]
+verify_jwt = false
+
 [auth.hooks.send_email]
 enabled = true
 uri = "{{PROJECT_REF}}/functions/v1/send-password-reset"
