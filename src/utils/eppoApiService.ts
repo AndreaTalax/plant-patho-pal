@@ -156,19 +156,70 @@ export const eppoApiService = {
   },
 
   /**
+   * Enhanced search for plants with local and EPPO database combination
+   * @param plantName The plant name to search for
+   * @param scientificName Optional scientific name for more accurate search
+   * @returns Promise with enhanced search results
+   */
+  async searchEnhancedPlants(plantName: string, scientificName?: string): Promise<{
+    localMatch?: any;
+    eppoMatches: EppoPlant[];
+    suggestions: EppoPlant[];
+  }> {
+    try {
+      const searchTerms = [plantName];
+      if (scientificName && scientificName !== plantName) {
+        searchTerms.push(scientificName);
+      }
+
+      // Search EPPO for all terms
+      const allResults = await Promise.all(
+        searchTerms.map(term => this.searchPlants(term))
+      );
+
+      const eppoMatches = allResults.flat();
+      
+      // Remove duplicates based on eppoCode
+      const uniqueMatches = eppoMatches.filter((match, index, self) => 
+        index === self.findIndex(m => m.eppoCode === match.eppoCode)
+      );
+
+      return {
+        eppoMatches: uniqueMatches.slice(0, 5), // Top 5 matches
+        suggestions: uniqueMatches.slice(5, 10) // Additional suggestions
+      };
+    } catch (err) {
+      console.warn('Enhanced EPPO plant search error:', err);
+      return { eppoMatches: [], suggestions: [] };
+    }
+  },
+
+  /**
    * Search for pathogens (diseases/pests) associated with a plant
    * @param plantName The plant name to search for
+   * @param scientificName Optional scientific name for better accuracy
    * @returns Promise with pathogen results
    */
-  async searchPathogens(plantName: string): Promise<EppoDiseases[]> {
+  async searchPathogens(plantName: string, scientificName?: string): Promise<EppoDiseases[]> {
     try {
-      // Cerca sia malattie che parassiti
-      const [diseases, pests] = await Promise.all([
-        this.searchDiseases(plantName),
-        this.searchPests(plantName)
+      const searchTerms = [plantName];
+      if (scientificName && scientificName !== plantName) {
+        searchTerms.push(scientificName);
+      }
+
+      // Search both diseases and pests for all terms
+      const searchPromises = searchTerms.flatMap(term => [
+        this.searchDiseases(term),
+        this.searchPests(term)
       ]);
 
-      // Converte i parassiti in formato malattie
+      const results = await Promise.all(searchPromises);
+      const [diseases, pests] = [
+        results.filter((_, i) => i % 2 === 0).flat(),
+        results.filter((_, i) => i % 2 === 1).flat()
+      ];
+
+      // Convert pests to disease format for unified handling
       const pestsAsDiseases: EppoDiseases[] = pests.map(pest => ({
         eppoCode: pest.eppoCode,
         preferredName: pest.preferredName,
@@ -179,7 +230,13 @@ export const eppoApiService = {
         regulatoryStatus: pest.regulatoryStatus || []
       }));
 
-      return [...diseases, ...pestsAsDiseases];
+      // Combine and remove duplicates
+      const allPathogens = [...diseases, ...pestsAsDiseases];
+      const uniquePathogens = allPathogens.filter((pathogen, index, self) => 
+        index === self.findIndex(p => p.eppoCode === pathogen.eppoCode)
+      );
+
+      return uniquePathogens;
     } catch (err) {
       console.warn('EPPO API pathogen connection error:', err);
       return [];

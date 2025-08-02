@@ -10,7 +10,7 @@ const corsHeaders = {
 const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
 const plantIdApiKey = Deno.env.get('PLANT_ID_API_KEY');
 const eppoAuthToken = Deno.env.get('EPPO_AUTH_TOKEN');
-const plantNetKey = Deno.env.get('PLANT_NET_KEY');
+const plantNetKey = Deno.env.get('PLANT_NET_KEY') || Deno.env.get('PLANTNET');
 const huggingFaceToken = Deno.env.get('HUGGINGFACE_ACCESS_TOKEN');
 
 function logWithTimestamp(level: 'INFO' | 'WARN' | 'ERROR', message: string, data?: any) {
@@ -299,20 +299,107 @@ async function analyzeWithPlantId(imageBase64: string): Promise<any> {
   }
 }
 
-// EPPO database search
-async function searchEppoDatabase(plantName: string): Promise<any> {
+// PlantNet analysis for plant identification
+async function analyzeWithPlantNet(imageBase64: string): Promise<any> {
+  if (!plantNetKey) {
+    logWithTimestamp('WARN', 'PlantNet API key not available');
+    return null;
+  }
+
+  try {
+    logWithTimestamp('INFO', 'Starting PlantNet analysis');
+    
+    // Convert base64 to blob for PlantNet
+    const base64Data = imageBase64.includes(',') ? imageBase64.split(',')[1] : imageBase64;
+    
+    // Decode base64 into Uint8Array
+    const binaryString = atob(base64Data);
+    const bytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
+    }
+    
+    // Create blob from byte array
+    const blob = new Blob([bytes], { type: 'image/jpeg' });
+
+    // Prepare FormData for PlantNet
+    const formData = new FormData();
+    formData.append('images', blob, 'plant.jpg');
+    formData.append('organs', 'leaf');
+    formData.append('organs', 'flower');
+    formData.append('organs', 'fruit');
+    formData.append('organs', 'bark');
+    formData.append('include-related-images', 'true');
+
+    // Call PlantNet API
+    const response = await fetch(
+      `https://my-api.plantnet.org/v2/identify/weurope?api-key=${plantNetKey}`,
+      {
+        method: 'POST',
+        body: formData,
+        signal: AbortSignal.timeout(15000),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`PlantNet API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    logWithTimestamp('INFO', 'PlantNet analysis successful');
+
+    // Process PlantNet results
+    if (!data.results || data.results.length === 0) {
+      return null;
+    }
+
+    const bestResult = data.results[0];
+    const score = bestResult.score || 0;
+    
+    return {
+      isPlant: score > 0.1,
+      confidence: Math.min(score, 0.95),
+      score,
+      species: bestResult.species?.scientificNameWithoutAuthor,
+      scientificName: bestResult.species?.scientificNameWithoutAuthor,
+      commonNames: bestResult.species?.commonNames || [],
+      family: bestResult.species?.family?.scientificNameWithoutAuthor,
+      genus: bestResult.species?.genus?.scientificNameWithoutAuthor,
+      images: bestResult.images?.map((img: any) => img.url?.m || img.url?.s || img.url?.o) || []
+    };
+
+  } catch (error) {
+    logWithTimestamp('ERROR', 'PlantNet analysis failed', { error: error.message });
+    return null;
+  }
+}
+
+// Enhanced EPPO database search with comprehensive lookup
+async function searchEppoDatabase(plantName: string, scientificName?: string): Promise<any> {
   if (!eppoAuthToken || !plantName) {
     logWithTimestamp('WARN', 'EPPO API key not available or no plant name');
     return null;
   }
 
   try {
-    logWithTimestamp('INFO', 'Starting EPPO database search', { plantName });
+    logWithTimestamp('INFO', 'Starting enhanced EPPO database search', { plantName, scientificName });
     
-    const searchQueries = [
-      { type: 'pests', url: `https://data.eppo.int/api/rest/1.0/tools/search?kw=${encodeURIComponent(plantName)}&searchfor=pests&authtoken=${eppoAuthToken}` },
-      { type: 'diseases', url: `https://data.eppo.int/api/rest/1.0/tools/search?kw=${encodeURIComponent(plantName)}&searchfor=diseases&authtoken=${eppoAuthToken}` }
-    ];
+    // Create multiple search terms for better coverage
+    const searchTerms = [plantName];
+    if (scientificName && scientificName !== plantName) {
+      searchTerms.push(scientificName);
+    }
+
+    // Search for plants, pests, and diseases
+    const searchQueries = [];
+    
+    for (const term of searchTerms) {
+      searchQueries.push(
+        { type: 'plants', term, url: `https://data.eppo.int/api/rest/1.0/tools/search?kw=${encodeURIComponent(term)}&searchfor=plants&authtoken=${eppoAuthToken}` },
+        { type: 'pests', term, url: `https://data.eppo.int/api/rest/1.0/tools/search?kw=${encodeURIComponent(term)}&searchfor=pests&authtoken=${eppoAuthToken}` },
+        { type: 'diseases', term, url: `https://data.eppo.int/api/rest/1.0/tools/search?kw=${encodeURIComponent(term)}&searchfor=diseases&authtoken=${eppoAuthToken}` }
+      );
+    }
 
     const results = await Promise.allSettled(
       searchQueries.map(async query => {
@@ -327,31 +414,47 @@ async function searchEppoDatabase(plantName: string): Promise<any> {
           }
           
           const data = await response.json();
-          return { type: query.type, data: Array.isArray(data) ? data : [] };
+          return { type: query.type, term: query.term, data: Array.isArray(data) ? data : [] };
         } catch (error) {
-          logWithTimestamp('ERROR', `EPPO ${query.type} search failed`, { error: error.message });
-          return { type: query.type, data: [] };
+          logWithTimestamp('ERROR', `EPPO ${query.type} search failed for ${query.term}`, { error: error.message });
+          return { type: query.type, term: query.term, data: [] };
         }
       })
     );
 
     const eppoResult = {
+      plants: [] as any[],
       pests: [] as any[],
-      diseases: [] as any[]
+      diseases: [] as any[],
+      searchTerms: searchTerms
     };
 
+    // Aggregate results and remove duplicates
+    const seenCodes = new Set();
+    
     results.forEach(result => {
       if (result.status === 'fulfilled') {
         const { type, data } = result.value;
-        eppoResult[type as keyof typeof eppoResult] = data;
+        data.forEach((item: any) => {
+          const code = item.codeid || item.eppocode;
+          if (code && !seenCodes.has(code)) {
+            seenCodes.add(code);
+            eppoResult[type as keyof typeof eppoResult].push(item);
+          }
+        });
       }
     });
 
-    logWithTimestamp('INFO', 'EPPO search successful');
+    logWithTimestamp('INFO', 'Enhanced EPPO search successful', {
+      plants: eppoResult.plants.length,
+      pests: eppoResult.pests.length,
+      diseases: eppoResult.diseases.length
+    });
+    
     return eppoResult;
 
   } catch (error) {
-    logWithTimestamp('ERROR', 'EPPO search failed', { error: error.message });
+    logWithTimestamp('ERROR', 'Enhanced EPPO search failed', { error: error.message });
     return null;
   }
 }
@@ -405,31 +508,77 @@ serve(async (req) => {
       });
     }
 
-    // Step 2: Comprehensive diagnosis with OpenAI
-    const openaiDiagnosis = await diagnoseWithOpenAI(imageBase64, plantInfo);
+    // Step 2: Run all AI services in parallel for maximum efficiency
+    const [openaiDiagnosis, plantIdResult, plantNetResult] = await Promise.allSettled([
+      diagnoseWithOpenAI(imageBase64, plantInfo),
+      analyzeWithPlantId(imageBase64),
+      analyzeWithPlantNet(imageBase64)
+    ]);
 
-    // Step 3: Cross-validate with Plant.ID (parallel)
-    const plantIdResult = await analyzeWithPlantId(imageBase64);
+    // Extract results from settled promises
+    const aiDiagnosis = openaiDiagnosis.status === 'fulfilled' ? openaiDiagnosis.value : null;
+    const plantIdData = plantIdResult.status === 'fulfilled' ? plantIdResult.value : null;
+    const plantNetData = plantNetResult.status === 'fulfilled' ? plantNetResult.value : null;
 
-    // Step 4: Search EPPO database if plant identified
-    let eppoResult = null;
-    if (openaiDiagnosis.plantIdentification?.name) {
-      eppoResult = await searchEppoDatabase(openaiDiagnosis.plantIdentification.name);
+    if (!aiDiagnosis) {
+      throw new Error('Primary diagnosis failed');
     }
 
-    // Step 5: Merge and enhance results
+    // Step 3: Enhanced plant identification using all sources
+    let bestPlantName = aiDiagnosis.plantIdentification?.name;
+    let bestScientificName = aiDiagnosis.plantIdentification?.scientificName;
+
+    // Use PlantNet data for better identification if available
+    if (plantNetData?.scientificName && plantNetData.confidence > 0.3) {
+      bestScientificName = plantNetData.scientificName;
+      if (plantNetData.commonNames?.length > 0) {
+        bestPlantName = plantNetData.commonNames[0];
+      }
+    }
+
+    // Step 4: Enhanced EPPO database search with multiple identifiers
+    let eppoResult = null;
+    if (bestPlantName) {
+      eppoResult = await searchEppoDatabase(bestPlantName, bestScientificName);
+    }
+
+    // Step 5: Merge and enhance results with all AI sources
     const enhancedDiagnosis = {
-      ...openaiDiagnosis,
+      ...aiDiagnosis,
+      plantIdentification: {
+        ...aiDiagnosis.plantIdentification,
+        // Override with PlantNet data if more reliable
+        name: bestPlantName,
+        scientificName: bestScientificName,
+        // Add PlantNet specific data
+        plantNetMatch: plantNetData ? {
+          species: plantNetData.species,
+          family: plantNetData.family,
+          genus: plantNetData.genus,
+          confidence: plantNetData.confidence,
+          commonNames: plantNetData.commonNames
+        } : null
+      },
       crossValidation: {
-        plantId: plantIdResult,
+        plantId: plantIdData,
+        plantNet: plantNetData,
         eppo: eppoResult
       },
       analysisDetails: {
-        source: 'Enhanced AI Analysis',
+        source: 'Multi-AI Enhanced Analysis',
         timestamp: new Date().toISOString(),
         processingTime: Date.now() - requestStartTime,
         imageQuality: validation.confidence / 100,
-        confidence: openaiDiagnosis.plantIdentification?.confidence || 75
+        confidence: Math.max(
+          aiDiagnosis.plantIdentification?.confidence || 0,
+          plantNetData?.confidence * 100 || 0
+        ),
+        aiServicesUsed: {
+          openai: !!aiDiagnosis,
+          plantId: !!plantIdData,
+          plantNet: !!plantNetData,
+          eppo: !!eppoResult
+        }
       }
     };
 
@@ -465,8 +614,8 @@ serve(async (req) => {
     }
 
     // Add Plant.ID cross-validation data
-    if (plantIdResult?.health?.health_assessment?.diseases) {
-      const plantIdDiseases = plantIdResult.health.health_assessment.diseases
+    if (plantIdData?.health?.health_assessment?.diseases) {
+      const plantIdDiseases = plantIdData.health.health_assessment.diseases
         .filter((disease: any) => disease.probability > 0.2)
         .map((disease: any) => ({
           name: disease.name,

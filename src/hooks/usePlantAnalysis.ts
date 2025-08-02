@@ -28,8 +28,8 @@ export const usePlantAnalysis = () => {
       setAnalysisProgress(5);
       const { data: apiStatus } = await supabase.functions.invoke('check-api-status');
       
-      if (!apiStatus || (!apiStatus.openai && !apiStatus.plantid && !apiStatus.eppo)) {
-        throw new Error('API_NOT_CONFIGURED: Nessuna API di diagnosi configurata. Configura almeno OpenAI, Plant.ID o EPPO per abilitare la diagnosi AI.');
+      if (!apiStatus || (!apiStatus.openai && !apiStatus.plantid && !apiStatus.eppo && !apiStatus.plantnet)) {
+        throw new Error('API_NOT_CONFIGURED: Nessuna API di diagnosi configurata. Configura almeno una tra OpenAI, Plant.ID, PlantNet o EPPO per abilitare la diagnosi AI.');
       }
       
       setAnalysisProgress(10);
@@ -153,7 +153,40 @@ export const usePlantAnalysis = () => {
         }
       }
       
-      diagnosisText += `\n\n**🔬 Fonte:** Analisi AI avanzata con GPT-4o Vision`;
+      // Aggiungi informazioni dalle fonti aggiuntive
+      let sourceInfo = `\n\n**🔬 Fonti utilizzate:**`;
+      sourceInfo += `\n• OpenAI GPT-4o Vision (Diagnosi principale)`;
+      
+      // PlantNet info
+      if (diagnosis.crossValidation?.plantNet) {
+        const plantNet = diagnosis.crossValidation.plantNet;
+        sourceInfo += `\n• PlantNet (Identificazione: ${plantNet.confidence ? Math.round(plantNet.confidence * 100) : 'N/A'}%)`;
+        if (plantNet.species) {
+          sourceInfo += ` - ${plantNet.species}`;
+        }
+      }
+      
+      // Plant.ID info
+      if (diagnosis.crossValidation?.plantId) {
+        sourceInfo += `\n• Plant.ID (Validazione incrociata)`;
+      }
+      
+      // EPPO Database info
+      if (diagnosis.crossValidation?.eppo) {
+        const eppo = diagnosis.crossValidation.eppo;
+        const totalResults = (eppo.plants?.length || 0) + (eppo.diseases?.length || 0) + (eppo.pests?.length || 0);
+        if (totalResults > 0) {
+          sourceInfo += `\n• Database EPPO (${totalResults} risultati fitosanitari)`;
+          if (eppo.diseases?.length > 0) {
+            sourceInfo += `\n  - ${eppo.diseases.length} malattie identificate`;
+          }
+          if (eppo.pests?.length > 0) {
+            sourceInfo += `\n  - ${eppo.pests.length} parassiti identificati`;
+          }
+        }
+      }
+      
+      diagnosisText += sourceInfo;
       
       setDiagnosisResult(diagnosisText);
       
@@ -199,14 +232,28 @@ export const usePlantAnalysis = () => {
           plantSpecies: scientificName,
           isHealthy: isHealthy,
           isValidPlantImage: true,
-          primaryService: diagnosis.analysisDetails?.source || 'Enhanced Analysis',
+          primaryService: 'Multi-AI Enhanced Analysis',
           agreementScore: confidence / 100,
-          dataSource: diagnosis.analysisDetails?.source || 'Enhanced AI Analysis'
+          dataSource: 'OpenAI + PlantNet + Plant.ID + EPPO Database',
+          // Add EPPO data insights using existing properties
+          eppoDiseasesFound: diagnosis.crossValidation?.eppo ? 
+            (diagnosis.crossValidation.eppo.diseases?.length || 0) + 
+            (diagnosis.crossValidation.eppo.pests?.length || 0) : 0
         },
         identifiedFeatures: analysisFeatures,
-        analysisTechnology: 'Enhanced AI Analysis with Advanced Validation',
+        analysisTechnology: 'Multi-AI Enhanced Analysis with PlantNet and EPPO Database',
         originalConfidence: confidence,
-        enhancedConfidence: confidence
+        enhancedConfidence: confidence,
+        // Add comprehensive analysis data using existing EPPO structure
+        eppoData: diagnosis.crossValidation?.eppo ? {
+          plantMatch: diagnosis.crossValidation.eppo.plants?.[0],
+          diseaseMatches: diagnosis.crossValidation.eppo.diseases || [],
+          recommendations: {
+            diseases: diagnosis.crossValidation.eppo.diseases || [],
+            pests: diagnosis.crossValidation.eppo.pests || [],
+            careAdvice: recommendations
+          }
+        } : undefined
       };
       
       setAnalysisDetails(detailsObj);
