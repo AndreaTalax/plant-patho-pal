@@ -190,29 +190,36 @@ export const usePlantAnalysis = () => {
       
       setDiagnosisResult(diagnosisText);
       
-      // Crea l'oggetto disease per compatibilità se ci sono problemi
+      // SEMPRE crea l'oggetto diagnosedDisease per la visualizzazione
+      let primaryIssue = null;
       if (!isHealthy && issues.length > 0) {
-        const primaryIssue = issues[0];
-        const diagnosedIssue: DiagnosedDisease = {
-          id: crypto.randomUUID(),
-          name: primaryIssue.name,
-          description: primaryIssue.description || 'Nessuna descrizione disponibile',
-          causes: 'Determinato attraverso analisi AI avanzata',
-          symptoms: primaryIssue.symptoms || [],
-          treatments: primaryIssue.treatment || recommendations,
-          confidence: Math.round(primaryIssue.confidence * 100),
-          healthy: false,
-          products: [],
-          disclaimer: 'Questa è una diagnosi AI avanzata con GPT-4o Vision. Consulta un esperto per conferma.',
-          recommendExpertConsultation: confidence < 80,
-          resources: ['Analisi AI Avanzata'],
-          label: primaryIssue.name,
-          disease: {
-            name: primaryIssue.name
-          }
-        };
-        setDiagnosedDisease(diagnosedIssue);
+        primaryIssue = issues[0];
       }
+      
+      const diagnosedIssue: any = {
+        id: crypto.randomUUID(),
+        name: primaryIssue ? primaryIssue.name : 'Analisi completata',
+        description: primaryIssue ? (primaryIssue.description || 'Problemi rilevati') : 'Pianta analizzata con successo',
+        causes: 'Determinato attraverso analisi AI avanzata',
+        symptoms: primaryIssue ? (primaryIssue.symptoms || []) : [],
+        treatments: primaryIssue ? (primaryIssue.treatment || recommendations) : recommendations,
+        confidence: Math.round(confidence),
+        healthy: isHealthy,
+        products: [],
+        disclaimer: 'Questa è una diagnosi AI avanzata con GPT-4o Vision. Consulta un esperto per conferma.',
+        recommendExpertConsultation: confidence < 80,
+        resources: ['Analisi AI Avanzata'],
+        label: primaryIssue ? primaryIssue.name : plantName,
+        disease: {
+          name: primaryIssue ? primaryIssue.name : 'Nessun problema rilevato'
+        },
+        // Aggiungi i dati necessari per la visualizzazione nel frontend
+        plantName: plantName,
+        scientificName: scientificName,
+        isHealthy: isHealthy,
+        diseases: issues || []
+      };
+      setDiagnosedDisease(diagnosedIssue);
       
       // Crea i dettagli dell'analisi
       const analysisFeatures = [
