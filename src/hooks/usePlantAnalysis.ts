@@ -83,20 +83,24 @@ export const usePlantAnalysis = () => {
       }
 
       const { diagnosis, validation } = diagnosisResponse.data;
-      console.log('✅ Diagnosi unificata completata:', diagnosis);
+
+      // Pulisci i dati corrotti da MaxDepthReached
+      const cleanDiagnosis = cleanMaxDepthData(diagnosis);
       
-      // Estrai dati dalla nuova struttura di diagnosi avanzata
-      const plantName = diagnosis.plantIdentification.name;
-      const scientificName = diagnosis.plantIdentification.scientificName;
-      const family = diagnosis.plantIdentification.family;
-      const isHealthy = diagnosis.healthAnalysis.isHealthy;
-      const issues = diagnosis.healthAnalysis.issues || [];
+      console.log('✅ Diagnosi unificata completata:', cleanDiagnosis);
+      
+      // Estrai dati dalla struttura di diagnosi pulita
+      const plantName = cleanDiagnosis?.plantIdentification?.name || 'Pianta non identificata';
+      const scientificName = cleanDiagnosis?.plantIdentification?.scientificName || '';
+      const family = cleanDiagnosis?.plantIdentification?.family || '';
+      const isHealthy = cleanDiagnosis?.healthAnalysis?.isHealthy ?? true;
+      const issues = cleanDiagnosis?.healthAnalysis?.issues?.filter(issue => issue && typeof issue === 'object') || [];
       const recommendations = [
-        ...diagnosis.recommendations.immediate,
-        ...diagnosis.recommendations.longTerm
+        ...(cleanDiagnosis?.recommendations?.immediate || []),
+        ...(cleanDiagnosis?.recommendations?.longTerm || [])
       ];
-      const confidence = Math.round(diagnosis.plantIdentification.confidence * 100);
-      const healthScore = Math.round(diagnosis.healthAnalysis.overallScore * 100);
+      const confidence = Math.round((cleanDiagnosis?.plantIdentification?.confidence || 0.7) * 100);
+      const healthScore = Math.round((cleanDiagnosis?.healthAnalysis?.overallScore || 0.8) * 100);
       
       setAnalysisProgress(75);
       
@@ -329,6 +333,26 @@ export const usePlantAnalysis = () => {
     } finally {
       setIsAnalyzing(false);
     }
+  };
+
+  // Funzione per pulire i dati corrotti da MaxDepthReached
+  const cleanMaxDepthData = (obj: any): any => {
+    if (!obj || typeof obj !== 'object') return obj;
+    
+    if (Array.isArray(obj)) {
+      return obj.map(cleanMaxDepthData);
+    }
+    
+    if (obj._type === 'MaxDepthReached') {
+      return null; // o un valore di default appropriato
+    }
+    
+    const cleaned: any = {};
+    for (const [key, value] of Object.entries(obj)) {
+      cleaned[key] = cleanMaxDepthData(value);
+    }
+    
+    return cleaned;
   };
 
   return {
