@@ -68,12 +68,18 @@ export const usePlantAnalysis = () => {
         throw new Error(diagnosisResponse.error.message || 'Errore nella chiamata alla diagnosi');
       }
 
-      if (!diagnosisResponse.data?.success) {
+      // Anche se la diagnosi ha avvertimenti, procedi comunque se c'è un risultato
+      if (!diagnosisResponse.data?.success && !diagnosisResponse.data?.diagnosis) {
         const errorMsg = diagnosisResponse.data?.error || 'Errore nella diagnosi unificata';
         if (errorMsg.includes('non valida') || errorMsg.includes('not valid')) {
           throw new Error('INVALID_IMAGE: ' + errorMsg);
         }
         throw new Error('API_ERROR: ' + errorMsg);
+      }
+      
+      // Se la diagnosi ha successo parziale (con avvertimenti), procedi comunque
+      if (!diagnosisResponse.data?.success && diagnosisResponse.data?.diagnosis) {
+        console.log('⚠️ Diagnosi con avvertimenti:', diagnosisResponse.data.error);
       }
 
       const { diagnosis, validation } = diagnosisResponse.data;
