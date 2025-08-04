@@ -276,17 +276,8 @@ export const usePlantAnalysis = () => {
       setAnalysisDetails(detailsObj);
       setAnalysisProgress(95);
       
-      // Salva la diagnosi su Firebase per backup e analisi future
-      try {
-        const firebaseId = await FirebaseDiagnosisService.saveDiagnosisResult(
-          diagnosis, 
-          imageFile, 
-          user?.id
-        );
-        console.log('💾 Diagnosi salvata su Firebase:', firebaseId);
-      } catch (error) {
-        console.warn('⚠️ Errore salvataggio Firebase (non critico):', error);
-      }
+      // Nota: Salvataggio Firebase temporaneamente disabilitato per evitare errori CORS
+      console.log('ℹ️ Salvataggio Firebase disabilitato temporaneamente');
       
       setAnalysisProgress(100);
       
