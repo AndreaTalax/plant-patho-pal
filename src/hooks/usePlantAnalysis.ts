@@ -70,13 +70,32 @@ export const usePlantAnalysis = () => {
       setAnalysisProgress(20);
       console.log('🔬 Chiamando diagnosi unificata con AI avanzata...');
       
-      // Usa la nuova edge function unificata
+      // FASE 1: Identificazione accurata della pianta
+      console.log('🌿 FASE 1: Identificazione della pianta...');
+      setAnalysisProgress(25);
+      
+      const identificationResponse = await supabase.functions.invoke('enhanced-plant-identification', {
+        body: { imageBase64 }
+      });
+      
+      let plantIdentification = null;
+      if (identificationResponse.data?.success) {
+        plantIdentification = identificationResponse.data.identificazione;
+        console.log('✅ Pianta identificata:', plantIdentification.consensus.mostProbabile?.nomeComune);
+      }
+      
+      // FASE 2: Diagnosi malattie con informazioni della pianta identificata
+      setAnalysisProgress(40);
+      console.log('🔬 FASE 2: Diagnosi malattie...');
+      
+      // Usa la nuova edge function unificata con informazioni della pianta identificata
       const diagnosisResponse = await supabase.functions.invoke('unified-plant-diagnosis', {
         body: { 
           imageBase64,
           plantInfo: {
             symptoms: plantInfo?.symptoms,
-            plantName: plantInfo?.name,
+            plantName: plantIdentification?.consensus?.mostProbabile?.nomeComune || plantInfo?.name,
+            scientificName: plantIdentification?.consensus?.mostProbabile?.nomeScientifico,
             isIndoor: plantInfo?.isIndoor,
             wateringFrequency: plantInfo?.wateringFrequency,
             lightExposure: plantInfo?.lightExposure

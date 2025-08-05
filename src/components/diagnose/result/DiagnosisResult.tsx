@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { PlantIdentificationDisplay } from '../PlantIdentificationDisplay';
 import { 
   CheckCircle, 
   AlertTriangle, 
@@ -325,6 +326,14 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
           analysisDetails={analysisDetails}
           userInput={plantInfo?.symptoms}
           eppoData={analysisData?.diseases?.filter(d => d.eppoCode) || []}
+        />
+      )}
+
+      {/* SEZIONE IDENTIFICAZIONE PIANTA - Nuova sezione */}
+      {analysisDetails?.plantIdentification && (
+        <PlantIdentificationDisplay 
+          identification={analysisDetails.plantIdentification}
+          className="mb-6"
         />
       )}
 
