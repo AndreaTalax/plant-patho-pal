@@ -3,18 +3,40 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { FirebaseDiagnosisService } from '@/services/firebaseDiagnosisService';
 import { useAuth } from '@/context/AuthContext';
+import { useImageValidation } from './useImageValidation';
 import type { PlantInfo } from '@/components/diagnose/types';
 import type { AnalysisDetails, DiagnosedDisease } from '@/components/diagnose/types';
 
 export const usePlantAnalysis = () => {
   const { user } = useAuth();
+  const { validateImage, isValidating } = useImageValidation();
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [diagnosisResult, setDiagnosisResult] = useState<string | null>(null);
   const [diagnosedDisease, setDiagnosedDisease] = useState<DiagnosedDisease | null>(null);
   const [analysisProgress, setAnalysisProgress] = useState(0);
   const [analysisDetails, setAnalysisDetails] = useState<AnalysisDetails | null>(null);
 
-  const analyzeUploadedImage = async (imageFile: File, plantInfo?: PlantInfo) => {
+  const analyzeUploadedImage = async (imageFile: File, plantInfo?: PlantInfo): Promise<void> => {
+    // FASE 1: Validazione rapida immagine (controllo se è una pianta)
+    console.log('🔍 FASE 1: Validazione rapida immagine...');
+    const validationResult = await validateImage(imageFile);
+    
+    if (!validationResult.isValid) {
+      console.log('❌ Validazione fallita:', validationResult.reason);
+      toast.error('Immagine non valida per diagnosi', {
+        description: `${validationResult.reason}. Carica una foto che mostra chiaramente una pianta.`,
+        duration: 6000
+      });
+      return;
+    }
+
+    console.log('✅ Validazione superata, procedo con diagnosi completa...');
+    toast.success('Pianta rilevata, avvio diagnosi...', {
+      description: `Confidenza: ${validationResult.confidence.toFixed(1)}%`,
+      duration: 2000
+    });
+    
+    // FASE 2: Diagnosi completa (solo se validazione ok)
     setIsAnalyzing(true);
     setDiagnosisResult(null);
     setDiagnosedDisease(null);
@@ -347,7 +369,7 @@ export const usePlantAnalysis = () => {
   };
 
   return {
-    isAnalyzing,
+    isAnalyzing: isAnalyzing || isValidating,
     diagnosisResult,
     diagnosedDisease,
     analysisProgress,

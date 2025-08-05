@@ -19,6 +19,8 @@ import { uploadPlantImage } from '@/utils/imageStorage';
 import { PlantInfo } from './diagnose/types';
 import { usePremiumStatus } from '@/services/premiumService';
 import { verifyImageContainsPlant, analyzeImageQuality } from '@/utils/plant-analysis/plantImageVerification';
+import { useImageValidation } from '@/hooks/useImageValidation';
+import { ImageValidationFeedback } from './diagnose/ImageValidationFeedback';
 import { PaymentRequiredModal } from './subscription/PaymentRequiredModal';
 import DiagnosisResult from './diagnose/result/DiagnosisResult';
 import { useDiagnosisLimits } from '@/hooks/useDiagnosisLimits';
@@ -56,6 +58,7 @@ const DiagnoseTab = () => {
   } = usePlantDiagnosis();
   
   // Component states
+  const { validateImage, isValidating, validationResult } = useImageValidation();
   const [currentStage, setCurrentStage] = useState<'info' | 'capture' | 'options' | 'analyzing' | 'result' | 'api-setup'>('info');
   const [showCamera, setShowCamera] = useState(false);
   const [dataSentToExpert, setDataSentToExpert] = useState(false);
@@ -159,9 +162,9 @@ const DiagnoseTab = () => {
       return;
     }
 
-    // Verifica che l'immagine contenga una pianta
-    const containsPlant = await verifyPlantInImage(file);
-    if (!containsPlant) {
+    // Verifica che l'immagine contenga una pianta usando il nuovo sistema
+    const validationResult = await validateImage(file);
+    if (!validationResult.isValid) {
       return; // Stop se non contiene una pianta
     }
 
@@ -194,14 +197,11 @@ const DiagnoseTab = () => {
       const blob = await response.blob();
       const file = new File([blob], 'camera-capture.jpg', { type: 'image/jpeg' });
       
-      // Verifica che l'immagine contenga una pianta
-      const containsPlant = await verifyPlantInImage(file);
-      if (!containsPlant) {
+      // Verifica che l'immagine contenga una pianta usando il nuovo sistema
+      const validationResult = await validateImage(file);
+      if (!validationResult.isValid) {
         // NON chiudere la fotocamera - permetti di scattare un'altra foto
         console.log('🔄 Pianta non rilevata, fotocamera rimane attiva per nuovi tentativi');
-        toast.error('Pianta non rilevata. Prova a scattare un\'altra foto con una pianta ben visibile.', {
-          duration: 5000
-        });
         return; // Esci senza chiudere la fotocamera
       }
       
@@ -545,6 +545,13 @@ const DiagnoseTab = () => {
             <PlantInfoSummary 
               plantInfo={plantInfo} 
               onEdit={() => setCurrentStage('info')} 
+            />
+            
+            {/* Feedback di validazione dell'immagine */}
+            <ImageValidationFeedback 
+              isValidating={isValidating}
+              validationResult={validationResult}
+              imageFile={plantInfo.uploadedFile}
             />
             
             {uploadedImage && (
