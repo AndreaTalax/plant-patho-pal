@@ -119,8 +119,8 @@ const ChatTab = () => {
     );
   }
 
-  // Se l'utente non ha accesso premium alla chat
-  if (!hasExpertChatAccess) {
+  // Se l'utente non ha accesso premium alla chat E non ha conversazioni attive
+  if (!hasExpertChatAccess && activeConversations.length === 0) {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-2xl mx-auto text-center">
