@@ -60,16 +60,10 @@ export const PlantIdentificationDisplay: React.FC<PlantIdentificationDisplayProp
   return (
     <Card className={`border-green-200 bg-gradient-to-br from-green-50 to-emerald-50 ${className}`}>
       <CardHeader className="pb-4">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-xl font-bold text-green-800 flex items-center gap-2">
-            <Leaf className="h-6 w-6" />
-            Identificazione Pianta
-          </CardTitle>
-          <div className={`flex items-center gap-1 px-3 py-1 rounded-full border text-sm font-medium ${getConfidenceColor(confidence)}`}>
-            {getConfidenceIcon(confidence)}
-            {confidence}% affidabile
-          </div>
-        </div>
+        <CardTitle className="text-xl font-bold text-green-800 flex items-center gap-2">
+          <Leaf className="h-6 w-6" />
+          Identificazione Pianta
+        </CardTitle>
       </CardHeader>
       
       <CardContent className="space-y-6">
@@ -98,30 +92,6 @@ export const PlantIdentificationDisplay: React.FC<PlantIdentificationDisplayProp
           )}
         </div>
 
-        {/* Fonti di identificazione */}
-        {identifications && identifications.length > 0 && (
-          <div>
-            <div className="flex items-center gap-2 mb-3">
-              <Database className="h-4 w-4 text-blue-600" />
-              <h3 className="font-semibold text-gray-800">Fonti di Identificazione</h3>
-            </div>
-            <div className="space-y-2">
-              {identifications.slice(0, 3).map((id: any, index: number) => (
-                <div key={index} className="flex items-center justify-between p-2 bg-white rounded border border-gray-200">
-                  <div className="flex-1">
-                    <span className="text-sm font-medium text-gray-700">{id.fonte}</span>
-                    {id.nomeComune !== plantInfo.nomeComune && (
-                      <p className="text-xs text-gray-500">"{id.nomeComune}"</p>
-                    )}
-                  </div>
-                  <Badge variant={id.confidenza >= 70 ? "default" : "secondary"} className="text-xs">
-                    {id.confidenza}%
-                  </Badge>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
 
         {/* Informazioni di cura (se disponibili) */}
         {informazioniCura && Object.values(informazioniCura).some(v => v) && (
