@@ -356,49 +356,104 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
             <h2 className="text-2xl font-bold text-green-800 mb-2">
               🌱 {plantName}
             </h2>
-            {scientificName && (
+            {scientificName && scientificName !== plantName && (
               <p className="text-lg italic text-green-700 font-medium">
                 {scientificName}
               </p>
             )}
-            <div className="flex justify-center items-center gap-2 mt-2">
-              <Badge className="bg-green-100 text-green-800 px-3 py-1">
-                Accuratezza: {confidencePercent}%
-              </Badge>
-              {analysisDetails?.eppoPlantIdentification && (
-                <Badge className="bg-blue-100 text-blue-800 px-3 py-1">
-                  🔬 EPPO Verified
-                </Badge>
-              )}
-            </div>
+            {/* Mostra famiglia se disponibile */}
+            {analysisDetails?.multiServiceInsights?.family && (
+              <p className="text-sm text-green-600 mt-1">
+                Famiglia: {analysisDetails.multiServiceInsights.family}
+              </p>
+            )}
           </div>
 
-          {/* Problemi rilevati - Molto visibile */}
-          {diseaseList && diseaseList.length > 0 && (
-            <div className="text-center p-4 bg-white rounded-lg border-2 border-amber-300 shadow-sm">
-              <h3 className="text-xl font-bold text-amber-800 mb-3">
-                ⚠️ Problemi Rilevati
+          {/* Problemi rilevati - Sezione migliorata con dettagli malattia */}
+          {diseaseList && diseaseList.length > 0 && !isHealthy && (
+            <div className="text-center p-4 bg-white rounded-lg border-2 border-red-300 shadow-sm">
+              <h3 className="text-xl font-bold text-red-800 mb-3">
+                🔬 Diagnosi Dettagliata
               </h3>
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {diseaseList.slice(0, 3).map((disease: any, index: number) => (
-                  <div key={index} className="border border-amber-200 rounded-lg p-3 bg-amber-50">
-                    <div className="flex justify-between items-center mb-2">
-                      <h4 className="font-bold text-amber-900 text-lg">{disease.name}</h4>
-                      <Badge variant="destructive" className="text-sm px-2 py-1">
+                  <div key={index} className="border border-red-200 rounded-lg p-4 bg-red-50 text-left">
+                    <div className="flex justify-between items-start mb-3">
+                      <h4 className="font-bold text-red-900 text-lg flex-1">{disease.name}</h4>
+                      <Badge variant="destructive" className="text-sm px-2 py-1 ml-2">
                         {getProbabilityDisplay(disease.probability)}
                       </Badge>
                     </div>
+                    
+                    {/* Descrizione malattia */}
                     {disease.description && (
-                      <p className="text-amber-800 text-sm">{disease.description}</p>
+                      <div className="mb-3">
+                        <h5 className="font-semibold text-red-800 text-sm mb-1">📋 Descrizione:</h5>
+                        <p className="text-red-700 text-sm">{disease.description}</p>
+                      </div>
                     )}
-                    {disease.treatment && (
-                      <p className="text-amber-700 text-sm mt-2">
-                        <strong>💡 Trattamento:</strong> {disease.treatment}
-                      </p>
+                    
+                    {/* Cause */}
+                    {disease.causes && (
+                      <div className="mb-3">
+                        <h5 className="font-semibold text-red-800 text-sm mb-1">🔍 Cause:</h5>
+                        <p className="text-red-700 text-sm">{disease.causes}</p>
+                      </div>
+                    )}
+                    
+                    {/* Sintomi */}
+                    {disease.symptoms && Array.isArray(disease.symptoms) && disease.symptoms.length > 0 && (
+                      <div className="mb-3">
+                        <h5 className="font-semibold text-red-800 text-sm mb-1">⚠️ Sintomi:</h5>
+                        <ul className="text-red-700 text-sm list-disc list-inside">
+                          {disease.symptoms.slice(0, 4).map((symptom: string, idx: number) => (
+                            <li key={idx}>{symptom}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    
+                    {/* Trattamenti */}
+                    {disease.treatments && Array.isArray(disease.treatments) && disease.treatments.length > 0 && (
+                      <div className="mb-3">
+                        <h5 className="font-semibold text-green-800 text-sm mb-1">💊 Trattamenti raccomandati:</h5>
+                        <ul className="text-green-700 text-sm list-disc list-inside">
+                          {disease.treatments.slice(0, 3).map((treatment: string, idx: number) => (
+                            <li key={idx}>{treatment}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    
+                    {/* Trattamento singolo (fallback) */}
+                    {disease.treatment && !Array.isArray(disease.treatments) && (
+                      <div className="mb-3">
+                        <h5 className="font-semibold text-green-800 text-sm mb-1">💡 Trattamento:</h5>
+                        <p className="text-green-700 text-sm">{disease.treatment}</p>
+                      </div>
+                    )}
+
+                    {/* Disclaimer se malattia è seria */}
+                    {disease.disclaimer && (
+                      <div className="mt-3 p-2 bg-yellow-100 border border-yellow-300 rounded text-xs text-yellow-800">
+                        <strong>⚠️ Importante:</strong> {disease.disclaimer}
+                      </div>
                     )}
                   </div>
                 ))}
               </div>
+            </div>
+          )}
+
+          {/* Pianta sana - Messaggio ottimizzato */}
+          {isHealthy && (
+            <div className="text-center p-4 bg-white rounded-lg border-2 border-green-300 shadow-sm">
+              <h3 className="text-xl font-bold text-green-800 mb-2">
+                ✅ Pianta in Ottima Salute
+              </h3>
+              <p className="text-green-700">
+                L'analisi non ha rilevato problemi significativi. Continua con le cure attuali.
+              </p>
             </div>
           )}
 
