@@ -46,7 +46,7 @@ const BottomNavigation = ({
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50">
+    <nav className="fixed bottom-0 left-0 right-0 bg-background border-t border-border z-50">
       <div className="flex justify-around items-center py-2 px-4 max-w-md mx-auto">
         {tabs.map((tab) => {
           const Icon = tab.icon;

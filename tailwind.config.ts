@@ -25,12 +25,12 @@ export default {
 				background: 'hsl(var(--background))',
 				foreground: 'hsl(var(--foreground))',
 				drplant: {
-					blue: '#3EB5FF',
-					'blue-light': '#A9DBFF',
-					'blue-dark': '#0089D9',
-					green: '#8AB83E',
-					'green-dark': '#5A7A28',
-					brown: '#7E5F44',
+					blue: 'hsl(202 100% 62%)',
+					'blue-light': 'hsl(202 100% 80%)',
+					'blue-dark': 'hsl(202 100% 42%)',
+					green: 'hsl(80 45% 52%)',
+					'green-dark': 'hsl(80 46% 32%)',
+					brown: 'hsl(25 28% 38%)',
 				},
 				primary: {
 					DEFAULT: 'hsl(var(--primary))',
@@ -59,6 +59,18 @@ export default {
 				card: {
 					DEFAULT: 'hsl(var(--card))',
 					foreground: 'hsl(var(--card-foreground))'
+				},
+				success: {
+					DEFAULT: 'hsl(var(--success))',
+					foreground: 'hsl(var(--success-foreground))'
+				},
+				warning: {
+					DEFAULT: 'hsl(var(--warning))',
+					foreground: 'hsl(var(--warning-foreground))'
+				},
+				info: {
+					DEFAULT: 'hsl(var(--info))',
+					foreground: 'hsl(var(--info-foreground))'
 				},
 				sidebar: {
 					DEFAULT: 'hsl(var(--sidebar-background))',
