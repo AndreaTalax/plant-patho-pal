@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { FirebaseDiagnosisService } from '@/services/firebaseDiagnosisService';
 import { useAuth } from '@/context/AuthContext';
 import { useImageValidation } from './useImageValidation';
 import type { PlantInfo } from '@/components/diagnose/types';
@@ -324,18 +323,8 @@ export const usePlantAnalysis = () => {
       
       toast.success(`✅ Analisi completata: ${plantName} ${isHealthy ? '(Sana)' : '(Problemi rilevati)'}`);
       
-      // Suggerisci diagnosi simili se disponibili
-      try {
-        const similarDiagnoses = await FirebaseDiagnosisService.findSimilarDiagnoses(plantName, 3);
-        if (similarDiagnoses.length > 0) {
-          console.log('🎯 Trovate diagnosi simili:', similarDiagnoses.length);
-          toast.info(`Trovate ${similarDiagnoses.length} diagnosi simili nel database`, {
-            description: 'Questo migliora l\'accuratezza della diagnosi'
-          });
-        }
-      } catch (error) {
-        console.warn('⚠️ Errore ricerca diagnosi simili:', error);
-      }
+      // Log successful analysis
+      console.log('✅ Analisi completata per:', plantName);
     } catch (error: any) {
       console.error('❌ Errore durante l\'analisi:', error);
       

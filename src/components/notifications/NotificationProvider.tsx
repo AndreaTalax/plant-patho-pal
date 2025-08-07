@@ -1,25 +1,21 @@
 import React, { useEffect } from 'react';
-import { useFirebaseNotifications } from '@/hooks/useFirebaseNotifications';
+import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { useAuth } from '@/context/AuthContext';
 
-/**
- * Componente wrapper per inizializzare automaticamente le notifiche Firebase
- */
 export function NotificationProvider({ children }: { children: React.ReactNode }) {
-  const { user } = useAuth();
-  const { isSupported, isPermissionGranted } = useFirebaseNotifications();
+  const { userProfile } = useAuth();
+  const { isSupported, permission } = usePushNotifications();
 
   useEffect(() => {
-    // Log dello stato delle notifiche quando l'utente è autenticato
-    if (user) {
+    if (userProfile && isSupported) {
       console.log('🔔 Notification Status:', {
-        userId: user.id,
-        email: user.email,
+        userId: userProfile.id,
+        email: userProfile.email,
         supported: isSupported,
-        permissionGranted: isPermissionGranted
+        permissionGranted: permission === 'granted'
       });
     }
-  }, [user, isSupported, isPermissionGranted]);
+  }, [userProfile, isSupported, permission]);
 
   return <>{children}</>;
 }
