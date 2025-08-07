@@ -27,6 +27,7 @@ import { useDiagnosisLimits } from '@/hooks/useDiagnosisLimits';
 import { AIApiSetup } from './diagnose/AIApiSetup';
 import { ApiKeyManager } from './diagnose/ApiKeyManager';
 import { supabase } from '@/integrations/supabase/client';
+import { DiagnosisTestButton } from './diagnose/DiagnosisTestButton';
 
 const DiagnoseTab = () => {
   const { userProfile, hasActiveSubscription } = useAuth();
@@ -571,6 +572,12 @@ const DiagnoseTab = () => {
                 </div>
               </Card>
             )}
+            
+            <DiagnosisTestButton 
+              uploadedImage={uploadedImage}
+              plantInfo={plantInfo}
+              analyzeUploadedImage={analyzeUploadedImage}
+            />
             
             <DiagnosisOptions
               onSelectAI={handleSelectAI}
