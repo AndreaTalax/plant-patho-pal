@@ -11,6 +11,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { MARCO_NIGRO_ID } from '@/components/phytopathologist';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { ChatTestButton } from './chat/ChatTestButton';
 
 interface ActiveConversation {
   id: string;
@@ -231,18 +232,21 @@ const ChatTab = () => {
             ))}
           </div>
 
-          <div className="mt-8 text-center">
-            <Button
-              onClick={() => {
-                const event = new CustomEvent('switchTab', { detail: { tab: 'diagnose' } });
-                window.dispatchEvent(event);
-              }}
-              variant="outline"
-              className="mr-4"
-            >
-              <FileText className="h-4 w-4 mr-2" />
-              Nuova Diagnosi
-            </Button>
+          <div className="mt-8 space-y-4">
+            <ChatTestButton />
+            <div className="text-center">
+              <Button
+                onClick={() => {
+                  const event = new CustomEvent('switchTab', { detail: { tab: 'diagnose' } });
+                  window.dispatchEvent(event);
+                }}
+                variant="outline"
+                className="mr-4"
+              >
+                <FileText className="h-4 w-4 mr-2" />
+                Nuova Diagnosi
+              </Button>
+            </div>
           </div>
         </div>
       </div>
