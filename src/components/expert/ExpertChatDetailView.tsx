@@ -32,11 +32,17 @@ const ExpertChatDetailView = ({ conversation, onBack }: {
     conversationId: conversation?.id,
     userId: MARCO_NIGRO_ID,
     onNewMessage: useCallback((message) => {
+      console.log('📨 [EXPERT] New message received via realtime:', message);
       setMessages(prev => {
         // Avoid duplicates
         const exists = prev.some(msg => msg.id === message.id);
-        if (exists) return prev;
-        return [...prev, message];
+        if (exists) {
+          console.log('⚠️ [EXPERT] Message already exists, skipping:', message.id);
+          return prev;
+        }
+        const newMessages = [...prev, message];
+        console.log('✅ [EXPERT] Messages updated:', newMessages.length);
+        return newMessages;
       });
     }, [])
   });

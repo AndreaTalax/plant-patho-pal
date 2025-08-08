@@ -357,25 +357,6 @@ const PlantAnalysisResultComponent: React.FC<PlantAnalysisResultComponentProps> 
         </Card>
       )}
 
-      {/* Dettagli tecnici */}
-      {analysisResult.analysisDetails && (
-        <Card className="border-gray-200">
-          <CardHeader>
-            <CardTitle className="text-sm text-gray-600">Dettagli Tecnici Analisi</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-xs text-gray-500 space-y-1">
-              {analysisResult.analysisDetails.source && (
-                <p>Fonte: {analysisResult.analysisDetails.source}</p>
-              )}
-              {analysisResult.analysisDetails.timestamp && (
-                <p>Timestamp: {new Date(analysisResult.analysisDetails.timestamp).toLocaleString()}</p>
-              )}
-              <p>Metodo: Analisi AI avanzata multi-servizio</p>
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Payment Required Modal */}
       <PaymentRequiredModal 
