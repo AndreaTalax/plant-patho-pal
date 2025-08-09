@@ -1,6 +1,32 @@
 
 import { toast } from 'sonner';
 
+// Color space helpers for skin detection
+const rgbToYCbCr = (r: number, g: number, b: number) => {
+  const y = 0.299 * r + 0.587 * g + 0.114 * b;
+  const cb = 128 - 0.168736 * r - 0.331264 * g + 0.5 * b;
+  const cr = 128 + 0.5 * r - 0.418688 * g - 0.081312 * b;
+  return { y, cb, cr };
+};
+
+const rgbToHsv = (r: number, g: number, b: number) => {
+  r /= 255; g /= 255; b /= 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  const d = max - min;
+  let h = 0;
+  if (d !== 0) {
+    switch (max) {
+      case r: h = ((g - b) / d + (g < b ? 6 : 0)); break;
+      case g: h = ((b - r) / d + 2); break;
+      case b: h = ((r - g) / d + 4); break;
+    }
+    h /= 6;
+  }
+  const s = max === 0 ? 0 : d / max;
+  const v = max;
+  return { h: h * 360, s, v };
+};
+
 /**
  * Verifica se un'immagine contiene effettivamente una pianta con criteri più realistici
  */
@@ -35,6 +61,7 @@ export const verifyImageContainsPlant = async (imageFile: File): Promise<{
       let naturalPixels = 0;
       let artificialPixels = 0;
       let brownPixels = 0;
+      let skinPixels = 0;
       
       // Analizza ogni pixel con criteri più realistici
       for (let i = 0; i < pixels.length; i += 4) {
@@ -64,6 +91,14 @@ export const verifyImageContainsPlant = async (imageFile: File): Promise<{
         const isArtificial = (Math.abs(r - g) < 5 && Math.abs(g - b) < 5 && Math.abs(r - b) < 5) && // Molto uniformi
                             ((r > 220 && g > 220 && b > 220) || // Bianchi puri
                              (r < 30 && g < 30 && b < 30)); // Neri puri
+
+        // Rilevamento pelle/volto con YCbCr e HSV (blocca foto di persone)
+        const { y, cb, cr } = rgbToYCbCr(r, g, b);
+        const skinYCbCr = cb >= 77 && cb <= 127 && cr >= 133 && cr <= 173 && y > 60 && y < 245;
+        const { h, s, v } = rgbToHsv(r, g, b);
+        const skinHSV = h >= 0 && h <= 50 && s >= 0.23 && v >= 0.35 && v <= 0.98;
+        const isSkin = skinYCbCr || skinHSV;
+        if (isSkin) skinPixels++;
         
         if (isNaturalGreen) {
           greenPixels++;
@@ -82,18 +117,28 @@ export const verifyImageContainsPlant = async (imageFile: File): Promise<{
       const brownPercentage = (brownPixels / totalPixels) * 100;
       const naturalPercentage = (naturalPixels / totalPixels) * 100;
       const artificialPercentage = (artificialPixels / totalPixels) * 100;
+      const skinPercentage = (skinPixels / totalPixels) * 100;
       
       // Criteri FLESSIBILI per identificare una pianta reale
       const hasMinimumGreen = greenPercentage > 1; // Almeno 1% di verde naturale
       const hasNaturalColors = naturalPercentage > 8; // Almeno 8% di colori naturali
       const hasPlantIndicators = (greenPercentage + brownPercentage) > 3; // Verde + marrone > 3%
       const tooMuchArtificial = artificialPercentage > 80; // Troppo artificiale se > 80%
+      const tooMuchSkin = skinPercentage > 35 || (skinPercentage > 20 && greenPercentage < 5);
       
       let isPlant = false;
       let confidence = 0;
       let reason = '';
       
-      if (tooMuchArtificial) {
+      if (tooMuchSkin) {
+        isPlant = false;
+        confidence = Math.max(0, 100 - skinPercentage);
+        reason = `Rilevata pelle/volto nell'immagine (${skinPercentage.toFixed(1)}%). Carica solo foto di piante.`;
+        toast.error('Immagine non valida', {
+          description: 'Rilevata una persona nell\'immagine. Per privacy e accuratezza, usa solo foto di piante ben visibili.',
+          duration: 5000
+        });
+      } else if (tooMuchArtificial) {
         isPlant = false;
         confidence = Math.max(0, 100 - artificialPercentage);
         reason = `Troppi colori artificiali uniformi (${artificialPercentage.toFixed(1)}%). Non sembra una pianta reale.`;
