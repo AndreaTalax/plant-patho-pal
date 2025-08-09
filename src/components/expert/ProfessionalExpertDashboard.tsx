@@ -15,6 +15,7 @@ import {
   Users, 
   TrendingUp,
   Activity,
+  RefreshCw,
   Archive,
   Phone,
   Mail,
@@ -397,6 +398,26 @@ const ProfessionalExpertDashboard = () => {
               <p className="text-gray-600">Gestione conversazioni e consultazioni - Marco Nigro</p>
             </div>
             <div className="flex items-center justify-center md:justify-end gap-3">
+              <Button
+                variant="outline"
+                onClick={loadExpertData}
+                disabled={loading}
+                className="hidden sm:inline-flex"
+                aria-label="Aggiorna conversazioni"
+                title="Aggiorna conversazioni"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Aggiorno...
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                    Aggiorna
+                  </>
+                )}
+              </Button>
               <div className="w-12 h-12 bg-drplant-green/10 rounded-full flex items-center justify-center">
                 <Activity className="h-6 w-6 text-drplant-green" />
               </div>
