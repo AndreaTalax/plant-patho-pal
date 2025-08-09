@@ -67,264 +67,110 @@ export const usePlantAnalysis = () => {
       const imageBase64 = `data:${imageFile.type};base64,${base64}`;
       
       setAnalysisProgress(20);
-      console.log('🔬 Chiamando diagnosi unificata con AI avanzata...');
-      
-      // FASE 1: Identificazione accurata della pianta
-      console.log('🌿 FASE 1: Identificazione della pianta...');
-      setAnalysisProgress(25);
-      
-      const identificationResponse = await supabase.functions.invoke('enhanced-plant-identification', {
+      console.log('🔬 Avvio diagnosi completa multi‑AI (OpenAI + Plant.ID + PlantNet + EPPO)...');
+
+      // Esecuzione diagnosi completa tramite edge function esistente
+      const compRes = await supabase.functions.invoke('comprehensive-plant-diagnosis', {
         body: { imageBase64 }
       });
-      
-      let plantIdentification = null;
-      if (identificationResponse.data?.success) {
-        plantIdentification = identificationResponse.data.identificazione;
-        console.log('✅ Pianta identificata:', plantIdentification.consensus.mostProbabile?.nomeComune);
+
+      if (compRes.error) {
+        throw new Error(compRes.error.message || 'Errore nella diagnosi completa');
       }
-      
-      // FASE 2: Diagnosi malattie con informazioni della pianta identificata
-      setAnalysisProgress(40);
-      console.log('🔬 FASE 2: Diagnosi malattie...');
-      
-      // Usa la nuova edge function unificata con informazioni della pianta identificata
-      const diagnosisResponse = await supabase.functions.invoke('unified-plant-diagnosis', {
-        body: { 
-          imageBase64,
-          plantInfo: {
-            symptoms: plantInfo?.symptoms,
-            plantName: plantIdentification?.consensus?.mostProbabile?.nomeComune || plantInfo?.name,
-            scientificName: plantIdentification?.consensus?.mostProbabile?.nomeScientifico,
-            isIndoor: plantInfo?.isIndoor,
-            wateringFrequency: plantInfo?.wateringFrequency,
-            lightExposure: plantInfo?.lightExposure
-          }
+
+      const comp: any = compRes.data;
+      if (!comp || !comp.plantIdentification) {
+        throw new Error('Risultato diagnosi non valido');
+      }
+
+      const plantName = comp.plantIdentification.name || 'Pianta non identificata';
+      const scientificName = comp.plantIdentification.scientificName || '';
+      const confidencePct = Math.round((comp.plantIdentification.confidence || 0) * 100);
+
+      const diseases = Array.isArray(comp.healthAssessment?.diseases) ? comp.healthAssessment.diseases : [];
+      const isHealthy = comp.healthAssessment?.isHealthy === true && diseases.length === 0;
+
+      // Testo compatto per UI (niente dettagli tecnici superflui)
+      let diagnosisText = `🌿 Pianta: ${plantName}`;
+      if (scientificName && scientificName !== plantName) diagnosisText += ` (*${scientificName}*)`;
+      diagnosisText += `\n🎯 Confidenza: ${confidencePct}%`;
+      diagnosisText += `\n💚 Stato: ${isHealthy ? 'Sana' : 'Possibili problemi'}`;
+
+      if (!isHealthy && diseases.length > 0) {
+        const top = diseases
+          .filter((d: any) => d && (typeof d === 'object'))
+          .sort((a: any, b: any) => (b.probability || 0) - (a.probability || 0))[0];
+        if (top) {
+          diagnosisText += `\n\n🔍 Possibile malattia: ${top.name} (${Math.round((top.probability || 0) * 100)}%)`;
+          if (top.description) diagnosisText += `\nDescrizione: ${top.description}`;
         }
+      }
+
+      setDiagnosisResult(diagnosisText);
+
+      // Popola struttura diagnosedDisease minimale per compatibilità UI
+      const primary = !isHealthy && diseases.length > 0 ? diseases[0] : null;
+      setDiagnosedDisease(primary ? {
+        id: crypto.randomUUID(),
+        name: primary.name,
+        description: primary.description || 'Problema rilevato',
+        causes: 'Analisi multi‑AI',
+        symptoms: primary.symptoms || [],
+        treatments: (primary.treatment && (primary.treatment.biological || primary.treatment.chemical))
+          ? [
+              ...(primary.treatment.biological || []),
+              ...(primary.treatment.chemical || [])
+            ]
+          : [],
+        confidence: Math.round((primary.probability || 0.7) * 100),
+        healthy: false,
+        products: [],
+        disclaimer: 'Diagnosi AI. Conferma con un esperto.',
+        recommendExpertConsultation: true,
+        resources: comp.sources || [],
+        label: primary.name,
+        disease: { name: primary.name }
+      } : {
+        id: crypto.randomUUID(),
+        name: 'Pianta sana',
+        description: 'Nessuna malattia evidente',
+        causes: '—',
+        symptoms: [],
+        treatments: [],
+        confidence: confidencePct,
+        healthy: true,
+        products: [],
+        disclaimer: 'Analisi AI. Continua a monitorare.',
+        recommendExpertConsultation: false,
+        resources: comp.sources || [],
+        label: plantName,
+        disease: { name: 'Nessuna' }
       });
 
-      console.log('📊 Risposta diagnosi:', diagnosisResponse);
-
-      if (diagnosisResponse.error) {
-        throw new Error(diagnosisResponse.error.message || 'Errore nella chiamata alla diagnosi');
-      }
-
-      // Anche se la diagnosi ha avvertimenti, procedi comunque se c'è un risultato
-      if (!diagnosisResponse.data?.success && !diagnosisResponse.data?.diagnosis) {
-        const errorMsg = diagnosisResponse.data?.error || 'Errore nella diagnosi unificata';
-        if (errorMsg.includes('non valida') || errorMsg.includes('not valid')) {
-          throw new Error('INVALID_IMAGE: ' + errorMsg);
-        }
-        throw new Error('API_ERROR: ' + errorMsg);
-      }
-      
-      // Se la diagnosi ha successo parziale (con avvertimenti), procedi comunque
-      if (!diagnosisResponse.data?.success && diagnosisResponse.data?.diagnosis) {
-        console.log('⚠️ Diagnosi con avvertimenti:', diagnosisResponse.data.error);
-      }
-
-      const { diagnosis, validation } = diagnosisResponse.data;
-
-      // Pulisci i dati corrotti da MaxDepthReached
-      const cleanDiagnosis = cleanMaxDepthData(diagnosis);
-      
-      console.log('✅ Diagnosi unificata completata:', cleanDiagnosis);
-      
-      // Estrai dati dalla struttura di diagnosi pulita
-      const plantName = cleanDiagnosis?.plantIdentification?.name || 'Pianta non identificata';
-      const scientificName = cleanDiagnosis?.plantIdentification?.scientificName || '';
-      const family = cleanDiagnosis?.plantIdentification?.family || '';
-      const isHealthy = cleanDiagnosis?.healthAnalysis?.isHealthy ?? true;
-      const issues = cleanDiagnosis?.healthAnalysis?.issues?.filter(issue => issue && typeof issue === 'object') || [];
-      const recommendations = [
-        ...(cleanDiagnosis?.recommendations?.immediate || []),
-        ...(cleanDiagnosis?.recommendations?.longTerm || [])
-      ];
-      const confidence = Math.round((cleanDiagnosis?.plantIdentification?.confidence || 0.7) * 100);
-      const healthScore = Math.round((cleanDiagnosis?.healthAnalysis?.overallScore || 0.8) * 100);
-      
-      setAnalysisProgress(75);
-      
-      let diagnosisText = `**🌿 Pianta identificata:** ${plantName}`;
-      if (scientificName && scientificName !== plantName) {
-        diagnosisText += ` (*${scientificName}*)`;
-      }
-      if (family) {
-        diagnosisText += `\n**📚 Famiglia:** ${family}`;
-      }
-      diagnosisText += `\n**🎯 Confidenza identificazione:** ${confidence}%`;
-      diagnosisText += `\n**💚 Punteggio salute:** ${healthScore}%`;
-      
-      if (isHealthy) {
-        diagnosisText += `\n\n✅ **Stato di salute:** Pianta sana!`;
-      } else {
-        diagnosisText += `\n\n⚠️ **Stato di salute:** Problemi rilevati`;
-        
-        if (issues.length > 0) {
-          diagnosisText += `\n\n**🔍 Problemi identificati:**`;
-          issues.forEach((issue, index) => {
-            const severityIcon = issue.severity === 'high' ? '🔴' : issue.severity === 'medium' ? '🟡' : '🟢';
-            diagnosisText += `\n\n${index + 1}. ${severityIcon} **${issue.name}** (${issue.type})`;
-            diagnosisText += `\n   **Gravità:** ${issue.severity} - **Confidenza:** ${Math.round(issue.confidence * 100)}%`;
-            if (issue.description) {
-              diagnosisText += `\n   **Descrizione:** ${issue.description}`;
-            }
-            if (issue.symptoms && issue.symptoms.length > 0) {
-              diagnosisText += `\n   **Sintomi:** ${issue.symptoms.join(', ')}`;
-            }
-            if (issue.treatment && issue.treatment.length > 0) {
-              diagnosisText += `\n   **Trattamento:** ${issue.treatment.join(', ')}`;
-            }
-          });
-        }
-      }
-      
-      if (recommendations.length > 0) {
-        diagnosisText += `\n\n**📋 Raccomandazioni:**`;
-        recommendations.forEach((rec, index) => {
-          diagnosisText += `\n${index + 1}. ${rec}`;
-        });
-      }
-      
-      // Aggiungi istruzioni di cura specifiche
-      const { careInstructions } = diagnosis;
-      if (careInstructions) {
-        diagnosisText += `\n\n**🌱 Istruzioni di cura specifiche:**`;
-        if (careInstructions.watering) {
-          diagnosisText += `\n💧 **Irrigazione:** ${careInstructions.watering}`;
-        }
-        if (careInstructions.light) {
-          diagnosisText += `\n☀️ **Luce:** ${careInstructions.light}`;
-        }
-        if (careInstructions.temperature) {
-          diagnosisText += `\n🌡️ **Temperatura:** ${careInstructions.temperature}`;
-        }
-        if (careInstructions.fertilization) {
-          diagnosisText += `\n🌿 **Fertilizzazione:** ${careInstructions.fertilization}`;
-        }
-      }
-      
-      // Aggiungi informazioni dalle fonti aggiuntive
-      let sourceInfo = `\n\n**🔬 Fonti utilizzate:**`;
-      sourceInfo += `\n• OpenAI GPT-4o Vision (Diagnosi principale)`;
-      
-      // PlantNet info
-      if (diagnosis.crossValidation?.plantNet) {
-        const plantNet = diagnosis.crossValidation.plantNet;
-        sourceInfo += `\n• PlantNet (Identificazione: ${plantNet.confidence ? Math.round(plantNet.confidence * 100) : 'N/A'}%)`;
-        if (plantNet.species) {
-          sourceInfo += ` - ${plantNet.species}`;
-        }
-      }
-      
-      // Plant.ID info
-      if (diagnosis.crossValidation?.plantId) {
-        sourceInfo += `\n• Plant.ID (Validazione incrociata)`;
-      }
-      
-      // EPPO Database info
-      if (diagnosis.crossValidation?.eppo) {
-        const eppo = diagnosis.crossValidation.eppo;
-        const totalResults = (eppo.plants?.length || 0) + (eppo.diseases?.length || 0) + (eppo.pests?.length || 0);
-        if (totalResults > 0) {
-          sourceInfo += `\n• Database EPPO (${totalResults} risultati fitosanitari)`;
-          if (eppo.diseases?.length > 0) {
-            sourceInfo += `\n  - ${eppo.diseases.length} malattie identificate`;
-          }
-          if (eppo.pests?.length > 0) {
-            sourceInfo += `\n  - ${eppo.pests.length} parassiti identificati`;
-          }
-        }
-      }
-      
-      diagnosisText += sourceInfo;
-      
-      setDiagnosisResult(diagnosisText);
-      
-      // SEMPRE crea l'oggetto diagnosedDisease per la visualizzazione
-      let primaryIssue = null;
-      if (!isHealthy && issues.length > 0) {
-        primaryIssue = issues[0];
-      }
-      
-      const diagnosedIssue: any = {
-        id: crypto.randomUUID(),
-        name: primaryIssue ? primaryIssue.name : 'Analisi completata',
-        description: primaryIssue ? (primaryIssue.description || 'Problemi rilevati') : 'Pianta analizzata con successo',
-        causes: 'Determinato attraverso analisi AI avanzata',
-        symptoms: primaryIssue ? (primaryIssue.symptoms || []) : [],
-        treatments: primaryIssue ? (primaryIssue.treatment || recommendations) : recommendations,
-        confidence: Math.round(confidence),
-        healthy: isHealthy,
-        products: [],
-        disclaimer: 'Questa è una diagnosi AI avanzata con GPT-4o Vision. Consulta un esperto per conferma.',
-        recommendExpertConsultation: confidence < 80,
-        resources: ['Analisi AI Avanzata'],
-        label: primaryIssue ? primaryIssue.name : plantName,
-        disease: {
-          name: primaryIssue ? primaryIssue.name : 'Nessun problema rilevato'
-        },
-        // Aggiungi i dati necessari per la visualizzazione nel frontend
-        plantName: plantName,
-        scientificName: scientificName,
-        isHealthy: isHealthy,
-        diseases: issues || []
-      };
-      setDiagnosedDisease(diagnosedIssue);
-      
-      // Crea i dettagli dell'analisi
-      const analysisFeatures = [
-        `Identificazione: ${plantName}`,
-        `Confidenza: ${confidence}%`,
-        `Stato: ${isHealthy ? 'Sana' : 'Problemi rilevati'}`,
-        `Qualità immagine: ${Math.round((diagnosis.analysisDetails?.imageQuality || 0) * 100)}%`
-      ];
-      
-      if (issues.length > 0) {
-        analysisFeatures.push(`Problemi rilevati: ${issues.length}`);
-      }
-      
-      const detailsObj: AnalysisDetails = {
+      setAnalysisDetails({
         multiServiceInsights: {
-          plantName: plantName,
+          plantName,
           plantSpecies: scientificName,
-          isHealthy: isHealthy,
+          isHealthy,
           isValidPlantImage: true,
-          primaryService: 'Multi-AI Enhanced Analysis',
-          agreementScore: confidence / 100,
-          dataSource: 'OpenAI + PlantNet + Plant.ID + EPPO Database',
-          // Add EPPO data insights using existing properties
-          eppoDiseasesFound: diagnosis.crossValidation?.eppo ? 
-            (diagnosis.crossValidation.eppo.diseases?.length || 0) + 
-            (diagnosis.crossValidation.eppo.pests?.length || 0) : 0
+          primaryService: 'Comprehensive AI',
+          agreementScore: (comp.plantIdentification.confidence || 0.7),
+          dataSource: (comp.sources || []).join(', '),
+          eppoDiseasesFound: (comp.sources || []).includes('EPPO') ? (comp.healthAssessment?.diseases?.length || 0) : 0,
         },
-        identifiedFeatures: analysisFeatures,
-        analysisTechnology: 'Multi-AI Enhanced Analysis with PlantNet and EPPO Database',
-        originalConfidence: confidence,
-        enhancedConfidence: confidence,
-        // Add comprehensive analysis data using existing EPPO structure
-        eppoData: diagnosis.crossValidation?.eppo ? {
-          plantMatch: diagnosis.crossValidation.eppo.plants?.[0],
-          diseaseMatches: diagnosis.crossValidation.eppo.diseases || [],
-          recommendations: {
-            diseases: diagnosis.crossValidation.eppo.diseases || [],
-            pests: diagnosis.crossValidation.eppo.pests || [],
-            careAdvice: recommendations
-          }
-        } : undefined
-      };
-      
-      setAnalysisDetails(detailsObj);
-      setAnalysisProgress(95);
-      
-      // Nota: Salvataggio Firebase temporaneamente disabilitato per evitare errori CORS
-      console.log('ℹ️ Salvataggio Firebase disabilitato temporaneamente');
-      
+        identifiedFeatures: [
+          `Confidenza: ${confidencePct}%`,
+          `Stato: ${isHealthy ? 'Sana' : 'Problemi'}`
+        ],
+        analysisTechnology: 'OpenAI + Plant.ID + PlantNet + EPPO',
+        originalConfidence: confidencePct,
+        enhancedConfidence: confidencePct
+      } as any);
+
       setAnalysisProgress(100);
+      setIsAnalyzing(false);
+      return;
       
-      toast.success(`✅ Analisi completata: ${plantName} ${isHealthy ? '(Sana)' : '(Problemi rilevati)'}`);
-      
-      // Log successful analysis
-      console.log('✅ Analisi completata per:', plantName);
     } catch (error: any) {
       console.error('❌ Errore durante l\'analisi:', error);
       
