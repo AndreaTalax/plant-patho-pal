@@ -5,6 +5,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useImageValidation } from './useImageValidation';
 import type { PlantInfo } from '@/components/diagnose/types';
 import type { AnalysisDetails, DiagnosedDisease } from '@/components/diagnose/types';
+import { DiagnosisConsensusService } from '@/services/diagnosisConsensusService';
 
 export const usePlantAnalysis = () => {
   const { user } = useAuth();
@@ -87,8 +88,23 @@ export const usePlantAnalysis = () => {
       const scientificName = comp.plantIdentification.scientificName || '';
       const confidencePct = Math.round((comp.plantIdentification.confidence || 0) * 100);
 
-      const diseases = Array.isArray(comp.healthAssessment?.diseases) ? comp.healthAssessment.diseases : [];
-      const isHealthy = comp.healthAssessment?.isHealthy === true && diseases.length === 0;
+      let diseases = Array.isArray(comp.healthAssessment?.diseases) ? comp.healthAssessment.diseases : [];
+      let isHealthy = comp.healthAssessment?.isHealthy === true && diseases.length === 0;
+
+      // Raffinamento consenso multi‑AI (EPPO + altre AI)
+      try {
+        const consensus = await DiagnosisConsensusService.refineDiagnosis(imageBase64, comp);
+        if (consensus) {
+          if (Array.isArray(consensus.diseases) && consensus.diseases.length > 0) {
+            diseases = consensus.diseases;
+          }
+          if (typeof consensus.isHealthy === 'boolean') {
+            isHealthy = consensus.isHealthy;
+          }
+        }
+      } catch (e) {
+        console.warn('Consensus refinement skipped:', e);
+      }
 
       // Testo compatto per UI (niente dettagli tecnici superflui)
       let diagnosisText = `🌿 Pianta: ${plantName}`;
