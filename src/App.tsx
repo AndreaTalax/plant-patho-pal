@@ -20,6 +20,7 @@ import { CDCDashboard } from "./components/cdc/CDCDashboard";
 import { UserManagement } from "./components/admin/UserManagement";
 import { NotificationSettings } from "./components/notifications/NotificationSettings";
 import { NotificationProvider } from "./components/notifications/NotificationProvider";
+import TestDiagnosi from "./pages/TestDiagnosi";
 
 const queryClient = new QueryClient();
 
@@ -52,6 +53,7 @@ function App() {
                     <Route path="/cdc-dashboard" element={<CDCDashboard />} />
                     <Route path="/user-management" element={<UserManagement />} />
                     <Route path="/notification-settings" element={<NotificationSettings />} />
+                    <Route path="/test-diagnosi" element={<TestDiagnosi />} />
                     <Route path="/404" element={<NotFound />} />
                     <Route path="*" element={<Navigate to="/404" replace />} />
                   </Routes>
