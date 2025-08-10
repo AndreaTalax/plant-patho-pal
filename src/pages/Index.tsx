@@ -13,9 +13,9 @@ import BottomNavigation from "@/components/BottomNavigation";
 import { ensureStorageBuckets } from "@/utils/storageSetup";
 import { usePlantInfo } from "@/context/PlantInfoContext";
 import { useToast } from "@/hooks/use-toast";
-
+import { supabase } from "@/integrations/supabase/client";
 const Index = () => {
-  const { isMasterAccount, isAuthenticated, isProfileComplete, loading } = useAuth();
+  const { isMasterAccount, isAuthenticated, isProfileComplete, loading, userProfile } = useAuth();
   const { plantInfo } = usePlantInfo();
   const { toast } = useToast();
   const { t } = useTheme();
@@ -48,6 +48,29 @@ const Index = () => {
       setActiveTab("expert");
     }
   }, [isMasterAccount, activeTab]);
+
+  // Se l'utente ha già messaggi in una conversazione, apri automaticamente la chat al login
+  useEffect(() => {
+    const autoOpenChatIfMessages = async () => {
+      try {
+        if (isMasterAccount || !isAuthenticated || !userProfile?.id) return;
+        if (activeTab !== 'diagnose') return;
+        const { data, error } = await supabase
+          .from('conversations' as any)
+          .select('id,last_message_at')
+          .eq('user_id', userProfile.id)
+          .not('last_message_at', 'is', null)
+          .order('last_message_at', { ascending: false })
+          .limit(1);
+        if (!error && data && data.length > 0) {
+          setActiveTab('chat');
+        }
+      } catch (e) {
+        console.log('ℹ️ Auto-open chat check error:', e);
+      }
+    };
+    autoOpenChatIfMessages();
+  }, [isAuthenticated, userProfile?.id, isMasterAccount, activeTab]);
 
   useEffect(() => {
     if (!canAccessTabs && activeTab !== "diagnose" && activeTab !== "chat" && !isMasterAccount) {

@@ -79,6 +79,9 @@ export const usePushNotifications = () => {
   };
 
   const sendTestNotification = async () => {
+    if (Notification.permission !== 'granted') {
+      await requestPermission();
+    }
     const success = await PushNotificationService.sendLocalNotification({
       title: 'Test Dr.Plant',
       body: 'Le notifiche push sono attive!',

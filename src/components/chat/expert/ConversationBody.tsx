@@ -3,6 +3,7 @@ import { MessageSquare } from 'lucide-react';
 import MessageList from '../MessageList';
 import MessageInput from '../MessageInput';
 import { Message, Conversation } from '../types';
+import { MARCO_NIGRO_ID } from '@/components/phytopathologist';
 
 interface ConversationBodyProps {
   conversation: Conversation & { user_id?: string; expertId?: string };
@@ -42,8 +43,8 @@ const ConversationBody = ({
         ) : (
           <MessageInput
             conversationId={conversation.id}
-            senderId={conversation.expertId || "expert"}
-            recipientId={conversation.user_id || conversation.id}
+            senderId={conversation.expertId || MARCO_NIGRO_ID}
+            recipientId={conversation.user_id || ''}
             onSendMessage={async (message: string) => {
               await onSendMessage(message);
             }}
