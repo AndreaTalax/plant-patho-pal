@@ -6,7 +6,8 @@ import { useImageValidation } from './useImageValidation';
 import type { PlantInfo } from '@/components/diagnose/types';
 import type { AnalysisDetails, DiagnosedDisease } from '@/components/diagnose/types';
 import { DiagnosisConsensusService } from '@/services/diagnosisConsensusService';
-
+import { LocalPlantIdentifier } from '@/services/localPlantIdentifier';
+import { eppoApiService } from '@/utils/eppoApiService';
 export const usePlantAnalysis = () => {
   const { user } = useAuth();
   const { validateImage, isValidating } = useImageValidation();
@@ -84,9 +85,9 @@ export const usePlantAnalysis = () => {
         throw new Error('Risultato diagnosi non valido');
       }
 
-      const plantName = comp.plantIdentification.name || 'Pianta non identificata';
-      const scientificName = comp.plantIdentification.scientificName || '';
-      const confidencePct = Math.round((comp.plantIdentification.confidence || 0) * 100);
+      let plantName = comp.plantIdentification.name || 'Pianta non identificata';
+      let scientificName = comp.plantIdentification.scientificName || '';
+      let confidencePct = Math.round((comp.plantIdentification.confidence || 0) * 100);
 
       let diseases = Array.isArray(comp.healthAssessment?.diseases) ? comp.healthAssessment.diseases : [];
       let isHealthy = comp.healthAssessment?.isHealthy === true && diseases.length === 0;
@@ -104,6 +105,34 @@ export const usePlantAnalysis = () => {
         }
       } catch (e) {
         console.warn('Consensus refinement skipped:', e);
+      }
+
+      // FALLBACK LOCALE: identifica pianta lato client + EPPO se bassa confidenza o risultato "sana" sospetto
+      if ((confidencePct < 40) || (isHealthy && diseases.length === 0)) {
+        try {
+          const local = await LocalPlantIdentifier.identify(imageFile);
+          if (local.plantName) {
+            plantName = local.plantName;
+            if (!scientificName) scientificName = local.plantName;
+            confidencePct = Math.max(confidencePct, local.confidence);
+
+            // Valida contro EPPO e cerca patogeni associati
+            const pathogens = await eppoApiService.searchPathogens(local.plantName);
+            if (Array.isArray(pathogens) && pathogens.length > 0) {
+              isHealthy = false;
+              const mapped = pathogens.slice(0, 3).map((p) => ({
+                name: p.preferredName,
+                probability: 0.6,
+                description: p.scientificName || 'Patogeno correlato (EPPO)',
+                symptoms: p.symptoms || [],
+              }));
+              // Mantieni eventuali malattie già individuate, ma dai priorità a EPPO
+              diseases = mapped.length ? mapped : diseases;
+            }
+          }
+        } catch (err) {
+          console.warn('Fallback locale non riuscito:', err);
+        }
       }
 
       // Testo compatto per UI (niente dettagli tecnici superflui)
