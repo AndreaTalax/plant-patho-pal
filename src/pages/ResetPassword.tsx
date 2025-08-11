@@ -24,14 +24,18 @@ const ResetPassword = () => {
     const handleAuthSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       
-      // If no session, check for recovery session from URL params
+      // If no session, check for recovery session from URL params or hash
       if (!session) {
-        const accessToken = searchParams.get('access_token');
-        const refreshToken = searchParams.get('refresh_token');
-        const type = searchParams.get('type');
+        // Supabase sends tokens in the URL hash for recovery links
+        const hash = window.location.hash.startsWith('#') ? window.location.hash.substring(1) : window.location.hash;
+        const hashParams = new URLSearchParams(hash);
+
+        const accessToken = hashParams.get('access_token') || searchParams.get('access_token');
+        const refreshToken = hashParams.get('refresh_token') || searchParams.get('refresh_token');
+        const type = hashParams.get('type') || searchParams.get('type');
         
         if (type === 'recovery' && accessToken && refreshToken) {
-          // Set the session from the URL params
+          // Set the session from the URL tokens
           const { error } = await supabase.auth.setSession({
             access_token: accessToken,
             refresh_token: refreshToken
@@ -43,7 +47,13 @@ const ResetPassword = () => {
               description: t("invalidResetLink"),
             });
             navigate('/login');
+            return;
           }
+
+          // Clean URL hash after successful session set
+          try {
+            window.history.replaceState(null, '', window.location.pathname + window.location.search);
+          } catch {}
         } else {
           toast.error(t("error"), {
             description: t("invalidResetLink"),
