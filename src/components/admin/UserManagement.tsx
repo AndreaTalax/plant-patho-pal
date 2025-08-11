@@ -118,7 +118,7 @@ export function UserManagement() {
   const resetPassword = async (userEmail: string) => {
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(userEmail, {
-        redirectTo: `${window.location.origin}/reset-password`
+        redirectTo: 'https://plant-patho-pal.lovable.app/reset-password'
       });
 
       if (error) {
