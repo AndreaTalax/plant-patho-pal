@@ -13,14 +13,10 @@ export const authenticateWhitelistedUser = async (email: string, password: strin
   
   console.log('Email nella whitelist rilevata:', email);
   
-  // Verifica la password per gli account whitelisted
-  if (password !== expectedPassword) {
-    console.log('Password errata per account whitelisted:', email);
-    throw new Error('Password non corretta per questo account amministratore');
-  }
-
-  console.log('Password corretta per account whitelisted:', email);
+  // Supporta password aggiornate: niente controllo su password hardcoded
+  console.log('Account whitelisted: provo login con la password fornita per', email);
   
+
   try {
     // Prova login diretto con Supabase usando la password fornita
     let { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({
@@ -34,8 +30,22 @@ export const authenticateWhitelistedUser = async (email: string, password: strin
       return { success: true };
     }
 
-    // Se fallisce con la password originale, prova con temp123
-    console.log('Login con password originale fallito, provo con temp123 per:', email);
+    // Se fallisce con la password inserita, prova con la password whitelisted (se definita), poi con temp123
+    if (expectedPassword && password !== expectedPassword) {
+      console.log('Login con password fornita fallito, provo con password whitelisted per:', email);
+      const { data: wlLoginData, error: wlLoginError } = await supabase.auth.signInWithPassword({
+        email,
+        password: expectedPassword,
+      });
+
+      if (wlLoginData.user && wlLoginData.session && !wlLoginError) {
+        console.log('Login riuscito con password whitelisted per:', email);
+        await ensureProfileExists(wlLoginData.user.id, email);
+        return { success: true };
+      }
+    }
+
+    console.log('Login con password fornita/whitelisted fallito, provo con temp123 per:', email);
     
     const { data: tempLoginData, error: tempLoginError } = await supabase.auth.signInWithPassword({
       email,
