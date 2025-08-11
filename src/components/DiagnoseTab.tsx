@@ -149,9 +149,17 @@ const DiagnoseTab = () => {
   // Plant info completion handler
   const handlePlantInfoComplete = useCallback((data: PlantInfo) => {
     setPlantInfo(data);
+
+    // Segna definitivamente che l'utente ha completato almeno una diagnosi (persistente per utente)
+    try {
+      if (userProfile?.id && data.infoComplete) {
+        localStorage.setItem(`firstDiagnosisDone:${userProfile.id}`, 'true');
+      }
+    } catch {}
+
     setCurrentStage('capture');
     toast.success('Informazioni pianta salvate! Ora scatta o carica una foto.');
-  }, [setPlantInfo]);
+  }, [setPlantInfo, userProfile?.id]);
 
   // File upload handler - NON avvia automaticamente la diagnosi
   const handleFileUpload = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {

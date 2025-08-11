@@ -27,9 +27,6 @@ const BottomNavigation = ({
       return tabName === "diagnose" ? "opacity-50 cursor-not-allowed" : "";
     }
     
-    if (!plantInfoComplete && tabName !== "diagnose") {
-      return "opacity-50 cursor-not-allowed";
-    }
     if (!canAccessTabs && tabName !== "diagnose") {
       return "opacity-50 cursor-not-allowed";
     }

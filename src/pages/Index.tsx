@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/context/ThemeContext";
 import { useNavigate } from "react-router-dom";
@@ -22,6 +22,7 @@ const Index = () => {
   const navigate = useNavigate();
 
   const [activeTab, setActiveTab] = useState<string>(isMasterAccount ? "expert" : "diagnose");
+  const hasAutoOpenedRef = useRef(false);
 
   useEffect(() => {
     if (!loading && !isAuthenticated) {
@@ -37,7 +38,8 @@ const Index = () => {
     }
   }, [isAuthenticated, isProfileComplete, isMasterAccount, loading, navigate]);
 
-  const canAccessTabs = plantInfo.infoComplete && (plantInfo.useAI || plantInfo.sendToExpert);
+  const hasFirstDiagnosis = !!(userProfile?.id && typeof window !== 'undefined' && localStorage.getItem(`firstDiagnosisDone:${userProfile.id}`) === 'true');
+  const canAccessTabs = hasFirstDiagnosis || (plantInfo.infoComplete && (plantInfo.useAI || plantInfo.sendToExpert));
 
   useEffect(() => {
     ensureStorageBuckets();
@@ -49,12 +51,12 @@ const Index = () => {
     }
   }, [isMasterAccount, activeTab]);
 
-  // Se l'utente ha già messaggi in una conversazione, apri automaticamente la chat al login
+  // Se l'utente ha già messaggi in una conversazione, apri automaticamente la chat solo una volta dopo il login
   useEffect(() => {
     const autoOpenChatIfMessages = async () => {
       try {
+        if (hasAutoOpenedRef.current) return;
         if (isMasterAccount || !isAuthenticated || !userProfile?.id) return;
-        if (activeTab !== 'diagnose') return;
         const { data, error } = await supabase
           .from('conversations' as any)
           .select('id,last_message_at')
@@ -67,10 +69,12 @@ const Index = () => {
         }
       } catch (e) {
         console.log('ℹ️ Auto-open chat check error:', e);
+      } finally {
+        hasAutoOpenedRef.current = true;
       }
     };
     autoOpenChatIfMessages();
-  }, [isAuthenticated, userProfile?.id, isMasterAccount, activeTab]);
+  }, [isAuthenticated, userProfile?.id, isMasterAccount]);
 
   useEffect(() => {
     if (!canAccessTabs && activeTab !== "diagnose" && activeTab !== "chat" && !isMasterAccount) {
