@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/context/ThemeContext";
 import { useNavigate } from "react-router-dom";
@@ -22,7 +22,6 @@ const Index = () => {
   const navigate = useNavigate();
 
   const [activeTab, setActiveTab] = useState<string>(isMasterAccount ? "expert" : "diagnose");
-  const hasAutoOpenedRef = useRef(false);
 
   useEffect(() => {
     if (!loading && !isAuthenticated) {
@@ -51,17 +50,16 @@ const Index = () => {
     }
   }, [isMasterAccount, activeTab]);
 
-  // Se l'utente ha già messaggi in una conversazione, apri automaticamente la chat solo una volta dopo il login
+  // Se l'utente ha una conversazione attiva, apri automaticamente la chat
   useEffect(() => {
     const autoOpenChatIfMessages = async () => {
       try {
-        if (hasAutoOpenedRef.current) return;
         if (isMasterAccount || !isAuthenticated || !userProfile?.id) return;
         const { data, error } = await supabase
           .from('conversations' as any)
-          .select('id,last_message_at')
+          .select('id,last_message_at,status')
           .eq('user_id', userProfile.id)
-          .not('last_message_at', 'is', null)
+          .eq('status', 'active')
           .order('last_message_at', { ascending: false })
           .limit(1);
         if (!error && data && data.length > 0) {
@@ -69,12 +67,10 @@ const Index = () => {
         }
       } catch (e) {
         console.log('ℹ️ Auto-open chat check error:', e);
-      } finally {
-        hasAutoOpenedRef.current = true;
       }
     };
     autoOpenChatIfMessages();
-  }, [isAuthenticated, userProfile?.id, isMasterAccount]);
+  }, [isAuthenticated, userProfile?.id, isMasterAccount, activeTab]);
 
   useEffect(() => {
     if (!canAccessTabs && activeTab !== "diagnose" && activeTab !== "chat" && !isMasterAccount) {
