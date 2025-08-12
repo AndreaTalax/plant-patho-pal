@@ -152,8 +152,11 @@ const DiagnoseTab = () => {
 
     // Segna definitivamente che l'utente ha completato almeno una diagnosi (persistente per utente)
     try {
-      if (userProfile?.id && data.infoComplete) {
-        localStorage.setItem(`firstDiagnosisDone:${userProfile.id}`, 'true');
+      if (data.infoComplete) {
+        localStorage.setItem('firstDiagnosisDone', 'true');
+        if (userProfile?.id) {
+          localStorage.setItem(`firstDiagnosisDone:${userProfile.id}`, 'true');
+        }
       }
     } catch {}
 

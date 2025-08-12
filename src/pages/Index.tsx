@@ -38,7 +38,11 @@ const Index = () => {
     }
   }, [isAuthenticated, isProfileComplete, isMasterAccount, loading, navigate]);
 
-  const hasFirstDiagnosis = !!(userProfile?.id && typeof window !== 'undefined' && localStorage.getItem(`firstDiagnosisDone:${userProfile.id}`) === 'true');
+  const hasFirstDiagnosis =
+    typeof window !== 'undefined' && (
+      localStorage.getItem('firstDiagnosisDone') === 'true' ||
+      (userProfile?.id ? localStorage.getItem(`firstDiagnosisDone:${userProfile.id}`) === 'true' : false)
+    );
   const canAccessTabs = hasFirstDiagnosis || (plantInfo.infoComplete && (plantInfo.useAI || plantInfo.sendToExpert));
 
   useEffect(() => {
