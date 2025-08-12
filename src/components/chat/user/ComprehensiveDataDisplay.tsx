@@ -33,7 +33,19 @@ export const ComprehensiveDataDisplay: React.FC<ComprehensiveDataDisplayProps> =
   const { plantInfo } = usePlantInfo();
   const [expandedSection, setExpandedSection] = useState<'user' | 'plant' | 'image' | null>('plant');
 
-  if (!isVisible) return null;
+  // Mostra una barra compatta quando è collassato, in modo da poterlo riaprire
+  if (!isVisible) {
+    return (
+      <div className="border-b border-gray-200 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80 z-10 sticky top-0">
+        <div className="p-3 flex items-center justify-between">
+          <h3 className="font-semibold text-gray-900">📋 Dati Inviati all'Esperto</h3>
+          <Button variant="ghost" size="sm" onClick={onToggle}>
+            <ChevronDown className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="border-b border-gray-200 bg-gray-50">

@@ -170,14 +170,12 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
       </div>
 
       {/* Visualizzazione dati quando necessario */}
-      {showComprehensiveData && (
-        <div className="flex-shrink-0">
-          <ComprehensiveDataDisplay
-            isVisible={showComprehensiveData}
-            onToggle={() => setShowComprehensiveData(!showComprehensiveData)}
-          />
-        </div>
-      )}
+      <div className="flex-shrink-0">
+        <ComprehensiveDataDisplay
+          isVisible={showComprehensiveData}
+          onToggle={() => setShowComprehensiveData(!showComprehensiveData)}
+        />
+      </div>
 
       {/* Area chat principale */}
       <div className="flex-1 overflow-hidden bg-white">
