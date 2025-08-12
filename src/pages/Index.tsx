@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/context/ThemeContext";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -23,6 +23,7 @@ const Index = () => {
   const location = useLocation();
 
   const [activeTab, setActiveTab] = useState<string>(isMasterAccount ? "expert" : "diagnose");
+  const suppressAutoOpenRef = useRef(false);
 
   useEffect(() => {
     if (!loading && !isAuthenticated) {
@@ -73,7 +74,8 @@ const Index = () => {
     const autoOpenChatIfMessages = async () => {
       try {
         const params = new URLSearchParams(location.search);
-        if (params.get('tab')) return; // non sovrascrivere la scelta esplicita dell'utente
+        if (params.get('tab')) return; // non sovrascrivere la scelta esplicita dell'utente (URL)
+        if (suppressAutoOpenRef.current) return; // non sovrascrivere la scelta manuale dell'utente
         if (isMasterAccount || !isAuthenticated || !userProfile?.id) return;
         const { data, error } = await supabase
           .from('conversations' as any)
@@ -117,9 +119,17 @@ const Index = () => {
         return;
       }
       
+      // Se l'utente chiede esplicitamente Diagnosi, non auto-aprire la chat
+      if (newTab === "diagnose") {
+        suppressAutoOpenRef.current = true;
+        setActiveTab("diagnose");
+        return;
+      }
+      
       // Per utenti normali, la chat è sempre accessibile
       if (newTab === "chat") {
         console.log("🎧 Chat requested - allowing access");
+        suppressAutoOpenRef.current = false; // riabilita auto-open su prossimi caricamenti
         setActiveTab("chat");
         return;
       }
@@ -164,6 +174,12 @@ const Index = () => {
       });
       setActiveTab("diagnose");
       return;
+    }
+    if (tab === 'diagnose') {
+      suppressAutoOpenRef.current = true; // rispetta la scelta manuale
+    }
+    if (tab === 'chat') {
+      suppressAutoOpenRef.current = false; // riabilita auto-open
     }
     setActiveTab(tab);
   };
