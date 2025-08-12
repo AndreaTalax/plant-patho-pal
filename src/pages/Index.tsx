@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/context/ThemeContext";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import Header from "@/components/Header";
 import DiagnoseTab from "@/components/DiagnoseTab";
 import ChatTab from "@/components/ChatTab";
@@ -20,6 +20,7 @@ const Index = () => {
   const { toast } = useToast();
   const { t } = useTheme();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [activeTab, setActiveTab] = useState<string>(isMasterAccount ? "expert" : "diagnose");
 
@@ -44,6 +45,19 @@ const Index = () => {
     ensureStorageBuckets();
   }, []);
 
+  // Legge il tab dalla querystring (es. /?tab=diagnose) e lo applica con priorità
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const tabParam = params.get('tab');
+    if (tabParam) {
+      if (isMasterAccount && tabParam === 'diagnose') {
+        setActiveTab('expert');
+      } else {
+        setActiveTab(tabParam);
+      }
+    }
+  }, [location.search, isMasterAccount]);
+
   useEffect(() => {
     if (isMasterAccount && activeTab === "diagnose") {
       setActiveTab("expert");
@@ -54,6 +68,8 @@ const Index = () => {
   useEffect(() => {
     const autoOpenChatIfMessages = async () => {
       try {
+        const params = new URLSearchParams(location.search);
+        if (params.get('tab')) return; // non sovrascrivere la scelta esplicita dell'utente
         if (isMasterAccount || !isAuthenticated || !userProfile?.id) return;
         const { data, error } = await supabase
           .from('conversations' as any)
@@ -70,7 +86,7 @@ const Index = () => {
       }
     };
     autoOpenChatIfMessages();
-  }, [isAuthenticated, userProfile?.id, isMasterAccount, activeTab]);
+  }, [isAuthenticated, userProfile?.id, isMasterAccount, activeTab, location.search]);
 
   useEffect(() => {
     if (!canAccessTabs && activeTab !== "diagnose" && activeTab !== "chat" && !isMasterAccount) {

@@ -44,7 +44,7 @@ const Header = () => {
   };
 
   const menuItems = [
-    { name: 'Home', icon: Home, path: '/' },
+    { name: 'Home', icon: Home, path: '/?tab=diagnose' },
     { name: 'About Us', icon: Info, path: '/about' },
     { name: 'Services', icon: Briefcase, path: '/services' },
     { name: 'Contact', icon: Phone, path: '/contact' },
