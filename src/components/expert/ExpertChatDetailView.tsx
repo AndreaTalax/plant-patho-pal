@@ -11,6 +11,7 @@ import { MARCO_NIGRO_ID } from "@/components/phytopathologist";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ConversationService } from "@/services/chat/conversationService";
 import { MessageService } from "@/services/chat/messageService";
+import MessageInput from "@/components/chat/MessageInput";
 
 /**
  * Dettaglio Chat Esperto (singola conversazione) con messaggistica real-time
@@ -276,29 +277,40 @@ const ExpertChatDetailView = ({ conversation, onBack }: {
       ) : (
         <>
           <div className="h-80 overflow-y-auto space-y-4 px-2 mb-4">
-            {messages.length > 0 ? messages.map(m => (
-              <div
-                key={m.id}
-                className={`p-3 rounded-xl max-w-[80%] ${m.sender_id === conversation.user_id
-                    ? "bg-drplant-green/10 text-left ml-0 mr-auto"
-                    : "bg-blue-100/80 text-right ml-auto mr-0"
-                  }`}
-              >
-                <div className="text-xs text-gray-500 mb-1">
-                  {m.sender_id === conversation.user_id ? "Utente" : "Marco Nigro"}
-                  <span className="ml-2">
-                    {new Date(m.sent_at).toLocaleTimeString('it-IT', { 
-                      hour: '2-digit', 
-                      minute: '2-digit' 
-                    })}
-                  </span>
+            {messages.length > 0 ? messages.map(m => {
+              const isExpertMessage = m.sender_id === MARCO_NIGRO_ID;
+              const isUserMessage = m.sender_id === conversation.user_id;
+              
+              return (
+                <div key={m.id} className="w-full">
+                  <div
+                    className={`p-3 rounded-xl max-w-[80%] flex flex-col ${
+                      isUserMessage
+                        ? "bg-drplant-green/10 text-left ml-0 mr-auto"
+                        : "bg-blue-100/80 text-left ml-auto mr-0"
+                    }`}
+                  >
+                    <div className="text-xs text-gray-500 mb-1">
+                      {isUserMessage ? "Utente" : "Marco Nigro"}
+                      <span className="ml-2">
+                        {new Date(m.sent_at).toLocaleTimeString('it-IT', { 
+                          hour: '2-digit', 
+                          minute: '2-digit' 
+                        })}
+                      </span>
+                    </div>
+                    <div className="font-medium">{m.text || m.content}</div>
+                    {m.image_url && (
+                      <img 
+                        src={m.image_url} 
+                        alt="Allegato" 
+                        className="mt-2 max-h-32 max-w-full rounded-lg object-cover" 
+                      />
+                    )}
+                  </div>
                 </div>
-                <div className="font-medium">{m.text || m.content}</div>
-                {m.image_url && (
-                  <img src={m.image_url} alt="Allegato" className="mt-2 max-h-24 rounded-lg" />
-                )}
-              </div>
-            )) : (
+              );
+            }) : (
               <div className="text-center text-gray-400">
                 {conversationDeleted ? "Conversazione eliminata" : "Nessun messaggio"}
               </div>
@@ -306,40 +318,57 @@ const ExpertChatDetailView = ({ conversation, onBack }: {
           </div>
 
           {/* Input dei messaggi - disabilitato se conversazione eliminata */}
-          <div className="flex gap-2">
-            <Input
-              value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
-              onKeyPress={handleKeyPress}
-              placeholder={
-                conversationDeleted ? "Conversazione eliminata - impossibile inviare messaggi" :
-                isArchivedConversation ? "Conversazione archiviata - solo lettura" :
-                "Scrivi un messaggio..."
-              }
-              disabled={sending || !isConnected || conversationDeleted || isArchivedConversation}
-              className={`flex-1 ${
-                conversationDeleted ? 'bg-red-50 border-red-200 text-red-600 placeholder-red-400' : 
-                isArchivedConversation ? 'bg-gray-50 border-gray-300 text-gray-500 placeholder-gray-400' : 
-                ''
-              }`}
+          {!conversationDeleted && !isArchivedConversation && (
+            <MessageInput
+              conversationId={conversation.id}
+              senderId={MARCO_NIGRO_ID}
+              recipientId={conversation.user_id}
+              onSendMessage={async (message: string, imageUrl?: string) => {
+                await sendMessage(conversation.user_id, message, imageUrl);
+              }}
+              isMasterAccount={true}
+              enableAudio={true}
+              enableEmoji={true}
             />
-            <Button 
-              onClick={handleSendMessage}
-              disabled={!newMessage.trim() || sending || !isConnected || conversationDeleted || isArchivedConversation}
-              size="icon"
-              className={`${
-                conversationDeleted ? 'bg-gray-400 hover:bg-gray-400 cursor-not-allowed' : 
-                isArchivedConversation ? 'bg-gray-400 hover:bg-gray-400 cursor-not-allowed' : 
-                ''
-              }`}
-            >
-              {sending ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Send className="h-4 w-4" />
-              )}
-            </Button>
-          </div>
+          )}
+          
+          {/* Fallback input per conversazioni archiviate o eliminate */}
+          {(conversationDeleted || isArchivedConversation) && (
+            <div className="flex gap-2">
+              <Input
+                value={newMessage}
+                onChange={(e) => setNewMessage(e.target.value)}
+                onKeyPress={handleKeyPress}
+                placeholder={
+                  conversationDeleted ? "Conversazione eliminata - impossibile inviare messaggi" :
+                  isArchivedConversation ? "Conversazione archiviata - solo lettura" :
+                  "Scrivi un messaggio..."
+                }
+                disabled={sending || !isConnected || conversationDeleted || isArchivedConversation}
+                className={`flex-1 ${
+                  conversationDeleted ? 'bg-red-50 border-red-200 text-red-600 placeholder-red-400' : 
+                  isArchivedConversation ? 'bg-gray-50 border-gray-300 text-gray-500 placeholder-gray-400' : 
+                  ''
+                }`}
+              />
+              <Button 
+                onClick={handleSendMessage}
+                disabled={!newMessage.trim() || sending || !isConnected || conversationDeleted || isArchivedConversation}
+                size="icon"
+                className={`${
+                  conversationDeleted ? 'bg-gray-400 hover:bg-gray-400 cursor-not-allowed' : 
+                  isArchivedConversation ? 'bg-gray-400 hover:bg-gray-400 cursor-not-allowed' : 
+                  ''
+                }`}
+              >
+                {sending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Send className="h-4 w-4" />
+                )}
+              </Button>
+            </div>
+          )}
 
           {/* Messaggio di stato per input disabilitato */}
           {conversationDeleted && (

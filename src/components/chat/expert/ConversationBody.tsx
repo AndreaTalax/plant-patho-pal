@@ -45,7 +45,7 @@ const ConversationBody = ({
             conversationId={conversation.id}
             senderId={conversation.expertId || MARCO_NIGRO_ID}
             recipientId={conversation.user_id || ''}
-            onSendMessage={async (message: string) => {
+            onSendMessage={async (message: string, imageUrl?: string) => {
               await onSendMessage(message);
             }}
             isMasterAccount={true}
