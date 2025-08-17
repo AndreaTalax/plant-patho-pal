@@ -45,6 +45,8 @@ const ShopTab = () => {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [isProductDetailOpen, setIsProductDetailOpen] = useState(false);
   const [paymentStatus, setPaymentStatus] = useState<'idle' | 'processing' | 'success' | 'error'>('idle');
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -70,14 +72,28 @@ const ShopTab = () => {
   const fetchProducts = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase.functions.invoke('get-products', {
-        body: { category: selectedCategory, search: searchTerm }
+      
+      // Use URL parameters instead of body for search and category
+      const supabaseUrl = 'https://otdmqmpxukifoxjlgzmq.supabase.co';
+      const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im90ZG1xbXB4dWtpZm94amxnem1xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDY2NDQ5ODksImV4cCI6MjA2MjIyMDk4OX0.re4vu-banv0K-hBFNRYZGy5VucPkk141Pa--x-QiGr4';
+      
+      const params = new URLSearchParams();
+      if (selectedCategory) params.append('category', selectedCategory);
+      if (searchTerm) params.append('search', searchTerm);
+      
+      const response = await fetch(`${supabaseUrl}/functions/v1/get-products?${params}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${supabaseAnonKey}`,
+          'Content-Type': 'application/json'
+        }
       });
 
-      if (error) throw error;
-      setProducts(data.products || []);
-      // AGGIUNGO DEBUG LOG
-      console.log('[ShopTab] Products loaded:', data.products);
+      if (!response.ok) throw new Error('Failed to fetch products');
+      
+      const result = await response.json();
+      setProducts(result.products || []);
+      console.log('[ShopTab] Products loaded:', result.products);
     } catch (error) {
       console.error('Error fetching products:', error);
       toast.error('Failed to load products');
@@ -250,6 +266,11 @@ const ShopTab = () => {
     return 'https://images.unsplash.com/photo-1464983953574-0892a716854b?q=80&w=400&h=400&auto=format&fit=crop';
   };
 
+  const openProductDetail = (product: Product) => {
+    setSelectedProduct(product);
+    setIsProductDetailOpen(true);
+  };
+
   return (
     <div className="flex flex-col pt-6 pb-24">
       <div className="px-4">
@@ -294,7 +315,10 @@ const ShopTab = () => {
             <div className="grid grid-cols-2 gap-4">
               {products.map(product => (
                 <Card key={product.id} className="overflow-hidden">
-                  <div className="aspect-square overflow-hidden">
+                  <div 
+                    className="aspect-square overflow-hidden cursor-pointer"
+                    onClick={() => openProductDetail(product)}
+                  >
                     <img
                       src={
                         product.image_url && product.image_url.trim() !== ""
@@ -302,14 +326,19 @@ const ShopTab = () => {
                           : getProductFallbackImage(product)
                       }
                       alt={product.name}
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-cover hover:scale-105 transition-transform duration-200"
                       onError={e => {
                         (e.currentTarget as HTMLImageElement).src = getProductFallbackImage(product);
                       }}
                     />
                   </div>
                   <div className="p-3">
-                    <h3 className="font-medium text-sm line-clamp-1">{product.name}</h3>
+                    <h3 
+                      className="font-medium text-sm line-clamp-1 cursor-pointer hover:text-drplant-green"
+                      onClick={() => openProductDetail(product)}
+                    >
+                      {product.name}
+                    </h3>
                     <p className="text-gray-500 text-xs mb-2">{product.category}</p>
                     <div className="flex justify-between items-center">
                       <span className="font-bold text-drplant-green">€{product.price.toFixed(2)}</span>
@@ -510,6 +539,72 @@ const ShopTab = () => {
                 Try Again
               </Button>
             </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Product Detail Dialog */}
+      <Dialog open={isProductDetailOpen} onOpenChange={setIsProductDetailOpen}>
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+          {selectedProduct && (
+            <>
+              <DialogHeader>
+                <DialogTitle>{selectedProduct.name}</DialogTitle>
+                <DialogDescription>
+                  {selectedProduct.category}
+                </DialogDescription>
+              </DialogHeader>
+              
+              <div className="space-y-4 my-4">
+                <div className="aspect-square overflow-hidden rounded-lg">
+                  <img
+                    src={
+                      selectedProduct.image_url && selectedProduct.image_url.trim() !== ""
+                        ? selectedProduct.image_url
+                        : getProductFallbackImage(selectedProduct)
+                    }
+                    alt={selectedProduct.name}
+                    className="w-full h-full object-cover"
+                    onError={e => {
+                      (e.currentTarget as HTMLImageElement).src = getProductFallbackImage(selectedProduct);
+                    }}
+                  />
+                </div>
+                
+                <div>
+                  <h3 className="font-semibold text-lg mb-2">{selectedProduct.name}</h3>
+                  <p className="text-gray-600 mb-4">{selectedProduct.description}</p>
+                  
+                  <div className="flex items-center justify-between mb-4">
+                    <Badge variant="outline">{selectedProduct.category}</Badge>
+                    <span className="text-2xl font-bold text-drplant-green">
+                      €{selectedProduct.price.toFixed(2)}
+                    </span>
+                  </div>
+                  
+                  <div className="mb-4">
+                    <p className="text-sm text-gray-600">
+                      Stock: {selectedProduct.stock_quantity > 0 
+                        ? `${selectedProduct.stock_quantity} available` 
+                        : 'Out of stock'
+                      }
+                    </p>
+                  </div>
+                  
+                  <Button 
+                    className="w-full bg-drplant-green hover:bg-drplant-green-dark"
+                    onClick={() => {
+                      addToCart(selectedProduct.id);
+                      setIsProductDetailOpen(false);
+                    }}
+                    disabled={selectedProduct.stock_quantity === 0}
+                  >
+                    <ShoppingBag className="mr-2 h-4 w-4" />
+                    {selectedProduct.stock_quantity === 0 ? 'Out of Stock' : 'Add to Cart'}
+                  </Button>
+                </div>
+              </div>
+            </>
           )}
         </DialogContent>
       </Dialog>
