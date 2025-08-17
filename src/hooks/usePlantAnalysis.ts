@@ -87,7 +87,8 @@ export const usePlantAnalysis = () => {
 
       let plantName = comp.plantIdentification.name || 'Pianta non identificata';
       let scientificName = comp.plantIdentification.scientificName || '';
-      let confidencePct = Math.round((comp.plantIdentification.confidence || 0) * 100);
+      // Cap accuracy at 70% for UI consistency
+      let confidencePct = Math.min(70, Math.round((comp.plantIdentification.confidence || 0) * 100));
 
       let diseases = Array.isArray(comp.healthAssessment?.diseases) ? comp.healthAssessment.diseases : [];
       let isHealthy = comp.healthAssessment?.isHealthy === true && diseases.length === 0;
@@ -167,7 +168,7 @@ export const usePlantAnalysis = () => {
               ...(primary.treatment.chemical || [])
             ]
           : [],
-        confidence: Math.round((primary.probability || 0.7) * 100),
+        confidence: Math.min(70, Math.round((primary.probability || 0.7) * 100)),
         healthy: false,
         products: [],
         disclaimer: 'Diagnosi AI. Conferma con un esperto.',

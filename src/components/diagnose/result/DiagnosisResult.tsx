@@ -22,6 +22,7 @@ import { toast } from 'sonner';
 import ImageDisplay from './ImageDisplay';
 import PlantInfoCard from './PlantInfoCard';
 import EppoDataPanel from './EppoDataPanel';
+import ProductSuggestions from './ProductSuggestions';
 
 interface DiagnosisResultProps {
   imageSrc: string;
@@ -194,10 +195,11 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
 
   // Prima definisco le variabili base con correzione accuratezza
   const rawConfidence = analysisData?.confidence || analysisDetails?.confidence || 0.5;
-  // Assicurati che l'accuratezza sia sempre tra 0-100%
-  const confidencePercent = Math.min(100, Math.max(0, 
+  // Assicurati che l'accuratezza sia sempre tra 0-70% (cap richiesto)
+  const computedPercent = Math.min(100, Math.max(0, 
     rawConfidence > 1 ? Math.round(rawConfidence) : Math.round(rawConfidence * 100)
   ));
+  const confidencePercent = Math.min(70, computedPercent);
 
   const isHealthy = analysisData?.isHealthy || analysisData?.healthy || false;
   const isHighConfidence = rawConfidence >= 0.7;
@@ -255,7 +257,7 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
   };
 
   const getDiseaseInfo = () => {
-    let diseases = [];
+    let diseases: any[] = [];
     
     // Cerca malattie in vari formati
     if (analysisData?.diseases && Array.isArray(analysisData.diseases)) {
@@ -275,13 +277,28 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
       diseases = [{ 
         name: 'Possibile problema rilevato', 
         probability: analysisData.confidence || 0.5,
-        description: 'L\'analisi AI ha rilevato possibili anomalie che richiedono ulteriore valutazione'
+        description: "L'analisi AI ha rilevato possibili anomalie che richiedono ulteriore valutazione"
       }];
     }
     
     return diseases;
   };
 
+  // Stima area colpita dalla lista sintomi o da campi dedicati
+  const getAffectedAreaFromSymptoms = (d: any): string => {
+    if (d?.affectedArea) return d.affectedArea;
+    const text = [
+      ...(Array.isArray(d?.symptoms) ? d.symptoms : []),
+      d?.description || '',
+    ].join(' ').toLowerCase();
+    if (/margini|bord/i.test(text)) return 'Margini fogliari';
+    if (/macchi|chiazze|necrosi|foglia|foglie/i.test(text)) return 'Foglie';
+    if (/punta|apice/i.test(text)) return 'Punte foglie';
+    if (/stelo|fusto|tronco/i.test(text)) return 'Fusto/Stelo';
+    if (/radic/i.test(text)) return 'Radici';
+    if (/frutt|bacca/i.test(text)) return 'Frutti';
+    return 'Intera pianta';
+  };
   // Infine chiamo le funzioni
   const { plantName, scientificName } = getPlantInfo();
   const diseaseList = getDiseaseInfo();
@@ -393,13 +410,11 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
                       </div>
                     )}
                     
-                    {/* Cause */}
-                    {disease.causes && (
-                      <div className="mb-3">
-                        <h5 className="font-semibold text-red-800 text-sm mb-1">🔍 Cause:</h5>
-                        <p className="text-red-700 text-sm">{disease.causes}</p>
-                      </div>
-                    )}
+                    {/* Zona colpita */}
+                    <div className="mb-3">
+                      <h5 className="font-semibold text-amber-800 text-sm mb-1">🗺️ Zona colpita:</h5>
+                      <p className="text-amber-800 text-sm">{getAffectedAreaFromSymptoms(disease)}</p>
+                    </div>
                     
                     {/* Sintomi */}
                     {disease.symptoms && Array.isArray(disease.symptoms) && disease.symptoms.length > 0 && (
@@ -432,6 +447,12 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
                         <p className="text-green-700 text-sm">{disease.treatment}</p>
                       </div>
                     )}
+
+                    {/* Prodotti consigliati */}
+                    <div className="mt-3">
+                      <h5 className="font-semibold text-green-900 text-sm mb-2">🧴 Prodotti consigliati:</h5>
+                      <ProductSuggestions diseaseName={disease.name} />
+                    </div>
 
                     {/* Disclaimer se malattia è seria */}
                     {disease.disclaimer && (
