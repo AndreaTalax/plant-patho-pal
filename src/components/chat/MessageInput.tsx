@@ -131,10 +131,10 @@ const MessageInput: React.FC<MessageInputProps> = ({
         />
       )}
       
-      <div className="bg-white border-t border-gray-200 p-3">
-        <div className="flex items-end gap-2 w-full">
+      <div className="bg-white border-t border-gray-200 p-3 max-w-2xl mx-auto">
+        <div className="flex items-end gap-2 w-full justify-center">
           {/* Message Input Area - takes most space */}
-          <div className="flex-1 min-w-0">
+          <div className="flex-1 min-w-[55%]">
             <Textarea
               ref={textareaRef}
               value={message}
