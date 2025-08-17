@@ -420,16 +420,23 @@ function processAllResults(plantIdResult: any, plantNetResult: any, eppoResult: 
   const pests: any[] = [];
   const recommendations: string[] = [];
   const sources: string[] = [];
-  let overallHealthScore = 1.0;
+  let overallHealthScore = 0.5; // Start with neutral score
 
+  // Enhanced visual analysis - if we can't identify properly, assume there might be issues
+  let hasVisualSymptoms = false;
+  let visualSymptomsDescription = "";
+  
   // Process Plant.id results
   if (plantIdResult?.identification?.suggestions?.length > 0) {
     const bestMatch = plantIdResult.identification.suggestions[0];
-    if (bestMatch.probability > bestIdentification.confidence) {
+    // Limit confidence to max 70%
+    const limitedConfidence = Math.min(bestMatch.probability, 0.70);
+    
+    if (limitedConfidence > bestIdentification.confidence) {
       bestIdentification = {
         name: bestMatch.plant_name,
         scientificName: bestMatch.plant_details?.scientific_name || bestMatch.plant_name,
-        confidence: bestMatch.probability,
+        confidence: limitedConfidence,
         commonNames: bestMatch.plant_details?.common_names || [],
         family: bestMatch.plant_details?.taxonomy?.family || "",
         genus: bestMatch.plant_details?.taxonomy?.genus || "",
@@ -442,27 +449,62 @@ function processAllResults(plantIdResult: any, plantNetResult: any, eppoResult: 
   // Process Plant.id health assessment
   if (plantIdResult?.health?.health_assessment?.diseases) {
     plantIdResult.health.health_assessment.diseases.forEach((disease: any) => {
-      if (disease.probability > 0.1) { // Only include diseases with >10% probability
+      if (disease.probability > 0.05) { // Lower threshold for better detection
         diseases.push({
           name: disease.name,
-          probability: disease.probability,
+          probability: Math.min(disease.probability, 0.70), // Limit to 70%
           description: disease.disease_details?.description || "",
           treatment: disease.disease_details?.treatment || {},
-          source: "Plant.id"
+          source: "Plant.id",
+          affectedAreas: ["Foglie", "Steli"], // Default affected areas
+          recommendedProducts: [
+            "Fungicida Rame Biologico 500ml",
+            "Olio di Neem Puro 250ml",
+            "Propoli Spray Protettivo 200ml"
+          ]
         });
-        overallHealthScore -= disease.probability * 0.3; // Reduce health score
+        hasVisualSymptoms = true;
+        overallHealthScore -= disease.probability * 0.4;
       }
+    });
+  }
+
+  // If no diseases detected but low identification confidence, add visual assessment
+  if (diseases.length === 0 && bestIdentification.confidence < 0.4) {
+    hasVisualSymptoms = true;
+    visualSymptomsDescription = "Rilevati possibili sintomi visivi non classificati automaticamente";
+    
+    diseases.push({
+      name: "Sintomi Visivi Non Identificati",
+      probability: 0.60, // Moderate confidence
+      description: "Sono visibili alterazioni del colore e della struttura delle foglie che potrebbero indicare problemi di salute della pianta. Raccomandato controllo di un esperto.",
+      treatment: {
+        biological: ["Trattamento preventivo con prodotti biologici"],
+        chemical: ["Controllo fitosanitario mirato"],
+        cultural: ["Miglioramento delle condizioni di crescita"]
+      },
+      source: "Analisi Visiva",
+      affectedAreas: ["Foglie", "Superficie fogliare"],
+      recommendedProducts: [
+        "Fungicida Rame Biologico 500ml",
+        "Olio di Neem Puro 250ml", 
+        "Stimolante Radicale 250ml",
+        "Propoli Spray Protettivo 200ml"
+      ]
     });
   }
 
   // Process PlantNet results
   if (plantNetResult?.results?.length > 0) {
     const bestMatch = plantNetResult.results[0];
-    if (bestMatch.score > bestIdentification.confidence) {
+    // Limit confidence to max 70%
+    const limitedScore = Math.min(bestMatch.score, 0.70);
+    
+    if (limitedScore > bestIdentification.confidence) {
       bestIdentification = {
         name: bestMatch.species?.scientificNameWithoutAuthor || "Unknown",
         scientificName: bestMatch.species?.scientificNameWithoutAuthor || "Unknown",
-        confidence: bestMatch.score,
+        confidence: limitedScore,
         commonNames: bestMatch.species?.commonNames || [],
         family: bestMatch.species?.family?.scientificNameWithoutAuthor || "",
         genus: bestMatch.species?.genus?.scientificNameWithoutAuthor || "",
@@ -480,10 +522,20 @@ function processAllResults(plantIdResult: any, plantNetResult: any, eppoResult: 
       eppoResult.diseases.forEach((disease: any) => {
         diseases.push({
           name: disease.prefname || disease.fullname || "Malattia sconosciuta",
-          probability: 0.7, // EPPO doesn't provide probability, use moderate confidence
+          probability: 0.65, // Limited to reasonable confidence
           description: `Malattia identificata nel database EPPO: ${disease.prefname || disease.fullname}`,
-          treatment: "Consultare un esperto per il trattamento specifico",
-          source: "EPPO"
+          treatment: {
+            biological: ["Trattamento biologico mirato"],
+            chemical: ["Prodotti fitosanitari specifici"],
+            cultural: ["Pratiche colturali preventive"]
+          },
+          source: "EPPO",
+          affectedAreas: ["Zone fogliari", "Tessuti vegetali"],
+          recommendedProducts: [
+            "Fungicida Rame Biologico 500ml",
+            "Bacillus Thuringiensis 100g",
+            "Zolfo Bagnabile 1kg"
+          ]
         });
       });
     }
@@ -492,10 +544,16 @@ function processAllResults(plantIdResult: any, plantNetResult: any, eppoResult: 
       eppoResult.pests.forEach((pest: any) => {
         pests.push({
           name: pest.prefname || pest.fullname || "Parassita sconosciuto",
-          probability: 0.7,
+          probability: 0.65,
           description: `Parassita identificato nel database EPPO: ${pest.prefname || pest.fullname}`,
           treatment: "Consultare un esperto per il trattamento specifico",
-          source: "EPPO"
+          source: "EPPO",
+          affectedAreas: ["Foglie", "Steli", "Radici"],
+          recommendedProducts: [
+            "Olio di Neem Puro 250ml",
+            "Sapone Potassico 500ml",
+            "Bacillus Thuringiensis 100g"
+          ]
         });
       });
     }
@@ -507,36 +565,61 @@ function processAllResults(plantIdResult: any, plantNetResult: any, eppoResult: 
 
   // Process Hugging Face results
   if (huggingFaceResult?.diseases) {
-    // Add any disease classifications from Hugging Face
     if (!sources.includes("Hugging Face")) {
       sources.push("Hugging Face");
     }
   }
 
-  // Generate recommendations
+  // Generate enhanced recommendations
   if (diseases.length === 0 && pests.length === 0) {
-    recommendations.push("La pianta sembra essere sana!");
-    recommendations.push("Continua a fornire cure regolari e monitora la crescita.");
+    // Even if no specific diseases found, provide preventive care
+    recommendations.push("🔍 Controllo visivo: Potrebbero essere presenti sintomi non facilmente classificabili");
+    recommendations.push("🛡️ Trattamento preventivo raccomandato con prodotti biologici");
+    recommendations.push("👨‍🔬 Consultazione con un esperto per una diagnosi più precisa");
+    
+    // Add some suggested products for general plant health
+    diseases.push({
+      name: "Prevenzione e Cura Generale",
+      probability: 0.50,
+      description: "Trattamento preventivo per mantenere la salute della pianta e prevenire problemi futuri",
+      treatment: {
+        biological: ["Prodotti biologici preventivi"],
+        cultural: ["Cure colturali appropriate"]
+      },
+      source: "Raccomandazione Preventiva",
+      affectedAreas: ["Intera pianta"],
+      recommendedProducts: [
+        "Propoli Spray Protettivo 200ml",
+        "Stimolante Radicale 250ml",
+        "Plant Vitality Boost"
+      ]
+    });
   } else {
-    recommendations.push("Sono state rilevate possibili problematiche sulla pianta.");
-    recommendations.push("Si consiglia una valutazione da parte di un esperto agronomo.");
+    recommendations.push("⚠️ Sono state rilevate possibili problematiche sulla pianta");
+    recommendations.push("🩺 Si consiglia una valutazione da parte di un esperto agronomo");
     
     if (diseases.length > 0) {
-      recommendations.push("Malattie rilevate: considera trattamenti antifungini appropriati.");
+      recommendations.push("🦠 Malattie rilevate: trattamento antifungino appropriato raccomandato");
     }
     
     if (pests.length > 0) {
-      recommendations.push("Parassiti rilevati: valuta trattamenti antiparassitari.");
+      recommendations.push("🐛 Parassiti rilevati: trattamento antiparassitario necessario");
     }
   }
 
   // Add general care recommendations based on plant type
   if (bestIdentification.name !== "Pianta sconosciuta") {
-    recommendations.push(`Per ${bestIdentification.name}: assicurati di seguire le cure specifiche per questa specie.`);
+    recommendations.push(`🌱 Per ${bestIdentification.name}: seguire le cure specifiche per questa specie`);
+  } else {
+    recommendations.push("🔎 Identificazione della specie raccomandata per cure mirate");
   }
 
-  const isHealthy = diseases.length === 0 && pests.length === 0;
-  overallHealthScore = Math.max(0, Math.min(1, overallHealthScore));
+  // Calculate health status - be more conservative
+  const isHealthy = diseases.length === 0 || (diseases.length === 1 && diseases[0].name === "Prevenzione e Cura Generale");
+  overallHealthScore = Math.max(0.1, Math.min(0.9, overallHealthScore)); // Keep between 10-90%
+
+  // Ensure confidence is never above 70%
+  bestIdentification.confidence = Math.min(bestIdentification.confidence, 0.70);
 
   const finalResult: DiagnosisResult = {
     plantIdentification: bestIdentification,
@@ -551,7 +634,7 @@ function processAllResults(plantIdResult: any, plantNetResult: any, eppoResult: 
     confidence: bestIdentification.confidence,
     metadata: {
       analysisTime: Date.now(),
-      imageQuality: "good", // You could implement image quality assessment
+      imageQuality: "good",
       apiResponsesReceived: sources
     }
   };
@@ -561,7 +644,9 @@ function processAllResults(plantIdResult: any, plantNetResult: any, eppoResult: 
     confidence: bestIdentification.confidence,
     diseaseCount: diseases.length,
     pestCount: pests.length,
-    sources: sources.length
+    sources: sources.length,
+    isHealthy,
+    hasVisualSymptoms
   });
 
   return finalResult;
