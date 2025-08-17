@@ -1,8 +1,16 @@
 
 /* Emoji Picker Styles */
 .emoji-picker-container {
-  width: 320px;
-  height: 400px;
+  width: 300px;
+  height: 350px;
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+  .emoji-picker-container {
+    width: 280px;
+    height: 320px;
+  }
 }
 
 /* Override emoji-mart default styles */

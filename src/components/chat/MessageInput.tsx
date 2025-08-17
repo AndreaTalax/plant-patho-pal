@@ -121,38 +121,70 @@ const MessageInput: React.FC<MessageInputProps> = ({
   console.log('📧 MessageInput render:', { enableAudio, enableEmoji, isMasterAccount });
   
   return (
-    <div className="bg-white border-t border-gray-200 p-4">
+    <div className="relative">
+      {/* Emoji Picker - positioned above the input */}
+      {enableEmoji && (
+        <EmojiPicker
+          onSelect={handleEmojiSelect}
+          open={showEmojiPicker}
+          onClose={() => setShowEmojiPicker(false)}
+        />
+      )}
       
-      <div className="flex items-end gap-3">
-        {/* Message Input Area */}
-        <div className="flex-1 relative">
-          <Textarea
-            ref={textareaRef}
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            onKeyPress={handleKeyPress}
-            placeholder="Scrivi un messaggio..."
-            className="min-h-[50px] max-h-[200px] resize-none"
-            disabled={isSending || isUploading}
-          />
-          
-          {/* Emoji Picker */}
-          {enableEmoji && (
-            <div className="absolute top-2 right-2">
-              <EmojiPicker
-                onSelect={handleEmojiSelect}
-                open={showEmojiPicker}
-                onClose={() => setShowEmojiPicker(false)}
-              />
-            </div>
-          )}
-        </div>
+      <div className="bg-white border-t border-gray-200 p-3">
+        <div className="flex items-end gap-2 w-full">
+          {/* Message Input Area - takes most space */}
+          <div className="flex-1 min-w-0">
+            <Textarea
+              ref={textareaRef}
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              onKeyPress={handleKeyPress}
+              placeholder="Scrivi un messaggio..."
+              className="min-h-[40px] max-h-[120px] resize-none text-sm w-full"
+              disabled={isSending || isUploading}
+            />
+          </div>
 
-        {/* Action Buttons */}
-        <div className="flex items-center gap-2">
-          {/* Audio Recorder Button */}
-          {enableAudio && (
-            <div>
+          {/* Action Buttons Row */}
+          <div className="flex items-center gap-1 flex-shrink-0">
+            {/* Emoji Button */}
+            {enableEmoji && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                disabled={isSending || isUploading}
+                className="h-8 w-8 p-0 flex-shrink-0"
+              >
+                <Smile className="h-4 w-4" />
+              </Button>
+            )}
+
+            {/* Image Upload */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleImageUpload}
+              className="hidden"
+            />
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isSending || isUploading}
+              className="h-8 w-8 p-0 flex-shrink-0"
+            >
+              {isUploading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <ImageIcon className="h-4 w-4" />
+              )}
+            </Button>
+
+            {/* Audio Recorder Button */}
+            {enableAudio && (
               <AudioRecorder 
                 onSendAudio={handleAudioSend}
                 disabled={isSending || isUploading}
@@ -160,68 +192,28 @@ const MessageInput: React.FC<MessageInputProps> = ({
                 senderId={senderId}
                 recipientId={recipientId}
               />
-            </div>
-          )}
+            )}
 
-          {/* Emoji Button */}
-          {enableEmoji && (
+            {/* Send Button */}
             <Button
-              variant="ghost"
+              onClick={handleSend}
+              disabled={!message.trim() || isSending || isUploading}
+              className="h-8 px-3 flex-shrink-0"
               size="sm"
-              onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-              disabled={isSending || isUploading}
-              className="h-10 w-10 p-0"
             >
-              <Smile className="h-4 w-4" />
+              {isSending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4" />
+              )}
             </Button>
-          )}
-
-          {/* Image Upload */}
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            onChange={handleImageUpload}
-            className="hidden"
-          />
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isSending || isUploading}
-            className="h-10 w-10 p-0"
-          >
-            {isUploading ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <ImageIcon className="h-4 w-4" />
-            )}
-          </Button>
-
-          {/* Send Button */}
-          <Button
-            onClick={handleSend}
-            disabled={!message.trim() || isSending || isUploading}
-            className="h-10 px-4"
-          >
-            {isSending ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                Invio...
-              </>
-            ) : (
-              <>
-                <Send className="h-4 w-4 mr-2" />
-                Invia
-              </>
-            )}
-          </Button>
+          </div>
         </div>
-      </div>
 
-      {/* Helper Text */}
-      <div className="text-xs text-gray-500 mt-2 text-center">
-        Premi Invio per inviare, Shift+Invio per andare a capo
+        {/* Helper Text - smaller and less prominent */}
+        <div className="text-xs text-gray-400 mt-1 text-center">
+          Invio per inviare • Shift+Invio per andare a capo
+        </div>
       </div>
     </div>
   );

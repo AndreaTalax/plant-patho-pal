@@ -30,8 +30,8 @@ const EmojiPicker: React.FC<EmojiPickerProps> = ({ onSelect, open, onClose }) =>
   };
 
   return (
-    <div className="absolute bottom-full right-0 z-50 mb-2">
-      <div className="relative bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden">
+    <div className="absolute bottom-full right-2 z-50 mb-2">
+      <div className="relative bg-white rounded-lg shadow-xl border border-gray-200 overflow-hidden">
         <button 
           onClick={onClose} 
           className="absolute top-2 right-2 z-10 bg-gray-100 hover:bg-gray-200 rounded-full p-1 transition-colors"
@@ -49,11 +49,11 @@ const EmojiPicker: React.FC<EmojiPickerProps> = ({ onSelect, open, onClose }) =>
             skinTonePosition="none"
             searchPosition="sticky"
             navPosition="bottom"
-            perLine={8}
+            perLine={9}
             maxFrequentRows={2}
             set="native"
-            emojiSize={20}
-            emojiButtonSize={28}
+            emojiSize={18}
+            emojiButtonSize={24}
           />
         </div>
       </div>
