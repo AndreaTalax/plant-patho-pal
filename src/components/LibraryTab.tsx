@@ -122,14 +122,24 @@ const LibraryTab = () => {
    */
   const fetchArticleDetails = async (articleId: string) => {
     try {
-      const { data, error } = await supabase.functions.invoke('get-library-articles', {
-        body: { id: articleId }
+      // Use URL parameters instead of body for article ID  
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+      
+      const response = await fetch(`${supabaseUrl}/functions/v1/get-library-articles?id=${articleId}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${supabaseAnonKey}`,
+          'Content-Type': 'application/json'
+        }
       });
 
-      if (error) throw error;
-      setSelectedArticle(data.article);
+      if (!response.ok) throw new Error('Failed to fetch article');
+      
+      const result = await response.json();
+      setSelectedArticle(result.article);
       setActiveArticle(articleId);
-      console.log('[LibraryTab] Fetched selectedArticle:', data.article); // <--- Debug dettaglio
+      console.log('[LibraryTab] Fetched selectedArticle:', result.article);
     } catch (error) {
       console.error('Error fetching article:', error);
       toast.error('Failed to load article');
