@@ -207,7 +207,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       console.log('✅ Logout completato, stato pulito');
       
       // Reindirizza alla pagina di login dopo il logout
-      window.location.href = '/auth';
+      window.location.href = '/login';
       
     } catch (error: any) {
       console.error('❌ Errore durante il logout:', error);
@@ -215,7 +215,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setUser(null);
       setSession(null);
       setUserProfile(null);
-      window.location.href = '/auth';
+      window.location.href = '/login';
       throw error;
     }
   };
