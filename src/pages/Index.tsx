@@ -94,10 +94,9 @@ const Index = () => {
     autoOpenChatIfMessages();
   }, [isAuthenticated, userProfile?.id, isMasterAccount, activeTab, location.search]);
 
+  // Non forzare più il redirect; l'utente può navigare liberamente tra le tab
   useEffect(() => {
-    if (!canAccessTabs && activeTab !== "diagnose" && activeTab !== "chat" && !isMasterAccount) {
-      setActiveTab("diagnose");
-    }
+    // intentionally left blank
   }, [canAccessTabs, activeTab, isMasterAccount]);
 
   useEffect(() => {
@@ -134,18 +133,10 @@ const Index = () => {
         return;
       }
       
-      if (!isMasterAccount && !canAccessTabs && newTab !== "diagnose" && newTab !== "chat") {
-        console.log("🎧 Access denied - showing toast and setting to diagnose");
-        toast({
-          title: t("completeDiagnosisFirst"),
-          description: t("afterUploadChoose"),
-          duration: 3500,
-          variant: "destructive",
-        });
-        setActiveTab("diagnose");
-        return;
-      }
-      
+      // Accesso aperto alle altre tab anche se canAccessTabs è false
+      // (nessun redirect automatico)
+      // Non auto-aprire la chat quando l'utente sceglie altre tab
+      suppressAutoOpenRef.current = newTab === 'chat' ? false : true;
       console.log("🎧 Setting active tab to:", newTab);
       setActiveTab(newTab);
       console.log("🎧 Tab switch completed");
@@ -165,21 +156,12 @@ const Index = () => {
       setActiveTab("expert");
       return;
     }
-    if (!isMasterAccount && !canAccessTabs && tab !== "diagnose" && tab !== "chat") {
-      toast({
-        title: t("completeDiagnosisFirst"),
-        description: t("afterUploadChoose"),
-        duration: 3500,
-        variant: "destructive",
-      });
-      setActiveTab("diagnose");
-      return;
-    }
-    if (tab === 'diagnose') {
-      suppressAutoOpenRef.current = true; // rispetta la scelta manuale
-    }
+    // Consenti la navigazione a tutte le tab; nessun redirect forzato
+
     if (tab === 'chat') {
       suppressAutoOpenRef.current = false; // riabilita auto-open
+    } else {
+      suppressAutoOpenRef.current = true; // non auto-aprire la chat su altre tab
     }
     setActiveTab(tab);
   };
