@@ -26,6 +26,7 @@ import { toast } from "sonner";
 import PrivacyPolicyModal from "./PrivacyPolicyModal";
 import SettingsModal from "./SettingsModal";
 import ChangeCredentialsModal from "./ChangeCredentialsModal";
+import { DiagnosisHistory } from "./diagnose/DiagnosisHistory";
 import { supabase } from "@/integrations/supabase/client";
 
 interface Order {
@@ -54,6 +55,7 @@ const ProfileTab = () => {
   const [privacyPolicyOpen, setPrivacyPolicyOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [credentialsOpen, setCredentialsOpen] = useState(false);
+  const [showDiagnosisHistory, setShowDiagnosisHistory] = useState(false);
   const [editingPhone, setEditingPhone] = useState(false);
   const [editingAddress, setEditingAddress] = useState(false);
   const [phoneValue, setPhoneValue] = useState("");
@@ -202,6 +204,26 @@ const ProfileTab = () => {
     }
   };
 
+  
+  // Show diagnosis history if requested
+  if (showDiagnosisHistory) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center gap-2 px-4 pt-4">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={() => setShowDiagnosisHistory(false)}
+            className="p-2"
+          >
+            ← Back to Profile
+          </Button>
+        </div>
+        <DiagnosisHistory />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Profile Header */}
@@ -280,7 +302,7 @@ const ProfileTab = () => {
                     <p className="text-sm text-gray-500">View your plant diagnosis history</p>
                   </div>
                 </div>
-                <Button variant="outline" size="sm">View All</Button>
+                <Button variant="outline" size="sm" onClick={() => setShowDiagnosisHistory(true)}>View All</Button>
               </div>
             </TabsContent>
             <TabsContent value="saved" className="space-y-4 mt-4">
