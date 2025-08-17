@@ -135,8 +135,8 @@ const LibraryTab = () => {
   const fetchArticleDetails = async (articleId: string) => {
     try {
       // Use URL parameters instead of body for article ID  
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+      const supabaseUrl = 'https://otdmqmpxukifoxjlgzmq.supabase.co';
+      const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im90ZG1xbXB4dWtpZm94amxnem1xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDY2NDQ5ODksImV4cCI6MjA2MjIyMDk4OX0.re4vu-banv0K-hBFNRYZGy5VucPkk141Pa--x-QiGr4';
       
       const response = await fetch(`${supabaseUrl}/functions/v1/get-library-articles?id=${articleId}`, {
         method: 'GET',
