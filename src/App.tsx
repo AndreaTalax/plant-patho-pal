@@ -16,6 +16,7 @@ import Services from "./pages/Services";
 import Contact from "./pages/Contact";
 import CompleteProfile from "./pages/CompleteProfile";
 import ResetPassword from "./pages/ResetPassword";
+import SavedArticles from "./pages/SavedArticles";
 import { CDCDashboard } from "./components/cdc/CDCDashboard";
 import { UserManagement } from "./components/admin/UserManagement";
 import { NotificationSettings } from "./components/notifications/NotificationSettings";
@@ -50,6 +51,7 @@ function App() {
                     <Route path="/about" element={<AboutUs />} />
                     <Route path="/services" element={<Services />} />
                     <Route path="/contact" element={<Contact />} />
+                    <Route path="/saved-articles" element={<SavedArticles />} />
                     <Route path="/cdc-dashboard" element={<CDCDashboard />} />
                     <Route path="/user-management" element={<UserManagement />} />
                     <Route path="/notification-settings" element={<NotificationSettings />} />

@@ -314,7 +314,7 @@ const ProfileTab = () => {
                     <p className="text-sm text-gray-500">Your bookmarked content</p>
                   </div>
                 </div>
-                <Button variant="outline" size="sm">View Saved</Button>
+                <Button variant="outline" size="sm" onClick={() => navigate('/saved-articles')}>View Saved</Button>
               </div>
             </TabsContent>
           </Tabs>
