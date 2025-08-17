@@ -89,16 +89,28 @@ const LibraryTab = () => {
   const fetchArticles = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase.functions.invoke('get-library-articles', {
-        body: { 
-          category: activeTab === 'all' ? null : activeTab,
-          search: searchTerm || null
+      
+      // Use URL parameters for better compatibility with the backend
+      const supabaseUrl = 'https://otdmqmpxukifoxjlgzmq.supabase.co';
+      const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im90ZG1xbXB4dWtpZm94amxnem1xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDY2NDQ5ODksImV4cCI6MjA2MjIyMDk4OX0.re4vu-banv0K-hBFNRYZGy5VucPkk141Pa--x-QiGr4';
+      
+      const params = new URLSearchParams();
+      if (activeTab !== 'all') params.append('category', activeTab);
+      if (searchTerm) params.append('search', searchTerm);
+      
+      const response = await fetch(`${supabaseUrl}/functions/v1/get-library-articles?${params}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${supabaseAnonKey}`,
+          'Content-Type': 'application/json'
         }
       });
 
-      if (error) throw error;
-      setArticles(data.articles || []);
-      console.log('[LibraryTab] Articles loaded:', data.articles); // <--- Debug immagini
+      if (!response.ok) throw new Error('Failed to fetch articles');
+      
+      const result = await response.json();
+      setArticles(result.articles || []);
+      console.log('[LibraryTab] Articles loaded:', result.articles);
     } catch (error) {
       console.error('Error fetching articles:', error);
       toast.error('Failed to load articles');
