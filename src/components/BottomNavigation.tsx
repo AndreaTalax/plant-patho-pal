@@ -27,7 +27,7 @@ const BottomNavigation = ({
       return tabName === "diagnose" ? "opacity-50 cursor-not-allowed" : "";
     }
     
-    if (!canAccessTabs && tabName !== "diagnose" && tabName !== "chat") {
+    if (!canAccessTabs && tabName !== "diagnose" && tabName !== "chat" && tabName !== "library" && tabName !== "shop" && tabName !== "profile") {
       return "opacity-50 cursor-not-allowed";
     }
     return "";
