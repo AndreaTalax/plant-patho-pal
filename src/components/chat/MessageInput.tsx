@@ -132,86 +132,84 @@ const MessageInput: React.FC<MessageInputProps> = ({
       )}
       
       <div className="bg-white border-t border-gray-200 p-3 max-w-2xl mx-auto">
-        <div className="flex items-end gap-2 w-full justify-center">
-          {/* Message Input Area - takes most space */}
-          <div className="flex-1 min-w-[55%]">
-            <Textarea
-              ref={textareaRef}
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              onKeyPress={handleKeyPress}
-              placeholder="Scrivi un messaggio..."
-              className="min-h-[40px] max-h-[120px] resize-none text-sm w-full text-center"
-              disabled={isSending || isUploading}
-            />
-          </div>
+        {/* Message Input Area - centered */}
+        <div className="w-full mb-3">
+          <Textarea
+            ref={textareaRef}
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            onKeyPress={handleKeyPress}
+            placeholder="Scrivi un messaggio..."
+            className="min-h-[40px] max-h-[120px] resize-none text-sm w-full"
+            disabled={isSending || isUploading}
+          />
+        </div>
 
-          {/* Action Buttons Row */}
-          <div className="flex items-center gap-1 flex-shrink-0">
-            {/* Emoji Button */}
-            {enableEmoji && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                disabled={isSending || isUploading}
-                className="h-8 w-8 p-0 flex-shrink-0"
-              >
-                <Smile className="h-4 w-4" />
-              </Button>
-            )}
-
-            {/* Image Upload */}
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              onChange={handleImageUpload}
-              className="hidden"
-            />
+        {/* Action Buttons Row - centered below input */}
+        <div className="flex items-center justify-center gap-2">
+          {/* Emoji Button */}
+          {enableEmoji && (
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => fileInputRef.current?.click()}
+              onClick={() => setShowEmojiPicker(!showEmojiPicker)}
               disabled={isSending || isUploading}
-              className="h-8 w-8 p-0 flex-shrink-0"
+              className="h-10 w-10 p-0"
             >
-              {isUploading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <ImageIcon className="h-4 w-4" />
-              )}
+              <Smile className="h-5 w-5" />
             </Button>
+          )}
 
-            {/* Audio Recorder Button */}
-            {enableAudio && (
-              <AudioRecorder 
-                onSendAudio={handleAudioSend}
-                disabled={isSending || isUploading}
-                conversationId={conversationId}
-                senderId={senderId}
-                recipientId={recipientId}
-              />
+          {/* Image Upload */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleImageUpload}
+            className="hidden"
+          />
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isSending || isUploading}
+            className="h-10 w-10 p-0"
+          >
+            {isUploading ? (
+              <Loader2 className="h-5 w-5 animate-spin" />
+            ) : (
+              <ImageIcon className="h-5 w-5" />
             )}
+          </Button>
 
-            {/* Send Button */}
-            <Button
-              onClick={handleSend}
-              disabled={!message.trim() || isSending || isUploading}
-              className="h-8 px-3 flex-shrink-0"
-              size="sm"
-            >
-              {isSending ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Send className="h-4 w-4" />
-              )}
-            </Button>
-          </div>
+          {/* Audio Recorder Button */}
+          {enableAudio && (
+            <AudioRecorder 
+              onSendAudio={handleAudioSend}
+              disabled={isSending || isUploading}
+              conversationId={conversationId}
+              senderId={senderId}
+              recipientId={recipientId}
+            />
+          )}
+
+          {/* Send Button */}
+          <Button
+            onClick={handleSend}
+            disabled={!message.trim() || isSending || isUploading}
+            className="h-10 px-4"
+            size="sm"
+          >
+            {isSending ? (
+              <Loader2 className="h-5 w-5 animate-spin" />
+            ) : (
+              <Send className="h-5 w-5" />
+            )}
+          </Button>
         </div>
 
         {/* Helper Text - smaller and less prominent */}
-        <div className="text-xs text-gray-400 mt-1 text-center">
+        <div className="text-xs text-gray-400 mt-2 text-center">
           Invio per inviare • Shift+Invio per andare a capo
         </div>
       </div>
