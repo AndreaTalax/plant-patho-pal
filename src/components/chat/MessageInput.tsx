@@ -141,7 +141,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
               onChange={(e) => setMessage(e.target.value)}
               onKeyPress={handleKeyPress}
               placeholder="Scrivi un messaggio..."
-              className="min-h-[40px] max-h-[120px] resize-none text-sm w-full"
+              className="min-h-[40px] max-h-[120px] resize-none text-sm w-full text-center"
               disabled={isSending || isUploading}
             />
           </div>
