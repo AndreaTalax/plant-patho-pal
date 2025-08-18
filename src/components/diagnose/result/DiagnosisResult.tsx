@@ -1,113 +1,101 @@
-
 import React, { useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import { Eye, Microscope, AlertCircle, CheckCircle } from 'lucide-react';
-import type { DiagnosedDisease, AnalysisDetails, PlantInfo } from '@/components/diagnose/types';
-import ProductSuggestions from './ProductSuggestions';
+import { useAuth } from '@/context/AuthContext';
+import ImageDisplay from './ImageDisplay';
+import PlantInfoCard from './PlantInfoCard';
 import ActionButtons from './ActionButtons';
 import { AutoExpertNotificationService } from '@/components/chat/AutoExpertNotificationService';
-import { useAuth } from '@/context/AuthContext';
-import { usePremiumStatus } from '@/services/premiumService';
 
-interface DiagnosisResultProps {
-  diagnosedDisease?: DiagnosedDisease | null;
-  analysisDetails?: AnalysisDetails | null;
-  diagnosisResult?: string | null;
-  imageSrc?: string;
-  plantInfo?: PlantInfo;
-  analysisData?: DiagnosedDisease | null;
-  isAnalyzing?: boolean;
-  onStartNewAnalysis?: () => void;
-  onChatWithExpert?: () => void | Promise<void>;
-  onSaveDiagnosis?: () => void;
-  saveLoading?: boolean;
+interface Disease {
+  name: string;
+  description: string;
+  symptoms: string[];
+  causes: string;
+  treatments: string[];
 }
 
-const DiagnosisResult = ({
-  diagnosedDisease: diagnosedDiseaseProp,
-  analysisDetails,
-  diagnosisResult,
-  imageSrc,
+interface AnalysisDetails {
+  multiServiceInsights: {
+    plantSpecies: string;
+  };
+  sources: string[];
+  apiSources: string[];
+}
+
+interface DiagnosisData {
+  plantType: string;
+  plantVariety: string;
+  symptoms: string[];
+  treatments: string[];
+  confidence: number;
+  isHealthy: boolean;
+  diseaseInfo: {
+    name: string;
+    description: string;
+    causes: string;
+  };
+  analysisMetadata: {
+    timestamp: string;
+    sources: string[];
+    apiSources: string[];
+  };
+}
+
+interface DiagnosisResultProps {
+  diagnosedDisease: any;
+  confidence: number;
+  isHealthy: boolean;
+  plantInfo: any;
+  analysisDetails: any;
+  imageSrc: string;
+  onStartNewAnalysis: () => void;
+  onSaveDiagnosis: () => void;
+  onChatWithExpert?: () => void;
+  saveLoading: boolean;
+  isAnalyzing: boolean;
+  hasExpertChatAccess: boolean;
+}
+
+const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
+  diagnosedDisease,
+  confidence,
+  isHealthy,
   plantInfo,
-  analysisData,
-  isAnalyzing,
+  analysisDetails,
+  imageSrc,
   onStartNewAnalysis,
-  onChatWithExpert,
   onSaveDiagnosis,
+  onChatWithExpert,
   saveLoading,
-}: DiagnosisResultProps) => {
+  isAnalyzing,
+  hasExpertChatAccess,
+}) => {
   const { user } = useAuth();
-  const { hasExpertChatAccess } = usePremiumStatus();
 
-  // Usa analysisData se fornito dai chiamanti, altrimenti fallback a diagnosedDiseaseProp
-  const diagnosedDisease = analysisData ?? diagnosedDiseaseProp ?? null;
+  if (isAnalyzing) {
+    return <div className="text-center">Analisi in corso...</div>;
+  }
 
-  // Evita accessi a proprietà su undefined
-  const isHealthy = diagnosedDisease?.healthy ?? false;
-  const confidence = diagnosedDisease?.confidence ?? 0;
-
-  // Estratti dai dettagli (già previsti come any nella generazione precedente)
-  const visualSymptoms = (analysisDetails as any)?.visualSymptoms || [];
-  const visualAnalysis = (analysisDetails as any)?.visualAnalysis || '';
-  const possibleDiseases = (analysisDetails as any)?.possibleDiseases || [];
-
-  const diseaseSymptoms = Array.isArray(diagnosedDisease?.symptoms) ? diagnosedDisease!.symptoms : [];
-  const diseaseTreatments = Array.isArray(diagnosedDisease?.treatments) ? diagnosedDisease!.treatments : [];
-
-  // Get severity based on confidence and symptoms
-  const getSeverity = () => {
-    if (isHealthy) return 'healthy';
-    if (confidence > 60 || diseaseSymptoms.length > 3) return 'high';
-    if (confidence > 40 || diseaseSymptoms.length > 1) return 'medium';
-    return 'low';
-  };
-
-  const severity = getSeverity();
-
-  const getSeverityColor = () => {
-    switch (severity) {
-      case 'healthy': return 'text-green-600 bg-green-50 border-green-200';
-      case 'high': return 'text-red-600 bg-red-50 border-red-200';
-      case 'medium': return 'text-yellow-600 bg-yellow-50 border-yellow-200';
-      case 'low': return 'text-blue-600 bg-blue-50 border-blue-200';
-      default: return 'text-gray-600 bg-gray-50 border-gray-200';
-    }
-  };
-
-  const getSeverityText = () => {
-    switch (severity) {
-      case 'healthy': return 'Pianta Sana';
-      case 'high': return 'Problema Grave';
-      case 'medium': return 'Problema Moderato';
-      case 'low': return 'Problema Lieve';
-      default: return 'Da Monitorare';
-    }
-  };
-
-  const getSeverityIcon = () => {
-    switch (severity) {
-      case 'healthy': return <CheckCircle className="h-3 w-3" />;
-      default: return <AlertCircle className="h-3 w-3" />;
-    }
-  };
+  if (!imageSrc) {
+    return <div className="text-center">Nessuna immagine da mostrare.</div>;
+  }
 
   // Prepara i dati della diagnosi per l'invio all'esperto
   const diagnosisData = {
     plantType: plantInfo?.name || diagnosedDisease?.name || 'Pianta non identificata',
     plantVariety: analysisDetails?.multiServiceInsights?.plantSpecies || '',
-    symptoms: diseaseSymptoms.join(', ') || visualSymptoms.join(', ') || 'Sintomi non specificati',
-    imageUrl: imageSrc || '',
-    diagnosisResult: diagnosisResult || diagnosedDisease?.description || '',
-    plantInfo: plantInfo,
-    analysisResult: {
-      disease: diagnosedDisease?.name,
-      confidence: confidence,
-      isHealthy: isHealthy,
-      treatments: diseaseTreatments,
-      visualAnalysis: visualAnalysis,
-      possibleDiseases: possibleDiseases
+    symptoms: diagnosedDisease?.symptoms || [],
+    treatments: diagnosedDisease?.treatments || [],
+    confidence: confidence || 0,
+    isHealthy: isHealthy || false,
+    diseaseInfo: {
+      name: diagnosedDisease?.name || 'Nessuna malattia rilevata',
+      description: diagnosedDisease?.description || '',
+      causes: diagnosedDisease?.causes || '',
+    },
+    analysisMetadata: {
+      timestamp: new Date().toISOString(),
+      sources: analysisDetails?.sources || [],
+      apiSources: analysisDetails?.apiSources || []
     }
   };
 
@@ -115,190 +103,161 @@ const DiagnosisResult = ({
   useEffect(() => {
     const sendAutomaticDiagnosis = async () => {
       // Invia solo se l'utente ha accesso premium e c'è una diagnosi valida
-      if (
-        user && 
-        hasExpertChatAccess && 
-        diagnosedDisease && 
-        imageSrc && 
-        !isAnalyzing
-      ) {
-        console.log('🤖 Invio automatico diagnosi AI all\'esperto...');
-        
-        const aiDiagnosisData = {
-          plantType: diagnosisData.plantType,
-          plantVariety: diagnosisData.plantVariety,
-          symptoms: diagnosisData.symptoms,
-          imageUrl: imageSrc,
-          analysisResult: diagnosisData.analysisResult,
-          confidence: confidence / 100, // Converti in decimale
-          isHealthy: isHealthy
-        };
+      if (!user || !hasExpertChatAccess || !diagnosedDisease || isAnalyzing) {
+        return;
+      }
 
+      // Aspetta un momento per assicurarsi che tutti i dati siano pronti
+      const timeoutId = setTimeout(async () => {
         try {
+          console.log('🤖 Invio automatico dati AI all\'esperto:', diagnosisData);
+          
           await AutoExpertNotificationService.sendDiagnosisToExpert(
             user.id,
-            aiDiagnosisData
+            diagnosisData,
+            imageSrc
           );
+          
+          console.log('✅ Dati AI inviati automaticamente all\'esperto');
         } catch (error) {
-          console.error('❌ Errore nell\'invio automatico:', error);
+          console.error('❌ Errore nell\'invio automatico all\'esperto:', error);
         }
-      }
+      }, 2000);
+      
+      return timeoutId;
     };
 
-    // Attendi un po' prima di inviare per assicurarsi che tutti i dati siano pronti
-    const timeoutId = setTimeout(sendAutomaticDiagnosis, 1000);
+    const timeoutId = sendAutomaticDiagnosis();
     
-    return () => clearTimeout(timeoutId);
+    return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
   }, [user, hasExpertChatAccess, diagnosedDisease, imageSrc, isAnalyzing, confidence, isHealthy]);
 
-  // Funzione per gestire il click su "Chat con l'esperto"
+  // Funzione per gestire il click su "Chat con l'esperto" - invia sempre i dati
   const handleChatWithExpert = async () => {
-    console.log('🗣️ Click su Chat con l\'esperto, dati da inviare:', diagnosisData);
+    console.log('🗣️ Click su Chat con l\'esperto, invio dati della diagnosi...');
     
-    if (onChatWithExpert) {
-      await onChatWithExpert();
+    if (!user) {
+      console.error('❌ Utente non autenticato');
+      return;
+    }
+
+    try {
+      // Invia sempre i dati della diagnosi quando si clicca "Chat con l'esperto"
+      console.log('📤 Invio dati diagnosi all\'esperto:', diagnosisData);
+      
+      await AutoExpertNotificationService.sendDiagnosisToExpert(
+        user.id,
+        diagnosisData,
+        imageSrc
+      );
+      
+      console.log('✅ Dati diagnosi inviati all\'esperto con successo');
+      
+      // Poi chiama la funzione originale per aprire la chat
+      if (onChatWithExpert) {
+        await onChatWithExpert();
+      }
+    } catch (error) {
+      console.error('❌ Errore nell\'invio dati all\'esperto:', error);
+      
+      // Anche in caso di errore, prova ad aprire la chat
+      if (onChatWithExpert) {
+        await onChatWithExpert();
+      }
     }
   };
 
   return (
     <div className="space-y-2 px-2">
-      {/* Main Diagnosis Card */}
-      <Card className={`border-2 ${getSeverityColor()}`}>
-        <CardHeader className="pb-1">
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2 text-sm">
-              {getSeverityIcon()}
-              <span className="break-words">{diagnosedDisease?.name || 'Diagnosi'}</span>
-            </CardTitle>
-            <Badge variant={isHealthy ? "default" : "destructive"} className="text-xs px-1 py-0.5">
-              {confidence}% accuratezza
-            </Badge>
-          </div>
-          <div className="flex items-center gap-2">
-            <Badge className={`${getSeverityColor()} text-xs px-1 py-0.5`}>
-              {getSeverityText()}
-            </Badge>
-          </div>
-        </CardHeader>
+      <div className="text-xl font-semibold text-center">
+        {isHealthy ? "La tua pianta è sana!" : "Risultati dell'analisi"}
+      </div>
 
-        <CardContent className="space-y-2 pt-0">
-          {diagnosedDisease?.description && (
-            <p className="text-gray-700 text-xs leading-relaxed">{diagnosedDisease.description}</p>
-          )}
+      <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-100">
+        <ImageDisplay imageSrc={imageSrc} />
+        
+        <div className="mt-3">
+          <PlantInfoCard
+            plantName={plantInfo?.name || diagnosedDisease?.name || analysisDetails?.multiServiceInsights?.plantSpecies}
+            scientificName={analysisDetails?.multiServiceInsights?.plantSpecies || ''}
+            confidence={confidence}
+            isHealthy={isHealthy}
+            diagnosedDisease={diagnosedDisease}
+            analysisDetails={analysisDetails}
+          />
+        </div>
+      </div>
 
-          {/* Visual Symptoms Analysis */}
-          {(visualAnalysis || (visualSymptoms && visualSymptoms.length > 0)) && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-2">
-              <div className="flex items-center gap-2 mb-1">
-                <Eye className="h-3 w-3 text-blue-600" />
-                <h4 className="font-semibold text-blue-800 text-xs">Analisi Sintomi Visivi</h4>
-              </div>
-              {visualAnalysis && (
-                <p className="text-blue-700 mb-1 text-xs leading-relaxed">{visualAnalysis}</p>
-              )}
-              {visualSymptoms && visualSymptoms.length > 0 && (
-                <div className="flex flex-wrap gap-1">
-                  {visualSymptoms.slice(0, 4).map((symptom: string, index: number) => (
-                    <Badge key={index} variant="outline" className="text-blue-700 border-blue-300 text-xs px-1 py-0.5">
-                      {symptom}
-                    </Badge>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
+      {diagnosedDisease && (
+        <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-100">
+          <h2 className="text-lg font-semibold">Dettagli della malattia</h2>
+          <p><strong>Nome:</strong> {diagnosedDisease.name}</p>
+          <p><strong>Descrizione:</strong> {diagnosedDisease.description}</p>
+          <p><strong>Cause:</strong> {diagnosedDisease.causes}</p>
 
-          {/* Multiple Disease Hypotheses */}
-          {Array.isArray(possibleDiseases) && possibleDiseases.length > 1 && (
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <Microscope className="h-3 w-3 text-gray-600" />
-                <h4 className="font-semibold text-gray-800 text-xs">Ipotesi Alternative</h4>
-              </div>
-              {possibleDiseases.slice(1, 3).map((disease: any, index: number) => (
-                <div key={index} className="bg-gray-50 border border-gray-200 rounded-lg p-2">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="font-medium text-gray-800 text-xs break-words">{disease?.name}</span>
-                    <Badge variant="outline" className="text-xs px-1 py-0.5">
-                      {Math.round((disease?.probability || 0) * 100)}%
-                    </Badge>
-                  </div>
-                  {disease?.visualAnalysis && (
-                    <p className="text-xs text-gray-600 mb-1">
-                      <Eye className="h-3 w-3 inline mr-1" />
-                      {disease.visualAnalysis}
-                    </p>
-                  )}
-                  {disease?.description && (
-                    <p className="text-xs text-gray-600 leading-relaxed">{disease.description}</p>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-
-          <Separator />
-
-          {/* Symptoms */}
-          {diseaseSymptoms.length > 0 && (
+          {diagnosedDisease.symptoms && diagnosedDisease.symptoms.length > 0 && (
             <div>
-              <h4 className="font-semibold mb-1 text-xs">Sintomi Identificati</h4>
-              <div className="flex flex-wrap gap-1">
-                {diseaseSymptoms.map((symptom, index) => (
-                  <Badge key={index} variant="outline" className="text-xs px-1 py-0.5">
-                    {symptom}
-                  </Badge>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Zona Colpita */}
-          <div>
-            <h4 className="font-semibold mb-1 text-xs">Zona Colpita</h4>
-            <p className="text-gray-700 text-xs">
-              {(visualSymptoms || []).some((s: string) => s.includes('foglia') || s.includes('leaf')) ? 'Foglie' :
-               (diseaseSymptoms || []).some(s => s.toLowerCase().includes('root')) ? 'Radici' :
-               (diseaseSymptoms || []).some(s => s.toLowerCase().includes('stem')) ? 'Fusto' :
-               (diseaseSymptoms || []).some(s => s.toLowerCase().includes('flower')) ? 'Fiori' :
-               'Sistema fogliare'}
-            </p>
-          </div>
-
-          {/* Treatments */}
-          {diseaseTreatments.length > 0 && (
-            <div>
-              <h4 className="font-semibold mb-1 text-xs">Trattamenti Suggeriti</h4>
-              <ul className="list-disc list-inside space-y-1">
-                {diseaseTreatments.slice(0, 3).map((treatment, index) => (
-                  <li key={index} className="text-gray-700 text-xs leading-relaxed">{treatment}</li>
+              <p className="font-semibold mt-2">Sintomi:</p>
+              <ul>
+                {diagnosedDisease.symptoms.map((symptom: string, index: number) => (
+                  <li key={index}>{symptom}</li>
                 ))}
               </ul>
             </div>
           )}
 
-          {/* Expert Recommendation */}
-          {diagnosedDisease?.recommendExpertConsultation && (
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-2">
-              <p className="text-yellow-800 text-xs leading-relaxed">
-                ⚠️ Si consiglia una consulenza esperta per una diagnosi più accurata e un piano di trattamento personalizzato.
-              </p>
+          {diagnosedDisease.treatments && diagnosedDisease.treatments.length > 0 && (
+            <div>
+              <p className="font-semibold mt-2">Trattamenti:</p>
+              <ul>
+                {diagnosedDisease.treatments.map((treatment: string, index: number) => (
+                  <li key={index}>{treatment}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
+
+      {analysisDetails && (
+        <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-100">
+          <h2 className="text-lg font-semibold">Dettagli dell'analisi</h2>
+          {analysisDetails.multiServiceInsights && (
+            <>
+              <p><strong>Specie:</strong> {analysisDetails.multiServiceInsights.plantSpecies}</p>
+              <p><strong>Nome comune:</strong> {analysisDetails.multiServiceInsights.commonNames?.join(', ') || 'N/A'}</p>
+            </>
+          )}
+
+          {analysisDetails.sources && analysisDetails.sources.length > 0 && (
+            <div>
+              <p className="font-semibold mt-2">Fonti:</p>
+              <ul>
+                {analysisDetails.sources.map((source: string, index: number) => (
+                  <li key={index}>{source}</li>
+                ))}
+              </ul>
             </div>
           )}
 
-          {diagnosedDisease?.disclaimer && (
-            <p className="text-xs text-gray-500 italic leading-relaxed">{diagnosedDisease.disclaimer}</p>
+          {analysisDetails.apiSources && analysisDetails.apiSources.length > 0 && (
+            <div>
+              <p className="font-semibold mt-2">Fonti API:</p>
+              <ul>
+                {analysisDetails.apiSources.map((source: string, index: number) => (
+                  <li key={index}>{source}</li>
+                ))}
+              </ul>
+            </div>
           )}
-        </CardContent>
-      </Card>
-
-      {/* Product Suggestions */}
-      {!isHealthy && diagnosedDisease?.name && (
-        <ProductSuggestions diseaseName={diagnosedDisease.name} />
+        </div>
       )}
 
-      {/* Action Buttons with Expert Chat and Premium Logic */}
-      {onStartNewAnalysis && (
+      <div className="mt-4">
         <ActionButtons
           onStartNewAnalysis={onStartNewAnalysis}
           onSaveDiagnosis={onSaveDiagnosis}
@@ -308,7 +267,7 @@ const DiagnosisResult = ({
           useAI={true}
           diagnosisData={diagnosisData}
         />
-      )}
+      </div>
     </div>
   );
 };
