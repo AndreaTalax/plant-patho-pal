@@ -6,6 +6,7 @@ import { Separator } from '@/components/ui/separator';
 import { Eye, Microscope, AlertCircle, CheckCircle } from 'lucide-react';
 import type { DiagnosedDisease, AnalysisDetails, PlantInfo } from '@/components/diagnose/types';
 import ProductSuggestions from './ProductSuggestions';
+import ActionButtons from './ActionButtons';
 
 interface DiagnosisResultProps {
   // Props già usati internamente in questa versione
@@ -20,18 +21,22 @@ interface DiagnosisResultProps {
   isAnalyzing?: boolean;
   onStartNewAnalysis?: () => void;
   onChatWithExpert?: () => void | Promise<void>;
+  onSaveDiagnosis?: () => void;
+  saveLoading?: boolean;
 }
 
 const DiagnosisResult = ({
   diagnosedDisease: diagnosedDiseaseProp,
   analysisDetails,
   diagnosisResult,
-  imageSrc,            // compat: non usato qui, ma accettato per tipizzazione
-  plantInfo,           // compat
-  analysisData,        // compat: se presente, ha priorità
-  isAnalyzing,         // compat
-  onStartNewAnalysis,  // compat
-  onChatWithExpert,    // compat
+  imageSrc,
+  plantInfo,
+  analysisData,
+  isAnalyzing,
+  onStartNewAnalysis,
+  onChatWithExpert,
+  onSaveDiagnosis,
+  saveLoading,
 }: DiagnosisResultProps) => {
   // Usa analysisData se fornito dai chiamanti, altrimenti fallback a diagnosedDiseaseProp
   const diagnosedDisease = analysisData ?? diagnosedDiseaseProp ?? null;
@@ -80,27 +85,45 @@ const DiagnosisResult = ({
 
   const getSeverityIcon = () => {
     switch (severity) {
-      case 'healthy': return <CheckCircle className="h-4 w-4" />;
-      default: return <AlertCircle className="h-4 w-4" />;
+      case 'healthy': return <CheckCircle className="h-3 w-3" />;
+      default: return <AlertCircle className="h-3 w-3" />;
+    }
+  };
+
+  // Prepara i dati della diagnosi per l'invio automatico all'esperto
+  const diagnosisData = {
+    plantType: plantInfo?.name || diagnosedDisease?.name || 'Pianta non identificata',
+    plantVariety: plantInfo?.scientificName || '',
+    symptoms: diseaseSymptoms.join(', ') || visualSymptoms.join(', ') || 'Sintomi non specificati',
+    imageUrl: imageSrc || '',
+    diagnosisResult: diagnosisResult || diagnosedDisease?.description || '',
+    plantInfo: plantInfo,
+    analysisResult: {
+      disease: diagnosedDisease?.name,
+      confidence: confidence,
+      isHealthy: isHealthy,
+      treatments: diseaseTreatments,
+      visualAnalysis: visualAnalysis,
+      possibleDiseases: possibleDiseases
     }
   };
 
   return (
-    <div className="space-y-4 px-2">
+    <div className="space-y-3 px-2">
       {/* Main Diagnosis Card */}
       <Card className={`border-2 ${getSeverityColor()}`}>
-        <CardHeader className="pb-3">
+        <CardHeader className="pb-2">
           <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2 text-lg">
+            <CardTitle className="flex items-center gap-2 text-base">
               {getSeverityIcon()}
               <span className="break-words">{diagnosedDisease?.name || 'Diagnosi'}</span>
             </CardTitle>
-            <Badge variant={isHealthy ? "default" : "destructive"} className="text-xs px-2 py-1">
+            <Badge variant={isHealthy ? "default" : "destructive"} className="text-xs px-2 py-0.5">
               {confidence}% accuratezza
             </Badge>
           </div>
           <div className="flex items-center gap-2">
-            <Badge className={`${getSeverityColor()} text-xs px-2 py-1`}>
+            <Badge className={`${getSeverityColor()} text-xs px-2 py-0.5`}>
               {getSeverityText()}
             </Badge>
           </div>
@@ -108,23 +131,23 @@ const DiagnosisResult = ({
 
         <CardContent className="space-y-3 pt-0">
           {diagnosedDisease?.description && (
-            <p className="text-gray-700 text-sm leading-relaxed">{diagnosedDisease.description}</p>
+            <p className="text-gray-700 text-xs leading-relaxed">{diagnosedDisease.description}</p>
           )}
 
           {/* Visual Symptoms Analysis */}
           {(visualAnalysis || (visualSymptoms && visualSymptoms.length > 0)) && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-              <div className="flex items-center gap-2 mb-2">
-                <Eye className="h-4 w-4 text-blue-600" />
-                <h4 className="font-semibold text-blue-800 text-sm">Analisi Sintomi Visivi</h4>
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-2">
+              <div className="flex items-center gap-2 mb-1">
+                <Eye className="h-3 w-3 text-blue-600" />
+                <h4 className="font-semibold text-blue-800 text-xs">Analisi Sintomi Visivi</h4>
               </div>
               {visualAnalysis && (
-                <p className="text-blue-700 mb-2 text-sm leading-relaxed">{visualAnalysis}</p>
+                <p className="text-blue-700 mb-1 text-xs leading-relaxed">{visualAnalysis}</p>
               )}
               {visualSymptoms && visualSymptoms.length > 0 && (
                 <div className="flex flex-wrap gap-1">
                   {visualSymptoms.slice(0, 4).map((symptom: string, index: number) => (
-                    <Badge key={index} variant="outline" className="text-blue-700 border-blue-300 text-xs px-2 py-1">
+                    <Badge key={index} variant="outline" className="text-blue-700 border-blue-300 text-xs px-1 py-0.5">
                       {symptom}
                     </Badge>
                   ))}
@@ -137,14 +160,14 @@ const DiagnosisResult = ({
           {Array.isArray(possibleDiseases) && possibleDiseases.length > 1 && (
             <div className="space-y-2">
               <div className="flex items-center gap-2">
-                <Microscope className="h-4 w-4 text-gray-600" />
-                <h4 className="font-semibold text-gray-800 text-sm">Ipotesi Alternative</h4>
+                <Microscope className="h-3 w-3 text-gray-600" />
+                <h4 className="font-semibold text-gray-800 text-xs">Ipotesi Alternative</h4>
               </div>
               {possibleDiseases.slice(1, 3).map((disease: any, index: number) => (
-                <div key={index} className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                <div key={index} className="bg-gray-50 border border-gray-200 rounded-lg p-2">
                   <div className="flex items-center justify-between mb-1">
-                    <span className="font-medium text-gray-800 text-sm break-words">{disease?.name}</span>
-                    <Badge variant="outline" className="text-xs px-2 py-1">
+                    <span className="font-medium text-gray-800 text-xs break-words">{disease?.name}</span>
+                    <Badge variant="outline" className="text-xs px-1 py-0.5">
                       {Math.round((disease?.probability || 0) * 100)}%
                     </Badge>
                   </div>
@@ -167,10 +190,10 @@ const DiagnosisResult = ({
           {/* Symptoms */}
           {diseaseSymptoms.length > 0 && (
             <div>
-              <h4 className="font-semibold mb-2 text-sm">Sintomi Identificati</h4>
+              <h4 className="font-semibold mb-1 text-xs">Sintomi Identificati</h4>
               <div className="flex flex-wrap gap-1">
                 {diseaseSymptoms.map((symptom, index) => (
-                  <Badge key={index} variant="outline" className="text-xs px-2 py-1">
+                  <Badge key={index} variant="outline" className="text-xs px-1 py-0.5">
                     {symptom}
                   </Badge>
                 ))}
@@ -180,8 +203,8 @@ const DiagnosisResult = ({
 
           {/* Zona Colpita */}
           <div>
-            <h4 className="font-semibold mb-2 text-sm">Zona Colpita</h4>
-            <p className="text-gray-700 text-sm">
+            <h4 className="font-semibold mb-1 text-xs">Zona Colpita</h4>
+            <p className="text-gray-700 text-xs">
               {(visualSymptoms || []).some((s: string) => s.includes('foglia') || s.includes('leaf')) ? 'Foglie' :
                (diseaseSymptoms || []).some(s => s.toLowerCase().includes('root')) ? 'Radici' :
                (diseaseSymptoms || []).some(s => s.toLowerCase().includes('stem')) ? 'Fusto' :
@@ -193,10 +216,10 @@ const DiagnosisResult = ({
           {/* Treatments */}
           {diseaseTreatments.length > 0 && (
             <div>
-              <h4 className="font-semibold mb-2 text-sm">Trattamenti Suggeriti</h4>
+              <h4 className="font-semibold mb-1 text-xs">Trattamenti Suggeriti</h4>
               <ul className="list-disc list-inside space-y-1">
                 {diseaseTreatments.slice(0, 3).map((treatment, index) => (
-                  <li key={index} className="text-gray-700 text-sm leading-relaxed">{treatment}</li>
+                  <li key={index} className="text-gray-700 text-xs leading-relaxed">{treatment}</li>
                 ))}
               </ul>
             </div>
@@ -204,7 +227,7 @@ const DiagnosisResult = ({
 
           {/* Expert Recommendation */}
           {diagnosedDisease?.recommendExpertConsultation && (
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-2">
               <p className="text-yellow-800 text-xs leading-relaxed">
                 ⚠️ Si consiglia una consulenza esperta per una diagnosi più accurata e un piano di trattamento personalizzato.
               </p>
@@ -220,6 +243,19 @@ const DiagnosisResult = ({
       {/* Product Suggestions */}
       {!isHealthy && diagnosedDisease?.name && (
         <ProductSuggestions diseaseName={diagnosedDisease.name} />
+      )}
+
+      {/* Action Buttons with Expert Chat and Premium Logic */}
+      {onStartNewAnalysis && (
+        <ActionButtons
+          onStartNewAnalysis={onStartNewAnalysis}
+          onSaveDiagnosis={onSaveDiagnosis}
+          onChatWithExpert={onChatWithExpert}
+          saveLoading={saveLoading}
+          hasValidAnalysis={!!diagnosedDisease}
+          useAI={true}
+          diagnosisData={diagnosisData}
+        />
       )}
     </div>
   );
