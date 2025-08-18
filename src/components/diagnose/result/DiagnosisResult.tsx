@@ -93,7 +93,7 @@ const DiagnosisResult = ({
     }
   };
 
-  // Prepara i dati della diagnosi per l'invio automatico all'esperto
+  // Prepara i dati della diagnosi per l'invio all'esperto
   const diagnosisData = {
     plantType: plantInfo?.name || diagnosedDisease?.name || 'Pianta non identificata',
     plantVariety: analysisDetails?.multiServiceInsights?.plantSpecies || '',
@@ -111,7 +111,7 @@ const DiagnosisResult = ({
     }
   };
 
-  // Invio automatico dei dati AI all'esperto quando disponibili
+  // Invio automatico dei dati AI all'esperto quando disponibili (solo per utenti premium)
   useEffect(() => {
     const sendAutomaticDiagnosis = async () => {
       // Invia solo se l'utente ha accesso premium e c'è una diagnosi valida
@@ -150,6 +150,15 @@ const DiagnosisResult = ({
     
     return () => clearTimeout(timeoutId);
   }, [user, hasExpertChatAccess, diagnosedDisease, imageSrc, isAnalyzing, confidence, isHealthy]);
+
+  // Funzione per gestire il click su "Chat con l'esperto"
+  const handleChatWithExpert = async () => {
+    console.log('🗣️ Click su Chat con l\'esperto, dati da inviare:', diagnosisData);
+    
+    if (onChatWithExpert) {
+      await onChatWithExpert();
+    }
+  };
 
   return (
     <div className="space-y-2 px-2">
@@ -293,7 +302,7 @@ const DiagnosisResult = ({
         <ActionButtons
           onStartNewAnalysis={onStartNewAnalysis}
           onSaveDiagnosis={onSaveDiagnosis}
-          onChatWithExpert={onChatWithExpert}
+          onChatWithExpert={handleChatWithExpert}
           saveLoading={saveLoading}
           hasValidAnalysis={!!diagnosedDisease}
           useAI={true}
