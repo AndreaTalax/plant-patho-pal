@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
@@ -7,6 +7,9 @@ import { Eye, Microscope, AlertCircle, CheckCircle } from 'lucide-react';
 import type { DiagnosedDisease, AnalysisDetails, PlantInfo } from '@/components/diagnose/types';
 import ProductSuggestions from './ProductSuggestions';
 import ActionButtons from './ActionButtons';
+import { AutoExpertNotificationService } from '@/components/chat/AutoExpertNotificationService';
+import { useAuth } from '@/context/AuthContext';
+import { usePremiumStatus } from '@/services/premiumService';
 
 interface DiagnosisResultProps {
   diagnosedDisease?: DiagnosedDisease | null;
@@ -35,6 +38,9 @@ const DiagnosisResult = ({
   onSaveDiagnosis,
   saveLoading,
 }: DiagnosisResultProps) => {
+  const { user } = useAuth();
+  const { hasExpertChatAccess } = usePremiumStatus();
+
   // Usa analysisData se fornito dai chiamanti, altrimenti fallback a diagnosedDiseaseProp
   const diagnosedDisease = analysisData ?? diagnosedDiseaseProp ?? null;
 
@@ -104,6 +110,46 @@ const DiagnosisResult = ({
       possibleDiseases: possibleDiseases
     }
   };
+
+  // Invio automatico dei dati AI all'esperto quando disponibili
+  useEffect(() => {
+    const sendAutomaticDiagnosis = async () => {
+      // Invia solo se l'utente ha accesso premium e c'è una diagnosi valida
+      if (
+        user && 
+        hasExpertChatAccess && 
+        diagnosedDisease && 
+        imageSrc && 
+        !isAnalyzing
+      ) {
+        console.log('🤖 Invio automatico diagnosi AI all\'esperto...');
+        
+        const aiDiagnosisData = {
+          plantType: diagnosisData.plantType,
+          plantVariety: diagnosisData.plantVariety,
+          symptoms: diagnosisData.symptoms,
+          imageUrl: imageSrc,
+          analysisResult: diagnosisData.analysisResult,
+          confidence: confidence / 100, // Converti in decimale
+          isHealthy: isHealthy
+        };
+
+        try {
+          await AutoExpertNotificationService.sendDiagnosisToExpert(
+            user.id,
+            aiDiagnosisData
+          );
+        } catch (error) {
+          console.error('❌ Errore nell\'invio automatico:', error);
+        }
+      }
+    };
+
+    // Attendi un po' prima di inviare per assicurarsi che tutti i dati siano pronti
+    const timeoutId = setTimeout(sendAutomaticDiagnosis, 1000);
+    
+    return () => clearTimeout(timeoutId);
+  }, [user, hasExpertChatAccess, diagnosedDisease, imageSrc, isAnalyzing, confidence, isHealthy]);
 
   return (
     <div className="space-y-2 px-2">
