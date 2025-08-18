@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -8,6 +9,97 @@ import type { AnalysisDetails, DiagnosedDisease } from '@/components/diagnose/ty
 import { DiagnosisConsensusService } from '@/services/diagnosisConsensusService';
 import { LocalPlantIdentifier } from '@/services/localPlantIdentifier';
 import { eppoApiService } from '@/utils/eppoApiService';
+
+// Visual symptoms mapping for better symptom detection
+const visualSymptomsMap = {
+  'yellow spots': {
+    symptoms: ['macchie gialle', 'ingiallimento fogliare', 'clorosi'],
+    possibleDiseases: ['septoria leaf spot', 'bacterial spot', 'fungal leaf spot', 'nutrient deficiency']
+  },
+  'brown spots': {
+    symptoms: ['macchie marroni', 'necrosi fogliare', 'lesioni scure'],
+    possibleDiseases: ['blight', 'anthracnose', 'leaf spot', 'bacterial canker']
+  },
+  'wilting': {
+    symptoms: ['appassimento', 'foglie cadenti', 'perdita di turgore'],
+    possibleDiseases: ['bacterial wilt', 'fusarium wilt', 'root rot', 'water stress']
+  },
+  'white powder': {
+    symptoms: ['polvere bianca', 'muffa bianca', 'patina biancastra'],
+    possibleDiseases: ['powdery mildew', 'oidio', 'white mold']
+  },
+  'black spots': {
+    symptoms: ['macchie nere', 'lesioni scure', 'necrosi'],
+    possibleDiseases: ['black spot', 'sooty mold', 'bacterial spot', 'fungal infection']
+  },
+  'curled leaves': {
+    symptoms: ['foglie arricciate', 'deformazioni fogliari', 'accartocciamento'],
+    possibleDiseases: ['leaf curl virus', 'aphid damage', 'herbicide damage', 'heat stress']
+  }
+};
+
+// Function to analyze visual symptoms from label/description
+const analyzeVisualSymptoms = (label: string, description?: string): { 
+  detectedSymptoms: string[], 
+  visualAnalysis: string,
+  linkedDiseases: string[]
+} => {
+  const text = `${label} ${description || ''}`.toLowerCase();
+  const detectedSymptoms: string[] = [];
+  const linkedDiseases: string[] = [];
+  let visualAnalysis = '';
+
+  // Check for visual symptoms
+  Object.entries(visualSymptomsMap).forEach(([key, data]) => {
+    const isPresent = data.symptoms.some(symptom => 
+      text.includes(symptom.toLowerCase()) || 
+      text.includes(key.toLowerCase())
+    );
+    
+    if (isPresent) {
+      detectedSymptoms.push(...data.symptoms);
+      linkedDiseases.push(...data.possibleDiseases);
+      
+      if (!visualAnalysis) {
+        if (key === 'yellow spots') {
+          visualAnalysis = 'Rilevate macchie gialle sulle foglie, tipiche di infezioni fungine o carenze nutrizionali';
+        } else if (key === 'brown spots') {
+          visualAnalysis = 'Osservate macchie marroni, indicative di malattie batteriche o fungine';
+        } else if (key === 'wilting') {
+          visualAnalysis = 'Segni di appassimento visibili, possibile stress idrico o malattie vascolari';
+        } else if (key === 'white powder') {
+          visualAnalysis = 'Presenza di patina biancastra, caratteristica dell\'oidio';
+        } else if (key === 'black spots') {
+          visualAnalysis = 'Macchie nere evidenti, sintomo di infezioni batteriche o fungine';
+        } else if (key === 'curled leaves') {
+          visualAnalysis = 'Foglie arricciate osservate, possibile stress ambientale o virale';
+        }
+      }
+    }
+  });
+
+  // Generic visual analysis if no specific symptoms detected
+  if (!visualAnalysis) {
+    if (text.includes('spot') || text.includes('macchia')) {
+      visualAnalysis = 'Macchie visibili sulla superficie fogliare';
+      detectedSymptoms.push('macchie fogliari');
+    } else if (text.includes('yellow') || text.includes('giallo')) {
+      visualAnalysis = 'Ingiallimento fogliare osservato';
+      detectedSymptoms.push('ingiallimento');
+    } else if (text.includes('brown') || text.includes('marrone')) {
+      visualAnalysis = 'Imbrunimento dei tessuti vegetali';
+      detectedSymptoms.push('imbrunimento');
+    } else {
+      visualAnalysis = 'Anomalie visive rilevate sui tessuti vegetali';
+    }
+  }
+
+  return {
+    detectedSymptoms: [...new Set(detectedSymptoms)],
+    visualAnalysis,
+    linkedDiseases: [...new Set(linkedDiseases)]
+  };
+};
 
 export const usePlantAnalysis = () => {
   const { user } = useAuth();
@@ -150,18 +242,42 @@ export const usePlantAnalysis = () => {
         .sort((a: any, b: any) => (b.probability || 0) - (a.probability || 0))
         .slice(0, 3);
 
-      // Testo compatto per UI
+      // Analisi visiva dei sintomi per ogni malattia rilevata
+      let visualSymptomsAnalysis = '';
+      const allDetectedSymptoms: string[] = [];
+      
+      if (!isHealthy && ranked.length > 0) {
+        ranked.forEach((disease, index) => {
+          const symptomAnalysis = analyzeVisualSymptoms(disease.name, disease.description);
+          allDetectedSymptoms.push(...symptomAnalysis.detectedSymptoms);
+          
+          if (index === 0 && symptomAnalysis.visualAnalysis) {
+            visualSymptomsAnalysis = symptomAnalysis.visualAnalysis;
+          }
+        });
+      }
+
+      // Testo compatto per UI con sintomi visivi
       let diagnosisText = `🌿 Pianta: ${plantName}`;
       if (scientificName && scientificName !== plantName) diagnosisText += ` (*${scientificName}*)`;
       diagnosisText += `\n🎯 Confidenza: ${confidencePct}%`;
       diagnosisText += `\n💚 Stato: ${isHealthy ? 'Sana' : 'Possibili problemi'}`;
 
-      // Aggiungiamo ipotesi principali (se presenti)
+      // Aggiungi analisi visiva dei sintomi
+      if (visualSymptomsAnalysis) {
+        diagnosisText += `\n\n👁️ Sintomi visivi: ${visualSymptomsAnalysis}`;
+      }
+
+      // Aggiungiamo ipotesi principali (se presenti) con collegamento ai sintomi
       if (!isHealthy && ranked.length > 0) {
         diagnosisText += `\n\n🧪 Ipotesi principali:`;
         ranked.forEach((r, idx) => {
           const pct = Math.round((r.probability || 0) * 100);
+          const symptomAnalysis = analyzeVisualSymptoms(r.name, r.description);
           diagnosisText += `\n${idx + 1}. ${r.name} (${pct}%)`;
+          if (symptomAnalysis.detectedSymptoms.length > 0) {
+            diagnosisText += `\n   Sintomi: ${symptomAnalysis.detectedSymptoms.slice(0, 2).join(', ')}`;
+          }
         });
       }
 
@@ -171,6 +287,11 @@ export const usePlantAnalysis = () => {
         if (top) {
           diagnosisText += `\n\n🔍 Possibile malattia: ${top.name} (${Math.round((top.probability || 0.7) * 100)}%)`;
           if (top.description) diagnosisText += `\nDescrizione: ${top.description}`;
+          
+          const topSymptomAnalysis = analyzeVisualSymptoms(top.name, top.description);
+          if (topSymptomAnalysis.visualAnalysis) {
+            diagnosisText += `\nAnalisi visiva: ${topSymptomAnalysis.visualAnalysis}`;
+          }
         }
       }
 
@@ -178,12 +299,16 @@ export const usePlantAnalysis = () => {
 
       // Popola struttura diagnosedDisease minimale per compatibilità UI
       const primary = !isHealthy && diseases.length > 0 ? diseases[0] : null;
+      const primarySymptomAnalysis = primary ? analyzeVisualSymptoms(primary.name, primary.description) : null;
+      
       setDiagnosedDisease(primary ? {
         id: crypto.randomUUID(),
         name: primary.name,
         description: primary.description || 'Problema rilevato',
         causes: 'Analisi multi‑AI',
-        symptoms: primary.symptoms || [],
+        symptoms: primarySymptomAnalysis ? 
+          [...(primary.symptoms || []), ...primarySymptomAnalysis.detectedSymptoms] : 
+          (primary.symptoms || []),
         treatments: (primary.treatment && (primary.treatment.biological || primary.treatment.chemical))
           ? [
               ...(primary.treatment.biological || []),
@@ -229,19 +354,28 @@ export const usePlantAnalysis = () => {
         },
         identifiedFeatures: [
           `Confidenza: ${confidencePct}%`,
-          `Stato: ${isHealthy ? 'Sana' : 'Problemi'}`
+          `Stato: ${isHealthy ? 'Sana' : 'Problemi'}`,
+          ...(allDetectedSymptoms.length > 0 ? [`Sintomi: ${allDetectedSymptoms.slice(0, 3).join(', ')}`] : [])
         ],
-        analysisTechnology: 'OpenAI + Plant.ID + PlantNet + EPPO',
+        analysisTechnology: 'OpenAI + Plant.ID + PlantNet + EPPO + Visual Analysis',
         originalConfidence: confidencePct,
         enhancedConfidence: confidencePct,
+        // Visual symptoms analysis
+        visualSymptoms: allDetectedSymptoms,
+        visualAnalysis: visualSymptomsAnalysis,
         // Nuovo campo non-breaking: lista di ipotesi per il frontend
-        possibleDiseases: ranked.map(r => ({
-          name: r.name,
-          probability: r.probability,
-          description: r.description,
-          symptoms: r.symptoms,
-          treatment: r.treatment
-        }))
+        possibleDiseases: ranked.map(r => {
+          const symptomAnalysis = analyzeVisualSymptoms(r.name, r.description);
+          return {
+            name: r.name,
+            probability: r.probability,
+            description: r.description,
+            symptoms: r.symptoms,
+            treatment: r.treatment,
+            visualSymptoms: symptomAnalysis.detectedSymptoms,
+            visualAnalysis: symptomAnalysis.visualAnalysis
+          };
+        })
       } as any);
 
       setAnalysisProgress(100);
