@@ -9,12 +9,9 @@ import ProductSuggestions from './ProductSuggestions';
 import ActionButtons from './ActionButtons';
 
 interface DiagnosisResultProps {
-  // Props già usati internamente in questa versione
   diagnosedDisease?: DiagnosedDisease | null;
   analysisDetails?: AnalysisDetails | null;
   diagnosisResult?: string | null;
-
-  // Props necessari per compatibilità con i chiamanti (DiagnoseTab, DiagnosisStages)
   imageSrc?: string;
   plantInfo?: PlantInfo;
   analysisData?: DiagnosedDisease | null;
@@ -93,7 +90,7 @@ const DiagnosisResult = ({
   // Prepara i dati della diagnosi per l'invio automatico all'esperto
   const diagnosisData = {
     plantType: plantInfo?.name || diagnosedDisease?.name || 'Pianta non identificata',
-    plantVariety: plantInfo?.scientificName || '',
+    plantVariety: analysisDetails?.multiServiceInsights?.plantSpecies || '',
     symptoms: diseaseSymptoms.join(', ') || visualSymptoms.join(', ') || 'Sintomi non specificati',
     imageUrl: imageSrc || '',
     diagnosisResult: diagnosisResult || diagnosedDisease?.description || '',
@@ -109,27 +106,27 @@ const DiagnosisResult = ({
   };
 
   return (
-    <div className="space-y-3 px-2">
+    <div className="space-y-2 px-2">
       {/* Main Diagnosis Card */}
       <Card className={`border-2 ${getSeverityColor()}`}>
-        <CardHeader className="pb-2">
+        <CardHeader className="pb-1">
           <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2 text-base">
+            <CardTitle className="flex items-center gap-2 text-sm">
               {getSeverityIcon()}
               <span className="break-words">{diagnosedDisease?.name || 'Diagnosi'}</span>
             </CardTitle>
-            <Badge variant={isHealthy ? "default" : "destructive"} className="text-xs px-2 py-0.5">
+            <Badge variant={isHealthy ? "default" : "destructive"} className="text-xs px-1 py-0.5">
               {confidence}% accuratezza
             </Badge>
           </div>
           <div className="flex items-center gap-2">
-            <Badge className={`${getSeverityColor()} text-xs px-2 py-0.5`}>
+            <Badge className={`${getSeverityColor()} text-xs px-1 py-0.5`}>
               {getSeverityText()}
             </Badge>
           </div>
         </CardHeader>
 
-        <CardContent className="space-y-3 pt-0">
+        <CardContent className="space-y-2 pt-0">
           {diagnosedDisease?.description && (
             <p className="text-gray-700 text-xs leading-relaxed">{diagnosedDisease.description}</p>
           )}
