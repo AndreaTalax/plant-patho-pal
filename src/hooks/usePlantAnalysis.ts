@@ -8,6 +8,7 @@ import type { AnalysisDetails, DiagnosedDisease } from '@/components/diagnose/ty
 import { DiagnosisConsensusService } from '@/services/diagnosisConsensusService';
 import { LocalPlantIdentifier } from '@/services/localPlantIdentifier';
 import { eppoApiService } from '@/utils/eppoApiService';
+
 export const usePlantAnalysis = () => {
   const { user } = useAuth();
   const { validateImage, isValidating } = useImageValidation();
@@ -136,18 +137,39 @@ export const usePlantAnalysis = () => {
         }
       }
 
-      // Testo compatto per UI (niente dettagli tecnici superflui)
+      // Costruiamo una lista ordinata di ipotesi (prime 3)
+      const ranked = (Array.isArray(diseases) ? diseases : [])
+        .filter((d: any) => d && typeof d === 'object' && typeof (d.name || d.label) === 'string')
+        .map((d: any) => ({
+          name: d.name || d.label,
+          probability: typeof d.probability === 'number' ? d.probability : (typeof d.score === 'number' ? d.score : 0.6),
+          description: d.description || '',
+          symptoms: d.symptoms || [],
+          treatment: d.treatment || {}
+        }))
+        .sort((a: any, b: any) => (b.probability || 0) - (a.probability || 0))
+        .slice(0, 3);
+
+      // Testo compatto per UI
       let diagnosisText = `🌿 Pianta: ${plantName}`;
       if (scientificName && scientificName !== plantName) diagnosisText += ` (*${scientificName}*)`;
       diagnosisText += `\n🎯 Confidenza: ${confidencePct}%`;
       diagnosisText += `\n💚 Stato: ${isHealthy ? 'Sana' : 'Possibili problemi'}`;
 
+      // Aggiungiamo ipotesi principali (se presenti)
+      if (!isHealthy && ranked.length > 0) {
+        diagnosisText += `\n\n🧪 Ipotesi principali:`;
+        ranked.forEach((r, idx) => {
+          const pct = Math.round((r.probability || 0) * 100);
+          diagnosisText += `\n${idx + 1}. ${r.name} (${pct}%)`;
+        });
+      }
+
+      // Dettaglio prima ipotesi (se disponibile) per compatibilità con UI esistente
       if (!isHealthy && diseases.length > 0) {
-        const top = diseases
-          .filter((d: any) => d && (typeof d === 'object'))
-          .sort((a: any, b: any) => (b.probability || 0) - (a.probability || 0))[0];
+        const top = ranked[0];
         if (top) {
-          diagnosisText += `\n\n🔍 Possibile malattia: ${top.name} (${Math.round((top.probability || 0) * 100)}%)`;
+          diagnosisText += `\n\n🔍 Possibile malattia: ${top.name} (${Math.round((top.probability || 0.7) * 100)}%)`;
           if (top.description) diagnosisText += `\nDescrizione: ${top.description}`;
         }
       }
@@ -193,6 +215,7 @@ export const usePlantAnalysis = () => {
         disease: { name: 'Nessuna' }
       });
 
+      // Salviamo le ipotesi nella sezione dettagli per renderle disponibili al frontend
       setAnalysisDetails({
         multiServiceInsights: {
           plantName,
@@ -210,7 +233,15 @@ export const usePlantAnalysis = () => {
         ],
         analysisTechnology: 'OpenAI + Plant.ID + PlantNet + EPPO',
         originalConfidence: confidencePct,
-        enhancedConfidence: confidencePct
+        enhancedConfidence: confidencePct,
+        // Nuovo campo non-breaking: lista di ipotesi per il frontend
+        possibleDiseases: ranked.map(r => ({
+          name: r.name,
+          probability: r.probability,
+          description: r.description,
+          symptoms: r.symptoms,
+          treatment: r.treatment
+        }))
       } as any);
 
       setAnalysisProgress(100);
