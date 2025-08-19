@@ -1,4 +1,5 @@
 
+
 import React, { useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import ImageDisplay from './ImageDisplay';
@@ -80,24 +81,15 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
     return <div className="text-center">Nessuna immagine da mostrare.</div>;
   }
 
-  // Prepara i dati della diagnosi per l'invio all'esperto
+  // Prepara i dati della diagnosi per l'invio all'esperto con tutte le proprietà richieste
   const diagnosisData = {
     plantType: plantInfo?.name || diagnosedDisease?.name || 'Pianta non identificata',
     plantVariety: analysisDetails?.multiServiceInsights?.plantSpecies || '',
-    symptoms: diagnosedDisease?.symptoms || [],
-    treatments: diagnosedDisease?.treatments || [],
+    symptoms: plantInfo?.symptoms || 'Nessun sintomo specificato',
+    imageUrl: imageSrc || '', // Aggiungi imageUrl richiesto
+    analysisResult: diagnosedDisease || null, // Aggiungi analysisResult richiesto
     confidence: confidence || 0,
     isHealthy: isHealthy || false,
-    diseaseInfo: {
-      name: diagnosedDisease?.name || 'Nessuna malattia rilevata',
-      description: diagnosedDisease?.description || '',
-      causes: diagnosedDisease?.causes || '',
-    },
-    analysisMetadata: {
-      timestamp: new Date().toISOString(),
-      sources: analysisDetails?.sources || [],
-      apiSources: analysisDetails?.apiSources || []
-    }
   };
 
   // Invio automatico dei dati AI all'esperto quando disponibili (solo per utenti premium)
