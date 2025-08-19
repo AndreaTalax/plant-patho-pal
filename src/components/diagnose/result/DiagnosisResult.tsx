@@ -5,6 +5,7 @@ import ImageDisplay from './ImageDisplay';
 import PlantInfoCard from './PlantInfoCard';
 import ActionButtons from './ActionButtons';
 import { AutoExpertNotificationService } from '@/components/chat/AutoExpertNotificationService';
+import ProductSuggestions from './ProductSuggestions'; // Aggiunta: sezione prodotti consigliati
 
 interface Disease {
   name: string;
@@ -218,6 +219,20 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
           )}
         </div>
       )}
+
+      {/* Sezione prodotti consigliati - reinserita */}
+      <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-100">
+        <h2 className="text-lg font-semibold">Prodotti consigliati</h2>
+        <p className="text-sm text-muted-foreground mb-2">
+          {resolvedIsHealthy
+            ? 'Prodotti per manutenzione e prevenzione'
+            : 'Prodotti utili per trattare il problema rilevato'}
+        </p>
+        <ProductSuggestions
+          diseaseName={effectiveDiagnosis?.name || plantInfo?.name || ''}
+          maxItems={4}
+        />
+      </div>
 
       {analysisDetails && (
         <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-100">
