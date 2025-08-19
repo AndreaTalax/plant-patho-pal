@@ -42,18 +42,18 @@ interface DiagnosisData {
 }
 
 interface DiagnosisResultProps {
-  diagnosedDisease: any;
-  confidence: number;
-  isHealthy: boolean;
+  diagnosedDisease?: any;
+  confidence?: number;
+  isHealthy?: boolean;
   plantInfo: any;
-  analysisDetails: any;
+  analysisDetails?: any;
   imageSrc: string;
   onStartNewAnalysis: () => void;
-  onSaveDiagnosis: () => void;
+  onSaveDiagnosis?: () => void;
   onChatWithExpert?: () => void;
-  saveLoading: boolean;
+  saveLoading?: boolean;
   isAnalyzing: boolean;
-  hasExpertChatAccess: boolean;
+  hasExpertChatAccess?: boolean;
   // Consente compatibilità con chiamanti che usano "analysisData"
   analysisData?: any;
 }
@@ -75,6 +75,13 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
 }) => {
   const { user } = useAuth();
 
+  // Default sicuri per props opzionali
+  const resolvedConfidence = confidence ?? 0;
+  const resolvedIsHealthy = !!isHealthy;
+  const resolvedHasExpertChatAccess = !!hasExpertChatAccess;
+  const resolvedSaveLoading = !!saveLoading;
+  const handleSaveDiagnosis: () => void = onSaveDiagnosis ?? (() => console.log('[DiagnosisResult] onSaveDiagnosis non fornito'));
+
   // Usa diagnosedDisease se presente, altrimenti fallback su analysisData
   const effectiveDiagnosis = diagnosedDisease ?? analysisData;
 
@@ -93,15 +100,15 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
     symptoms: plantInfo?.symptoms || 'Nessun sintomo specificato',
     imageUrl: imageSrc || '',
     analysisResult: effectiveDiagnosis || null,
-    confidence: confidence || 0,
-    isHealthy: isHealthy || false,
+    confidence: resolvedConfidence,
+    isHealthy: resolvedIsHealthy,
   };
 
   // Invio automatico dei dati AI all'esperto quando disponibili (solo per utenti premium)
   useEffect(() => {
     const sendAutomaticDiagnosis = async () => {
       // Invia solo se l'utente ha accesso premium e c'è una diagnosi valida
-      if (!user || !hasExpertChatAccess || !effectiveDiagnosis || isAnalyzing) {
+      if (!user || !resolvedHasExpertChatAccess || !effectiveDiagnosis || isAnalyzing) {
         return;
       }
 
@@ -127,7 +134,7 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
     };
 
     sendAutomaticDiagnosis();
-  }, [user, hasExpertChatAccess, effectiveDiagnosis, imageSrc, isAnalyzing, confidence, isHealthy]);
+  }, [user, resolvedHasExpertChatAccess, effectiveDiagnosis, imageSrc, isAnalyzing, resolvedConfidence, resolvedIsHealthy]);
 
   // Funzione per gestire il click su "Chat con l'esperto" - invia sempre i dati
   const handleChatWithExpert = async () => {
@@ -166,7 +173,7 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
   return (
     <div className="space-y-2 px-2">
       <div className="text-xl font-semibold text-center">
-        {isHealthy ? "La tua pianta è sana!" : "Risultati dell'analisi"}
+        {resolvedIsHealthy ? "La tua pianta è sana!" : "Risultati dell'analisi"}
       </div>
 
       <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-100">
@@ -249,9 +256,9 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
       <div className="mt-4">
         <ActionButtons
           onStartNewAnalysis={onStartNewAnalysis}
-          onSaveDiagnosis={onSaveDiagnosis}
+          onSaveDiagnosis={handleSaveDiagnosis}
           onChatWithExpert={handleChatWithExpert}
-          saveLoading={saveLoading}
+          saveLoading={resolvedSaveLoading}
           hasValidAnalysis={!!effectiveDiagnosis}
           useAI={true}
           diagnosisData={diagnosisData}
@@ -262,4 +269,3 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
 };
 
 export default DiagnosisResult;
-
