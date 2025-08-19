@@ -1,5 +1,4 @@
 
-
 import React, { useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import ImageDisplay from './ImageDisplay';
@@ -55,6 +54,8 @@ interface DiagnosisResultProps {
   saveLoading: boolean;
   isAnalyzing: boolean;
   hasExpertChatAccess: boolean;
+  // Consente compatibilità con chiamanti che usano "analysisData"
+  analysisData?: any;
 }
 
 const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
@@ -70,8 +71,12 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
   saveLoading,
   isAnalyzing,
   hasExpertChatAccess,
+  analysisData, // nuova prop opzionale per compatibilità
 }) => {
   const { user } = useAuth();
+
+  // Usa diagnosedDisease se presente, altrimenti fallback su analysisData
+  const effectiveDiagnosis = diagnosedDisease ?? analysisData;
 
   if (isAnalyzing) {
     return <div className="text-center">Analisi in corso...</div>;
@@ -83,11 +88,11 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
 
   // Prepara i dati della diagnosi per l'invio all'esperto con tutte le proprietà richieste
   const diagnosisData = {
-    plantType: plantInfo?.name || diagnosedDisease?.name || 'Pianta non identificata',
+    plantType: plantInfo?.name || effectiveDiagnosis?.name || 'Pianta non identificata',
     plantVariety: analysisDetails?.multiServiceInsights?.plantSpecies || '',
     symptoms: plantInfo?.symptoms || 'Nessun sintomo specificato',
-    imageUrl: imageSrc || '', // Aggiungi imageUrl richiesto
-    analysisResult: diagnosedDisease || null, // Aggiungi analysisResult richiesto
+    imageUrl: imageSrc || '',
+    analysisResult: effectiveDiagnosis || null,
     confidence: confidence || 0,
     isHealthy: isHealthy || false,
   };
@@ -96,7 +101,7 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
   useEffect(() => {
     const sendAutomaticDiagnosis = async () => {
       // Invia solo se l'utente ha accesso premium e c'è una diagnosi valida
-      if (!user || !hasExpertChatAccess || !diagnosedDisease || isAnalyzing) {
+      if (!user || !hasExpertChatAccess || !effectiveDiagnosis || isAnalyzing) {
         return;
       }
 
@@ -122,7 +127,7 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
     };
 
     sendAutomaticDiagnosis();
-  }, [user, hasExpertChatAccess, diagnosedDisease, imageSrc, isAnalyzing, confidence, isHealthy]);
+  }, [user, hasExpertChatAccess, effectiveDiagnosis, imageSrc, isAnalyzing, confidence, isHealthy]);
 
   // Funzione per gestire il click su "Chat con l'esperto" - invia sempre i dati
   const handleChatWithExpert = async () => {
@@ -171,34 +176,34 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
           <PlantInfoCard
             plantInfo={plantInfo}
             analysisDetails={analysisDetails}
-            standardizedData={diagnosedDisease}
+            standardizedData={effectiveDiagnosis}
           />
         </div>
       </div>
 
-      {diagnosedDisease && (
+      {effectiveDiagnosis && (
         <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-100">
           <h2 className="text-lg font-semibold">Dettagli della malattia</h2>
-          <p><strong>Nome:</strong> {diagnosedDisease.name}</p>
-          <p><strong>Descrizione:</strong> {diagnosedDisease.description}</p>
-          <p><strong>Cause:</strong> {diagnosedDisease.causes}</p>
+          <p><strong>Nome:</strong> {effectiveDiagnosis.name}</p>
+          <p><strong>Descrizione:</strong> {effectiveDiagnosis.description}</p>
+          <p><strong>Cause:</strong> {effectiveDiagnosis.causes}</p>
 
-          {diagnosedDisease.symptoms && diagnosedDisease.symptoms.length > 0 && (
+          {effectiveDiagnosis.symptoms && effectiveDiagnosis.symptoms.length > 0 && (
             <div>
               <p className="font-semibold mt-2">Sintomi:</p>
               <ul>
-                {diagnosedDisease.symptoms.map((symptom: string, index: number) => (
+                {effectiveDiagnosis.symptoms.map((symptom: string, index: number) => (
                   <li key={index}>{symptom}</li>
                 ))}
               </ul>
             </div>
           )}
 
-          {diagnosedDisease.treatments && diagnosedDisease.treatments.length > 0 && (
+          {effectiveDiagnosis.treatments && effectiveDiagnosis.treatments.length > 0 && (
             <div>
               <p className="font-semibold mt-2">Trattamenti:</p>
               <ul>
-                {diagnosedDisease.treatments.map((treatment: string, index: number) => (
+                {effectiveDiagnosis.treatments.map((treatment: string, index: number) => (
                   <li key={index}>{treatment}</li>
                 ))}
               </ul>
@@ -247,7 +252,7 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
           onSaveDiagnosis={onSaveDiagnosis}
           onChatWithExpert={handleChatWithExpert}
           saveLoading={saveLoading}
-          hasValidAnalysis={!!diagnosedDisease}
+          hasValidAnalysis={!!effectiveDiagnosis}
           useAI={true}
           diagnosisData={diagnosisData}
         />
@@ -257,3 +262,4 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
 };
 
 export default DiagnosisResult;
+
