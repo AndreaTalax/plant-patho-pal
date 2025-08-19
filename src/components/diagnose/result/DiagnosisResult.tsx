@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import ImageDisplay from './ImageDisplay';
@@ -114,8 +115,7 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
           
           await AutoExpertNotificationService.sendDiagnosisToExpert(
             user.id,
-            diagnosisData,
-            imageSrc
+            diagnosisData
           );
           
           console.log('✅ Dati AI inviati automaticamente all\'esperto');
@@ -124,16 +124,12 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
         }
       }, 2000);
       
-      return timeoutId;
+      return () => {
+        clearTimeout(timeoutId);
+      };
     };
 
-    const timeoutId = sendAutomaticDiagnosis();
-    
-    return () => {
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-      }
-    };
+    sendAutomaticDiagnosis();
   }, [user, hasExpertChatAccess, diagnosedDisease, imageSrc, isAnalyzing, confidence, isHealthy]);
 
   // Funzione per gestire il click su "Chat con l'esperto" - invia sempre i dati
@@ -151,8 +147,7 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
       
       await AutoExpertNotificationService.sendDiagnosisToExpert(
         user.id,
-        diagnosisData,
-        imageSrc
+        diagnosisData
       );
       
       console.log('✅ Dati diagnosi inviati all\'esperto con successo');
@@ -182,12 +177,9 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
         
         <div className="mt-3">
           <PlantInfoCard
-            plantName={plantInfo?.name || diagnosedDisease?.name || analysisDetails?.multiServiceInsights?.plantSpecies}
-            scientificName={analysisDetails?.multiServiceInsights?.plantSpecies || ''}
-            confidence={confidence}
-            isHealthy={isHealthy}
-            diagnosedDisease={diagnosedDisease}
+            plantInfo={plantInfo}
             analysisDetails={analysisDetails}
+            standardizedData={diagnosedDisease}
           />
         </div>
       </div>
