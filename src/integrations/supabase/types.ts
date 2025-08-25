@@ -666,10 +666,6 @@ export type Database = {
         }
         Returns: boolean
       }
-      profile_change_permitted: {
-        Args: { _id: string; _plan: string; _role: string }
-        Returns: boolean
-      }
       send_message: {
         Args: { p_conversation_id: number; p_sender_id: string; p_text: string }
         Returns: undefined

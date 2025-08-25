@@ -17,13 +17,13 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.create-checkout]
-verify_jwt = true
+verify_jwt = false
 
 [functions.check-subscription]
-verify_jwt = true
+verify_jwt = false
 
 [functions.customer-portal]
-verify_jwt = true
+verify_jwt = false
 
 [functions.send-registration-confirmation]
 verify_jwt = false
@@ -44,28 +44,28 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.delete-conversation]
-verify_jwt = true
+verify_jwt = false
 
 [functions.delete-consultation]
-verify_jwt = true
+verify_jwt = false
 
 [functions.get-conversation]
-verify_jwt = true
+verify_jwt = false
 
 [functions.get-conversations]
-verify_jwt = true
+verify_jwt = false
 
 [functions.get-user-orders]
-verify_jwt = true
+verify_jwt = false
 
 [functions.verify-payment]
-verify_jwt = true
+verify_jwt = false
 
 [functions.send-message]
-verify_jwt = true
+verify_jwt = false
 
 [functions.upload-audio]
-verify_jwt = true
+verify_jwt = false
 
 [functions.test-secrets]
 verify_jwt = false

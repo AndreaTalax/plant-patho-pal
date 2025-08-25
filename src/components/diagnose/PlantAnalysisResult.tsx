@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -68,9 +69,9 @@ const PlantAnalysisResultComponent: React.FC<PlantAnalysisResultComponentProps> 
     setSendingToExpert(true);
     
     try {
-      console.log('📨 Invio dati AI completi + pianta all\'esperto...');
+      console.log('📨 Invio dati AI + pianta all\'esperto...');
       
-      // Sincronizza i dati della pianta prima
+      // Sincronizza i dati della pianta
       const synced = await PlantDataSyncService.syncPlantDataToChat(
         userProfile.id,
         plantInfo,
@@ -78,22 +79,13 @@ const PlantAnalysisResultComponent: React.FC<PlantAnalysisResultComponentProps> 
       );
 
       if (synced) {
-        // Prepara tutti i dati della diagnosi includendo i risultati AI
-        const completeDiagnosisData = {
+        // Invia anche i risultati dell'analisi AI
+        const diagnosisData = {
           plantType: analysisResult.plantName || 'Pianta non identificata',
           plantVariety: analysisResult.scientificName,
           symptoms: plantInfo.symptoms || 'Analisi AI completata',
           imageUrl: imageUrl,
-          analysisResult: {
-            ...analysisResult,
-            // Assicuriamoci che tutti i dati AI siano inclusi
-            confidence: analysisResult.confidence,
-            isHealthy: analysisResult.isHealthy,
-            diseases: analysisResult.diseases || [],
-            recommendations: analysisResult.recommendations || [],
-            plantName: analysisResult.plantName,
-            scientificName: analysisResult.scientificName
-          },
+          analysisResult: analysisResult,
           confidence: analysisResult.confidence,
           isHealthy: analysisResult.isHealthy,
           plantInfo: {
@@ -104,30 +96,25 @@ const PlantAnalysisResultComponent: React.FC<PlantAnalysisResultComponentProps> 
           }
         };
 
-        // Invia i risultati completi dell'analisi AI all'esperto
-        const sentToExpert = await AutoExpertNotificationService.sendDiagnosisToExpert(
+        await AutoExpertNotificationService.sendDiagnosisToExpert(
           userProfile.id,
-          completeDiagnosisData
+          diagnosisData
         );
 
-        if (sentToExpert) {
-          setDataSentToExpert(true);
-          toast.success('Analisi AI completa inviata all\'esperto!', {
-            description: 'Marco Nigro ha ricevuto tutti i risultati dell\'analisi AI nella chat'
-          });
+        setDataSentToExpert(true);
+        toast.success('Analisi AI e dati pianta inviati all\'esperto!', {
+          description: 'Marco Nigro riceverà tutti i risultati nella chat'
+        });
 
-          // Naviga alla chat dopo un breve delay
-          setTimeout(() => {
-            window.dispatchEvent(new CustomEvent('switchTab', { detail: 'chat' }));
-          }, 2000);
-        } else {
-          toast.error('Errore nell\'invio all\'esperto');
-        }
+        // Naviga alla chat dopo un breve delay
+        setTimeout(() => {
+          window.dispatchEvent(new CustomEvent('switchTab', { detail: 'chat' }));
+        }, 2000);
       } else {
-        toast.error('Errore nella sincronizzazione dati');
+        toast.error('Errore nell\'invio all\'esperto');
       }
     } catch (error) {
-      console.error('❌ Errore invio completo all\'esperto:', error);
+      console.error('❌ Errore invio all\'esperto:', error);
       toast.error('Errore nell\'invio all\'esperto');
     } finally {
       setSendingToExpert(false);

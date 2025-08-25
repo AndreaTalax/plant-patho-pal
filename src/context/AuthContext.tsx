@@ -1,229 +1,247 @@
-
-import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import type { User, Session } from '@supabase/supabase-js';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { UserRoleService } from '@/services/userRoleService';
-import type { AuthContextType, UserProfile } from '@/context/auth/types';
-import type { SubscriptionStatus } from '@/services/subscriptionService';
+import { User, Session } from '@supabase/supabase-js';
+import { useNavigate } from 'react-router-dom';
+import { 
+  UserProfile, 
+  AuthContextType 
+} from './auth/types';
+import { 
+  normalizeProfile, 
+  convertProfileUpdates 
+} from './auth/utils';
+import {
+  authenticateUser,
+  fetchUserProfile,
+  registerUser,
+  updateUserProfile,
+  updateUserPassword,
+  signOutUser
+} from './auth/authService';
+import { SubscriptionService, SubscriptionStatus } from '@/services/subscriptionService';
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 /**
- * Unified AuthContext that exposes the richer API expected across the app.
- * - Keeps user and session in state
- * - Loads user profile from "profiles" table
- * - Derives roles via UserRoleService and exposes isMasterAccount
- * - Implements login, logout, register, updateProfile, updateUsername, updatePassword
- * - Provides subscription helpers: checkSubscription and hasActiveSubscription
+ * Provides authentication context for user management including login, registration, and profile updates.
+ * @example
+ * AuthContext({ children: <YourComponent /> })
+ * Returns a context provider for authentication
+ * @param {Object} { children } - React child components to be wrapped by AuthContext provider.
+ * @returns {JSX.Element} AuthContext.Provider wrapping the children components.
+ * @description
+ *   - Manages user authentication state using Supabase.
+ *   - Handles session management and side effects related to authentication state changes.
+ *   - Includes helper methods for authentication tasks like login, logout, registration.
+ *   - Automatically fetches and normalizes user profile data on authentication changes.
  */
-
-const AuthContext = createContext<AuthContextType>({} as AuthContextType);
-
-export const useAuth = () => {
-  const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error('useAuth must be used within an AuthProvider');
-  return ctx;
-};
-
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [subscriptionStatus, setSubscriptionStatus] = useState<SubscriptionStatus>({ subscribed: false });
   const [loading, setLoading] = useState(true);
 
-  // Derived flags
+  // Computed properties
   const isAuthenticated = !!user;
-  const isProfileComplete = useMemo(() => {
-    if (!userProfile) return false;
-    // Consider basic completeness (customize as needed)
-    return Boolean(
-      userProfile.firstName || userProfile.first_name ||
-      (userProfile.lastName || userProfile.last_name) ||
-      userProfile.username
-    );
-  }, [userProfile]);
+  const isProfileComplete = !!(userProfile?.firstName && userProfile?.lastName && userProfile?.birthDate && userProfile?.birthPlace);
+  const isMasterAccount = userProfile?.email === 'agrotecnicomarconigro@gmail.com' || userProfile?.email === 'premium@gmail.com';
 
-  // Roles
-  const [isMasterAccount, setIsMasterAccount] = useState(false);
-  const [isPremiumRole, setIsPremiumRole] = useState(false);
-
-  // Subscription status (type is imported, but we don't rely on specific enum values here)
-  const [subscriptionStatus, setSubscriptionStatus] = useState<SubscriptionStatus>('unknown' as unknown as SubscriptionStatus);
-
-  // --- Helpers ---
-  const loadProfile = async (uid: string) => {
-    console.log('[AuthContext] Loading profile for', uid);
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', uid)
-      .maybeSingle();
-
-    if (error) {
-      console.error('[AuthContext] loadProfile error:', error);
-      setUserProfile(null);
-      return;
-    }
-    setUserProfile(data as unknown as UserProfile);
-  };
-
-  const refreshUserRoles = async (uid?: string) => {
-    const userId = uid || user?.id;
-    if (!userId) {
-      setIsMasterAccount(false);
-      setIsPremiumRole(false);
-      return;
-    }
+  // Funzione per garantire che i dati utente siano sempre completi
+  const ensureCompleteUserData = async (userId: string) => {
     try {
-      const roles = await UserRoleService.getUserRoles(userId);
-      const hasExpert = roles.includes('expert');
-      const hasAdmin = roles.includes('admin');
-      const hasPremium = roles.includes('premium');
-      setIsMasterAccount(hasExpert || hasAdmin);
-      setIsPremiumRole(hasPremium);
-      console.log('[AuthContext] Roles:', { hasExpert, hasAdmin, hasPremium });
-    } catch (err) {
-      console.error('[AuthContext] refreshUserRoles error:', err);
-      setIsMasterAccount(false);
-      setIsPremiumRole(false);
+      const profile = await fetchUserProfile(userId);
+      if (profile) {
+        const normalizedProfile = normalizeProfile(profile);
+        setUserProfile(normalizedProfile);
+        
+        // Log per debug - assicurati che i dati siano sempre disponibili
+        console.log('👤 [AUTH] Dati utente caricati:', {
+          id: normalizedProfile.id,
+          email: normalizedProfile.email,
+          name: `${normalizedProfile.firstName || normalizedProfile.first_name} ${normalizedProfile.lastName || normalizedProfile.last_name}`,
+          birthInfo: `${normalizedProfile.birthDate || normalizedProfile.birth_date} - ${normalizedProfile.birthPlace || normalizedProfile.birth_place}`,
+          isComplete: !!(normalizedProfile.firstName && normalizedProfile.lastName && normalizedProfile.birthDate && normalizedProfile.birthPlace)
+        });
+        
+        return normalizedProfile;
+      }
+    } catch (error) {
+      console.error('❌ [AUTH] Error loading complete user data:', error);
+    }
+    return null;
+  };
+
+  useEffect(() => {
+    let mounted = true;
+
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (!mounted) return;
+        
+        console.log('🔄 Auth state changed:', event, session?.user?.email);
+        setSession(session);
+        setUser(session?.user ?? null);
+        
+        // Gestione specifica per il logout
+        if (event === 'SIGNED_OUT') {
+          console.log('👋 Utente disconnesso, pulizia stato...');
+          setUserProfile(null);
+          if (mounted) {
+            setLoading(false);
+          }
+          return;
+        }
+        
+        if (session?.user) {
+          // Carica SEMPRE i dati utente completi quando c'è una sessione
+          setTimeout(async () => {
+            if (!mounted) return;
+            const profile = await ensureCompleteUserData(session.user.id);
+            if (mounted) {
+              setLoading(false);
+            }
+          }, 0);
+        } else {
+          setUserProfile(null);
+          if (mounted) {
+            setLoading(false);
+          }
+        }
+      }
+    );
+
+    // Check for existing session
+    const initializeAuth = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!mounted) return;
+        
+        console.log('Initial session check:', session?.user?.email);
+        setSession(session);
+        setUser(session?.user ?? null);
+        
+        if (session?.user) {
+          await ensureCompleteUserData(session.user.id);
+        }
+      } catch (error) {
+        console.error('Error initializing auth:', error);
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    initializeAuth();
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  const login = async (email: string, password: string): Promise<{ success: boolean }> => {
+    try {
+      return await authenticateUser(email, password);
+    } catch (error) {
+      console.error('Login error in context:', error);
+      return { success: false };
     }
   };
 
+  /**
+   * Updates the user profile with provided updates.
+   * @example
+   * sync({name: 'John'}) // Updates the user's name to 'John'
+   * sync('age', 30) // Sets the user's age to 30
+   * @param {Partial<UserProfile> | string} updates - Partial profile updates or a single field name.
+   * @param {any} [value] - Value for the field when updates is a string.
+   * @returns {void} Updates the user profile and refreshes it.
+   * @description
+   *   - Throws an error if the user is not authenticated.
+   *   - Converts updates into a format suitable for the database.
+   *   - Fetches and normalizes the user profile after updating to ensure it's up-to-date.
+   */
+  const updateProfile = async (updates: Partial<UserProfile> | string, value?: any) => {
+    if (!user) throw new Error('User not authenticated');
+    
+    let profileUpdates: any;
+    if (typeof updates === 'string') {
+      profileUpdates = { [updates]: value };
+    } else {
+      profileUpdates = updates;
+    }
+
+    const dbUpdates = convertProfileUpdates(profileUpdates);
+    await updateUserProfile(user.id, dbUpdates);
+    
+    // Refresh profile
+    const profile = await fetchUserProfile(user.id);
+    if (profile) {
+      setUserProfile(normalizeProfile(profile));
+    }
+  };
+
+  const updateUsername = async (username: string) => {
+    await updateProfile({ username });
+  };
+
+  const updatePassword = async (password: string) => {
+    await updateUserPassword(password);
+  };
+
+  const logout = async () => {
+    try {
+      console.log('🔓 Avvio processo di logout...');
+      
+      // Pulisci lo stato locale prima del logout
+      setUser(null);
+      setSession(null);
+      setUserProfile(null);
+      
+      // Effettua il logout
+      await signOutUser();
+      
+      console.log('✅ Logout completato, stato pulito');
+      
+      // Reindirizza alla pagina di login dopo il logout
+      window.location.href = '/login';
+      
+    } catch (error: any) {
+      console.error('❌ Errore durante il logout:', error);
+      // Anche in caso di errore, pulisci lo stato locale e reindirizza
+      setUser(null);
+      setSession(null);
+      setUserProfile(null);
+      window.location.href = '/login';
+      throw error;
+    }
+  };
+
+  const register = async (email: string, password: string) => {
+    await registerUser(email, password);
+  };
+
+  // Subscription management functions
   const checkSubscription = async () => {
-    if (!user) {
-      setSubscriptionStatus('unknown' as unknown as SubscriptionStatus);
-      return;
+    if (user) {
+      const status = await SubscriptionService.checkSubscription();
+      setSubscriptionStatus(status);
     }
-    // Try calling the edge function if available; fall back to role-based status
-    const { data, error } = await supabase.functions.invoke('check-subscription', {
-      body: { userId: user.id },
-    });
-    if (error) {
-      console.warn('[AuthContext] check-subscription failed, falling back to role-based status:', error.message);
-      setSubscriptionStatus((isPremiumRole ? 'active' : 'inactive') as unknown as SubscriptionStatus);
-      return;
-    }
-    const status = (data?.status || 'inactive') as SubscriptionStatus;
-    setSubscriptionStatus(status);
   };
 
   const hasActiveSubscription = () => {
-    // Consider active if status is "active" or the user has the 'premium' role
-    const statusString = String(subscriptionStatus || '').toLowerCase();
-    return statusString === 'active' || isPremiumRole;
+    return subscriptionStatus.subscribed;
   };
 
-  // --- Auth operations ---
-  const login: AuthContextType['login'] = async (email, password) => {
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) {
-      console.error('[AuthContext] login error:', error);
-      return { success: false };
-    }
-    // session and user are set by the auth state listener
-    console.log('[AuthContext] login success', data.user?.id);
-    return { success: true };
-  };
-
-  const logout: AuthContextType['logout'] = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) throw error;
-  };
-
-  const register: AuthContextType['register'] = async (email, password) => {
-    const redirectUrl = `${window.location.origin}/`;
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { emailRedirectTo: redirectUrl },
-    });
-    if (error) throw error;
-  };
-
-  const updateProfile: AuthContextType['updateProfile'] = async (updatesOrKey, value) => {
-    if (!user) throw new Error('Not authenticated');
-    let updates: Partial<UserProfile> = {};
-
-    if (typeof updatesOrKey === 'string') {
-      updates = { [updatesOrKey]: value } as Partial<UserProfile>;
-    } else {
-      updates = updatesOrKey;
-    }
-
-    // Prevent client-side role/plan changes - create a clean object without these properties
-    const safeUpdates = Object.keys(updates).reduce((acc, key) => {
-      if (key !== 'role' && key !== 'subscription_plan') {
-        acc[key as keyof UserProfile] = updates[key as keyof UserProfile];
-      }
-      return acc;
-    }, {} as Partial<UserProfile>);
-
-    const { error } = await supabase
-      .from('profiles')
-      .update(safeUpdates)
-      .eq('id', user.id);
-
-    if (error) {
-      console.error('[AuthContext] updateProfile error:', error);
-      throw error;
-    }
-    await loadProfile(user.id);
-  };
-
-  const updateUsername: AuthContextType['updateUsername'] = async (username) => {
-    if (!user) throw new Error('Not authenticated');
-    const { error } = await supabase
-      .from('profiles')
-      .update({ username })
-      .eq('id', user.id);
-    if (error) throw error;
-    await loadProfile(user.id);
-  };
-
-  const updatePassword: AuthContextType['updatePassword'] = async (password) => {
-    const { error } = await supabase.auth.updateUser({ password });
-    if (error) throw error;
-  };
-
-  // --- Init auth state ---
+  // Check subscription on user login
   useEffect(() => {
-    // Listener first
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSession) => {
-      console.log('[AuthContext] onAuthStateChange:', event);
-      setSession(newSession);
-      setUser(newSession?.user ?? null);
-
-      if (newSession?.user) {
-        const uid = newSession.user.id;
-        // Defer async side effects
-        setTimeout(() => {
-          loadProfile(uid);
-          refreshUserRoles(uid);
-          checkSubscription();
-        }, 0);
-      } else {
-        setUserProfile(null);
-        setIsMasterAccount(false);
-        setIsPremiumRole(false);
-        setSubscriptionStatus('unknown' as unknown as SubscriptionStatus);
-      }
-      setLoading(false);
-    });
-
-    // Then get existing session
-    supabase.auth.getSession().then(({ data: { session: initialSession } }) => {
-      setSession(initialSession);
-      setUser(initialSession?.user ?? null);
-      if (initialSession?.user) {
-        const uid = initialSession.user.id;
-        loadProfile(uid);
-        refreshUserRoles(uid);
-        checkSubscription();
-      }
-      setLoading(false);
-    });
-
-    return () => subscription.unsubscribe();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    if (user && !loading) {
+      checkSubscription();
+    }
+  }, [user, loading]);
 
   const value: AuthContextType = {
     user,
@@ -250,3 +268,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     </AuthContext.Provider>
   );
 };
+
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};
+
+export default AuthProvider;
