@@ -39,10 +39,11 @@ const CompleteProfile = () => {
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
-      firstName: userProfile?.firstName || "",
-      lastName: userProfile?.lastName || "",
-      birthDate: "",
-      birthPlace: "",
+      // Legge sia camelCase che snake_case per precompilare se disponibili
+      firstName: userProfile?.firstName || userProfile?.first_name || "",
+      lastName: userProfile?.lastName || userProfile?.last_name || "",
+      birthDate: (userProfile?.birthDate || userProfile?.birth_date || "") as string,
+      birthPlace: userProfile?.birthPlace || userProfile?.birth_place || "",
     },
   });
 
@@ -50,10 +51,13 @@ const CompleteProfile = () => {
     setIsLoading(true);
 
     try {
-      await updateProfile("firstName", values.firstName);
-      await updateProfile("lastName", values.lastName);
-      await updateProfile("birthDate", values.birthDate);  
-      await updateProfile("birthPlace", values.birthPlace);
+      // Usa i nomi colonna corretti del DB (snake_case)
+      await updateProfile({
+        first_name: values.firstName,
+        last_name: values.lastName,
+        birth_date: values.birthDate,
+        birth_place: values.birthPlace,
+      });
       
       toast({
         title: t("profileCompleted"),
