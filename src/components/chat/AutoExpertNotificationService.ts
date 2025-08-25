@@ -25,7 +25,6 @@ export class AutoExpertNotificationService {
       const success = await MessageService.sendMessage(
         conversation.id,
         userId,
-        MARCO_NIGRO_ID,
         aiAnalysisMessage,
         diagnosisData.imageUrl
       );
@@ -128,7 +127,6 @@ export class AutoExpertNotificationService {
       const success = await MessageService.sendMessage(
         conversation.id,
         userId,
-        MARCO_NIGRO_ID,
         message,
         imageUrl
       );
