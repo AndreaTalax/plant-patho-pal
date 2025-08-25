@@ -1,45 +1,51 @@
 
-import { useState } from "react";
+import React, { useState } from "react";
+import { useAuth } from "@/context/AuthContext";
 import { useNavigate } from "react-router-dom";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { useToast } from "@/hooks/use-toast";
-import { User, ArrowLeft } from "lucide-react";
-import { useAuth } from "@/context/AuthContext";
+import { toast } from "sonner";
 import { useTheme } from "@/context/ThemeContext";
-import { 
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import * as z from "zod";
 
 const profileSchema = z.object({
-  firstName: z.string().min(1, { message: "Il nome è obbligatorio" }),
-  lastName: z.string().min(1, { message: "Il cognome è obbligatorio" }),
-  birthDate: z.string().min(1, { message: "La data di nascita è obbligatoria" }),
-  birthPlace: z.string().min(1, { message: "Il luogo di nascita è obbligatorio" }),
+  firstName: z.string().min(2, "Il nome deve avere almeno 2 caratteri"),
+  lastName: z.string().min(2, "Il cognome deve avere almeno 2 caratteri"),
+  birthDate: z.string().min(1, "La data di nascita è obbligatoria"),
+  birthPlace: z.string().min(2, "Il luogo di nascita deve avere almeno 2 caratteri"),
 });
 
 type ProfileFormValues = z.infer<typeof profileSchema>;
 
 const CompleteProfile = () => {
-  const [isLoading, setIsLoading] = useState(false);
+  const { userProfile, updateProfile, loading } = useAuth();
   const navigate = useNavigate();
-  const { toast } = useToast();
-  const { updateProfile, userProfile } = useAuth();
+  const [isLoading, setIsLoading] = useState(false);
   const { t } = useTheme();
+
+  // Se il profilo è già completo, redirect alla home
+  React.useEffect(() => {
+    if (!loading && userProfile) {
+      const isComplete = Boolean(
+        (userProfile.firstName || userProfile.first_name) &&
+        (userProfile.lastName || userProfile.last_name) &&
+        (userProfile.birthDate || userProfile.birth_date) &&
+        (userProfile.birthPlace || userProfile.birth_place)
+      );
+      
+      if (isComplete) {
+        navigate('/');
+      }
+    }
+  }, [userProfile, loading, navigate]);
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
-      // Legge sia camelCase che snake_case per precompilare se disponibili
       firstName: userProfile?.firstName || userProfile?.first_name || "",
       lastName: userProfile?.lastName || userProfile?.last_name || "",
       birthDate: (userProfile?.birthDate || userProfile?.birth_date || "") as string,
@@ -51,7 +57,7 @@ const CompleteProfile = () => {
     setIsLoading(true);
 
     try {
-      // Usa i nomi colonna corretti del DB (snake_case)
+      // Aggiorna solo i campi del profilo, senza toccare ruoli o sottoscrizioni
       await updateProfile({
         first_name: values.firstName,
         last_name: values.lastName,
@@ -59,123 +65,106 @@ const CompleteProfile = () => {
         birth_place: values.birthPlace,
       });
       
-      toast({
-        title: t("profileCompleted"),
-        description: t("welcomeMessage"),
-      });
-      
+      toast.success("Profilo completato con successo!");
       navigate("/");
     } catch (error) {
-      toast({
-        variant: "destructive",
-        title: t("error"),
-        description: t("tryAgain"),
-      });
+      console.error("Errore durante il completamento del profilo:", error);
+      toast.error("Errore durante il completamento del profilo. Riprova.");
     } finally {
       setIsLoading(false);
     }
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-drplant-green/5 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-drplant-green mx-auto mb-4"></div>
+          <p className="text-gray-600">Caricamento...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="h-screen w-full bg-gradient-to-b from-drplant-blue-light via-white to-drplant-green/10 flex flex-col items-center justify-center px-4">
-      <div className="absolute top-0 left-0 w-full h-64 bg-drplant-blue-light/30 -z-10 rounded-b-[50%]" />
-      <div className="absolute bottom-0 right-0 w-full h-64 bg-drplant-green/20 -z-10 rounded-t-[30%]" />
-      
-      {/* Back Button */}
-      <div className="absolute top-4 left-4">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => navigate("/login")}
-          className="flex items-center gap-2 text-drplant-blue hover:text-drplant-blue-dark"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Esci
-        </Button>
-      </div>
-      
-      <div className="w-full max-w-md">
-        <Card className="border-none shadow-xl bg-white/80 backdrop-blur-sm">
-          <CardHeader>
-            <div className="flex justify-center mb-4">
-              <div className="p-3 bg-drplant-blue/10 rounded-full">
-                <User className="h-8 w-8 text-drplant-blue" />
-              </div>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-drplant-green/5 flex items-center justify-center p-4">
+      <Card className="w-full max-w-md">
+        <CardHeader className="text-center">
+          <CardTitle className="text-2xl font-bold text-drplant-green">
+            Completa il tuo profilo
+          </CardTitle>
+          <CardDescription>
+            Aggiungi le informazioni mancanti per continuare
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="firstName">Nome *</Label>
+              <Input
+                id="firstName"
+                {...form.register("firstName")}
+                placeholder="Inserisci il tuo nome"
+              />
+              {form.formState.errors.firstName && (
+                <p className="text-sm text-red-600">
+                  {form.formState.errors.firstName.message}
+                </p>
+              )}
             </div>
-            <CardTitle className="text-2xl text-drplant-blue-dark text-center">{t("completeProfile")}</CardTitle>
-            <CardDescription className="text-center">
-              {t("personalInfo")}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="firstName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("firstName")} *</FormLabel>
-                      <FormControl>
-                        <Input {...field} placeholder={t("enterFirstName")} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="lastName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("lastName")} *</FormLabel>
-                      <FormControl>
-                        <Input {...field} placeholder={t("enterLastName")} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="birthDate"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("birthDate")} *</FormLabel>
-                      <FormControl>
-                        <Input {...field} type="date" placeholder={t("enterBirthDate")} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="birthPlace"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("birthPlace")} *</FormLabel>
-                      <FormControl>
-                        <Input {...field} placeholder={t("enterBirthPlace")} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <div className="pt-4">
-                  <Button 
-                    type="submit" 
-                    className="w-full bg-gradient-to-r from-drplant-blue to-drplant-blue-dark hover:from-drplant-blue-dark hover:to-drplant-blue-dark transition-all duration-300"
-                    disabled={isLoading}
-                  >
-                    {isLoading ? t("saving") : t("continue")}
-                  </Button>
-                </div>
-              </form>
-            </Form>
-          </CardContent>
-        </Card>
-      </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="lastName">Cognome *</Label>
+              <Input
+                id="lastName"
+                {...form.register("lastName")}
+                placeholder="Inserisci il tuo cognome"
+              />
+              {form.formState.errors.lastName && (
+                <p className="text-sm text-red-600">
+                  {form.formState.errors.lastName.message}
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="birthDate">Data di nascita *</Label>
+              <Input
+                id="birthDate"
+                type="date"
+                {...form.register("birthDate")}
+              />
+              {form.formState.errors.birthDate && (
+                <p className="text-sm text-red-600">
+                  {form.formState.errors.birthDate.message}
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="birthPlace">Luogo di nascita *</Label>
+              <Input
+                id="birthPlace"
+                {...form.register("birthPlace")}
+                placeholder="Inserisci il tuo luogo di nascita"
+              />
+              {form.formState.errors.birthPlace && (
+                <p className="text-sm text-red-600">
+                  {form.formState.errors.birthPlace.message}
+                </p>
+              )}
+            </div>
+
+            <Button
+              type="submit"
+              className="w-full bg-drplant-green hover:bg-drplant-green/90"
+              disabled={isLoading}
+            >
+              {isLoading ? "Salvataggio..." : "Continua"}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   );
 };
