@@ -23,11 +23,17 @@ const MessageList = ({ messages, isExpertView = false }: MessageListProps) => {
     }
   }, [messages]);
 
-  // Debug log per messaggi
+  // Debug log per messaggi con timestamp
   useEffect(() => {
-    console.log('📋 MessageList - Messaggi ricevuti:', {
+    console.log('📋 MessageList - Messaggi ricevuti con timestamp:', {
       count: messages.length,
-      messages: messages
+      timestamp: new Date().toISOString(),
+      messages: messages.map(m => ({ 
+        id: m.id, 
+        text: m.text.substring(0, 100), 
+        time: m.time,
+        sender: m.sender 
+      }))
     });
   }, [messages]);
 
@@ -74,8 +80,13 @@ const MessageList = ({ messages, isExpertView = false }: MessageListProps) => {
               </div>
             ) : (
               <>
-                {messages.map(message => {
-                  console.log('🎨 Rendering messaggio:', message);
+                {messages.map((message, index) => {
+                  console.log(`🎨 Rendering messaggio ${index + 1}/${messages.length}:`, {
+                    id: message.id,
+                    text: message.text.substring(0, 100),
+                    time: message.time,
+                    sender: message.sender
+                  });
                   return (
                     <div key={message.id} className="w-full">
                       <ChatMessage 

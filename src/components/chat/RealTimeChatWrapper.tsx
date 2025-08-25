@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { useRealtimeChat } from '@/hooks/useRealtimeChat';
 import { DatabaseMessage, DatabaseConversation } from '@/services/chat/types';
-import { convertToUIMessage } from '@/services/chat/messageUtils';
+import { processMessages, clearMessageCache } from '@/services/chat/messageUtils';
 import { Message } from '@/components/chat/types';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -24,23 +24,24 @@ export const RealTimeChatWrapper: React.FC<RealTimeChatWrapperProps> = ({
 }) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [conversation, setConversation] = useState<DatabaseConversation | null>(null);
+  const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
 
   const handleNewMessage = (newMessage: DatabaseMessage) => {
     console.log('📨 Nuovo messaggio ricevuto via realtime:', newMessage);
-    const uiMessage = convertToUIMessage(newMessage);
-    console.log('🔄 Messaggio convertito per UI:', uiMessage);
     
+    // Aggiorna i messaggi utilizzando la nuova funzione di processing
     setMessages(prev => {
-      // Avoid duplicates
-      const exists = prev.some(msg => msg.id === uiMessage.id);
-      if (exists) {
-        console.log('⚠️ Messaggio già esistente, skip:', uiMessage.id);
-        return prev;
-      }
+      const allMessages = [...prev.map(msg => ({
+        id: msg.id,
+        sender_id: msg.sender === 'expert' ? '07c7fe19-33c3-4782-b9a0-4e87c8aa7044' : userId,
+        content: msg.text,
+        text: msg.text,
+        sent_at: new Date().toISOString(),
+        image_url: msg.image_url,
+        products: msg.products
+      } as DatabaseMessage)), newMessage];
       
-      const newMessages = [...prev, uiMessage];
-      console.log('✅ Messaggi aggiornati:', newMessages);
-      return newMessages;
+      return processMessages(allMessages);
     });
   };
 
@@ -60,6 +61,7 @@ export const RealTimeChatWrapper: React.FC<RealTimeChatWrapperProps> = ({
   const refreshMessages = async () => {
     try {
       console.log('🔄 Loading conversation and messages for:', conversationId);
+      setLastRefresh(new Date());
       
       // Load conversation details
       const { data: conversationData, error: conversationError } = await supabase
@@ -76,7 +78,7 @@ export const RealTimeChatWrapper: React.FC<RealTimeChatWrapperProps> = ({
       console.log('✅ Conversazione caricata:', conversationData);
       setConversation(conversationData);
 
-      // Load messages
+      // Load messages with proper ordering
       const { data: messagesData, error: messagesError } = await supabase
         .from('messages')
         .select('*')
@@ -88,15 +90,12 @@ export const RealTimeChatWrapper: React.FC<RealTimeChatWrapperProps> = ({
         return;
       }
 
-      console.log('📬 Messaggi raw dal database:', messagesData);
+      console.log('📬 Messaggi raw dal database (ordinati per data):', messagesData?.length || 0);
 
-      const uiMessages = messagesData.map((msg: DatabaseMessage) => {
-        const converted = convertToUIMessage(msg);
-        console.log('🔄 Messaggio convertito:', { original: msg, converted });
-        return converted;
-      });
+      // Usa la nuova funzione per processare i messaggi
+      const uiMessages = messagesData ? processMessages(messagesData) : [];
       
-      console.log('📩 Messaggi ricevuti (UI format):', uiMessages);
+      console.log('📩 Messaggi processati per UI:', uiMessages.length);
       setMessages(uiMessages);
       
       console.log('✅ Loaded conversation and messages successfully');
@@ -113,9 +112,14 @@ export const RealTimeChatWrapper: React.FC<RealTimeChatWrapperProps> = ({
       const result = await sendMessage(recipientId, text, imageUrl);
       console.log('✅ Messaggio inviato, risultato:', result);
       
-      // Refresh messages immediately after sending
-      console.log('🔄 Aggiornamento messaggi dopo invio...');
-      await refreshMessages();
+      // Clear cache e refresh messaggi dopo invio
+      clearMessageCache(conversationId);
+      
+      // Refresh messages dopo un breve delay per permettere al database di essere aggiornato
+      setTimeout(async () => {
+        console.log('🔄 Aggiornamento messaggi dopo invio...');
+        await refreshMessages();
+      }, 500);
       
       return result;
     } catch (error) {
@@ -124,11 +128,28 @@ export const RealTimeChatWrapper: React.FC<RealTimeChatWrapperProps> = ({
     }
   };
 
+  // Load messages on mount and when conversation changes
   useEffect(() => {
     if (conversationId) {
       console.log('🚀 Inizializzazione chat per conversazione:', conversationId);
       refreshMessages();
     }
+  }, [conversationId]);
+
+  // Listen for cache clear events
+  useEffect(() => {
+    const handleCacheClear = (event: CustomEvent) => {
+      if (event.detail?.conversationId === conversationId) {
+        console.log('🧹 Ricevuto evento clear cache, refreshing...');
+        refreshMessages();
+      }
+    };
+
+    window.addEventListener('clearMessageCache', handleCacheClear as EventListener);
+    
+    return () => {
+      window.removeEventListener('clearMessageCache', handleCacheClear as EventListener);
+    };
   }, [conversationId]);
 
   // Debug log per stato corrente
@@ -138,9 +159,10 @@ export const RealTimeChatWrapper: React.FC<RealTimeChatWrapperProps> = ({
       userId,
       isConnected,
       messagesCount: messages.length,
-      messages: messages
+      lastRefresh: lastRefresh.toISOString(),
+      messages: messages.map(m => ({ id: m.id, text: m.text.substring(0, 50), time: m.time }))
     });
-  }, [conversationId, userId, isConnected, messages]);
+  }, [conversationId, userId, isConnected, messages, lastRefresh]);
 
   return (
     <>
