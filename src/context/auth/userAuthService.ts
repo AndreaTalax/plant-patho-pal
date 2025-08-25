@@ -1,6 +1,5 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { profileService } from './profileService';
 
 interface SignUpData {
   email: string;

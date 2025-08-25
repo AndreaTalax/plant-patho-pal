@@ -148,15 +148,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       updates = updatesOrKey;
     }
 
-    // Prevent client-side role/plan changes
-    // @ts-expect-error - we intentionally remove these fields from updates
-    delete updates.role;
-    // @ts-expect-error
-    delete updates.subscription_plan;
+    // Prevent client-side role/plan changes - create a clean object without these properties
+    const safeUpdates = Object.keys(updates).reduce((acc, key) => {
+      if (key !== 'role' && key !== 'subscription_plan') {
+        acc[key as keyof UserProfile] = updates[key as keyof UserProfile];
+      }
+      return acc;
+    }, {} as Partial<UserProfile>);
 
     const { error } = await supabase
       .from('profiles')
-      .update(updates)
+      .update(safeUpdates)
       .eq('id', user.id);
 
     if (error) {
