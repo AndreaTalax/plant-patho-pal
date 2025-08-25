@@ -74,29 +74,8 @@ export class AutoExpertNotificationService {
         conversationId = newConversation.id;
       }
 
-      // Create comprehensive message content
-      const messageContent = `🌿 **Richiesta di Diagnosi Automatica**
-
-**Utente:** ${userProfile?.first_name || 'User'} ${userProfile?.last_name || ''}
-**Tipo di Pianta:** ${diagnosisData.plantType}
-**Nome Scientifico:** ${diagnosisData.plantVariety || 'Non identificato'}
-
-**Risultati Analisi:**
-- **Stato di Salute:** ${diagnosisData.isHealthy ? 'Sana' : 'Possibili Problemi Rilevati'}
-- **Confidenza AI:** ${Math.round(diagnosisData.confidence * 100)}%
-- **Sintomi:** ${diagnosisData.symptoms}
-
-**Riassunto Analisi AI:**
-${diagnosisData.analysisResult ? JSON.stringify(diagnosisData.analysisResult, null, 2) : 'Analisi non disponibile'}
-
-**Fonti API Utilizzate:**
-- Plant.id API per identificazione specie
-- Hugging Face AI per rilevamento malattie
-- Database EPPO per informazioni normative
-
-Per favore, rivedi l'analisi e fornisci la tua valutazione professionale. L'utente attende il tuo parere esperto.
-
-*Questo messaggio è stato inviato automaticamente dopo l'analisi AI della pianta.*`;
+      // Create comprehensive message content with AI analysis details
+      const messageContent = this.buildComprehensiveAnalysisMessage(diagnosisData, userProfile);
 
       console.log('📝 Message content:', messageContent);
 
@@ -107,13 +86,14 @@ Per favore, rivedi l'analisi e fornisci la tua valutazione professionale. L'uten
           conversation_id: conversationId,
           sender_id: userId,
           recipient_id: MARCO_NIGRO_ID,
-          content: messageContent, // Required field
-          text: messageContent, // Also populate text field for consistency
+          content: messageContent,
+          text: messageContent,
           metadata: {
             type: 'automatic_diagnosis',
             confidence: diagnosisData.confidence,
             isHealthy: diagnosisData.isHealthy,
-            plantType: diagnosisData.plantType
+            plantType: diagnosisData.plantType,
+            hasAiAnalysis: true
           }
         });
 
@@ -132,8 +112,8 @@ Per favore, rivedi l'analisi e fornisci la tua valutazione professionale. L'uten
             conversation_id: conversationId,
             sender_id: userId,
             recipient_id: MARCO_NIGRO_ID,
-            content: imageMessage, // Required field
-            text: imageMessage, // Also populate text field
+            content: imageMessage,
+            text: imageMessage,
             image_url: diagnosisData.imageUrl,
             metadata: {
               type: 'image',
@@ -181,8 +161,8 @@ Per favore, rivedi l'analisi e fornisci la tua valutazione professionale. L'uten
       }
 
       console.log('✅ Successfully sent diagnosis to expert');
-      toast.success('Diagnosi inviata automaticamente all\'esperto!', {
-        description: 'Riceverai una risposta professionale a breve'
+      toast.success('Diagnosi AI inviata all\'esperto!', {
+        description: 'Il fitopatologo può ora vedere tutti i dettagli dell\'analisi'
       });
 
       return true;
@@ -194,5 +174,81 @@ Per favore, rivedi l'analisi e fornisci la tua valutazione professionale. L'uten
       });
       return false;
     }
+  }
+
+  /**
+   * Builds a comprehensive message with AI analysis details
+   */
+  private static buildComprehensiveAnalysisMessage(diagnosisData: DiagnosisData, userProfile: any): string {
+    const userName = userProfile?.first_name && userProfile?.last_name 
+      ? `${userProfile.first_name} ${userProfile.last_name}`
+      : userProfile?.first_name || 'Utente';
+
+    let message = `🤖 **Analisi AI Completata - Richiesta Consulenza Esperto**\n\n`;
+    
+    // User info
+    message += `👤 **Utente:** ${userName}\n`;
+    message += `📧 **Email:** ${userProfile?.email || 'Non disponibile'}\n\n`;
+    
+    // Plant identification
+    message += `🌿 **IDENTIFICAZIONE PIANTA**\n`;
+    message += `• **Nome:** ${diagnosisData.analysisResult?.plantName || diagnosisData.plantType}\n`;
+    if (diagnosisData.analysisResult?.scientificName) {
+      message += `• **Nome Scientifico:** ${diagnosisData.analysisResult.scientificName}\n`;
+    }
+    message += `• **Confidenza AI:** ${Math.round(diagnosisData.confidence * 100)}%\n\n`;
+    
+    // Health status
+    message += `🏥 **STATO DI SALUTE**\n`;
+    message += `• **Condizione:** ${diagnosisData.isHealthy ? '✅ Pianta Sana' : '⚠️ Problemi Rilevati'}\n`;
+    
+    // Diseases detected
+    if (diagnosisData.analysisResult?.diseases && diagnosisData.analysisResult.diseases.length > 0) {
+      message += `\n🦠 **PROBLEMI RILEVATI**\n`;
+      diagnosisData.analysisResult.diseases.forEach((disease: any, index: number) => {
+        message += `\n**${index + 1}. ${disease.name}**\n`;
+        if (disease.probability) {
+          message += `   • Probabilità: ${Math.round(disease.probability * 100)}%\n`;
+        }
+        if (disease.description) {
+          message += `   • Descrizione: ${disease.description}\n`;
+        }
+        if (disease.treatment) {
+          message += `   • Trattamento suggerito: ${disease.treatment}\n`;
+        }
+      });
+    }
+    
+    // AI recommendations
+    if (diagnosisData.analysisResult?.recommendations && diagnosisData.analysisResult.recommendations.length > 0) {
+      message += `\n💡 **RACCOMANDAZIONI AI**\n`;
+      diagnosisData.analysisResult.recommendations.forEach((rec: string, index: number) => {
+        message += `${index + 1}. ${rec}\n`;
+      });
+    }
+    
+    // Symptoms observed
+    if (diagnosisData.symptoms && diagnosisData.symptoms.trim() !== '') {
+      message += `\n🔍 **SINTOMI OSSERVATI**\n`;
+      message += `${diagnosisData.symptoms}\n`;
+    }
+    
+    // Technical details
+    message += `\n🔬 **DETTAGLI TECNICI**\n`;
+    message += `• **Modello AI utilizzato:** Analisi Multi-Provider\n`;
+    message += `• **Timestamp:** ${new Date().toLocaleString('it-IT')}\n`;
+    message += `• **Immagine:** ${diagnosisData.imageUrl ? 'Allegata' : 'Non disponibile'}\n`;
+    
+    // Expert request
+    message += `\n👨‍🔬 **RICHIESTA CONSULENZA**\n`;
+    message += `Il sistema AI ha completato l'analisi preliminare. `;
+    message += `Si richiede la valutazione professionale del fitopatologo per:\n`;
+    message += `• Confermare o correggere la diagnosi AI\n`;
+    message += `• Fornire raccomandazioni specifiche di trattamento\n`;
+    message += `• Valutare la gravità e urgenza dell'intervento\n`;
+    
+    message += `\n*Questo messaggio contiene l'analisi AI completa per facilitare la consulenza professionale.*`;
+    
+    return message;
   }
 }
