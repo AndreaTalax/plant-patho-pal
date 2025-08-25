@@ -84,7 +84,7 @@ export class AutoExpertNotificationService {
     }
 
     // Malattie rilevate (se presenti)
-    if (analysisResult && analysisResult.diseases && analysisResult.diseases.length > 0) {
+    if (analysisResult && analysisResult.diseases && Array.isArray(analysisResult.diseases) && analysisResult.diseases.length > 0) {
       message += `🦠 **PROBLEMI RILEVATI**\n`;
       analysisResult.diseases.forEach((disease: any, index: number) => {
         const probability = disease.probability ? Math.round(disease.probability * 100) : 'N/A';
@@ -100,7 +100,7 @@ export class AutoExpertNotificationService {
     }
 
     // Raccomandazioni (se presenti)
-    if (analysisResult && analysisResult.recommendations && analysisResult.recommendations.length > 0) {
+    if (analysisResult && analysisResult.recommendations && Array.isArray(analysisResult.recommendations) && analysisResult.recommendations.length > 0) {
       message += `💡 **RACCOMANDAZIONI AI**\n`;
       analysisResult.recommendations.forEach((rec: string, index: number) => {
         message += `${index + 1}. ${rec}\n`;
