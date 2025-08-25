@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -39,10 +38,10 @@ const CompleteProfile = () => {
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
-      firstName: userProfile?.firstName || "",
-      lastName: userProfile?.lastName || "",
-      birthDate: "",
-      birthPlace: "",
+      firstName: userProfile?.firstName || userProfile?.first_name || "",
+      lastName: userProfile?.lastName || userProfile?.last_name || "",
+      birthDate: userProfile?.birthDate || userProfile?.birth_date || "",
+      birthPlace: userProfile?.birthPlace || userProfile?.birth_place || "",
     },
   });
 
@@ -50,17 +49,19 @@ const CompleteProfile = () => {
     setIsLoading(true);
 
     try {
-      await updateProfile("firstName", values.firstName);
-      await updateProfile("lastName", values.lastName);
-      await updateProfile("birthDate", values.birthDate);  
-      await updateProfile("birthPlace", values.birthPlace);
+      // Map to database field names (snake_case)
+      await updateProfile("first_name", values.firstName);
+      await updateProfile("last_name", values.lastName);
+      await updateProfile("birth_date", values.birthDate);  
+      await updateProfile("birth_place", values.birthPlace);
       
       toast({
         title: t("profileCompleted"),
         description: t("welcomeMessage"),
       });
       
-      navigate("/");
+      // Redirect to home page with diagnose tab active
+      navigate("/?tab=diagnose");
     } catch (error) {
       toast({
         variant: "destructive",
