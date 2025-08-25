@@ -1,197 +1,141 @@
 
-import { MARCO_NIGRO_ID } from '@/components/phytopathologist';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
-
-export interface DiagnosisData {
-  plantType: string;
-  plantVariety?: string;
-  symptoms: string;
-  imageUrl: string;
-  analysisResult: any;
-  confidence: number;
-  isHealthy: boolean;
-}
+import { MARCO_NIGRO_ID } from '@/components/phytopathologist';
+import { ConversationService } from '@/services/chat/conversationService';
+import { MessageService } from '@/services/chat/messageService';
 
 export class AutoExpertNotificationService {
   /**
-   * Sends an automatic plant diagnosis to an expert.
+   * Invia i risultati della diagnosi AI all'esperto nella chat
    */
-  static async sendDiagnosisToExpert(userId: string, diagnosisData: DiagnosisData): Promise<boolean> {
+  static async sendDiagnosisToExpert(userId: string, diagnosisData: any): Promise<boolean> {
     try {
-      console.log('📨 Sending diagnosis automatically to expert...');
-      console.log('👤 User ID:', userId);
-      console.log('🌿 Diagnosis data:', diagnosisData);
-      console.log('🖼️ Image URL ricevuto:', diagnosisData.imageUrl);
+      console.log('📨 Invio diagnosi AI all\'esperto:', diagnosisData);
 
-      // Get current user to include their info
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        console.error('❌ User not authenticated');
-        toast.error('Errore di autenticazione');
-        return false;
+      // Trova o crea conversazione
+      const conversation = await ConversationService.findOrCreateConversation(userId);
+      if (!conversation) {
+        throw new Error('Impossibile creare conversazione');
       }
 
-      // Get user profile for better context
-      const { data: userProfile } = await supabase
-        .from('profiles')
-        .select('first_name, last_name, email')
-        .eq('id', userId)
-        .single();
+      // Prepara il messaggio con i risultati dell'analisi AI
+      const aiAnalysisMessage = this.formatAIAnalysisMessage(diagnosisData);
 
-      console.log('👤 User profile:', userProfile);
+      // Invia messaggio con i risultati dell'analisi AI
+      const success = await MessageService.sendMessage(
+        conversation.id,
+        userId,
+        MARCO_NIGRO_ID,
+        aiAnalysisMessage,
+        diagnosisData.imageUrl
+      );
 
-      // Check if conversation exists with the expert
-      let conversationId: string;
-      const { data: existingConversations } = await supabase
-        .from('conversations')
-        .select('id')
-        .eq('user_id', userId)
-        .eq('expert_id', MARCO_NIGRO_ID);
-
-      if (existingConversations && existingConversations.length > 0) {
-        conversationId = existingConversations[0].id;
-        console.log('💬 Using existing conversation:', conversationId);
-      } else {
-        console.log('🆕 Creating new conversation with expert');
-        const { data: newConversation, error: conversationError } = await supabase
-          .from('conversations')
-          .insert({
-            user_id: userId,
-            expert_id: MARCO_NIGRO_ID,
-            status: 'active',
-            title: `Consulenza per ${diagnosisData.plantType}`
-          })
-          .select()
-          .single();
-
-        if (conversationError) {
-          console.error('❌ Error creating conversation:', conversationError);
-          toast.error('Errore nella creazione della conversazione');
-          return false;
-        }
-
-        conversationId = newConversation.id;
+      if (success) {
+        console.log('✅ Risultati AI inviati all\'esperto con successo');
+        return true;
       }
 
-      // Create comprehensive message content
-      const messageContent = `🌿 **Richiesta di Diagnosi Automatica**
-
-**Utente:** ${userProfile?.first_name || 'User'} ${userProfile?.last_name || ''}
-**Tipo di Pianta:** ${diagnosisData.plantType}
-**Nome Scientifico:** ${diagnosisData.plantVariety || 'Non identificato'}
-
-**Risultati Analisi:**
-- **Stato di Salute:** ${diagnosisData.isHealthy ? 'Sana' : 'Possibili Problemi Rilevati'}
-- **Confidenza AI:** ${Math.round(diagnosisData.confidence * 100)}%
-- **Sintomi:** ${diagnosisData.symptoms}
-
-**Riassunto Analisi AI:**
-${diagnosisData.analysisResult ? JSON.stringify(diagnosisData.analysisResult, null, 2) : 'Analisi non disponibile'}
-
-**Fonti API Utilizzate:**
-- Plant.id API per identificazione specie
-- Hugging Face AI per rilevamento malattie
-- Database EPPO per informazioni normative
-
-Per favore, rivedi l'analisi e fornisci la tua valutazione professionale. L'utente attende il tuo parere esperto.
-
-*Questo messaggio è stato inviato automaticamente dopo l'analisi AI della pianta.*`;
-
-      console.log('📝 Message content:', messageContent);
-
-      // Insert the message using both 'content' and 'text' fields
-      const { error: messageError } = await supabase
-        .from('messages')
-        .insert({
-          conversation_id: conversationId,
-          sender_id: userId,
-          recipient_id: MARCO_NIGRO_ID,
-          content: messageContent, // Required field
-          text: messageContent, // Also populate text field for consistency
-          metadata: {
-            type: 'automatic_diagnosis',
-            confidence: diagnosisData.confidence,
-            isHealthy: diagnosisData.isHealthy,
-            plantType: diagnosisData.plantType
-          }
-        });
-
-      if (messageError) {
-        console.error('❌ Error sending message:', messageError);
-        toast.error(`Errore nell'invio del messaggio: ${messageError.message}`);
-        return false;
-      }
-
-      // Send image as separate message if available
-      if (diagnosisData.imageUrl) {
-        const imageMessage = `📸 Immagine della pianta allegata alla diagnosi`;
-        const { error: imageMessageError } = await supabase
-          .from('messages')
-          .insert({
-            conversation_id: conversationId,
-            sender_id: userId,
-            recipient_id: MARCO_NIGRO_ID,
-            content: imageMessage, // Required field
-            text: imageMessage, // Also populate text field
-            image_url: diagnosisData.imageUrl,
-            metadata: {
-              type: 'image',
-              isPlantImage: true,
-              imageUrl: diagnosisData.imageUrl
-            }
-          });
-
-        if (imageMessageError) {
-          console.error('❌ Error sending image message:', imageMessageError);
-          // Don't fail the whole process for image message
-        }
-      }
-
-      // Send notification to expert using the edge function
-      try {
-        const { data, error } = await supabase.functions.invoke('send-specialist-notification', {
-          body: {
-            conversation_id: conversationId,
-            sender_id: userId,
-            recipient_id: MARCO_NIGRO_ID,
-            message_text: messageContent,
-            expert_email: 'agrotecnicomarconigro@gmail.com',
-            image_url: diagnosisData.imageUrl,
-            user_details: {
-              firstName: userProfile?.first_name || 'Utente',
-              lastName: userProfile?.last_name || '',
-              email: user.email || ''
-            },
-            plant_details: [{
-              name: diagnosisData.plantType,
-              price: 'Diagnosi automatica'
-            }]
-          }
-        });
-
-        if (error) {
-          console.error('❌ Error sending expert notification:', error);
-        } else {
-          console.log('✅ Expert notification sent successfully:', data);
-        }
-      } catch (notificationError) {
-        console.error('❌ Failed to send expert notification:', notificationError);
-        // Don't fail the whole process for notification error
-      }
-
-      console.log('✅ Successfully sent diagnosis to expert');
-      toast.success('Diagnosi inviata automaticamente all\'esperto!', {
-        description: 'Riceverai una risposta professionale a breve'
-      });
-
-      return true;
-
+      return false;
     } catch (error) {
-      console.error('❌ Failed to send diagnosis to expert:', error);
-      toast.error('Impossibile contattare l\'esperto', {
-        description: 'Prova a inviare manualmente dalla chat'
+      console.error('❌ Errore invio diagnosi AI all\'esperto:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Formatta i risultati dell'analisi AI per la chat
+   */
+  private static formatAIAnalysisMessage(diagnosisData: any): string {
+    const {
+      plantType,
+      plantVariety,
+      confidence,
+      isHealthy,
+      analysisResult,
+      plantInfo
+    } = diagnosisData;
+
+    let message = `🤖 **ANALISI AI COMPLETATA**\n\n`;
+    
+    // Informazioni sulla pianta identificata
+    message += `🌿 **Pianta identificata:** ${plantType || 'Non identificata'}\n`;
+    if (plantVariety) {
+      message += `🔬 **Nome scientifico:** ${plantVariety}\n`;
+    }
+    
+    // Stato di salute
+    const healthStatus = isHealthy ? '✅ Sana' : '⚠️ Problemi rilevati';
+    message += `💚 **Stato di salute:** ${healthStatus}\n`;
+    
+    // Confidenza dell'analisi
+    const confidencePercent = Math.round((confidence || 0) * 100);
+    message += `🎯 **Confidenza:** ${confidencePercent}%\n\n`;
+
+    // Dettagli dell'ambiente
+    if (plantInfo) {
+      message += `🏠 **DETTAGLI AMBIENTE**\n`;
+      message += `📍 **Posizione:** ${plantInfo.environment || 'Non specificata'}\n`;
+      message += `💧 **Irrigazione:** ${plantInfo.watering || 'Non specificata'}\n`;
+      message += `☀️ **Esposizione:** ${plantInfo.lightExposure || 'Non specificata'}\n`;
+      if (plantInfo.symptoms) {
+        message += `🔍 **Sintomi osservati:** ${plantInfo.symptoms}\n`;
+      }
+      message += `\n`;
+    }
+
+    // Malattie rilevate (se presenti)
+    if (analysisResult && analysisResult.diseases && analysisResult.diseases.length > 0) {
+      message += `🦠 **PROBLEMI RILEVATI**\n`;
+      analysisResult.diseases.forEach((disease: any, index: number) => {
+        const probability = disease.probability ? Math.round(disease.probability * 100) : 'N/A';
+        message += `${index + 1}. **${disease.name}** (${probability}%)\n`;
+        if (disease.description) {
+          message += `   📝 ${disease.description}\n`;
+        }
+        if (disease.treatment) {
+          message += `   💊 Trattamento suggerito: ${disease.treatment}\n`;
+        }
+        message += `\n`;
       });
+    }
+
+    // Raccomandazioni (se presenti)
+    if (analysisResult && analysisResult.recommendations && analysisResult.recommendations.length > 0) {
+      message += `💡 **RACCOMANDAZIONI AI**\n`;
+      analysisResult.recommendations.forEach((rec: string, index: number) => {
+        message += `${index + 1}. ${rec}\n`;
+      });
+      message += `\n`;
+    }
+
+    // Nota finale
+    message += `📸 **Immagine allegata per verifica**\n\n`;
+    message += `⚠️ *Questa è un'analisi AI preliminare. Si prega di verificare e fornire diagnosi professionale.*`;
+
+    return message;
+  }
+
+  /**
+   * Invia notifica generale all'esperto (manteniamo per compatibilità)
+   */
+  static async notifyExpert(userId: string, message: string, imageUrl?: string): Promise<boolean> {
+    try {
+      const conversation = await ConversationService.findOrCreateConversation(userId);
+      if (!conversation) {
+        throw new Error('Impossibile creare conversazione');
+      }
+
+      const success = await MessageService.sendMessage(
+        conversation.id,
+        userId,
+        MARCO_NIGRO_ID,
+        message,
+        imageUrl
+      );
+
+      return success;
+    } catch (error) {
+      console.error('❌ Errore notifica esperto:', error);
       return false;
     }
   }
