@@ -55,18 +55,21 @@ export const useRealtimeChat = ({
         (payload) => {
           try {
             console.log('📨 New message received:', payload.new);
-            const newMessage = payload.new as DatabaseMessage;
+            const newMsg = payload.new as DatabaseMessage;
             
-            // Only show toast for messages from others
-            if (newMessage.sender_id !== userId) {
+            // Show toast for messages from others, but also process all messages
+            if (newMsg.sender_id !== userId) {
               toast.success('Nuovo messaggio ricevuto!', {
-                description: newMessage.text?.slice(0, 50) + (newMessage.text?.length > 50 ? '...' : ''),
+                description: newMsg.text?.slice(0, 50) + (newMsg.text?.length > 50 ? '...' : ''),
                 duration: 4000,
               });
+            } else {
+              // Log own messages for debugging
+              console.log('📤 Own message received via realtime:', newMsg.id);
             }
             
             if (onNewMessage) {
-              onNewMessage(newMessage);
+              onNewMessage(newMsg);
             }
           } catch (error) {
             console.error('❌ Error handling new message:', error);
@@ -96,14 +99,17 @@ export const useRealtimeChat = ({
         }
       )
       .subscribe((status, err) => {
-        console.log('🔗 Real-time subscription status:', status, err);
+        console.log('🔗 Subscription status:', status, err);
         setIsConnected(status === 'SUBSCRIBED');
         
         if (status === 'SUBSCRIBED') {
-          console.log('✅ Real-time chat connected successfully');
+          console.log('✅ Real-time connected successfully');
         } else if (status === 'CHANNEL_ERROR') {
-          console.error('❌ Real-time chat connection failed:', err);
+          console.error('❌ Real-time connection failed:', err);
           toast.error('Connessione real-time fallita');
+        } else if (status === 'TIMED_OUT') {
+          console.error('⏰ Real-time connection timed out');
+          setIsConnected(false);
         }
       });
 
@@ -145,7 +151,7 @@ export const useRealtimeChat = ({
       }
 
       // Inserimento diretto nel database
-      const { error: insertError } = await supabase
+      const { data: insertedMessage, error: insertError } = await supabase
         .from('messages')
         .insert({
           conversation_id: conversationId,
@@ -155,21 +161,30 @@ export const useRealtimeChat = ({
           text: text.trim(),
           image_url: imageUrl,
           sent_at: new Date().toISOString()
-        });
+        })
+        .select()
+        .single();
 
       if (insertError) {
         console.error('❌ Direct insert error:', insertError);
         throw new Error(insertError.message || 'Failed to send message');
       }
 
-      console.log('✅ Message sent successfully via direct insert');
-      return { success: true };
+      console.log('✅ Message sent successfully via direct insert:', insertedMessage);
+      
+      // Immediately trigger callback for own message to show in UI
+      if (onNewMessage && insertedMessage) {
+        console.log('🔄 Triggering immediate callback for own message');
+        onNewMessage(insertedMessage as DatabaseMessage);
+      }
+      
+      return { success: true, message: insertedMessage };
 
     } catch (error: any) {
       console.error('❌ Error in sendMessage:', error);
       throw error;
     }
-  }, [conversationId, userId]);
+  }, [conversationId, userId, onNewMessage]);
 
   // Add cleanup on unmount
   useEffect(() => {
