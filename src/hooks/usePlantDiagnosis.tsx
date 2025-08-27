@@ -73,10 +73,10 @@ export const usePlantDiagnosis = () => {
         analysisDetails
       });
 
-      // Crea un URL valido per l'immagine (se è un File)
-      const imageUrl = uploadedImage instanceof File ? 
-        `temp_image_${Date.now()}.jpg` : // Salva un nome temporaneo invece dell'URL
-        uploadedImage;
+      // Crea un URL valido per l'immagine
+      const imageUrl = typeof uploadedImage === 'string' ? 
+        uploadedImage : 
+        `temp_image_${Date.now()}.jpg`;
 
       // Prepara i dati per il salvataggio (serializza correttamente gli oggetti complessi)
       const diagnosisData = {
