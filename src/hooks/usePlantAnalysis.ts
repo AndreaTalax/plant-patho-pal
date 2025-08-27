@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -230,7 +229,7 @@ export const usePlantAnalysis = () => {
       }
 
       // Costruiamo una lista ordinata di ipotesi (prime 3)
-      const ranked = (Array.isArray(diseases) ? diseases : [])
+      let ranked = (Array.isArray(diseases) ? diseases : [])
         .filter((d: any) => d && typeof d === 'object' && typeof (d.name || d.label) === 'string')
         .map((d: any) => ({
           name: d.name || d.label,
@@ -257,6 +256,33 @@ export const usePlantAnalysis = () => {
         });
       }
 
+      // Recalibrazione: evita falsi positivi e ripetizioni
+      // - Se non ci sono ipotesi o sono deboli e non abbiamo sintomi visivi forti, marchiamo come SANA.
+      const topProb = ranked[0]?.probability ?? 0;
+      const hasVisual = allDetectedSymptoms.length > 0 || Boolean(visualSymptomsAnalysis);
+      const strongTerms = ['oidio', 'muffa', 'ruggine', 'necrosi', 'peronospora', 'cancro', 'afidi', 'virus'];      
+      const hasStrongVisual = allDetectedSymptoms.some(s =>
+        strongTerms.some(t => s.toLowerCase().includes(t))
+      );
+
+      const needsHealthyOverride =
+        // nessuna ipotesi → sano
+        ranked.length === 0
+        // ipotesi deboli e nessun sintomo visivo
+        || (topProb < 0.55 && !hasVisual)
+        // pochi sintomi deboli + probabilità bassa
+        || (!hasStrongVisual && allDetectedSymptoms.length <= 1 && topProb < 0.5);
+
+      if (needsHealthyOverride) {
+        console.log('🟢 Healthy override attivato: ipotesi deboli o nessuna evidenza visiva.');
+        isHealthy = true;
+        diseases = [];
+        ranked = [];
+        visualSymptomsAnalysis = '';
+        // Svuotiamo i sintomi visivi rilevati
+        while (allDetectedSymptoms.length) allDetectedSymptoms.pop();
+      }
+
       // Testo compatto per UI con sintomi visivi
       let diagnosisText = `🌿 Pianta: ${plantName}`;
       if (scientificName && scientificName !== plantName) diagnosisText += ` (*${scientificName}*)`;
@@ -264,7 +290,7 @@ export const usePlantAnalysis = () => {
       diagnosisText += `\n💚 Stato: ${isHealthy ? 'Sana' : 'Possibili problemi'}`;
 
       // Aggiungi analisi visiva dei sintomi
-      if (visualSymptomsAnalysis) {
+      if (!isHealthy && visualSymptomsAnalysis) {
         diagnosisText += `\n\n👁️ Sintomi visivi: ${visualSymptomsAnalysis}`;
       }
 
@@ -282,7 +308,7 @@ export const usePlantAnalysis = () => {
       }
 
       // Dettaglio prima ipotesi (se disponibile) per compatibilità con UI esistente
-      if (!isHealthy && diseases.length > 0) {
+      if (!isHealthy && ranked.length > 0) {
         const top = ranked[0];
         if (top) {
           diagnosisText += `\n\n🔍 Possibile malattia: ${top.name} (${Math.round((top.probability || 0.7) * 100)}%)`;
@@ -298,7 +324,7 @@ export const usePlantAnalysis = () => {
       setDiagnosisResult(diagnosisText);
 
       // Popola struttura diagnosedDisease minimale per compatibilità UI
-      const primary = !isHealthy && diseases.length > 0 ? diseases[0] : null;
+      const primary = !isHealthy && ranked.length > 0 ? ranked[0] : null;
       const primarySymptomAnalysis = primary ? analyzeVisualSymptoms(primary.name, primary.description) : null;
       
       setDiagnosedDisease(primary ? {
