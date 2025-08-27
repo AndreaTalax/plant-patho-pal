@@ -149,16 +149,16 @@ export const useExpertConversation = (userId: string) => {
     
     setIsSending(true);
     
+    // Add temporary message to UI immediately
+    const tempMessageData: Message = {
+      id: `temp-${Date.now()}`,
+      sender: 'expert',
+      text: text.trim(),
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    };
+    
     try {
       console.log('📤 Expert sending message:', text);
-      
-      // Add temporary message to UI immediately
-      const tempMessageData: Message = {
-        id: `temp-${Date.now()}`,
-        sender: 'expert',
-        text: text.trim(),
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      };
       
       // Update current conversation with temp message
       setCurrentConversation(prev => {
