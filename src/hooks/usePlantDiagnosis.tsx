@@ -2,9 +2,13 @@
 import { useEffect, useState } from 'react';
 import { usePlantAnalysis } from './usePlantAnalysis';
 import { usePlantImageUpload } from './usePlantImageUpload';
+import { useAuth } from '@/context/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 import type { PlantInfo } from '@/components/diagnose/types';
 
 export const usePlantDiagnosis = () => {
+  const { user } = useAuth();
   const { 
     isAnalyzing,
     diagnosisResult,
@@ -27,6 +31,8 @@ export const usePlantDiagnosis = () => {
     streamRef,
   } = usePlantImageUpload({ analyzeUploadedImage });
 
+  const [isSaving, setIsSaving] = useState(false);
+
   // Event-based global name update
   useEffect(() => {
     const handler = (e: Event) => {
@@ -44,6 +50,79 @@ export const usePlantDiagnosis = () => {
     window.addEventListener("updatePlantInfoName", handler as any);
     return () => window.removeEventListener("updatePlantInfoName", handler as any);
   }, [setUploadedImage]);
+
+  // Funzione per salvare la diagnosi nel database
+  const saveDiagnosis = async () => {
+    if (!user) {
+      toast.error('Devi essere autenticato per salvare la diagnosi');
+      return;
+    }
+
+    if (!diagnosisResult || !uploadedImage) {
+      toast.error('Nessuna diagnosi da salvare');
+      return;
+    }
+
+    setIsSaving(true);
+    
+    try {
+      console.log('🔄 Salvando diagnosi...', {
+        user_id: user.id,
+        diagnosisResult,
+        diagnosedDisease,
+        analysisDetails
+      });
+
+      // Prepara i dati per il salvataggio
+      const diagnosisData = {
+        user_id: user.id,
+        plant_type: diagnosedDisease?.name || 'Pianta sconosciuta',
+        plant_variety: analysisDetails?.multiServiceInsights?.plantSpecies || '',
+        symptoms: diagnosedDisease?.symptoms?.join(', ') || 'Nessun sintomo specifico',
+        image_url: uploadedImage ? URL.createObjectURL(uploadedImage) : '',
+        status: 'completed',
+        diagnosis_result: {
+          confidence: diagnosedDisease?.confidence || 0,
+          isHealthy: diagnosedDisease?.healthy || false,
+          disease: diagnosedDisease?.disease?.name || diagnosedDisease?.name || 'Nessuna',
+          description: diagnosisResult,
+          analysisDetails: analysisDetails,
+          timestamp: new Date().toISOString()
+        }
+      };
+
+      console.log('📝 Dati diagnosi da salvare:', diagnosisData);
+
+      // Salva nel database
+      const { data, error } = await supabase
+        .from('diagnoses')
+        .insert(diagnosisData)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('❌ Errore nel salvataggio:', error);
+        throw error;
+      }
+
+      console.log('✅ Diagnosi salvata con successo:', data);
+      toast.success('Diagnosi salvata con successo!');
+
+    } catch (error: any) {
+      console.error('❌ Errore nel salvare la diagnosi:', error);
+      
+      let errorMessage = 'Errore nel salvare la diagnosi';
+      if (error.message?.includes('row-level security')) {
+        errorMessage = 'Permessi insufficienti. Assicurati di essere autenticato.';
+      } else if (error.message) {
+        errorMessage = `Errore: ${error.message}`;
+      }
+      
+      toast.error(errorMessage);
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   // Reset diagnosi/immagine etc
   const resetDiagnosis = () => {
@@ -67,11 +146,13 @@ export const usePlantDiagnosis = () => {
     analysisDetails,
     retryCount,
     streamRef,
+    isSaving,
     resetDiagnosis,
     captureImage,
     handleImageUpload,
     analyzeUploadedImage,
     stopCameraStream,
     setUploadedImage,
+    saveDiagnosis,
   };
 };
