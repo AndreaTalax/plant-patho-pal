@@ -51,7 +51,7 @@ export const useExpertConversation = (userId: string) => {
               const uiMessage = convertToUIMessage(newMessage);
               
               // Check if message already exists to avoid duplicates
-              const messageExists = conv.messages.some(msg => msg.id === uiMessage.id);
+              const messageExists = conv.messages?.some(msg => msg.id === uiMessage.id) || false;
               if (messageExists) {
                 console.log('⚠️ Message already exists in conversation, skipping');
                 return conv;
@@ -60,9 +60,9 @@ export const useExpertConversation = (userId: string) => {
               console.log('✅ Adding new message to conversation:', conv.id);
               return {
                 ...conv,
-                messages: [...conv.messages, uiMessage],
+                messages: [...(conv.messages || []), uiMessage],
                 lastMessage: uiMessage.text,
-                lastMessageTime: uiMessage.time
+                time: uiMessage.time
               };
             }
             return conv;
@@ -74,7 +74,7 @@ export const useExpertConversation = (userId: string) => {
               if (!prev) return prev;
               
               const uiMessage = convertToUIMessage(newMessage);
-              const messageExists = prev.messages.some(msg => msg.id === uiMessage.id);
+              const messageExists = prev.messages?.some(msg => msg.id === uiMessage.id) || false;
               
               if (messageExists) {
                 return prev;
@@ -82,7 +82,7 @@ export const useExpertConversation = (userId: string) => {
               
               return {
                 ...prev,
-                messages: [...prev.messages, uiMessage]
+                messages: [...(prev.messages || []), uiMessage]
               };
             });
           }
@@ -115,15 +115,16 @@ export const useExpertConversation = (userId: string) => {
           
           return {
             id: conv.id,
-            userId: conv.user_id,
-            expertId: conv.expert_id,
-            userName: conv.title || 'Utente',
+            title: conv.title || 'Utente',
             lastMessage: uiMessages[uiMessages.length - 1]?.text || '',
-            lastMessageTime: uiMessages[uiMessages.length - 1]?.time || '',
-            messages: uiMessages,
+            time: uiMessages[uiMessages.length - 1]?.time || '',
+            unreadCount: 0,
+            expertId: conv.expert_id,
+            user_id: conv.user_id,
+            username: conv.user?.username || 'Utente',
             blocked: conv.status === 'blocked',
-            user_id: conv.user_id
-          };
+            messages: uiMessages
+          } as Conversation;
         })
       );
       
@@ -152,7 +153,7 @@ export const useExpertConversation = (userId: string) => {
       console.log('📤 Expert sending message:', text);
       
       // Add temporary message to UI immediately
-      const tempMessage: Message = {
+      const tempMessageData: Message = {
         id: `temp-${Date.now()}`,
         sender: 'expert',
         text: text.trim(),
@@ -164,7 +165,7 @@ export const useExpertConversation = (userId: string) => {
         if (!prev) return prev;
         return {
           ...prev,
-          messages: [...prev.messages, tempMessage]
+          messages: [...(prev.messages || []), tempMessageData]
         };
       });
       
@@ -172,7 +173,7 @@ export const useExpertConversation = (userId: string) => {
       await ChatMessageService.sendMessage(
         currentConversation.id,
         userId,
-        currentConversation.userId,
+        currentConversation.user_id,
         text.trim()
       );
       
@@ -184,7 +185,7 @@ export const useExpertConversation = (userId: string) => {
           if (!prev) return prev;
           return {
             ...prev,
-            messages: prev.messages.filter(msg => msg.id !== tempMessage.id)
+            messages: (prev.messages || []).filter(msg => msg.id !== tempMessageData.id)
           };
         });
       }, 1000);
@@ -198,7 +199,7 @@ export const useExpertConversation = (userId: string) => {
         if (!prev) return prev;
         return {
           ...prev,
-          messages: prev.messages.filter(msg => msg.id !== tempMessage.id)
+          messages: (prev.messages || []).filter(msg => msg.id !== tempMessageData.id)
         };
       });
     } finally {
@@ -209,7 +210,14 @@ export const useExpertConversation = (userId: string) => {
   const handleDeleteConversation = async (conversationId: string) => {
     try {
       console.log('🗑️ Deleting conversation:', conversationId);
-      await ChatConversationService.deleteConversation(conversationId);
+      
+      // Use the correct method name from the service
+      const { error } = await supabase
+        .from('conversations')
+        .delete()
+        .eq('id', conversationId);
+      
+      if (error) throw error;
       
       setConversations(prev => prev.filter(c => c.id !== conversationId));
       
