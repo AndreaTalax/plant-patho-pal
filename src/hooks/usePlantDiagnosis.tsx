@@ -73,20 +73,26 @@ export const usePlantDiagnosis = () => {
         analysisDetails
       });
 
-      // Prepara i dati per il salvataggio
+      // Crea un URL valido per l'immagine (se è un File)
+      const imageUrl = uploadedImage instanceof File ? 
+        `temp_image_${Date.now()}.jpg` : // Salva un nome temporaneo invece dell'URL
+        uploadedImage;
+
+      // Prepara i dati per il salvataggio (serializza correttamente gli oggetti complessi)
       const diagnosisData = {
         user_id: user.id,
         plant_type: diagnosedDisease?.name || 'Pianta sconosciuta',
         plant_variety: analysisDetails?.multiServiceInsights?.plantSpecies || '',
         symptoms: diagnosedDisease?.symptoms?.join(', ') || 'Nessun sintomo specifico',
-        image_url: uploadedImage ? URL.createObjectURL(uploadedImage) : '',
+        image_url: imageUrl,
         status: 'completed',
         diagnosis_result: {
           confidence: diagnosedDisease?.confidence || 0,
           isHealthy: diagnosedDisease?.healthy || false,
           disease: diagnosedDisease?.disease?.name || diagnosedDisease?.name || 'Nessuna',
           description: diagnosisResult,
-          analysisDetails: analysisDetails,
+          // Serializza analysisDetails in modo sicuro per il database
+          analysisDetails: analysisDetails ? JSON.parse(JSON.stringify(analysisDetails)) : null,
           timestamp: new Date().toISOString()
         }
       };

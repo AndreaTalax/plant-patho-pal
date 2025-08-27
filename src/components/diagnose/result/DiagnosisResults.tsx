@@ -41,10 +41,46 @@ const DiagnosisResults = ({
     <div className="space-y-6">
       <Card>
         <CardContent className="p-6">
-          <DiagnosisResult 
-            result={diagnosisResult}
-            disease={diagnosedDisease}
-          />
+          <div className="space-y-4">
+            <h2 className="text-xl font-semibold text-center">
+              {diagnosedDisease?.healthy ? "La tua pianta è sana!" : "Risultati dell'analisi"}
+            </h2>
+            
+            <div className="prose prose-sm">
+              <p>{diagnosisResult}</p>
+            </div>
+
+            {diagnosedDisease && !diagnosedDisease.healthy && (
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <h3 className="font-semibold mb-2">{diagnosedDisease.name}</h3>
+                {diagnosedDisease.description && (
+                  <p className="text-sm text-gray-600 mb-2">{diagnosedDisease.description}</p>
+                )}
+                
+                {diagnosedDisease.symptoms && diagnosedDisease.symptoms.length > 0 && (
+                  <div className="mb-2">
+                    <h4 className="font-medium text-sm">Sintomi:</h4>
+                    <ul className="list-disc list-inside text-sm text-gray-600">
+                      {diagnosedDisease.symptoms.map((symptom, index) => (
+                        <li key={index}>{symptom}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {diagnosedDisease.treatments && diagnosedDisease.treatments.length > 0 && (
+                  <div>
+                    <h4 className="font-medium text-sm">Trattamenti consigliati:</h4>
+                    <ul className="list-disc list-inside text-sm text-gray-600">
+                      {diagnosedDisease.treatments.map((treatment, index) => (
+                        <li key={index}>{treatment}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </CardContent>
       </Card>
 
