@@ -122,6 +122,17 @@ export const useUserChatRealtime = (userId: string) => {
       try {
         logSupabaseOperation('loadMessages', { conversationId: conversation.id });
         const existingMessages = await MessageService.loadMessages(conversation.id);
+        
+        console.log('🔍 Messages loaded from database:', {
+          count: existingMessages?.length || 0,
+          messages: existingMessages?.map(m => ({
+            id: m.id,
+            sender_id: m.sender_id,
+            text: (m.content || m.text || '').substring(0, 50),
+            sent_at: m.sent_at
+          })) || []
+        });
+        
         setMessages(existingMessages || []);
         console.log('✅ useUserChatRealtime: Messaggi caricati:', existingMessages?.length || 0);
       } catch (messageError) {
@@ -146,6 +157,15 @@ export const useUserChatRealtime = (userId: string) => {
               console.log('📨 useUserChatRealtime: Nuovo messaggio ricevuto:', payload.new);
               const newMessage = payload.new as DatabaseMessage;
               
+              console.log('🔍 New message details:', {
+                id: newMessage.id,
+                sender_id: newMessage.sender_id,
+                userId: userId,
+                marcoId: MARCO_NIGRO_ID,
+                isFromUser: newMessage.sender_id === userId,
+                isFromExpert: newMessage.sender_id === MARCO_NIGRO_ID
+              });
+              
               setMessages(prev => {
                 // Evita duplicati
                 const exists = prev.some(msg => msg.id === newMessage.id);
@@ -153,7 +173,10 @@ export const useUserChatRealtime = (userId: string) => {
                   console.log('⚠️ useUserChatRealtime: Messaggio già esistente, ignorato');
                   return prev;
                 }
-                return [...prev, newMessage];
+                
+                const newMessages = [...prev, newMessage];
+                console.log('✅ useUserChatRealtime: Messaggio aggiunto, totale:', newMessages.length);
+                return newMessages;
               });
             }
           )
@@ -203,7 +226,12 @@ export const useUserChatRealtime = (userId: string) => {
     setIsSending(true);
     
     try {
-      console.log('📤 useUserChatRealtime: Invio messaggio:', { text: text?.slice(0, 50), hasImage: !!imageUrl });
+      console.log('📤 useUserChatRealtime: Invio messaggio:', { 
+        text: text?.slice(0, 50), 
+        hasImage: !!imageUrl,
+        userId: userId,
+        conversationId: currentConversationId
+      });
 
       const success = await MessageService.sendMessage(
         currentConversationId,
@@ -222,6 +250,7 @@ export const useUserChatRealtime = (userId: string) => {
       setTimeout(async () => {
         try {
           const refreshedMessages = await MessageService.loadMessages(currentConversationId);
+          console.log('🔄 useUserChatRealtime: Messaggi ricaricati dopo invio:', refreshedMessages?.length || 0);
           setMessages(refreshedMessages || []);
         } catch (error) {
           console.warn('⚠️ useUserChatRealtime: Impossibile ricaricare messaggi:', error);

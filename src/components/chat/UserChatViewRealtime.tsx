@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useUserChatRealtime } from '@/hooks/useUserChatRealtime';
 import MessageList from './MessageList';
@@ -59,16 +58,42 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
   }, [autoDataSent]);
 
   const formatMessagesForDisplay = (dbMessages: DatabaseMessage[]): Message[] => {
-    return dbMessages.map(msg => ({
-      id: msg.id,
-      sender: msg.sender_id === userId ? 'user' as const : 'expert' as const,
-      text: msg.content || msg.text || '',
-      time: new Date(msg.sent_at).toLocaleTimeString([], { 
-        hour: '2-digit', 
-        minute: '2-digit' 
-      }),
-      image_url: msg.image_url || undefined
-    }));
+    console.log('🔄 Formatting messages for display:', dbMessages.length);
+    
+    return dbMessages.map((msg, index) => {
+      // Determina il sender basandosi sugli ID
+      let sender: 'user' | 'expert';
+      if (msg.sender_id === userId) {
+        sender = 'user';
+      } else if (msg.sender_id === MARCO_NIGRO_ID) {
+        sender = 'expert';
+      } else {
+        // Fallback per messaggi dove l'ID del sender non corrisponde
+        sender = msg.sender_id === userId ? 'user' : 'expert';
+      }
+      
+      const formattedMessage: Message = {
+        id: msg.id,
+        sender: sender,
+        text: msg.content || msg.text || '',
+        time: new Date(msg.sent_at).toLocaleTimeString([], { 
+          hour: '2-digit', 
+          minute: '2-digit' 
+        }),
+        image_url: msg.image_url || undefined
+      };
+      
+      console.log(`🎨 Formatting message ${index + 1}/${dbMessages.length}:`, {
+        id: formattedMessage.id,
+        sender: formattedMessage.sender,
+        text: formattedMessage.text.substring(0, 50),
+        senderId: msg.sender_id,
+        userId: userId,
+        marcoId: MARCO_NIGRO_ID
+      });
+      
+      return formattedMessage;
+    });
   };
 
   // Gestione click pulsante indietro
@@ -89,6 +114,19 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
       startChatWithExpert();
     }, 500);
   };
+
+  // Log per debug dei messaggi formattati
+  useEffect(() => {
+    const formattedMessages = formatMessagesForDisplay(messages);
+    console.log('📊 Messages debug info:', {
+      totalMessages: messages.length,
+      formattedMessages: formattedMessages.length,
+      userMessages: formattedMessages.filter(m => m.sender === 'user').length,
+      expertMessages: formattedMessages.filter(m => m.sender === 'expert').length,
+      userId: userId,
+      marcoId: MARCO_NIGRO_ID
+    });
+  }, [messages, userId]);
 
   // Stato di errore con opzioni di recupero
   if (initializationError) {
