@@ -1,5 +1,5 @@
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { usePlantAnalysis } from './usePlantAnalysis';
 import { usePlantImageUpload } from './usePlantImageUpload';
 import { useAuth } from '@/context/AuthContext';
@@ -9,18 +9,21 @@ import type { PlantInfo } from '@/components/diagnose/types';
 
 export const usePlantDiagnosis = () => {
   const { user } = useAuth();
+
+  // Nuovo hook analisi
   const { 
+    results,
     isAnalyzing,
-    diagnosisResult,
-    diagnosedDisease,
-    analysisProgress,
-    analysisDetails,
-    analyzeUploadedImage,
-    setDiagnosisResult,
-    setDiagnosedDisease,
-    setAnalysisProgress,
-    setAnalysisDetails,
+    progress,
+    analyzeImage,
+    clearResults,
   } = usePlantAnalysis();
+
+  // Wrapper per compatibilità con usePlantImageUpload
+  const analyzeUploadedImage = async (file: File) => {
+    console.log('▶️ analyzeUploadedImage wrapper called');
+    return analyzeImage(file);
+  };
 
   const {
     uploadedImage,
@@ -32,6 +35,56 @@ export const usePlantDiagnosis = () => {
   } = usePlantImageUpload({ analyzeUploadedImage });
 
   const [isSaving, setIsSaving] = useState(false);
+
+  // Derivati dai risultati
+  const diagnosisResult = useMemo(() => {
+    const plant = results?.consensus?.mostLikelyPlant;
+    if (!plant) return null;
+    const conf = Math.min(70, Math.round(plant.confidence || 0));
+    return `Pianta identificata: ${plant.plantName}${plant.scientificName ? ` (${plant.scientificName})` : ''} • Affidabilità ${conf}%`;
+  }, [results]);
+
+  const diagnosedDisease = useMemo(() => {
+    const dis = results?.consensus?.mostLikelyDisease;
+    if (!dis) return null;
+    return {
+      id: dis.disease,
+      name: dis.disease,
+      description: '',
+      causes: dis.additionalInfo?.cause || '',
+      symptoms: dis.symptoms || [],
+      treatments: dis.treatments || [],
+      confidence: Math.min(70, Math.round(dis.confidence || 0)),
+      healthy: false,
+      label: dis.severity,
+    };
+  }, [results]);
+
+  const analysisDetails = useMemo(() => {
+    if (!results) return null;
+    return {
+      multiServiceInsights: {
+        plantName: results.consensus.mostLikelyPlant?.plantName,
+        plantSpecies: results.consensus.mostLikelyPlant?.scientificName,
+        isHealthy: !results.consensus.mostLikelyDisease,
+        agreementScore: results.consensus.agreementScore,
+        primaryService: results.consensus.bestProvider,
+        eppoDiseasesFound: results.diseaseDetection?.length || 0,
+      },
+      identifiedFeatures: [],
+      analysisTechnology: 'Global AI + EPPO',
+      // Includiamo anche i provider usati per trasparenza
+      risultatiCompleti: {
+        plantInfo: undefined,
+        accuracyGuarantee: undefined,
+        plantIdResult: undefined,
+        detectedDiseases: results.diseaseDetection,
+        eppoPathogens: undefined,
+      }
+    };
+  }, [results]);
+
+  const analysisProgress = useMemo(() => progress?.progress ?? 0, [progress]);
 
   // Event-based global name update
   useEffect(() => {
@@ -51,14 +104,14 @@ export const usePlantDiagnosis = () => {
     return () => window.removeEventListener("updatePlantInfoName", handler as any);
   }, [setUploadedImage]);
 
-  // Funzione per salvare la diagnosi nel database
+  // Salvataggio diagnosi nel database
   const saveDiagnosis = async () => {
     if (!user) {
       toast.error('Devi essere autenticato per salvare la diagnosi');
       return;
     }
 
-    if (!diagnosisResult || !uploadedImage) {
+    if (!results || !uploadedImage) {
       toast.error('Nessuna diagnosi da salvare');
       return;
     }
@@ -66,6 +119,9 @@ export const usePlantDiagnosis = () => {
     setIsSaving(true);
     
     try {
+      const plant = results.consensus.mostLikelyPlant;
+      const disease = results.consensus.mostLikelyDisease;
+
       console.log('🔄 Salvando diagnosi...', {
         user_id: user.id,
         diagnosisResult,
@@ -73,25 +129,20 @@ export const usePlantDiagnosis = () => {
         analysisDetails
       });
 
-      // Crea un URL valido per l'immagine
-      const imageUrl = typeof uploadedImage === 'string' ? 
-        uploadedImage : 
-        `temp_image_${Date.now()}.jpg`;
+      const imageUrl = typeof uploadedImage === 'string' ? uploadedImage : `temp_image_${Date.now()}.jpg`;
 
-      // Prepara i dati per il salvataggio (serializza correttamente gli oggetti complessi)
       const diagnosisData = {
         user_id: user.id,
-        plant_type: diagnosedDisease?.name || 'Pianta sconosciuta',
-        plant_variety: analysisDetails?.multiServiceInsights?.plantSpecies || '',
+        plant_type: plant?.plantName || 'Pianta sconosciuta',
+        plant_variety: plant?.scientificName || '',
         symptoms: diagnosedDisease?.symptoms?.join(', ') || 'Nessun sintomo specifico',
         image_url: imageUrl,
         status: 'completed',
         diagnosis_result: {
-          confidence: diagnosedDisease?.confidence || 0,
-          isHealthy: diagnosedDisease?.healthy || false,
-          disease: diagnosedDisease?.disease?.name || diagnosedDisease?.name || 'Nessuna',
+          confidence: Math.min(70, Math.round(plant?.confidence || 0)),
+          isHealthy: !disease,
+          disease: disease?.disease || 'Nessuna',
           description: diagnosisResult,
-          // Serializza analysisDetails in modo sicuro per il database
           analysisDetails: analysisDetails ? JSON.parse(JSON.stringify(analysisDetails)) : null,
           timestamp: new Date().toISOString()
         }
@@ -99,7 +150,6 @@ export const usePlantDiagnosis = () => {
 
       console.log('📝 Dati diagnosi da salvare:', diagnosisData);
 
-      // Salva nel database
       const { data, error } = await supabase
         .from('diagnoses')
         .insert(diagnosisData)
@@ -136,10 +186,7 @@ export const usePlantDiagnosis = () => {
   // Reset diagnosi/immagine etc
   const resetDiagnosis = () => {
     setUploadedImage(null);
-    setDiagnosisResult(null);
-    setDiagnosedDisease(null);
-    setAnalysisProgress(0);
-    setAnalysisDetails(null);
+    clearResults();
     stopCameraStream();
   };
 

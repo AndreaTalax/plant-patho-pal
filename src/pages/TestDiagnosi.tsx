@@ -1,3 +1,4 @@
+
 import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -21,7 +22,7 @@ const sampleTests: TestCase[] = [
 
 export default function TestDiagnosi() {
   const tests = useMemo(() => sampleTests, []);
-  const { analyzeUploadedImage, isAnalyzing, diagnosisResult, diagnosedDisease } = usePlantAnalysis();
+  const { analyzeImage, isAnalyzing, results: analysisResults } = usePlantAnalysis();
   const [results, setResults] = useState<Record<string, { text?: string | null; disease?: any }>>({});
   const [runningId, setRunningId] = useState<string | null>(null);
 
@@ -35,12 +36,24 @@ export default function TestDiagnosi() {
       const res = await fetch(t.url, { cache: 'no-store' });
       const blob = await res.blob();
       const file = new File([blob], `${t.id}.jpg`, { type: blob.type || 'image/jpeg' });
-      await analyzeUploadedImage(file);
+      await analyzeImage(file);
       // Piccolo delay per assicurarsi che lo stato sia aggiornato
       await new Promise((r) => setTimeout(r, 50));
+
+      const plant = analysisResults?.consensus?.mostLikelyPlant;
+      const disease = analysisResults?.consensus?.mostLikelyDisease;
+
+      const text = plant
+        ? `${plant.plantName}${plant.scientificName ? ` (${plant.scientificName})` : ''}`
+        : null;
+
+      const diseaseObj = disease
+        ? { name: disease.disease, confidence: Math.min(70, Math.round(disease.confidence || 0)), healthy: false }
+        : { healthy: true };
+
       setResults((prev) => ({
         ...prev,
-        [t.id]: { text: diagnosisResult, disease: diagnosedDisease },
+        [t.id]: { text, disease: diseaseObj },
       }));
       toast.success(`Analisi completata: ${t.label}`);
     } catch (e: any) {
@@ -106,7 +119,7 @@ export default function TestDiagnosi() {
                   {r?.disease && (
                     <div className="text-sm">
                       <div>
-                        Malattia più probabile: <strong>{r.disease.name}</strong>
+                        Malattia più probabile: <strong>{r.disease.name ?? '—'}</strong>
                         {typeof r.disease.confidence === 'number' ? ` (${r.disease.confidence}%)` : ''}
                       </div>
                     </div>

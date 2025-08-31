@@ -1,3 +1,4 @@
+
 import React from 'react';
 import {
   AlertTriangle,
@@ -7,7 +8,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/sonner';
-import { ConfidenceBadge } from '@/components/ui/confidence-badge';
+import { ConfidenceBadge } from '@/components/diagnose/ConfidenceBadge';
 import { type CombinedAnalysisResult } from '@/types/analysis';
 
 interface DiagnosisResultsProps {

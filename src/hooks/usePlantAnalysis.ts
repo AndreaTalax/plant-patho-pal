@@ -1,11 +1,12 @@
+
 import { useState } from 'react';
 import { toast } from "@/components/ui/sonner";
 import { 
   PlantIdentificationResult, 
   DiseaseDetectionResult, 
-  CombinedAnalysisResult 
 } from '@/services/aiProviders';
 import { GlobalPlantIdentificationService, type GlobalIdentificationResult } from '@/services/globalPlantIdentificationService';
+import type { CombinedAnalysisResult } from '@/types/analysis';
 
 interface AnalysisState {
   results: CombinedAnalysisResult | null;
