@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -45,15 +46,15 @@ const DiagnoseTab = () => {
   
   // Utilizzo del nuovo hook per la diagnosi GPT-4 Vision
   const {
+    results,
     isAnalyzing,
     uploadedImage,
-    diagnosisResult,
-    diagnosedDisease,
-    analysisProgress,
-    analysisDetails,
+    progress,
+    error,
+    analyzeImage,
+    clearResults,
     resetDiagnosis,
     captureImage,
-    analyzeUploadedImage,
     stopCameraStream,
     setUploadedImage,
   } = usePlantDiagnosis();
@@ -96,10 +97,10 @@ const DiagnoseTab = () => {
   useEffect(() => {
     if (isAnalyzing) {
       setCurrentStage('analyzing');
-    } else if ((diagnosedDisease || diagnosisResult) && currentStage === 'analyzing') {
+    } else if (results && currentStage === 'analyzing') {
       setCurrentStage('result');
     }
-  }, [isAnalyzing, diagnosedDisease, diagnosisResult, currentStage]);
+  }, [isAnalyzing, results, currentStage]);
 
   // Verifica che l'immagine contenga una pianta prima di procedere
   const verifyPlantInImage = async (file: File): Promise<boolean> => {
@@ -279,15 +280,15 @@ const DiagnoseTab = () => {
         setDataSentToExpert(true);
         
         // Se c'è un'analisi AI, usa l'URL finale dell'immagine di Storage
-        if (includeAnalysis && diagnosedDisease && synced.finalImageUrl) {
+        if (includeAnalysis && results?.mostLikelyDisease && synced.finalImageUrl) {
           const diagnosisData = {
-            plantType: plantInfo.name || diagnosedDisease.name || 'Pianta non specificata',
-            plantVariety: diagnosedDisease.name,
-            symptoms: plantInfo.symptoms || diagnosedDisease.description,
+            plantType: plantInfo.name || results.mostLikelyPlant?.scientificName || 'Pianta non specificata',
+            plantVariety: results.mostLikelyPlant?.commonName,
+            symptoms: plantInfo.symptoms || results.mostLikelyDisease?.symptoms?.join(', '),
             imageUrl: synced.finalImageUrl, // Use the Storage URL returned by sync
-            analysisResult: diagnosedDisease,
-            confidence: diagnosedDisease.confidence || 0,
-            isHealthy: diagnosedDisease.healthy || false,
+            analysisResult: results.mostLikelyDisease,
+            confidence: results.confidenceScore || 0,
+            isHealthy: !results.mostLikelyDisease || results.mostLikelyDisease.severity === 'healthy',
             plantInfo: {
               environment: plantInfo.isIndoor ? 'Interno' : 'Esterno',
               watering: plantInfo.wateringFrequency,
@@ -314,7 +315,7 @@ const DiagnoseTab = () => {
       toast.error('Errore nell\'invio all\'esperto');
       return false;
     }
-  }, [userProfile, uploadedImage, plantInfo, diagnosedDisease, dataSentToExpert, hasActiveSubscription]);
+  }, [userProfile, uploadedImage, plantInfo, results, dataSentToExpert, hasActiveSubscription]);
 
   // AI diagnosis selection con controllo limiti
   const handleSelectAI = useCallback(async () => {
@@ -363,8 +364,8 @@ const DiagnoseTab = () => {
         }
       }
       
-      // Usa il file salvato precedentemente
-      await analyzeUploadedImage(plantInfo.uploadedFile, plantInfo);
+      // Usa il file salvato precedentemente - Fixed: only pass one argument
+      await analyzeImage(plantInfo.uploadedFile);
       
       toast.info('🤖 Analisi AI avviata...', {
         description: 'Utilizzo dell\'AI più avanzata per la diagnosi fitopatologica'
@@ -381,7 +382,7 @@ const DiagnoseTab = () => {
     getRemainingFreeDiagnoses,
     incrementDiagnosisUsage,
     hasActiveSubscription,
-    analyzeUploadedImage
+    analyzeImage
   ]);
 
   // Expert consultation selection
@@ -416,6 +417,7 @@ const DiagnoseTab = () => {
   // Reset to start new analysis
   const handleNewAnalysis = useCallback(() => {
     setCurrentStage('info');
+    clearResults();
     resetDiagnosis();
     setDataSentToExpert(false);
     setPlantInfo({
@@ -430,7 +432,7 @@ const DiagnoseTab = () => {
       uploadedFile: null,
       uploadedImageUrl: null
     });
-  }, [resetDiagnosis, setPlantInfo]);
+  }, [clearResults, resetDiagnosis, setPlantInfo]);
 
   // Navigate to chat
   const handleNavigateToChat = useCallback(() => {
@@ -587,7 +589,7 @@ const DiagnoseTab = () => {
             <DiagnosisTestButton 
               uploadedImage={uploadedImage}
               plantInfo={plantInfo}
-              analyzeUploadedImage={analyzeUploadedImage}
+              analyzeUploadedImage={analyzeImage}
             />
             
             <DiagnosisOptions
@@ -611,16 +613,16 @@ const DiagnoseTab = () => {
         );
 
       case 'result':
-        if (uploadedImage && (diagnosedDisease || diagnosisResult)) {
+        if (uploadedImage && results) {
           return (
             <DiagnosisResult
               imageSrc={uploadedImage}
               plantInfo={plantInfo}
-              analysisData={diagnosedDisease}
+              analysisData={results.mostLikelyDisease}
               isAnalyzing={false}
               onStartNewAnalysis={handleNewAnalysis}
               onChatWithExpert={handleExpertConsultation}
-              analysisDetails={analysisDetails}
+              analysisDetails={results}
             />
           );
         } else {
