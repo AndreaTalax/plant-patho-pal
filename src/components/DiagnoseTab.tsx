@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -44,19 +43,24 @@ const DiagnoseTab = () => {
     FREE_DIAGNOSES_LIMIT
   } = useDiagnosisLimits();
   
-  // Utilizzo del nuovo hook per la diagnosi GPT-4 Vision
+  // Utilizzo del hook per la diagnosi
   const {
-    results,
     isAnalyzing,
     uploadedImage,
-    progress,
-    error,
-    analyzeImage,
-    clearResults,
+    diagnosisResult,
+    diagnosedDisease,
+    analysisProgress,
+    analysisDetails,
+    retryCount,
+    streamRef,
+    isSaving,
     resetDiagnosis,
     captureImage,
+    handleImageUpload,
+    analyzeUploadedImage,
     stopCameraStream,
     setUploadedImage,
+    saveDiagnosis,
   } = usePlantDiagnosis();
   
   // Component states
@@ -97,55 +101,10 @@ const DiagnoseTab = () => {
   useEffect(() => {
     if (isAnalyzing) {
       setCurrentStage('analyzing');
-    } else if (results && currentStage === 'analyzing') {
+    } else if (diagnosisResult && currentStage === 'analyzing') {
       setCurrentStage('result');
     }
-  }, [isAnalyzing, results, currentStage]);
-
-  // Verifica che l'immagine contenga una pianta prima di procedere
-  const verifyPlantInImage = async (file: File): Promise<boolean> => {
-    try {
-      console.log('🔍 Verifica se l\'immagine contiene una pianta...');
-      
-      // Analisi qualità immagine
-      const qualityCheck = analyzeImageQuality(file);
-      if (!qualityCheck.isGoodQuality) {
-        toast.warning('Problemi di qualità dell\'immagine', {
-          description: qualityCheck.issues.join(', ') + '. ' + qualityCheck.recommendations.join(', '),
-          duration: 6000
-        });
-      }
-      
-      // Verifica presenza pianta
-      const plantVerification = await verifyImageContainsPlant(file);
-      
-      if (!plantVerification.isPlant || plantVerification.confidence < 0.4) {
-        toast.error('❌ Nessuna pianta rilevata nell\'immagine', {
-          description: `${plantVerification.reason}. Scatta una foto che mostri chiaramente una pianta.`,
-          duration: 8000
-        });
-        return false;
-      }
-      
-      if (plantVerification.confidence < 0.7) {
-        toast.warning('⚠️ Pianta rilevata con bassa confidenza', {
-          description: `${plantVerification.reason}. Per risultati migliori, usa un\'immagine più chiara della pianta.`,
-          duration: 6000
-        });
-      } else {
-        toast.success('✅ Pianta rilevata nell\'immagine', {
-          description: `${plantVerification.reason}`,
-          duration: 4000
-        });
-      }
-      
-      return true;
-    } catch (error) {
-      console.error('Errore verifica pianta:', error);
-      toast.error('Errore nella verifica dell\'immagine');
-      return false;
-    }
-  };
+  }, [isAnalyzing, diagnosisResult, currentStage]);
 
   // Plant info completion handler
   const handlePlantInfoComplete = useCallback((data: PlantInfo) => {
@@ -200,7 +159,7 @@ const DiagnoseTab = () => {
       console.error('Errore caricamento file:', error);
       toast.error('Errore nel caricamento immagine');
     }
-  }, [plantInfo, setPlantInfo, setUploadedImage]);
+  }, [plantInfo, setPlantInfo, setUploadedImage, validateImage]);
 
   // Camera capture handler - NON avvia automaticamente la diagnosi
   const handleCameraCapture = useCallback(async (imageDataUrl: string) => {
@@ -237,7 +196,7 @@ const DiagnoseTab = () => {
       console.error('Errore verifica foto catturata:', error);
       toast.error('Errore nella verifica della foto. Riprova.');
     }
-  }, [plantInfo, setPlantInfo, setUploadedImage]);
+  }, [plantInfo, setPlantInfo, setUploadedImage, validateImage]);
 
   // Gestione chiusura fotocamera da parte dell'utente
   const handleCameraCancel = useCallback(() => {
@@ -280,15 +239,15 @@ const DiagnoseTab = () => {
         setDataSentToExpert(true);
         
         // Se c'è un'analisi AI, usa l'URL finale dell'immagine di Storage
-        if (includeAnalysis && results?.mostLikelyDisease && synced.finalImageUrl) {
+        if (includeAnalysis && diagnosedDisease && synced.finalImageUrl) {
           const diagnosisData = {
-            plantType: plantInfo.name || results.mostLikelyPlant?.scientificName || 'Pianta non specificata',
-            plantVariety: results.mostLikelyPlant?.commonName,
-            symptoms: plantInfo.symptoms || results.mostLikelyDisease?.symptoms?.join(', '),
+            plantType: plantInfo.name || 'Pianta non specificata',
+            plantVariety: diagnosedDisease.name,
+            symptoms: plantInfo.symptoms || diagnosedDisease.symptoms?.join(', '),
             imageUrl: synced.finalImageUrl, // Use the Storage URL returned by sync
-            analysisResult: results.mostLikelyDisease,
-            confidence: results.confidenceScore || 0,
-            isHealthy: !results.mostLikelyDisease || results.mostLikelyDisease.severity === 'healthy',
+            analysisResult: diagnosedDisease,
+            confidence: diagnosedDisease.confidence || 0,
+            isHealthy: !diagnosedDisease || diagnosedDisease.healthy,
             plantInfo: {
               environment: plantInfo.isIndoor ? 'Interno' : 'Esterno',
               watering: plantInfo.wateringFrequency,
@@ -315,7 +274,7 @@ const DiagnoseTab = () => {
       toast.error('Errore nell\'invio all\'esperto');
       return false;
     }
-  }, [userProfile, uploadedImage, plantInfo, results, dataSentToExpert, hasActiveSubscription]);
+  }, [userProfile, uploadedImage, plantInfo, diagnosedDisease, dataSentToExpert, hasActiveSubscription]);
 
   // AI diagnosis selection con controllo limiti
   const handleSelectAI = useCallback(async () => {
@@ -364,8 +323,8 @@ const DiagnoseTab = () => {
         }
       }
       
-      // Usa il file salvato precedentemente - Fixed: only pass one argument
-      await analyzeImage(plantInfo.uploadedFile);
+      // Usa il file salvato precedentemente
+      await analyzeUploadedImage(plantInfo.uploadedFile);
       
       toast.info('🤖 Analisi AI avviata...', {
         description: 'Utilizzo dell\'AI più avanzata per la diagnosi fitopatologica'
@@ -382,7 +341,7 @@ const DiagnoseTab = () => {
     getRemainingFreeDiagnoses,
     incrementDiagnosisUsage,
     hasActiveSubscription,
-    analyzeImage
+    analyzeUploadedImage
   ]);
 
   // Expert consultation selection
@@ -417,7 +376,6 @@ const DiagnoseTab = () => {
   // Reset to start new analysis
   const handleNewAnalysis = useCallback(() => {
     setCurrentStage('info');
-    clearResults();
     resetDiagnosis();
     setDataSentToExpert(false);
     setPlantInfo({
@@ -432,7 +390,7 @@ const DiagnoseTab = () => {
       uploadedFile: null,
       uploadedImageUrl: null
     });
-  }, [clearResults, resetDiagnosis, setPlantInfo]);
+  }, [resetDiagnosis, setPlantInfo]);
 
   // Navigate to chat
   const handleNavigateToChat = useCallback(() => {
@@ -589,7 +547,7 @@ const DiagnoseTab = () => {
             <DiagnosisTestButton 
               uploadedImage={uploadedImage}
               plantInfo={plantInfo}
-              analyzeUploadedImage={analyzeImage}
+              analyzeUploadedImage={analyzeUploadedImage}
             />
             
             <DiagnosisOptions
@@ -613,16 +571,16 @@ const DiagnoseTab = () => {
         );
 
       case 'result':
-        if (uploadedImage && results) {
+        if (uploadedImage && diagnosedDisease) {
           return (
             <DiagnosisResult
               imageSrc={uploadedImage}
               plantInfo={plantInfo}
-              analysisData={results.mostLikelyDisease}
+              analysisData={diagnosedDisease}
               isAnalyzing={false}
               onStartNewAnalysis={handleNewAnalysis}
               onChatWithExpert={handleExpertConsultation}
-              analysisDetails={results}
+              analysisDetails={analysisDetails}
             />
           );
         } else {
