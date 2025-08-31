@@ -1,38 +1,25 @@
-import React, { useState, useCallback } from 'react';
-import { toast } from '@/components/ui/sonner';
-import { UploadButton } from "@/utils/uploadthing";
-import { generateAnalysis } from '@/lib/analysis';
-import { Wizard } from '@/components/diagnose/Wizard';
+
+import React from 'react';
+import { usePlantDiagnosis } from '@/hooks/usePlantDiagnosis';
+import { DiagnoseWizard } from '@/components/diagnose/DiagnoseWizard';
 import { DiagnosisResults } from '@/components/diagnose/result/DiagnosisResults';
-import { type CombinedAnalysisResult } from '@/types/analysis';
+import { toast } from 'sonner';
 
 const DiagnoseTab = () => {
-  const [imageUrl, setImageUrl] = useState<string | null>(null);
-  const [results, setResults] = useState<CombinedAnalysisResult | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [isFallback, setIsFallback] = useState(false);
-
-  const onClientGenerate = useCallback(async () => {
-    if (!imageUrl) {
-      toast.error('Please upload an image first.');
-      return;
-    }
-
-    setLoading(true);
-    setIsFallback(false);
-    try {
-      const analysis = await generateAnalysis(imageUrl);
-      setResults(analysis);
-      setIsFallback(analysis.isFallback);
-    } catch (error: any) {
-      console.error("Error during analysis:", error);
-      toast.error(`Failed to generate analysis: ${error.message || error}`);
-      setResults(null);
-      setIsFallback(true);
-    } finally {
-      setLoading(false);
-    }
-  }, [imageUrl]);
+  const {
+    uploadedImage,
+    diagnosisResult,
+    diagnosedDisease,
+    analysisDetails,
+    isAnalyzing,
+    analysisProgress,
+    resetDiagnosis,
+    captureImage,
+    handleImageUpload,
+    analyzeUploadedImage,
+    saveDiagnosis,
+    isSaving
+  } = usePlantDiagnosis();
 
   const handleNavigateToShop = (productId: string, productName: string) => {
     // Store product info in localStorage per accesso dal tab Shop
@@ -51,39 +38,37 @@ const DiagnoseTab = () => {
     toast.success(`Navigando al prodotto: ${productName}`);
   };
 
+  // Create results object from diagnosis data
+  const results = diagnosisResult || diagnosedDisease ? {
+    consensus: {
+      mostLikelyPlant: diagnosisResult ? {
+        plantName: diagnosisResult.split('Pianta identificata: ')[1]?.split(' •')[0] || 'Pianta sconosciuta',
+        scientificName: '',
+        confidence: 65
+      } : null,
+      mostLikelyDisease: diagnosedDisease ? {
+        disease: diagnosedDisease.name,
+        confidence: diagnosedDisease.confidence,
+        symptoms: diagnosedDisease.symptoms,
+        treatments: diagnosedDisease.treatments
+      } : null,
+      agreementScore: 0.7,
+      bestProvider: 'AI Analysis'
+    },
+    diseaseDetection: diagnosedDisease ? [diagnosedDisease] : [],
+    isFallback: false
+  } : null;
+
   return (
     <div className="space-y-6">
       {/* Wizard per guidare l'utente attraverso il processo */}
-      <Wizard
-        imageUrl={imageUrl}
-        onImageUrlChange={setImageUrl}
-        onGenerate={onClientGenerate}
-        loading={loading}
-      />
-
-      {/* Upload immagine */}
-      {!imageUrl && (
-        <div className="flex justify-center">
-          <UploadButton
-            endpoint="imageUploader"
-            onClientUploadComplete={(res) => {
-              if (res && res.length > 0) {
-                setImageUrl(res[0].url);
-                toast.success("Image uploaded successfully!");
-              }
-            }}
-            onUploadError={(error: Error) => {
-              toast.error(`Upload failed: ${error.message}`);
-            }}
-          />
-        </div>
-      )}
+      <DiagnoseWizard />
 
       {/* Risultati diagnosi */}
       {results && (
         <DiagnosisResults 
           results={results} 
-          isFallback={isFallback}
+          isFallback={false}
           onNavigateToShop={handleNavigateToShop}
         />
       )}
