@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -220,10 +219,13 @@ export const usePlantAnalysis = () => {
       let diseases = Array.isArray(comp.healthAssessment?.diseases) ? comp.healthAssessment.diseases : [];
       let isHealthy = comp.healthAssessment?.isHealthy === true && diseases.length === 0;
 
-      // Integra l'analisi visiva con le cause specifiche
-      const specificCauses = visualAnalysis.specificCauses.length > 0 
-        ? visualAnalysis.specificCauses 
-        : generateCausesFromVisualAnalysis(visualAnalysis);
+      // Integra l'analisi visiva con CAUSE sempre in italiano
+      // - Prendo le cause dell'AI solo se sono specifiche e non il fallback "Analisi automatica non disponibile"
+      const generatedCauses = generateCausesFromVisualAnalysis(visualAnalysis);
+      const aiCauses = (visualAnalysis.specificCauses || []).filter((c: string) => 
+        c && !/analisi automatica non disponibile/i.test(c)
+      );
+      const finalCauses = aiCauses.length > 0 ? aiCauses : generatedCauses;
 
       // Raffinamento consenso multi‑AI (EPPO + altre AI)
       try {
@@ -363,7 +365,7 @@ export const usePlantAnalysis = () => {
 
       setDiagnosisResult(diagnosisText);
 
-      // Popola struttura diagnosedDisease con cause specifiche dall'analisi visiva
+      // Popola struttura diagnosedDisease con cause finali in italiano
       const primary = !isHealthy && ranked.length > 0 ? ranked[0] : null;
       const primarySymptomAnalysis = primary ? analyzeVisualSymptoms(primary.name, primary.description) : null;
       
@@ -371,7 +373,7 @@ export const usePlantAnalysis = () => {
         id: crypto.randomUUID(),
         name: primary.name,
         description: primary.description || 'Problema rilevato',
-        causes: specificCauses.join('; ') || 'Cause multiple rilevate dall\'analisi visiva',
+        causes: finalCauses.join('; ') || 'Cause multiple rilevate dall\'analisi visiva',
         symptoms: primarySymptomAnalysis ? 
           [...(primary.symptoms || []), ...primarySymptomAnalysis.detectedSymptoms] : 
           (primary.symptoms || []),
@@ -406,7 +408,7 @@ export const usePlantAnalysis = () => {
         disease: { name: 'Nessuna' }
       });
 
-      // Salviamo le ipotesi nella sezione dettagli per renderle disponibili al frontend
+      // Salviamo le ipotesi e le cause nei dettagli (in italiano)
       setAnalysisDetails({
         multiServiceInsights: {
           plantName,
@@ -420,18 +422,15 @@ export const usePlantAnalysis = () => {
         },
         identifiedFeatures: [
           `Confidenza: ${confidencePct}%`,
-          `Stato: ${isHealthy ? 'Sana' : 'Problemi'}`,
-          ...(allDetectedSymptoms.length > 0 ? [`Sintomi: ${allDetectedSymptoms.slice(0, 3).join(', ')}`] : [])
+          `Stato: ${isHealthy ? 'Sana' : 'Problemi'}`
         ],
         analysisTechnology: 'OpenAI + Plant.ID + PlantNet + EPPO + Visual Analysis',
         originalConfidence: confidencePct,
         enhancedConfidence: confidencePct,
-        // Visual symptoms analysis
         visualSymptoms: allDetectedSymptoms,
         visualAnalysis: visualAnalysis,
         visualReport: visualReport,
-        specificCauses: specificCauses,
-        // Nuovo campo non-breaking: lista di ipotesi per il frontend
+        specificCauses: finalCauses,
         possibleDiseases: ranked.map(r => {
           const symptomAnalysis = analyzeVisualSymptoms(r.name, r.description);
           return {

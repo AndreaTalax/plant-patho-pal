@@ -56,6 +56,13 @@ const DiagnosisResults = ({
                 {diagnosedDisease.description && (
                   <p className="text-sm text-gray-600 mb-2">{diagnosedDisease.description}</p>
                 )}
+
+                {/* Nuova sezione: Cause (sempre in italiano) */}
+                {diagnosedDisease.causes && (
+                  <p className="text-sm text-gray-700 mb-2">
+                    <span className="font-medium">Cause:</span> {diagnosedDisease.causes}
+                  </p>
+                )}
                 
                 {diagnosedDisease.symptoms && diagnosedDisease.symptoms.length > 0 && (
                   <div className="mb-2">
