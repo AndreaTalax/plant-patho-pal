@@ -1,5 +1,5 @@
-
 import { supabase } from '@/integrations/supabase/client';
+import { FallbackSuggestionsService } from './fallbackSuggestionsService';
 
 export interface GlobalPlantIdentification {
   name: string;
@@ -28,6 +28,8 @@ export interface GlobalIdentificationResult {
     diseases: any[];
   };
   success: boolean;
+  isFallback?: boolean;
+  fallbackMessage?: string;
 }
 
 export class GlobalPlantIdentificationService {
@@ -44,11 +46,14 @@ export class GlobalPlantIdentificationService {
 
       if (error) {
         console.error('❌ Errore identificazione globale:', error);
-        throw error;
+        // Ritorna suggerimenti di fallback invece di fallire completamente
+        console.log('🔄 Generando suggerimenti di fallback...');
+        return this.generateEnhancedFallback();
       }
 
-      if (!data || !data.success) {
-        throw new Error('Identificazione non riuscita');
+      if (!data || !data.success || (data.plantIdentification.length === 0 && data.diseases.length === 0)) {
+        console.log('⚠️ Identificazione API fallita, generando suggerimenti...');
+        return this.generateEnhancedFallback();
       }
 
       console.log('✅ Identificazione globale completata:', {
@@ -64,8 +69,38 @@ export class GlobalPlantIdentificationService {
       };
     } catch (error) {
       console.error('❌ Errore servizio identificazione globale:', error);
-      throw error;
+      console.log('🔄 Utilizzando sistema di fallback...');
+      return this.generateEnhancedFallback();
     }
+  }
+
+  /**
+   * Genera un risultato di fallback migliorato con suggerimenti utili
+   */
+  private static generateEnhancedFallback(): GlobalIdentificationResult {
+    const fallbackData = FallbackSuggestionsService.generateFallbackSuggestions();
+    
+    return {
+      plantIdentification: fallbackData.plantIdentification.map(plant => ({
+        name: plant.plantName,
+        scientificName: plant.scientificName,
+        confidence: plant.confidence,
+        source: 'Suggerimento Sistema',
+        family: undefined,
+        genus: undefined
+      })),
+      diseases: fallbackData.diseaseDetection.map(disease => ({
+        name: disease.disease,
+        confidence: disease.confidence,
+        symptoms: disease.symptoms,
+        treatments: disease.treatments,
+        cause: disease.additionalInfo.cause,
+        source: 'Diagnosi Generale'
+      })),
+      success: true, // Considera il fallback come successo
+      isFallback: true,
+      fallbackMessage: fallbackData.fallbackMessage
+    };
   }
 
   /**

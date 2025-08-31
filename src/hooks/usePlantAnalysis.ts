@@ -122,12 +122,29 @@ export const usePlantAnalysis = () => {
       };
 
       setResults(finalResult);
-      setProgress({ step: 'Completato', progress: 100, message: `Analisi completata! Identificata da ${consensus.providersUsed.length} fonti` });
 
-      // Toast di successo
-      toast.success(`Identificazione completata!`, {
-        description: `Pianta identificata da ${consensus.providersUsed.length} fonti AI diverse con confidenza del ${consensus.finalConfidence}%`
-      });
+      // Messaggio personalizzato per i risultati di fallback
+      if (globalResult.isFallback) {
+        setProgress({ 
+          step: 'Suggerimenti', 
+          progress: 100, 
+          message: 'Identificazione automatica non riuscita - forniti suggerimenti alternativi' 
+        });
+
+        toast.warning('Identificazione incerta', {
+          description: `Non siamo riusciti a identificare con certezza la pianta. Ti forniamo alcuni suggerimenti basati sulle piante più comuni.`
+        });
+      } else {
+        setProgress({ 
+          step: 'Completato', 
+          progress: 100, 
+          message: `Analisi completata! Identificata da ${consensus.providersUsed.length} fonti` 
+        });
+
+        toast.success(`Identificazione completata!`, {
+          description: `Pianta identificata da ${consensus.providersUsed.length} fonti AI diverse con confidenza del ${consensus.finalConfidence}%`
+        });
+      }
 
     } catch (error) {
       console.error('❌ Errore analisi:', error);
