@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -101,6 +102,32 @@ const analyzeVisualSymptoms = (label: string, description?: string): {
   };
 };
 
+// Function to generate causes from visual analysis
+const generateCausesFromVisualAnalysis = (analysis: any): string[] => {
+  const causes = [];
+  
+  if (analysis.leafCondition?.yellowing) {
+    causes.push('Ingiallimento fogliare: possibile carenza nutrizionale o eccesso idrico');
+  }
+  if (analysis.leafCondition?.spots) {
+    causes.push('Macchie fogliari: probabile infezione fungina o batterica');
+  }
+  if (analysis.leafCondition?.dryness) {
+    causes.push('Secchezza fogliare: insufficiente irrigazione o bassa umidità ambientale');
+  }
+  if (analysis.stemAndFlowerCondition?.deterioration) {
+    causes.push('Deperimento di steli/fiori: stress della pianta o malattie vascolari');
+  }
+  if (analysis.stemAndFlowerCondition?.pests) {
+    causes.push('Presenza di parassiti: infestazione da insetti o acari');
+  }
+  if (analysis.generalGrowth?.drooping) {
+    causes.push('Portamento cadente: stress idrico, problemi radicali o carenza di luce');
+  }
+  
+  return causes.length > 0 ? causes : ['Analisi delle cause basata su osservazione diretta dell\'immagine'];
+};
+
 export const usePlantAnalysis = () => {
   const { user } = useAuth();
   const { validateImage, isValidating } = useImageValidation();
@@ -196,7 +223,7 @@ export const usePlantAnalysis = () => {
       // Integra l'analisi visiva con le cause specifiche
       const specificCauses = visualAnalysis.specificCauses.length > 0 
         ? visualAnalysis.specificCauses 
-        : this.generateCausesFromVisualAnalysis(visualAnalysis);
+        : generateCausesFromVisualAnalysis(visualAnalysis);
 
       // Raffinamento consenso multi‑AI (EPPO + altre AI)
       try {
@@ -452,32 +479,6 @@ export const usePlantAnalysis = () => {
     } finally {
       setIsAnalyzing(false);
     }
-  };
-
-  // Nuovo metodo per generare cause dall'analisi visiva
-  private generateCausesFromVisualAnalysis = (analysis: any): string[] => {
-    const causes = [];
-    
-    if (analysis.leafCondition.yellowing) {
-      causes.push('Ingiallimento fogliare: possibile carenza nutrizionale o eccesso idrico');
-    }
-    if (analysis.leafCondition.spots) {
-      causes.push('Macchie fogliari: probabile infezione fungina o batterica');
-    }
-    if (analysis.leafCondition.dryness) {
-      causes.push('Secchezza fogliare: insufficiente irrigazione o bassa umidità ambientale');
-    }
-    if (analysis.stemAndFlowerCondition.deterioration) {
-      causes.push('Deperimento di steli/fiori: stress della pianta o malattie vascolari');
-    }
-    if (analysis.stemAndFlowerCondition.pests) {
-      causes.push('Presenza di parassiti: infestazione da insetti o acari');
-    }
-    if (analysis.generalGrowth.drooping) {
-      causes.push('Portamento cadente: stress idrico, problemi radicali o carenza di luce');
-    }
-    
-    return causes.length > 0 ? causes : ['Analisi delle cause basata su osservazione diretta dell\'immagine'];
   };
 
   // Funzione per pulire i dati corrotti da MaxDepthReached
