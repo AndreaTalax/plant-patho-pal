@@ -8,6 +8,7 @@ import type { AnalysisDetails, DiagnosedDisease } from '@/components/diagnose/ty
 import { DiagnosisConsensusService } from '@/services/diagnosisConsensusService';
 import { LocalPlantIdentifier } from '@/services/localPlantIdentifier';
 import { eppoApiService } from '@/utils/eppoApiService';
+import { VisualPlantAnalysisService } from '@/services/visualPlantAnalysisService';
 
 // Visual symptoms mapping for better symptom detection
 const visualSymptomsMap = {
@@ -163,6 +164,13 @@ export const usePlantAnalysis = () => {
       setAnalysisProgress(20);
       console.log('🔬 Avvio diagnosi completa multi‑AI (OpenAI + Plant.ID + PlantNet + EPPO)...');
 
+      // NUOVA FASE: Analisi visiva dettagliata dell'immagine
+      setAnalysisProgress(30);
+      console.log('👁️ Avvio analisi visiva dettagliata dell\'immagine...');
+      const visualAnalysis = await VisualPlantAnalysisService.analyzeVisualConditions(imageBase64);
+      
+      setAnalysisProgress(50);
+
       // Esecuzione diagnosi completa tramite edge function esistente
       const compRes = await supabase.functions.invoke('comprehensive-plant-diagnosis', {
         body: { imageBase64 }
@@ -184,6 +192,11 @@ export const usePlantAnalysis = () => {
 
       let diseases = Array.isArray(comp.healthAssessment?.diseases) ? comp.healthAssessment.diseases : [];
       let isHealthy = comp.healthAssessment?.isHealthy === true && diseases.length === 0;
+
+      // Integra l'analisi visiva con le cause specifiche
+      const specificCauses = visualAnalysis.specificCauses.length > 0 
+        ? visualAnalysis.specificCauses 
+        : this.generateCausesFromVisualAnalysis(visualAnalysis);
 
       // Raffinamento consenso multi‑AI (EPPO + altre AI)
       try {
@@ -283,16 +296,16 @@ export const usePlantAnalysis = () => {
         while (allDetectedSymptoms.length) allDetectedSymptoms.pop();
       }
 
-      // Testo compatto per UI con sintomi visivi
+      // Costruiamo il testo della diagnosi con l'analisi visiva integrata
+      const visualReport = VisualPlantAnalysisService.formatVisualAnalysisForDisplay(visualAnalysis);
+      
       let diagnosisText = `🌿 Pianta: ${plantName}`;
       if (scientificName && scientificName !== plantName) diagnosisText += ` (*${scientificName}*)`;
       diagnosisText += `\n🎯 Confidenza: ${confidencePct}%`;
       diagnosisText += `\n💚 Stato: ${isHealthy ? 'Sana' : 'Possibili problemi'}`;
 
-      // Aggiungi analisi visiva dei sintomi
-      if (!isHealthy && visualSymptomsAnalysis) {
-        diagnosisText += `\n\n👁️ Sintomi visivi: ${visualSymptomsAnalysis}`;
-      }
+      // Aggiungi l'analisi visiva dettagliata
+      diagnosisText += `\n\n${visualReport}`;
 
       // Aggiungiamo ipotesi principali (se presenti) con collegamento ai sintomi
       if (!isHealthy && ranked.length > 0) {
@@ -323,7 +336,7 @@ export const usePlantAnalysis = () => {
 
       setDiagnosisResult(diagnosisText);
 
-      // Popola struttura diagnosedDisease minimale per compatibilità UI
+      // Popola struttura diagnosedDisease con cause specifiche dall'analisi visiva
       const primary = !isHealthy && ranked.length > 0 ? ranked[0] : null;
       const primarySymptomAnalysis = primary ? analyzeVisualSymptoms(primary.name, primary.description) : null;
       
@@ -331,7 +344,7 @@ export const usePlantAnalysis = () => {
         id: crypto.randomUUID(),
         name: primary.name,
         description: primary.description || 'Problema rilevato',
-        causes: 'Analisi multi‑AI',
+        causes: specificCauses.join('; ') || 'Cause multiple rilevate dall\'analisi visiva',
         symptoms: primarySymptomAnalysis ? 
           [...(primary.symptoms || []), ...primarySymptomAnalysis.detectedSymptoms] : 
           (primary.symptoms || []),
@@ -353,7 +366,7 @@ export const usePlantAnalysis = () => {
         id: crypto.randomUUID(),
         name: 'Pianta sana',
         description: 'Nessuna malattia evidente',
-        causes: '—',
+        causes: 'Nessuna causa di preoccupazione rilevata',
         symptoms: [],
         treatments: [],
         confidence: confidencePct,
@@ -388,7 +401,9 @@ export const usePlantAnalysis = () => {
         enhancedConfidence: confidencePct,
         // Visual symptoms analysis
         visualSymptoms: allDetectedSymptoms,
-        visualAnalysis: visualSymptomsAnalysis,
+        visualAnalysis: visualAnalysis,
+        visualReport: visualReport,
+        specificCauses: specificCauses,
         // Nuovo campo non-breaking: lista di ipotesi per il frontend
         possibleDiseases: ranked.map(r => {
           const symptomAnalysis = analyzeVisualSymptoms(r.name, r.description);
@@ -437,6 +452,32 @@ export const usePlantAnalysis = () => {
     } finally {
       setIsAnalyzing(false);
     }
+  };
+
+  // Nuovo metodo per generare cause dall'analisi visiva
+  private generateCausesFromVisualAnalysis = (analysis: any): string[] => {
+    const causes = [];
+    
+    if (analysis.leafCondition.yellowing) {
+      causes.push('Ingiallimento fogliare: possibile carenza nutrizionale o eccesso idrico');
+    }
+    if (analysis.leafCondition.spots) {
+      causes.push('Macchie fogliari: probabile infezione fungina o batterica');
+    }
+    if (analysis.leafCondition.dryness) {
+      causes.push('Secchezza fogliare: insufficiente irrigazione o bassa umidità ambientale');
+    }
+    if (analysis.stemAndFlowerCondition.deterioration) {
+      causes.push('Deperimento di steli/fiori: stress della pianta o malattie vascolari');
+    }
+    if (analysis.stemAndFlowerCondition.pests) {
+      causes.push('Presenza di parassiti: infestazione da insetti o acari');
+    }
+    if (analysis.generalGrowth.drooping) {
+      causes.push('Portamento cadente: stress idrico, problemi radicali o carenza di luce');
+    }
+    
+    return causes.length > 0 ? causes : ['Analisi delle cause basata su osservazione diretta dell\'immagine'];
   };
 
   // Funzione per pulire i dati corrotti da MaxDepthReached

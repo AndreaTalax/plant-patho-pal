@@ -112,7 +112,10 @@ export const usePlantDiagnosis = () => {
       }
 
       console.log('✅ Diagnosi salvata con successo:', data);
-      toast.success('Diagnosi salvata con successo!');
+      toast.success('✅ Diagnosi salvata con successo!', {
+        description: 'La tua diagnosi è stata salvata nella cronologia',
+        duration: 4000
+      });
 
     } catch (error: any) {
       console.error('❌ Errore nel salvare la diagnosi:', error);
@@ -124,7 +127,7 @@ export const usePlantDiagnosis = () => {
         errorMessage = `Errore: ${error.message}`;
       }
       
-      toast.error(errorMessage);
+      toast.error(`❌ ${errorMessage}`);
     } finally {
       setIsSaving(false);
     }
