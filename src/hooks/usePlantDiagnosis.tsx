@@ -1,3 +1,4 @@
+
 import { useEffect, useMemo, useState } from 'react';
 import { usePlantAnalysis } from './usePlantAnalysis';
 import { usePlantImageUpload } from './usePlantImageUpload';
@@ -157,6 +158,7 @@ export const usePlantDiagnosis = () => {
       }
 
       // Crea un payload JSON-safe completamente serializzabile
+      const now = new Date().toISOString();
       const diagnosisResultData = {
         confidence: Math.min(70, Math.round(plant?.confidence || 0)),
         isHealthy: !disease,
@@ -165,7 +167,7 @@ export const usePlantDiagnosis = () => {
         treatments: disease?.treatments || [],
         causes: disease?.additionalInfo?.cause || '',
         severity: disease?.severity || 'N/A',
-        timestamp: new Date().toISOString(),
+        timestamp: now,
         // Serializza i risultati completi come stringa JSON
         analysisDetails: analysisDetails ? JSON.stringify(analysisDetails) : null,
         fullResults: results ? JSON.stringify(results) : null
@@ -181,7 +183,10 @@ export const usePlantDiagnosis = () => {
         symptoms: diagnosedDisease?.symptoms?.join(', ') || disease?.symptoms?.join(', ') || 'Nessun sintomo specifico',
         image_url: imageUrl,
         status: 'completed',
-        diagnosis_result: safeDiagnosisResult
+        diagnosis_result: safeDiagnosisResult,
+        // Forza la data corrente
+        created_at: now,
+        updated_at: now
       };
 
       console.log('📝 Dati diagnosi completi da salvare:', diagnosisData);
@@ -199,7 +204,7 @@ export const usePlantDiagnosis = () => {
 
       console.log('✅ Diagnosi salvata con successo:', data);
       toast.success('✅ Diagnosi salvata con successo!', {
-        description: 'La tua diagnosi è stata salvata nella cronologia con tutti i dettagli',
+        description: `Salvata il ${new Date().toLocaleDateString('it-IT')}`,
         duration: 4000
       });
 
