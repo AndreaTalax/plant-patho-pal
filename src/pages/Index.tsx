@@ -1,4 +1,5 @@
 
+
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/context/ThemeContext";
@@ -140,7 +141,11 @@ const Index = () => {
       // Accesso aperto alle altre tab anche se canAccessTabs è false
       // (nessun redirect automatico)
       // Non auto-aprire la chat quando l'utente sceglie altre tab
-      suppressAutoOpenRef.current = newTab === 'chat' ? false : true;
+      if (newTab === 'chat') {
+        suppressAutoOpenRef.current = false;
+      } else {
+        suppressAutoOpenRef.current = true;
+      }
       console.log("🎧 Setting active tab to:", newTab);
       setActiveTab(newTab);
       console.log("🎧 Tab switch completed");
@@ -230,3 +235,4 @@ const Index = () => {
 };
 
 export default Index;
+
