@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { User, Session } from '@supabase/supabase-js';
 
@@ -175,7 +176,7 @@ export const signIn = async (email: string, password: string) => {
     // For specific emails, allow direct access without calling supabase.auth.signInWithPassword
     const whitelistedEmails = ["talaiaandrea@gmail.com", "test@gmail.com", "agrotecnicomarconigro@gmail.com"];
     const mockPasswords = {
-      "talaiaandrea@gmail.com": "ciao5",
+      "talaiaandrea@gmail.com": "test1234",
       "test@gmail.com": "test123",
       "agrotecnicomarconigro@gmail.com": "marconigro93"
     };
