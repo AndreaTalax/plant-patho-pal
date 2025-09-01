@@ -8,6 +8,7 @@ import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { convertToUIMessage } from './utils/messageConverter';
+import { DatabaseMessage } from './types';
 
 interface SimpleRealtimeChatViewProps {
   userId: string;
@@ -62,7 +63,8 @@ export const SimpleRealtimeChatView: React.FC<SimpleRealtimeChatViewProps> = ({
         (payload) => {
           console.log('Real-time message update:', payload);
           if (payload.eventType === 'INSERT') {
-            const uiMessage = convertToUIMessage(payload.new);
+            // Type cast payload.new as DatabaseMessage
+            const uiMessage = convertToUIMessage(payload.new as DatabaseMessage);
             setMessages(prev => [...prev, uiMessage]);
           }
         }
