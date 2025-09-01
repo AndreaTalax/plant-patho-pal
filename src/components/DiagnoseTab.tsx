@@ -1,17 +1,11 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { usePlantDiagnosis } from '@/hooks/usePlantDiagnosis';
 import DiagnoseWizard from '@/components/diagnose/DiagnoseWizard';
 import { DiagnosisResults } from '@/components/diagnose/result/DiagnosisResults';
 import { toast } from 'sonner';
-import PullToRefresh from '@/components/mobile/PullToRefresh';
-import SwipeableTabContainer from '@/components/mobile/SwipeableTabContainer';
-import { useMobileEnhancements } from '@/hooks/useMobileEnhancements';
 
 const DiagnoseTab = () => {
-  const { triggerHapticFeedback } = useMobileEnhancements();
-  const [refreshing, setRefreshing] = useState(false);
-
   const {
     uploadedImage,
     diagnosisResult,
@@ -28,9 +22,6 @@ const DiagnoseTab = () => {
   } = usePlantDiagnosis();
 
   const handleNavigateToShop = (productId: string, productName: string) => {
-    // Haptic feedback per navigazione
-    triggerHapticFeedback('medium');
-    
     // Store product info in localStorage per accesso dal tab Shop
     localStorage.setItem('selectedProduct', JSON.stringify({
       id: productId,
@@ -45,22 +36,6 @@ const DiagnoseTab = () => {
     }
     
     toast.success(`Navigando al prodotto: ${productName}`);
-  };
-
-  const handleRefresh = async () => {
-    setRefreshing(true);
-    triggerHapticFeedback('light');
-    
-    // Simula refresh - in una app reale qui ricaricheresti i dati
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Reset eventuali errori o stati
-    if (uploadedImage || diagnosisResult) {
-      resetDiagnosis();
-      toast.success('Diagnosi reimpostata');
-    }
-    
-    setRefreshing(false);
   };
 
   // Create results object from diagnosis data
@@ -106,21 +81,19 @@ const DiagnoseTab = () => {
   } : null;
 
   return (
-    <PullToRefresh onRefresh={handleRefresh}>
-      <div className="space-y-6">
-        {/* Wizard per guidare l'utente attraverso il processo */}
-        <DiagnoseWizard />
+    <div className="space-y-6">
+      {/* Wizard per guidare l'utente attraverso il processo */}
+      <DiagnoseWizard />
 
-        {/* Risultati diagnosi */}
-        {results && (
-          <DiagnosisResults 
-            results={results} 
-            isFallback={false}
-            onNavigateToShop={handleNavigateToShop}
-          />
-        )}
-      </div>
-    </PullToRefresh>
+      {/* Risultati diagnosi */}
+      {results && (
+        <DiagnosisResults 
+          results={results} 
+          isFallback={false}
+          onNavigateToShop={handleNavigateToShop}
+        />
+      )}
+    </div>
   );
 };
 

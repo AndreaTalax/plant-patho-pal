@@ -91,7 +91,7 @@ const MessageList = ({ messages, isExpertView = false }: MessageListProps) => {
                     <div key={message.id} className="w-full">
                       <ChatMessage 
                         message={message}
-                        isExpert={isExpertView}
+                        isExpertView={isExpertView}
                       />
                     </div>
                   );
