@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { usePremiumStatus } from "@/services/premiumService";
 import { PremiumPaywallModal } from "../PremiumPaywallModal";
 import { ConsultationDataService } from '@/services/chat/consultationDataService';
+import { usePlantInfo } from "@/context/PlantInfoContext"; // NEW
 
 interface ActionButtonsProps {
   onStartNewAnalysis: () => void;
@@ -44,30 +45,31 @@ const ActionButtons = ({
   const [showAuthDialog, setShowAuthDialog] = useState(false);
   const [showPaywallModal, setShowPaywallModal] = useState(false);
   const [isSendingToChat, setIsSendingToChat] = useState(false);
+  const { plantInfo } = usePlantInfo(); // NEW
   
   const isAuthenticated = !!user;
 
   // Funzione migliorata per il redirect alla chat
   const redirectToChat = () => {
-    console.log('🎯 Redirecting to chat tab...');
+    console.log('🎯 Redirecting to chat tab (enhanced)...');
     
-    // Metodo 1: Event dispatch immediato
-    const switchEvent = new CustomEvent('switchTab', { detail: 'chat' });
-    window.dispatchEvent(switchEvent);
-    document.dispatchEvent(switchEvent as any);
-    
-    // Metodo 2: Messaggio postMessage
-    window.postMessage({ type: 'SWITCH_TAB', tab: 'chat' }, '*');
-    
-    // Metodo 3: LocalStorage per persistenza
+    // Persistenza
     try {
       localStorage.setItem('activeTab', 'chat');
       localStorage.setItem('forceTabSwitch', 'chat');
+      localStorage.setItem('openExpertChat', 'true');
     } catch (e) {
       console.warn('LocalStorage not available:', e);
     }
-    
-    // Metodo 4: Navigate con stato
+
+    // Aggiorna hash per eventuale listener
+    try {
+      window.location.hash = 'chat';
+    } catch (e) {
+      console.warn('Cannot set location hash:', e);
+    }
+
+    // Naviga alla home (container tab) e passa stato
     navigate('/', { 
       state: { 
         activeTab: 'chat',
@@ -75,19 +77,40 @@ const ActionButtons = ({
         timestamp: Date.now()
       } 
     });
-    
-    // Metodo 5: Retry con delay per assicurarsi che funzioni
+
+    // Eventi broadcast
+    const switchEvent = new CustomEvent('switchTab', { detail: 'chat' });
+    window.dispatchEvent(switchEvent);
+    document.dispatchEvent(switchEvent as any);
+    window.postMessage({ type: 'SWITCH_TAB', tab: 'chat' }, '*');
+
+    // Tentativi ritardati + click diretto su bottone "Chat" se presente
+    const attemptClick = () => {
+      try {
+        const byDataAttr = document.querySelector('[data-tab="chat"]') as HTMLElement | null;
+        if (byDataAttr) byDataAttr.click();
+
+        const buttons = Array.from(document.querySelectorAll('button, a')) as HTMLElement[];
+        const chatBtn = buttons.find(el => (el.textContent || '').trim().toLowerCase() === 'chat');
+        if (chatBtn) chatBtn.click();
+      } catch (e) {
+        console.warn('Fallback click failed:', e);
+      }
+    };
+
     setTimeout(() => {
       window.dispatchEvent(new CustomEvent('switchTab', { detail: 'chat' }));
       window.postMessage({ type: 'SWITCH_TAB', tab: 'chat' }, '*');
+      attemptClick();
     }, 100);
-    
+
     setTimeout(() => {
       window.dispatchEvent(new CustomEvent('switchTab', { detail: 'chat' }));
       window.postMessage({ type: 'SWITCH_TAB', tab: 'chat' }, '*');
+      attemptClick();
     }, 500);
-    
-    console.log('✅ Chat redirect executed with multiple methods');
+
+    console.log('✅ Chat redirect executed with enhanced methods');
   };
   
   const startChatWithExpert = async () => {
@@ -114,9 +137,16 @@ const ActionButtons = ({
       }
       
       // Prepara dati completi per l'invio
-      const plantType = diagnosisData?.plantType || diagnosisData?.plantInfo?.name || 'Pianta da identificare';
-      const symptoms = diagnosisData?.symptoms || diagnosisData?.plantInfo?.symptoms || 'Sintomi da descrivere';
-      const imageUrl = diagnosisData?.imageUrl || null;
+      const fallbackPlantType = plantInfo?.name || 'Pianta da identificare'; // NEW
+      const plantType = diagnosisData?.plantType || diagnosisData?.plantInfo?.name || fallbackPlantType;
+      const symptoms = diagnosisData?.symptoms || diagnosisData?.plantInfo?.symptoms || plantInfo?.symptoms || 'Sintomi da descrivere';
+
+      // NEW: prendiamo la foto dal contesto se non fornita in diagnosisData
+      const imageUrl = diagnosisData?.imageUrl 
+        || diagnosisData?.plantInfo?.imageUrl 
+        || plantInfo?.uploadedImageUrl 
+        || null;
+
       const diagnosisResult = diagnosisData?.diagnosisResult || null;
       
       console.log("📊 Prepared data:", { plantType, symptoms, imageUrl: !!imageUrl, diagnosisResult: !!diagnosisResult });
@@ -188,7 +218,7 @@ const ActionButtons = ({
         console.log("✅ Initial message sent");
       }
 
-      // Invia immagine separatamente se presente
+      // Invia immagine separatamente se presente (usa anche il fallback dal contesto)
       if (imageUrl) {
         console.log("📸 Sending image to expert...");
         const { error: imageError } = await supabase.functions.invoke('send-message', {
@@ -214,10 +244,10 @@ const ActionButtons = ({
       // Invia dati completi tramite il servizio automatico
       const plantData = {
         symptoms: symptoms,
-        wateringFrequency: diagnosisData?.plantInfo?.wateringFrequency || 'Da specificare',
-        sunExposure: diagnosisData?.plantInfo?.lightExposure || 'Da specificare',
-        environment: diagnosisData?.plantInfo?.isIndoor !== undefined 
-          ? (diagnosisData?.plantInfo?.isIndoor ? 'Interno' : 'Esterno') 
+        wateringFrequency: diagnosisData?.plantInfo?.wateringFrequency || plantInfo?.wateringFrequency || 'Da specificare',
+        sunExposure: diagnosisData?.plantInfo?.lightExposure || plantInfo?.lightExposure || 'Da specificare',
+        environment: (diagnosisData?.plantInfo?.isIndoor ?? plantInfo?.isIndoor) !== undefined
+          ? ((diagnosisData?.plantInfo?.isIndoor ?? plantInfo?.isIndoor) ? 'Interno' : 'Esterno')
           : 'Da specificare',
         plantName: plantType,
         imageUrl: imageUrl,
@@ -256,8 +286,8 @@ const ActionButtons = ({
         });
       }
 
-      // Esegui il redirect alla chat con metodi multipli
-      console.log("🎯 Executing chat redirect...");
+      // Redirect affidabile alla chat
+      console.log("🎯 Executing chat redirect (enhanced)...");
       redirectToChat();
 
     } catch (error: any) {
@@ -395,3 +425,4 @@ const ActionButtons = ({
 };
 
 export default ActionButtons;
+
