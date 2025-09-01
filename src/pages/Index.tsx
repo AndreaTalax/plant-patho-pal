@@ -1,8 +1,7 @@
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/context/ThemeContext";
-import { useNavigate, useLocation } from "react-router-dom";
 import Header from "@/components/Header";
 import DiagnoseTab from "@/components/DiagnoseTab";
 import ChatTab from "@/components/ChatTab";
@@ -10,158 +9,50 @@ import LibraryTab from "@/components/LibraryTab";
 import ShopTab from "@/components/ShopTab";
 import ProfileTab from "@/components/ProfileTab";
 import BottomNavigation from "@/components/BottomNavigation";
-import { ensureStorageBuckets } from "@/utils/storageSetup";
-import { usePlantInfo } from "@/context/PlantInfoContext";
-import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
-
-type TabType = 'diagnose' | 'shop' | 'profile' | 'chat' | 'library';
+import ExpertDashboard from "@/components/expert/ExpertDashboard";
+import { MARCO_NIGRO_ID } from "@/components/phytopathologist";
 
 const Index = () => {
-  const { isMasterAccount, isAuthenticated, isProfileComplete, loading, userProfile } = useAuth();
-  const { plantInfo } = usePlantInfo();
-  const { toast } = useToast();
+  const { isAuthenticated, userProfile, loading } = useAuth();
   const { t } = useTheme();
-  const navigate = useNavigate();
-  const location = useLocation();
+  const [activeTab, setActiveTab] = useState("diagnose");
 
-  const [activeTab, setActiveTab] = useState<TabType>("diagnose");
-  const suppressAutoOpenRef = useRef(false);
+  // Check if current user is Marco Nigro (expert)
+  const isMarcoNigro = userProfile?.id === MARCO_NIGRO_ID || 
+                       userProfile?.email === 'agrotecnicomarconigro@gmail.com';
 
   useEffect(() => {
     if (!loading && !isAuthenticated) {
-      console.log('🔒 Utente non autenticato, reindirizzamento al login...');
-      navigate('/login');
+      window.location.href = '/login';
     }
-  }, [isAuthenticated, loading, navigate]);
-
-  useEffect(() => {
-    if (!loading && isAuthenticated && !isProfileComplete && !isMasterAccount) {
-      console.log('📝 Profilo incompleto, reindirizzamento al completamento profilo...');
-      navigate('/complete-profile');
-    }
-  }, [isAuthenticated, isProfileComplete, isMasterAccount, loading, navigate]);
-
-  const hasFirstDiagnosis =
-    typeof window !== 'undefined' && (
-      localStorage.getItem('firstDiagnosisDone') === 'true' ||
-      (userProfile?.id ? localStorage.getItem(`firstDiagnosisDone:${userProfile.id}`) === 'true' : false)
-    );
-  const canAccessTabs = hasFirstDiagnosis || (plantInfo.infoComplete && (plantInfo.useAI || plantInfo.sendToExpert));
-
-  useEffect(() => {
-    ensureStorageBuckets();
-  }, []);
-
-  // Legge il tab dalla querystring (es. /?tab=diagnose) e lo applica con priorità
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const tabParam = params.get('tab');
-    const validTabs: TabType[] = ['diagnose', 'shop', 'profile', 'chat', 'library'];
-    
-    if (tabParam && validTabs.includes(tabParam as TabType)) {
-      setActiveTab(tabParam as TabType);
-    }
-  }, [location.search]);
-
-  // Se l'utente ha una conversazione attiva, apri automaticamente la chat
-  useEffect(() => {
-    const autoOpenChatIfMessages = async () => {
-      try {
-        const params = new URLSearchParams(location.search);
-        if (params.get('tab')) return; // non sovrascrivere la scelta esplicita dell'utente (URL)
-        if (suppressAutoOpenRef.current) return; // non sovrascrivere la scelta manuale dell'utente
-        if (isMasterAccount || !isAuthenticated || !userProfile?.id) return;
-        const { data, error } = await supabase
-          .from('conversations' as any)
-          .select('id,last_message_at,status')
-          .eq('user_id', userProfile.id)
-          .eq('status', 'active')
-          .order('last_message_at', { ascending: false })
-          .limit(1);
-        if (!error && data && data.length > 0) {
-          setActiveTab('chat');
-        }
-      } catch (e) {
-        console.log('ℹ️ Auto-open chat check error:', e);
-      }
-    };
-    autoOpenChatIfMessages();
-  }, [isAuthenticated, userProfile?.id, isMasterAccount, activeTab, location.search]);
-
-  useEffect(() => {
-    const handleSwitchTab = (event: CustomEvent) => {
-      console.log("🎧 Index.tsx - handleSwitchTab called");
-      console.log("🎧 Event received:", event);
-      console.log("🎧 Event detail:", event.detail);
-      console.log("🎧 Event type:", event.type);
-      console.log("🎧 Current state - isMasterAccount:", isMasterAccount);
-      console.log("🎧 Current state - canAccessTabs:", canAccessTabs);
-      console.log("🎧 Current state - activeTab:", activeTab);
-      
-      const newTab = event.detail as TabType;
-      console.log("🎧 New tab requested:", newTab);
-      
-      // Se l'utente chiede esplicitamente Diagnosi, non auto-aprire la chat
-      if (newTab === "diagnose") {
-        suppressAutoOpenRef.current = true;
-        setActiveTab("diagnose");
-        return;
-      }
-      
-      // Per utenti normali, la chat è sempre accessibile
-      if (newTab === "chat") {
-        console.log("🎧 Chat requested - allowing access");
-        suppressAutoOpenRef.current = false; // riabilita auto-open su prossimi caricamenti
-        setActiveTab("chat");
-        return;
-      }
-      
-      // Accesso aperto alle altre tab anche se canAccessTabs è false
-      // (nessun redirect automatico)
-      // Non auto-aprire la chat quando l'utente sceglie altre tab
-      suppressAutoOpenRef.current = true;
-      console.log("🎧 Setting active tab to:", newTab);
-      setActiveTab(newTab);
-      console.log("🎧 Tab switch completed");
-    };
-
-    console.log("🎧 Adding switchTab event listener");
-    window.addEventListener('switchTab', handleSwitchTab as EventListener);
-
-    return () => {
-      console.log("🎧 Removing switchTab event listener");
-      window.removeEventListener('switchTab', handleSwitchTab as EventListener);
-    };
-  }, [isMasterAccount, canAccessTabs, toast, t, activeTab]);
-
-  const handleSetActiveTab = (tab: TabType) => {
-    // Consenti la navigazione a tutte le tab; nessun redirect forzato
-
-    if (tab === 'chat') {
-      suppressAutoOpenRef.current = false; // riabilita auto-open
-    } else {
-      suppressAutoOpenRef.current = true; // non auto-aprire la chat su altre tab
-    }
-    setActiveTab(tab);
-  };
+  }, [isAuthenticated, loading]);
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-drplant-green/5 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-drplant-green mx-auto mb-4"></div>
-          <p className="text-gray-600">{t("loading")}</p>
-        </div>
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-drplant-green"></div>
       </div>
     );
   }
 
-  if (!isAuthenticated || (!isProfileComplete && !isMasterAccount)) {
+  if (!isAuthenticated) {
     return null;
   }
 
-  const renderTabContent = () => {
+  // If user is Marco Nigro, show expert dashboard
+  if (isMarcoNigro) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <main className="pb-16">
+          <ExpertDashboard />
+        </main>
+      </div>
+    );
+  }
+
+  // Regular user interface
+  const renderActiveTab = () => {
     switch (activeTab) {
       case "diagnose":
         return <DiagnoseTab />;
@@ -179,15 +70,12 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-drplant-green/5">
+    <div className="min-h-screen bg-background">
       <Header />
-      <div className="pb-20">
-        {renderTabContent()}
-      </div>
-      <BottomNavigation 
-        activeTab={activeTab} 
-        setActiveTab={handleSetActiveTab}
-      />
+      <main className="pb-16">
+        {renderActiveTab()}
+      </main>
+      <BottomNavigation activeTab={activeTab} onTabChange={setActiveTab} />
     </div>
   );
 };
