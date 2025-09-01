@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { usePlantDiagnosis } from '@/hooks/usePlantDiagnosis';
-import { DiagnoseWizard } from '@/components/diagnose/DiagnoseWizard';
+import DiagnoseWizard from '@/components/diagnose/DiagnoseWizard';
 import { DiagnosisResults } from '@/components/diagnose/result/DiagnosisResults';
 import { toast } from 'sonner';
 
@@ -40,6 +40,14 @@ const DiagnoseTab = () => {
 
   // Create results object from diagnosis data
   const results = diagnosisResult || diagnosedDisease ? {
+    plantIdentification: diagnosisResult ? [{
+      plantName: diagnosisResult.split('Pianta identificata: ')[1]?.split(' •')[0] || 'Pianta sconosciuta',
+      scientificName: '',
+      confidence: 65,
+      habitat: 'Identificato tramite AI',
+      careInstructions: ['Informazioni da analisi AI'],
+      provider: 'ai' as any
+    }] : [],
     consensus: {
       mostLikelyPlant: diagnosisResult ? {
         plantName: diagnosisResult.split('Pianta identificata: ')[1]?.split(' •')[0] || 'Pianta sconosciuta',
@@ -53,9 +61,22 @@ const DiagnoseTab = () => {
         treatments: diagnosedDisease.treatments
       } : null,
       agreementScore: 0.7,
-      bestProvider: 'AI Analysis'
+      bestProvider: 'AI Analysis',
+      overallConfidence: 65,
+      finalConfidence: 65,
+      providersUsed: ['AI Analysis']
     },
-    diseaseDetection: diagnosedDisease ? [diagnosedDisease] : [],
+    diseaseDetection: diagnosedDisease ? [{
+      disease: diagnosedDisease.name,
+      confidence: diagnosedDisease.confidence,
+      symptoms: diagnosedDisease.symptoms,
+      treatments: diagnosedDisease.treatments,
+      severity: diagnosedDisease.confidence > 60 ? 'high' : diagnosedDisease.confidence > 40 ? 'medium' : 'low',
+      provider: 'ai',
+      additionalInfo: {
+        cause: diagnosedDisease.causes || ''
+      }
+    }] : [],
     isFallback: false
   } : null;
 
