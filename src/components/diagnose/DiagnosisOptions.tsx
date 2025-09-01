@@ -32,11 +32,12 @@ const DiagnosisOptions: React.FC<DiagnosisOptionsProps> = ({
   const { userProfile } = useAuth();
   const [paywallOpen, setPaywallOpen] = useState(false);
 
-  const isTestUser = userProfile?.email === 'test@gmail.com';
+  const isPremiumTestUser = userProfile?.email === 'test@gmail.com';
+  const isNormalUser = userProfile?.email === 'talaiaandrea@gmail.com';
   const canUseDiagnosis = hasUnlimitedDiagnosis || canUseFreeDiagnosis || hasActiveSubscription;
 
   const handleExpertSelection = () => {
-    if (!hasExpertChatAccess && !isTestUser) {
+    if (!hasExpertChatAccess && !isPremiumTestUser) {
       setPaywallOpen(true);
       return;
     }
@@ -47,14 +48,26 @@ const DiagnosisOptions: React.FC<DiagnosisOptionsProps> = ({
     <div className="space-y-6">
       <AIAccuracyStats />
       
-      {isTestUser && (
+      {isPremiumTestUser && (
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
           <div className="flex items-center gap-2 text-blue-800">
             <TestTube className="h-4 w-4" />
-            <span className="font-medium">Account di Test</span>
+            <span className="font-medium">Account Premium Test</span>
           </div>
           <p className="text-blue-700 text-sm mt-1">
-            Hai accesso completo a tutte le funzionalità per il testing
+            Hai accesso completo a tutte le funzionalità premium per il testing
+          </p>
+        </div>
+      )}
+
+      {isNormalUser && (
+        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+          <div className="flex items-center gap-2 text-gray-800">
+            <Users className="h-4 w-4" />
+            <span className="font-medium">Utente Standard</span>
+          </div>
+          <p className="text-gray-700 text-sm mt-1">
+            Account utente normale per test delle funzionalità gratuite
           </p>
         </div>
       )}
@@ -68,10 +81,15 @@ const DiagnosisOptions: React.FC<DiagnosisOptionsProps> = ({
                 <Brain className="h-5 w-5 text-drplant-blue" />
                 Diagnosi AI
               </CardTitle>
-              {isTestUser ? (
+              {isPremiumTestUser ? (
                 <Badge variant="secondary" className="bg-blue-100 text-blue-800">
                   <TestTube className="h-3 w-3 mr-1" />
-                  Test
+                  Premium Test
+                </Badge>
+              ) : isNormalUser ? (
+                <Badge variant="secondary" className="bg-gray-100 text-gray-800">
+                  <Users className="h-3 w-3 mr-1" />
+                  Standard
                 </Badge>
               ) : hasActiveSubscription || hasUnlimitedDiagnosis ? (
                 <Badge variant="secondary" className="bg-blue-100 text-blue-800">
@@ -106,16 +124,20 @@ const DiagnosisOptions: React.FC<DiagnosisOptionsProps> = ({
             <Button 
               onClick={onSelectAI}
               className="w-full"
-              disabled={!canUseDiagnosis && !isTestUser}
-              variant={(!canUseDiagnosis && !isTestUser) ? "outline" : "default"}
+              disabled={!canUseDiagnosis && !isPremiumTestUser}
+              variant={(!canUseDiagnosis && !isPremiumTestUser) ? "outline" : "default"}
             >
-              {(!canUseDiagnosis && !isTestUser) && <Lock className="h-4 w-4 mr-2" />}
+              {(!canUseDiagnosis && !isPremiumTestUser) && <Lock className="h-4 w-4 mr-2" />}
               Analizza con AI
             </Button>
             
             <p className="text-xs text-center">
-              {isTestUser ? (
-                <span className="text-blue-600">Accesso illimitato per test</span>
+              {isPremiumTestUser ? (
+                <span className="text-blue-600">Accesso illimitato premium</span>
+              ) : isNormalUser ? (
+                <span className="text-gray-600">
+                  {remainingFreeDiagnoses} diagnosi gratuite rimanenti
+                </span>
               ) : hasActiveSubscription || hasUnlimitedDiagnosis ? (
                 <span className="text-blue-600">Illimitato con Premium</span>
               ) : canUseFreeDiagnosis ? (
@@ -139,10 +161,15 @@ const DiagnosisOptions: React.FC<DiagnosisOptionsProps> = ({
                 <Users className="h-5 w-5 text-drplant-green" />
                 Chat con Fitopatologo
               </CardTitle>
-              {isTestUser ? (
+              {isPremiumTestUser ? (
                 <Badge variant="secondary" className="bg-blue-100 text-blue-800">
                   <TestTube className="h-3 w-3 mr-1" />
-                  Test
+                  Premium Test
+                </Badge>
+              ) : isNormalUser ? (
+                <Badge variant="secondary" className="bg-amber-100 text-amber-800">
+                  <Lock className="h-3 w-3 mr-1" />
+                  Richiede Premium
                 </Badge>
               ) : !hasExpertChatAccess && (
                 <Badge variant="secondary" className="bg-amber-100 text-amber-800">
@@ -174,21 +201,27 @@ const DiagnosisOptions: React.FC<DiagnosisOptionsProps> = ({
             <Button 
               onClick={handleExpertSelection}
               className="w-full"
-              variant={(!hasExpertChatAccess && !isTestUser) ? "outline" : "default"}
+              variant={(!hasExpertChatAccess && !isPremiumTestUser) ? "outline" : "default"}
             >
-              {(!hasExpertChatAccess && !isTestUser) && <Lock className="h-4 w-4 mr-2" />}
-              {hasExpertChatAccess || isTestUser ? 'Chat con Esperto' : 'Richiede Premium'}
+              {(!hasExpertChatAccess && !isPremiumTestUser) && <Lock className="h-4 w-4 mr-2" />}
+              {hasExpertChatAccess || isPremiumTestUser ? 'Chat con Esperto' : 'Richiede Premium'}
             </Button>
             
-            {!hasExpertChatAccess && !isTestUser && (
+            {!hasExpertChatAccess && !isPremiumTestUser && (
               <p className="text-xs text-amber-600 text-center">
                 Disponibile per utenti Premium
               </p>
             )}
             
-            {isTestUser && (
+            {isPremiumTestUser && (
               <p className="text-xs text-blue-600 text-center">
-                Accesso completo per test
+                Accesso premium completo per test
+              </p>
+            )}
+
+            {isNormalUser && (
+              <p className="text-xs text-gray-600 text-center">
+                Upgrade a Premium per accedere
               </p>
             )}
           </CardContent>
