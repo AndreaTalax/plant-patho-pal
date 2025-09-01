@@ -1,11 +1,10 @@
-
 import React, { useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import ImageDisplay from './ImageDisplay';
 import PlantInfoCard from './PlantInfoCard';
 import ActionButtons from './ActionButtons';
 import { AutoExpertNotificationService } from '@/components/chat/AutoExpertNotificationService';
-import ProductSuggestions from './ProductSuggestions'; // Aggiunta: sezione prodotti consigliati
+import ProductSuggestions from './ProductSuggestions';
 
 interface Disease {
   name: string;
@@ -55,7 +54,6 @@ interface DiagnosisResultProps {
   saveLoading?: boolean;
   isAnalyzing: boolean;
   hasExpertChatAccess?: boolean;
-  // Consente compatibilità con chiamanti che usano "analysisData"
   analysisData?: any;
 }
 
@@ -72,7 +70,7 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
   saveLoading,
   isAnalyzing,
   hasExpertChatAccess,
-  analysisData, // nuova prop opzionale per compatibilità
+  analysisData,
 }) => {
   const { user } = useAuth();
 
@@ -94,7 +92,7 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
     return <div className="text-center">Nessuna immagine da mostrare.</div>;
   }
 
-  // Prepara i dati della diagnosi per l'invio all'esperto con tutte le proprietà richieste
+  // Prepara i dati della diagnosi per l'invio all'esperto
   const diagnosisData = {
     plantType: plantInfo?.name || effectiveDiagnosis?.name || 'Pianta non identificata',
     plantVariety: analysisDetails?.multiServiceInsights?.plantSpecies || '',
@@ -105,41 +103,9 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
     isHealthy: resolvedIsHealthy,
   };
 
-  // Invio automatico dei dati AI all'esperto quando disponibili (solo per utenti premium)
-  useEffect(() => {
-    const sendAutomaticDiagnosis = async () => {
-      // Invia solo se l'utente ha accesso premium e c'è una diagnosi valida
-      if (!user || !resolvedHasExpertChatAccess || !effectiveDiagnosis || isAnalyzing) {
-        return;
-      }
-
-      // Aspetta un momento per assicurarsi che tutti i dati siano pronti
-      const timeoutId = setTimeout(async () => {
-        try {
-          console.log('🤖 Invio automatico dati AI all\'esperto:', diagnosisData);
-          
-          await AutoExpertNotificationService.sendDiagnosisToExpert(
-            user.id,
-            diagnosisData
-          );
-          
-          console.log('✅ Dati AI inviati automaticamente all\'esperto');
-        } catch (error) {
-          console.error('❌ Errore nell\'invio automatico all\'esperto:', error);
-        }
-      }, 2000);
-      
-      return () => {
-        clearTimeout(timeoutId);
-      };
-    };
-
-    sendAutomaticDiagnosis();
-  }, [user, resolvedHasExpertChatAccess, effectiveDiagnosis, imageSrc, isAnalyzing, resolvedConfidence, resolvedIsHealthy]);
-
-  // Funzione per gestire il click su "Chat con l'esperto" - invia sempre i dati
+  // Funzione per gestire il click su "Chat con l'esperto" - invia automaticamente i dati AI
   const handleChatWithExpert = async () => {
-    console.log('🗣️ Click su Chat con l\'esperto, invio dati della diagnosi...');
+    console.log('🗣️ Click su Chat con l\'esperto, invio automatico dati AI...');
     
     if (!user) {
       console.error('❌ Utente non autenticato');
@@ -147,22 +113,22 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
     }
 
     try {
-      // Invia sempre i dati della diagnosi quando si clicca "Chat con l'esperto"
-      console.log('📤 Invio dati diagnosi all\'esperto:', diagnosisData);
+      // Invia automaticamente i dati della diagnosi AI quando si clicca "Chat con l'esperto"
+      console.log('📤 Invio automatico dati diagnosi AI all\'esperto:', diagnosisData);
       
       await AutoExpertNotificationService.sendDiagnosisToExpert(
         user.id,
         diagnosisData
       );
       
-      console.log('✅ Dati diagnosi inviati all\'esperto con successo');
+      console.log('✅ Dati diagnosi AI inviati automaticamente con successo');
       
       // Poi chiama la funzione originale per aprire la chat
       if (onChatWithExpert) {
         await onChatWithExpert();
       }
     } catch (error) {
-      console.error('❌ Errore nell\'invio dati all\'esperto:', error);
+      console.error('❌ Errore nell\'invio automatico dati all\'esperto:', error);
       
       // Anche in caso di errore, prova ad aprire la chat
       if (onChatWithExpert) {
@@ -220,7 +186,7 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
         </div>
       )}
 
-      {/* Sezione prodotti consigliati - reinserita */}
+      {/* Sezione prodotti consigliati */}
       <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-100">
         <h2 className="text-lg font-semibold">Prodotti consigliati</h2>
         <p className="text-sm text-muted-foreground mb-2">
