@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 
 export interface PlantInfo {
@@ -12,6 +11,7 @@ export interface PlantInfo {
   infoComplete: boolean;
   uploadedFile?: File | null;
   uploadedImageUrl?: string | null;
+  aiDiagnosis?: any; // Add aiDiagnosis property
 }
 
 interface PlantInfoContextType {

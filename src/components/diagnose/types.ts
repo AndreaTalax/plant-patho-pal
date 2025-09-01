@@ -9,6 +9,7 @@ export interface PlantInfo {
   infoComplete: boolean;
   uploadedFile?: File | null;
   uploadedImageUrl?: string | null;
+  aiDiagnosis?: any;
 }
 
 export interface DiagnosedDisease {
