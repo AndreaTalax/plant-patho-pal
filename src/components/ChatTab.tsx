@@ -2,7 +2,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { FileText } from 'lucide-react';
-import RealTimeChatWrapper from '@/components/chat/RealTimeChatWrapper';
+import { RealTimeChatWrapper } from '@/components/chat/RealTimeChatWrapper';
 import { NavigationUtils } from '@/utils/navigationUtils';
 
 const ChatTab = () => {
