@@ -1,52 +1,97 @@
 
-import { useState } from "react";
-import { useAuth } from "@/context/AuthContext";
-import { usePlantInfo } from "@/context/PlantInfoContext";
-import DiagnoseWizard from "./diagnose/DiagnoseWizard";
-import { DiagnosisHistory } from "./diagnose/DiagnosisHistory";
-import { Button } from "@/components/ui/button";
-import { History, Scan } from "lucide-react";
+import React from 'react';
+import { usePlantDiagnosis } from '@/hooks/usePlantDiagnosis';
+import DiagnoseWizard from '@/components/diagnose/DiagnoseWizard';
+import { DiagnosisResults } from '@/components/diagnose/result/DiagnosisResults';
+import { toast } from 'sonner';
 
 const DiagnoseTab = () => {
-  const { userProfile } = useAuth();
-  const { plantInfo } = usePlantInfo();
-  const [activeView, setActiveView] = useState<'wizard' | 'history'>('wizard');
+  const {
+    uploadedImage,
+    diagnosisResult,
+    diagnosedDisease,
+    analysisDetails,
+    isAnalyzing,
+    analysisProgress,
+    resetDiagnosis,
+    captureImage,
+    handleImageUpload,
+    analyzeUploadedImage,
+    saveDiagnosis,
+    isSaving
+  } = usePlantDiagnosis();
+
+  const handleNavigateToShop = (productId: string, productName: string) => {
+    // Store product info in localStorage per accesso dal tab Shop
+    localStorage.setItem('selectedProduct', JSON.stringify({
+      id: productId,
+      name: productName,
+      fromDiagnosis: true
+    }));
+    
+    // Cambia al tab Shop
+    const shopTab = document.querySelector('button[data-tab="shop"]') as HTMLButtonElement;
+    if (shopTab) {
+      shopTab.click();
+    }
+    
+    toast.success(`Navigando al prodotto: ${productName}`);
+  };
+
+  // Create results object from diagnosis data
+  const results = diagnosisResult || diagnosedDisease ? {
+    plantIdentification: diagnosisResult ? [{
+      plantName: diagnosisResult.split('Pianta identificata: ')[1]?.split(' •')[0] || 'Pianta sconosciuta',
+      scientificName: '',
+      confidence: 65,
+      habitat: 'Identificato tramite AI',
+      careInstructions: ['Informazioni da analisi AI'],
+      provider: 'ai' as any
+    }] : [],
+    consensus: {
+      mostLikelyPlant: diagnosisResult ? {
+        plantName: diagnosisResult.split('Pianta identificata: ')[1]?.split(' •')[0] || 'Pianta sconosciuta',
+        scientificName: '',
+        confidence: 65
+      } : null,
+      mostLikelyDisease: diagnosedDisease ? {
+        disease: diagnosedDisease.name,
+        confidence: diagnosedDisease.confidence,
+        symptoms: diagnosedDisease.symptoms,
+        treatments: diagnosedDisease.treatments
+      } : null,
+      agreementScore: 0.7,
+      bestProvider: 'AI Analysis',
+      overallConfidence: 65,
+      finalConfidence: 65,
+      providersUsed: ['AI Analysis']
+    },
+    diseaseDetection: diagnosedDisease ? [{
+      disease: diagnosedDisease.name,
+      confidence: diagnosedDisease.confidence,
+      symptoms: diagnosedDisease.symptoms,
+      treatments: diagnosedDisease.treatments,
+      severity: diagnosedDisease.confidence > 60 ? 'high' : diagnosedDisease.confidence > 40 ? 'medium' : 'low',
+      provider: 'ai',
+      additionalInfo: {
+        cause: diagnosedDisease.causes || ''
+      }
+    }] : [],
+    isFallback: false
+  } : null;
 
   return (
-    <div className="container mx-auto px-4 py-6 max-w-4xl">
-      {/* Header con toggle */}
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">
-          Ciao {userProfile?.firstName || userProfile?.first_name || 'Utente'}!
-        </h1>
-        
-        <div className="flex gap-2">
-          <Button
-            variant={activeView === 'wizard' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setActiveView('wizard')}
-            className="flex items-center gap-2"
-          >
-            <Scan className="h-4 w-4" />
-            Nuova Diagnosi
-          </Button>
-          <Button
-            variant={activeView === 'history' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setActiveView('history')}
-            className="flex items-center gap-2"
-          >
-            <History className="h-4 w-4" />
-            Cronologia
-          </Button>
-        </div>
-      </div>
+    <div className="space-y-6">
+      {/* Wizard per guidare l'utente attraverso il processo */}
+      <DiagnoseWizard />
 
-      {/* Contenuto principale */}
-      {activeView === 'wizard' ? (
-        <DiagnoseWizard />
-      ) : (
-        <DiagnosisHistory />
+      {/* Risultati diagnosi */}
+      {results && (
+        <DiagnosisResults 
+          results={results} 
+          isFallback={false}
+          onNavigateToShop={handleNavigateToShop}
+        />
       )}
     </div>
   );

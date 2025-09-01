@@ -65,8 +65,7 @@ const Login = () => {
         });
         
         setTimeout(() => {
-          // Reindirizza direttamente al tab diagnosi
-          navigate("/?tab=diagnose", { replace: true });
+          navigate("/", { replace: true });
         }, 500);
       } else {
         toast.error(t("loginFailed"), {
@@ -91,6 +90,7 @@ const Login = () => {
     <div className="h-screen w-full bg-gradient-to-b from-drplant-blue-light via-white to-drplant-green/10 flex flex-col items-center justify-center px-4">
       <div className="absolute top-0 left-0 w-full h-64 bg-drplant-blue-light/30 -z-10 rounded-b-[50%]" />
       <div className="absolute bottom-0 right-0 w-full h-64 bg-drplant-green/20 -z-10 rounded-t-[30%]" />
+
 
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
