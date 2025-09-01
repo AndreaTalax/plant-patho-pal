@@ -14,6 +14,7 @@ import { ensureStorageBuckets } from "@/utils/storageSetup";
 import { usePlantInfo } from "@/context/PlantInfoContext";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+
 const Index = () => {
   const { isMasterAccount, isAuthenticated, isProfileComplete, loading, userProfile } = useAuth();
   const { plantInfo } = usePlantInfo();

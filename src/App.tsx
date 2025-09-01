@@ -1,15 +1,16 @@
+
 import { useEffect, useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from './context/AuthContext';
 import { PlantInfoProvider } from './context/PlantInfoContext';
 import { ThemeProvider } from './context/ThemeContext';
-import { Header } from './components/Header';
-import { DiagnoseTab } from './components/DiagnoseTab';
-import { ShopTab } from './components/ShopTab';
-import { ProfileTab } from './components/ProfileTab';
-import { ChatTab } from './components/ChatTab';
-import { LibraryTab } from './components/LibraryTab';
-import { ExpertTab } from './components/ExpertTab';
+import Header from './components/Header';
+import DiagnoseTab from './components/DiagnoseTab';
+import ShopTab from './components/ShopTab';
+import ProfileTab from './components/ProfileTab';
+import ChatTab from './components/ChatTab';
+import LibraryTab from './components/LibraryTab';
+import ExpertTab from './components/ExpertTab';
 import { BottomNavigation } from './components/BottomNavigation';
 import { Toaster } from './components/ui/sonner';
 import { NotificationProvider } from './components/notifications/NotificationProvider';

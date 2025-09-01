@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Leaf, ShoppingBag, User, MessageCircle, BookOpen, Stethoscope } from 'lucide-react';
 
@@ -59,3 +60,6 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
     </nav>
   );
 };
+
+// Add default export
+export default BottomNavigation;

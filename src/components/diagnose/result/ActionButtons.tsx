@@ -27,18 +27,19 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
       
       if (finalImageUrl && finalImageUrl !== plantInfo.uploadedImageUrl) {
         console.log('📸 Updating plantInfo with image:', finalImageUrl);
-        setPlantInfo(prev => ({
-          ...prev,
+        setPlantInfo({
+          ...plantInfo,
           uploadedImageUrl: finalImageUrl
-        }));
+        });
       }
 
       // Marca che i dati devono essere inviati all'esperto
-      setPlantInfo(prev => ({
-        ...prev,
+      setPlantInfo({
+        ...plantInfo,
+        uploadedImageUrl: finalImageUrl,
         sendToExpert: true,
         infoComplete: true
-      }));
+      });
 
       console.log('📤 Sending comprehensive consultation data...', {
         plantInfo: { ...plantInfo, uploadedImageUrl: finalImageUrl },
@@ -98,3 +99,6 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
     </div>
   );
 };
+
+// Add default export
+export default ActionButtons;

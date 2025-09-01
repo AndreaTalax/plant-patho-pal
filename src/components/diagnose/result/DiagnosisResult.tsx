@@ -1,9 +1,10 @@
+
 import React from 'react';
 import { CheckCircle, AlertTriangle, Info } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import ImageDisplay from './ImageDisplay';
 import PlantInfoCard from './PlantInfoCard';
-import ActionButtons from './ActionButtons';
+import { ActionButtons } from './ActionButtons';
 import ProductSuggestions from './ProductSuggestions';
 
 interface Disease {
