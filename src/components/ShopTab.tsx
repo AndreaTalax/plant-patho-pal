@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { toast } from '@/components/ui/sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -77,11 +76,10 @@ const ShopTab = () => {
       setProducts(productList);
 
       // Estrai le categorie uniche con proper typing
-      const uniqueCategories = [...new Set(
-        productList
-          .map((p: Product) => p.category)
-          .filter((category): category is string => Boolean(category))
-      )];
+      const categoryList = productList
+        .map((p: Product) => p.category)
+        .filter((category): category is string => typeof category === 'string' && category.length > 0);
+      const uniqueCategories: string[] = [...new Set(categoryList)];
       setCategories(uniqueCategories);
     } catch (error) {
       console.error('Error fetching products:', error);
