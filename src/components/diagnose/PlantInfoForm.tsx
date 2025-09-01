@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -51,7 +52,7 @@ const PlantInfoForm = ({ onComplete, initialData }: PlantInfoFormProps) => {
   const handlePlantNameChange = (value: string) => {
     if (value === 'altro') {
       setShowCustomPlantName(true);
-      handleChange('name', '');
+      handleChange('name', 'altro'); // Use 'altro' instead of empty string
     } else if (value === 'non-so') {
       setShowCustomPlantName(false);
       setCustomPlantName('');
@@ -68,6 +69,14 @@ const PlantInfoForm = ({ onComplete, initialData }: PlantInfoFormProps) => {
     return formData.wateringFrequency && formData.lightExposure;
   };
 
+  // Get the current select value for plant name
+  const getCurrentPlantSelectValue = () => {
+    if (showCustomPlantName) return 'altro';
+    if (formData.name === t('unidentifiedPlant')) return 'non-so';
+    if (!formData.name) return undefined; // Use undefined instead of empty string
+    return formData.name;
+  };
+
   return (
     <Card className="w-full max-w-2xl mx-auto">
       <CardHeader>
@@ -81,7 +90,7 @@ const PlantInfoForm = ({ onComplete, initialData }: PlantInfoFormProps) => {
           {/* Nome della pianta - ora opzionale */}
           <div className="space-y-2">
             <Label htmlFor="name">{t('plantTypeOptional')}</Label>
-            <Select value={showCustomPlantName ? 'altro' : (formData.name === t('unidentifiedPlant') ? 'non-so' : formData.name)} onValueChange={handlePlantNameChange}>
+            <Select value={getCurrentPlantSelectValue()} onValueChange={handlePlantNameChange}>
               <SelectTrigger>
                 <SelectValue placeholder={t('selectPlantType')} />
               </SelectTrigger>
@@ -136,7 +145,7 @@ const PlantInfoForm = ({ onComplete, initialData }: PlantInfoFormProps) => {
           {/* Frequenza irrigazione */}
           <div className="space-y-2">
             <Label>{t('wateringFrequency')}</Label>
-            <Select value={formData.wateringFrequency} onValueChange={(value) => handleChange('wateringFrequency', value)}>
+            <Select value={formData.wateringFrequency || undefined} onValueChange={(value) => handleChange('wateringFrequency', value)}>
               <SelectTrigger>
                 <SelectValue placeholder={t('selectFrequency')} />
               </SelectTrigger>
@@ -155,7 +164,7 @@ const PlantInfoForm = ({ onComplete, initialData }: PlantInfoFormProps) => {
           {/* Esposizione alla luce */}
           <div className="space-y-2">
             <Label>{t('lightExposure')}</Label>
-            <Select value={formData.lightExposure} onValueChange={(value) => handleChange('lightExposure', value)}>
+            <Select value={formData.lightExposure || undefined} onValueChange={(value) => handleChange('lightExposure', value)}>
               <SelectTrigger>
                 <SelectValue placeholder={t('selectExposure')} />
               </SelectTrigger>
