@@ -5,9 +5,9 @@
 
 export const getWhitelistedCredentials = () => ({
   'agrotecnicomarconigro@gmail.com': 'marconigro93',
-  'test@gmail.com': 'test123', // Account di test premium
+  'test@gmail.com': 'test123', // Account di test completo
   'premium@gmail.com': 'premium123',
-  'talaiaandrea@gmail.com': 'test123' // Account utente normale
+  'talaiaandrea@gmail.com': 'test123'
 });
 
 export const isWhitelistedEmail = (email: string): boolean => {
@@ -27,11 +27,11 @@ export const determineUserRole = (email: string): string => {
   if (emailLower === 'agrotecnicomarconigro@gmail.com') {
     return 'admin';
   } else if (emailLower === 'test@gmail.com') {
-    return 'admin'; // Account di test con privilegi admin e premium
+    return 'admin'; // Account di test con privilegi admin
   } else if (emailLower.includes('marco') || emailLower.includes('fitopatologo')) {
     return 'expert';
   }
-  return 'user'; // talaiaandrea@gmail.com sarà un utente normale
+  return 'user';
 };
 
 export const getUserDisplayName = (email: string): { firstName: string; lastName: string } => {
@@ -41,7 +41,7 @@ export const getUserDisplayName = (email: string): { firstName: string; lastName
     case 'agrotecnicomarconigro@gmail.com':
       return { firstName: 'Marco', lastName: 'Nigro' };
     case 'test@gmail.com':
-      return { firstName: 'Test', lastName: 'Premium' };
+      return { firstName: 'Test', lastName: 'Admin' };
     case 'premium@gmail.com':
       return { firstName: 'Premium', lastName: 'User' };
     case 'talaiaandrea@gmail.com':
@@ -57,9 +57,10 @@ export const getUserDisplayName = (email: string): { firstName: string; lastName
 export const isTestAccount = (email: string): boolean => {
   const emailLower = email.toLowerCase();
   return [
-    'test@gmail.com', // Account premium per test
+    'test@gmail.com',
     'agrotecnicomarconigro@gmail.com',
-    'premium@gmail.com'
+    'premium@gmail.com',
+    'talaiaandrea@gmail.com'
   ].includes(emailLower);
 };
 

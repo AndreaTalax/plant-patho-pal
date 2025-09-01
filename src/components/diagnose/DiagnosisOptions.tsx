@@ -1,148 +1,212 @@
 
 import React from 'react';
-import { CheckCircle, Circle } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import { usePlantInfo } from '@/context/PlantInfoContext';
-import DirectChatButton from './DirectChatButton';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Brain, MessageCircle, Zap, Users, Crown, Lock, TestTube } from 'lucide-react';
+import { usePremiumStatus } from '@/services/premiumService';
+import { useAuth } from '@/context/AuthContext';
+import { toast } from 'sonner';
+import AIAccuracyStats from './AIAccuracyStats';
+import { PremiumPaywallModal } from "./PremiumPaywallModal";
+import { useState } from "react";
 
 interface DiagnosisOptionsProps {
-  onOptionChange: (option: 'ai' | 'expert') => void;
-  uploadedImage: string | File | null;
-  onStartDiagnosis: () => void;
-  onSelectAI?: () => Promise<void> | void;
-  onSelectExpert?: () => void;
-  hasAIAccess?: boolean;
+  onSelectAI: () => void;
+  onSelectExpert: () => void;
+  hasAIAccess: boolean;
+  canUseFreeDiagnosis?: boolean;
+  remainingFreeDiagnoses?: number;
+  hasActiveSubscription?: boolean;
 }
 
-export const DiagnosisOptions: React.FC<DiagnosisOptionsProps> = ({
-  onOptionChange,
-  uploadedImage,
-  onStartDiagnosis,
+const DiagnosisOptions: React.FC<DiagnosisOptionsProps> = ({
   onSelectAI,
   onSelectExpert,
-  hasAIAccess = true
+  hasAIAccess,
+  canUseFreeDiagnosis = true,
+  remainingFreeDiagnoses = 3,
+  hasActiveSubscription = false
 }) => {
-  const { plantInfo, setPlantInfo } = usePlantInfo();
+  const { hasExpertChatAccess, hasUnlimitedDiagnosis, isTestAdmin, upgradeMessage } = usePremiumStatus();
+  const { userProfile } = useAuth();
+  const [paywallOpen, setPaywallOpen] = useState(false);
 
-  const handleAIToggle = () => {
-    const updatedInfo = {
-      ...plantInfo,
-      useAI: !plantInfo.useAI,
-      sendToExpert: false // Disabilita l'altra opzione
-    };
-    setPlantInfo(updatedInfo);
-    onOptionChange('ai');
-    if (onSelectAI) {
-      onSelectAI();
-    }
-  };
+  const isTestUser = userProfile?.email === 'test@gmail.com';
+  const canUseDiagnosis = hasUnlimitedDiagnosis || canUseFreeDiagnosis || hasActiveSubscription;
 
-  const handleExpertToggle = () => {
-    const updatedInfo = {
-      ...plantInfo,
-      sendToExpert: !plantInfo.sendToExpert,
-      useAI: false // Disabilita l'altra opzione
-    };
-    setPlantInfo(updatedInfo);
-    onOptionChange('expert');
-    if (onSelectExpert) {
-      onSelectExpert();
+  const handleExpertSelection = () => {
+    if (!hasExpertChatAccess && !isTestUser) {
+      setPaywallOpen(true);
+      return;
     }
+    onSelectExpert();
   };
 
   return (
-    <div className="space-y-4">
-      {/* Diagnosi AI */}
-      <div className={`border-2 rounded-lg p-4 cursor-pointer transition-all ${
-        plantInfo.useAI 
-          ? 'border-drplant-green bg-drplant-green/5' 
-          : 'border-gray-200 hover:border-drplant-green/50'
-      }`} onClick={() => handleAIToggle()}>
-        <div className="flex items-start gap-3">
-          <div className="flex-shrink-0 mt-1">
-            {plantInfo.useAI ? (
-              <CheckCircle className="w-5 h-5 text-drplant-green" />
-            ) : (
-              <Circle className="w-5 h-5 text-gray-400" />
-            )}
+    <div className="space-y-6">
+      <AIAccuracyStats />
+      
+      {isTestUser && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="flex items-center gap-2 text-blue-800">
+            <TestTube className="h-4 w-4" />
+            <span className="font-medium">Account di Test</span>
           </div>
-          <div className="flex-1">
-            <div className="flex items-center gap-2 mb-2">
-              <h3 className="font-semibold text-gray-900">Diagnosi con Intelligenza Artificiale</h3>
-              {hasAIAccess ? (
-                <Badge variant="outline" className="text-xs">
-                  Veloce
+          <p className="text-blue-700 text-sm mt-1">
+            Hai accesso completo a tutte le funzionalità per il testing
+          </p>
+        </div>
+      )}
+      
+      <div className="grid md:grid-cols-2 gap-4">
+        {/* Opzione Diagnosi AI */}
+        <Card className="transition-all hover:shadow-lg">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Brain className="h-5 w-5 text-drplant-blue" />
+                Diagnosi AI
+              </CardTitle>
+              {isTestUser ? (
+                <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+                  <TestTube className="h-3 w-3 mr-1" />
+                  Test
+                </Badge>
+              ) : hasActiveSubscription || hasUnlimitedDiagnosis ? (
+                <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+                  Premium
                 </Badge>
               ) : (
-                <Badge variant="outline" className="text-xs bg-orange-50 text-orange-600 border-orange-200">
+                <Badge variant="secondary" className="bg-green-100 text-green-800">
+                  {canUseFreeDiagnosis ? `${remainingFreeDiagnoses}/3 Gratis` : 'Limite Raggiunto'}
+                </Badge>
+              )}
+            </div>
+            <CardDescription>
+              Analisi immediata con intelligenza artificiale avanzata
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="space-y-2 text-sm">
+              <div className="flex items-center gap-2">
+                <Zap className="h-4 w-4 text-green-600" />
+                <span>Risultati in pochi secondi</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Brain className="h-4 w-4 text-blue-600" />
+                <span>Database di migliaia di malattie</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <MessageCircle className="h-4 w-4 text-purple-600" />
+                <span>Invio automatico all'esperto</span>
+              </div>
+            </div>
+            
+            <Button 
+              onClick={onSelectAI}
+              className="w-full"
+              disabled={!canUseDiagnosis && !isTestUser}
+              variant={(!canUseDiagnosis && !isTestUser) ? "outline" : "default"}
+            >
+              {(!canUseDiagnosis && !isTestUser) && <Lock className="h-4 w-4 mr-2" />}
+              Analizza con AI
+            </Button>
+            
+            <p className="text-xs text-center">
+              {isTestUser ? (
+                <span className="text-blue-600">Accesso illimitato per test</span>
+              ) : hasActiveSubscription || hasUnlimitedDiagnosis ? (
+                <span className="text-blue-600">Illimitato con Premium</span>
+              ) : canUseFreeDiagnosis ? (
+                <span className="text-green-600">
+                  {remainingFreeDiagnoses} diagnosi gratuite rimanenti
+                </span>
+              ) : (
+                <span className="text-red-600">
+                  Limite raggiunto - Richiede Premium
+                </span>
+              )}
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* Opzione Esperto */}
+        <Card className={`relative transition-all hover:shadow-lg`}>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Users className="h-5 w-5 text-drplant-green" />
+                Chat con Fitopatologo
+              </CardTitle>
+              {isTestUser ? (
+                <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+                  <TestTube className="h-3 w-3 mr-1" />
+                  Test
+                </Badge>
+              ) : !hasExpertChatAccess && (
+                <Badge variant="secondary" className="bg-amber-100 text-amber-800">
+                  <Crown className="h-3 w-3 mr-1" />
                   Premium
                 </Badge>
               )}
             </div>
-            <p className="text-sm text-gray-600 mb-3">
-              {hasAIAccess 
-                ? "Ricevi un'analisi rapida e automatizzata della tua pianta. Ideale per identificare problemi comuni e ottenere suggerimenti."
-                : "Funzionalità premium: analisi AI avanzata per diagnosi rapide e accurate."
-              }
-            </p>
-            {!hasAIAccess && (
-              <p className="text-xs text-orange-600 font-medium">
-                Aggiorna a Premium per accedere alla diagnosi AI
+            <CardDescription>
+              Consulenza diretta con il nostro esperto Marco Nigro
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="space-y-2 text-sm">
+              <div className="flex items-center gap-2">
+                <Users className="h-4 w-4 text-green-600" />
+                <span>Fitopatologo qualificato</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <MessageCircle className="h-4 w-4 text-blue-600" />
+                <span>Consulenza personalizzata</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Zap className="h-4 w-4 text-purple-600" />
+                <span>Risposta entro 24h</span>
+              </div>
+            </div>
+            
+            <Button 
+              onClick={handleExpertSelection}
+              className="w-full"
+              variant={(!hasExpertChatAccess && !isTestUser) ? "outline" : "default"}
+            >
+              {(!hasExpertChatAccess && !isTestUser) && <Lock className="h-4 w-4 mr-2" />}
+              {hasExpertChatAccess || isTestUser ? 'Chat con Esperto' : 'Richiede Premium'}
+            </Button>
+            
+            {!hasExpertChatAccess && !isTestUser && (
+              <p className="text-xs text-amber-600 text-center">
+                Disponibile per utenti Premium
               </p>
             )}
-          </div>
-        </div>
-      </div>
-
-      {/* Chat con Fitopatologo */}
-      <div className={`border-2 rounded-lg p-4 cursor-pointer transition-all ${
-        plantInfo.sendToExpert 
-          ? 'border-drplant-green bg-drplant-green/5' 
-          : 'border-gray-200 hover:border-drplant-green/50'
-      }`} onClick={() => handleExpertToggle()}>
-        <div className="flex items-start gap-3">
-          <div className="flex-shrink-0 mt-1">
-            {plantInfo.sendToExpert ? (
-              <CheckCircle className="w-5 h-5 text-drplant-green" />
-            ) : (
-              <Circle className="w-5 h-5 text-gray-400" />
-            )}
-          </div>
-          <div className="flex-1">
-            <div className="flex items-center gap-2 mb-2">
-              <h3 className="font-semibold text-gray-900">Chat con Fitopatologo</h3>
-              <Badge variant="outline" className="text-xs">
-                Gratuito
-              </Badge>
-            </div>
-            <p className="text-sm text-gray-600 mb-3">
-              Consulenza diretta con il Dr. Marco Nigro, fitopatologo esperto.
-              Ricevi consigli personalizzati e risposte professionali.
-            </p>
             
-            {plantInfo.sendToExpert && (
-              <div className="mt-4">
-                <DirectChatButton 
-                  uploadedImage={uploadedImage}
-                  isDisabled={!plantInfo.infoComplete}
-                />
-              </div>
+            {isTestUser && (
+              <p className="text-xs text-blue-600 text-center">
+                Accesso completo per test
+              </p>
             )}
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       </div>
-
-      {/* Pulsante di avvio diagnosi */}
-      {!plantInfo.sendToExpert && (
-        <Button
-          onClick={onStartDiagnosis}
-          disabled={!plantInfo.useAI || !plantInfo.infoComplete || !hasAIAccess}
-          className="bg-drplant-green hover:bg-drplant-green/90 text-white w-full disabled:opacity-50"
-        >
-          {hasAIAccess ? 'Avvia Diagnosi AI' : 'Aggiorna a Premium per Diagnosi AI'}
-        </Button>
-      )}
+      
+      <div className="bg-gray-50 rounded-lg p-4">
+        <p className="text-sm text-gray-700 text-center">
+          <strong>Raccomandazione:</strong> Inizia con l'analisi AI gratuita, poi passa alla consulenza premium 
+          per una valutazione professionale completa.
+        </p>
+      </div>
+      
+      {/* Paywall modale per la chat esperto */}
+      <PremiumPaywallModal
+        open={paywallOpen}
+        onClose={() => setPaywallOpen(false)}
+      />
     </div>
   );
 };

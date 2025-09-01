@@ -1,10 +1,12 @@
+
 import { useAuth } from '@/context/AuthContext';
 
 export const PREMIUM_TEST_EMAILS = [
-  'test@gmail.com', // Account premium per test
+  'test@gmail.com',
   'agrotecnicomarconigro@gmail.com',
-  'premium@gmail.com'
-  // talaiaandrea@gmail.com rimosso - ora è utente normale
+  'premium@gmail.com',
+  'talaiaandrea@gmail.com',
+  // Aggiungi altri email di test qui
 ];
 
 export const ADMIN_TEST_EMAILS = [
@@ -19,7 +21,7 @@ export class PremiumService {
   static hasExpertChatAccess(userEmail: string | undefined): boolean {
     if (!userEmail) return false;
     
-    // Solo account premium hanno accesso
+    // Account di test hanno sempre accesso
     return PREMIUM_TEST_EMAILS.includes(userEmail.toLowerCase());
   }
 
@@ -44,7 +46,7 @@ export class PremiumService {
   static hasUnlimitedDiagnosis(userEmail: string | undefined): boolean {
     if (!userEmail) return false;
     
-    // Solo account premium hanno accesso illimitato
+    // Account di test hanno sempre accesso illimitato
     return PREMIUM_TEST_EMAILS.includes(userEmail.toLowerCase());
   }
 

@@ -28,7 +28,7 @@ const rgbToHsv = (r: number, g: number, b: number) => {
 };
 
 /**
- * Verifica rigorosa che un'immagine contenga SOLO una pianta reale
+ * Verifica se un'immagine contiene effettivamente una pianta con criteri più realistici
  */
 export const verifyImageContainsPlant = async (imageFile: File): Promise<{
   isPlant: boolean;
@@ -62,10 +62,8 @@ export const verifyImageContainsPlant = async (imageFile: File): Promise<{
       let artificialPixels = 0;
       let brownPixels = 0;
       let skinPixels = 0;
-      let objectPixels = 0;
-      let uniformPixels = 0;
       
-      // Analizza ogni pixel con criteri PIÙ RIGOROSI
+      // Analizza ogni pixel con criteri più realistici
       for (let i = 0; i < pixels.length; i += 4) {
         const r = pixels[i];
         const g = pixels[i + 1];
@@ -73,44 +71,35 @@ export const verifyImageContainsPlant = async (imageFile: File): Promise<{
         
         totalPixels++;
         
-        // Rileva verde naturale delle piante (CRITERI PIÙ RIGOROSI)
-        const isNaturalGreen = (g > r + 15 && g > b + 15 && g > 60) || // Verde più dominante
-                              (g > 80 && r < 120 && b < 120 && g > (r + b) / 1.5) || // Verde scuro naturale
-                              (g > 100 && Math.abs(g - r) > 20 && Math.abs(g - b) > 20); // Verde con contrasto
+        // Rileva verde naturale delle piante (CRITERI PIÙ FLESSIBILI)
+        const isNaturalGreen = (g > r && g > b && g > 50) || // Verde classico
+                              (g > 40 && r < 100 && b < 100 && g > (r + b) / 2) || // Verde scuro
+                              (g > 60 && Math.abs(g - r) > 10 && Math.abs(g - b) > 10); // Verde variegate
         
-        // Rileva marroni naturali (tronchi, terra, vasi) - più selettivo
-        const isNaturalBrown = r > 80 && r < 160 && 
-                              g > 60 && g < 140 && 
-                              b > 30 && b < 120 && 
-                              Math.abs(r - g) < 40 &&
-                              (r > g && g > b); // Progressione naturale
+        // Rileva marroni naturali (tronchi, terra, vasi)
+        const isNaturalBrown = r > 60 && r < 180 && 
+                              g > 40 && g < 160 && 
+                              b > 20 && b < 140 && 
+                              Math.abs(r - g) < 60;
         
-        // Rileva altri colori naturali delle piante
-        const isOtherNatural = (r > 120 && r < 200 && g > 100 && g < 180 && b < 90) || // Gialli/arancioni autunnali
-                              (r > 80 && r < 150 && g > 60 && g < 120 && b > 40 && b < 100); // Toni terrosi
+        // Rileva altri colori naturali (foglie secche, fiori)
+        const isOtherNatural = (r > 100 && r < 200 && g > 80 && g < 180 && b < 100) || // Gialli/arancioni
+                              (r > 150 && g < 100 && b < 100) || // Rossi naturali
+                              (r > 80 && g > 80 && b < 80); // Verdi scuri
         
-        // Rileva colori artificiali (MOLTO più severo)
-        const isArtificial = (Math.abs(r - g) < 3 && Math.abs(g - b) < 3 && Math.abs(r - b) < 3) ||
-                            (r > 240 && g > 240 && b > 240) || // Bianco puro
-                            (r < 20 && g < 20 && b < 20) || // Nero puro
-                            ((r > 200 || g > 200 || b > 200) && 
-                             (Math.abs(r - g) > 100 || Math.abs(g - b) > 100)); // Colori troppo saturi
-        
-        // Rileva oggetti inorganici (metallo, plastica, vetro)
-        const isObject = (r > 180 && g > 180 && b > 180 && Math.abs(r - g) < 10) || // Superfici riflettenti
-                        (Math.abs(r - 128) < 20 && Math.abs(g - 128) < 20 && Math.abs(b - 128) < 20); // Grigio uniforme
-        
-        // Rileva uniformità eccessiva (non naturale)
-        const isUniform = Math.abs(r - g) < 5 && Math.abs(g - b) < 5 && Math.abs(r - b) < 5;
-        
-        // Rilevamento pelle/volto più accurato
+        // Rileva colori artificiali SOLO se molto uniformi
+        const isArtificial = (Math.abs(r - g) < 5 && Math.abs(g - b) < 5 && Math.abs(r - b) < 5) && // Molto uniformi
+                            ((r > 220 && g > 220 && b > 220) || // Bianchi puri
+                             (r < 30 && g < 30 && b < 30)); // Neri puri
+
+        // Rilevamento pelle/volto con YCbCr e HSV (blocca foto di persone)
         const { y, cb, cr } = rgbToYCbCr(r, g, b);
-        const skinYCbCr = cb >= 77 && cb <= 127 && cr >= 133 && cr <= 173 && y > 80 && y < 230;
+        const skinYCbCr = cb >= 77 && cb <= 127 && cr >= 133 && cr <= 173 && y > 60 && y < 245;
         const { h, s, v } = rgbToHsv(r, g, b);
-        const skinHSV = h >= 0 && h <= 50 && s >= 0.20 && s <= 0.68 && v >= 0.35 && v <= 0.95;
+        const skinHSV = h >= 0 && h <= 50 && s >= 0.23 && v >= 0.35 && v <= 0.98;
         const isSkin = skinYCbCr || skinHSV;
-        
         if (isSkin) skinPixels++;
+        
         if (isNaturalGreen) {
           greenPixels++;
           naturalPixels++;
@@ -121,11 +110,7 @@ export const verifyImageContainsPlant = async (imageFile: File): Promise<{
           naturalPixels++;
         } else if (isArtificial) {
           artificialPixels++;
-        } else if (isObject) {
-          objectPixels++;
         }
-        
-        if (isUniform) uniformPixels++;
       }
       
       const greenPercentage = (greenPixels / totalPixels) * 100;
@@ -133,17 +118,13 @@ export const verifyImageContainsPlant = async (imageFile: File): Promise<{
       const naturalPercentage = (naturalPixels / totalPixels) * 100;
       const artificialPercentage = (artificialPixels / totalPixels) * 100;
       const skinPercentage = (skinPixels / totalPixels) * 100;
-      const objectPercentage = (objectPixels / totalPixels) * 100;
-      const uniformPercentage = (uniformPixels / totalPixels) * 100;
       
-      // Criteri MOLTO PIÙ RIGOROSI per piante reali
-      const hasMinimumGreen = greenPercentage > 3; // Almeno 3% di verde naturale
-      const hasNaturalColors = naturalPercentage > 15; // Almeno 15% di colori naturali
-      const hasPlantIndicators = (greenPercentage + brownPercentage) > 5; // Verde + marrone > 5%
-      const tooMuchArtificial = artificialPercentage > 60; // Troppo artificiale
-      const tooMuchSkin = skinPercentage > 25; // Troppa pelle
-      const tooMuchObject = objectPercentage > 50; // Troppi oggetti
-      const tooUniform = uniformPercentage > 70; // Troppo uniforme
+      // Criteri FLESSIBILI per identificare una pianta reale
+      const hasMinimumGreen = greenPercentage > 1; // Almeno 1% di verde naturale
+      const hasNaturalColors = naturalPercentage > 8; // Almeno 8% di colori naturali
+      const hasPlantIndicators = (greenPercentage + brownPercentage) > 3; // Verde + marrone > 3%
+      const tooMuchArtificial = artificialPercentage > 80; // Troppo artificiale se > 80%
+      const tooMuchSkin = skinPercentage > 35 || (skinPercentage > 20 && greenPercentage < 5);
       
       let isPlant = false;
       let confidence = 0;
@@ -151,67 +132,52 @@ export const verifyImageContainsPlant = async (imageFile: File): Promise<{
       
       if (tooMuchSkin) {
         isPlant = false;
-        confidence = 0;
-        reason = `Rilevata persona nell'immagine (${skinPercentage.toFixed(1)}%). Usa solo foto di piante.`;
-        toast.error('❌ Immagine non valida', {
-          description: 'Rilevata una persona. Carica solo foto di piante, foglie, fiori o parti vegetali.',
-          duration: 6000
+        confidence = Math.max(0, 100 - skinPercentage);
+        reason = `Rilevata pelle/volto nell'immagine (${skinPercentage.toFixed(1)}%). Carica solo foto di piante.`;
+        toast.error('Immagine non valida', {
+          description: 'Rilevata una persona nell\'immagine. Per privacy e accuratezza, usa solo foto di piante ben visibili.',
+          duration: 5000
         });
-      } else if (tooMuchArtificial || tooMuchObject) {
+      } else if (tooMuchArtificial) {
         isPlant = false;
-        confidence = 0;
-        reason = `Troppi elementi artificiali (${(artificialPercentage + objectPercentage).toFixed(1)}%). Non è una pianta.`;
-        toast.error('❌ Immagine non valida', {
-          description: 'L\'immagine contiene troppi oggetti artificiali. Fotografa solo piante vere.',
-          duration: 6000
+        confidence = Math.max(0, 100 - artificialPercentage);
+        reason = `Troppi colori artificiali uniformi (${artificialPercentage.toFixed(1)}%). Non sembra una pianta reale.`;
+        toast.error('Immagine non valida', {
+          description: reason,
+          duration: 4000
         });
-      } else if (tooUniform) {
-        isPlant = false;
-        confidence = 0;
-        reason = `Immagine troppo uniforme (${uniformPercentage.toFixed(1)}%). Non sembra una pianta naturale.`;
-        toast.error('❌ Immagine non valida', {
-          description: 'L\'immagine è troppo uniforme. Usa foto di piante reali con dettagli naturali.',
-          duration: 6000
-        });
+      } else if (hasMinimumGreen && hasNaturalColors && hasPlantIndicators) {
+        isPlant = true;
+        confidence = Math.min(95, (greenPercentage * 6) + (naturalPercentage * 2) + (brownPercentage * 3));
+        reason = `Pianta rilevata: ${greenPercentage.toFixed(1)}% verde naturale, ${naturalPercentage.toFixed(1)}% colori naturali totali`;
       } else if (!hasMinimumGreen) {
         isPlant = false;
         confidence = Math.max(0, greenPercentage * 10);
-        reason = `Verde insufficiente (${greenPercentage.toFixed(1)}%). Serve almeno 3% di verde per identificare una pianta.`;
-        toast.error('🌿 Pianta non rilevata', {
-          description: 'L\'immagine non contiene abbastanza verde naturale. Fotografa foglie, steli o parti verdi della pianta.',
-          duration: 6000,
-          action: {
-            label: 'Consigli',
-            onClick: () => {
-              toast.info('📸 Consigli per foto migliori', {
-                description: '• Inquadra foglie verdi ben visibili\n• Usa luce naturale\n• Avvicinati alla pianta\n• Evita sfondi artificiali',
-                duration: 8000
-              });
-            }
-          }
+        reason = `Verde insufficiente (${greenPercentage.toFixed(1)}%). Serve almeno 1% di verde naturale per identificare una pianta.`;
+        toast.error('Pianta non rilevata', {
+          description: 'L\'immagine non contiene abbastanza verde naturale. Assicurati che la pianta sia ben visibile.',
+          duration: 5000
         });
-      } else if (!hasNaturalColors || !hasPlantIndicators) {
+      } else if (!hasNaturalColors) {
         isPlant = false;
-        confidence = Math.max(0, naturalPercentage * 3);
-        reason = `Colori non naturali (${naturalPercentage.toFixed(1)}% naturali). Non è una pianta vera.`;
-        toast.error('🌿 Pianta non identificata', {
-          description: 'L\'immagine non contiene abbastanza elementi naturali tipici delle piante.',
-          duration: 6000
+        confidence = Math.max(0, naturalPercentage * 4);
+        reason = `Colori naturali insufficienti (${naturalPercentage.toFixed(1)}%). Serve almeno 8% di colori naturali.`;
+        toast.error('Immagine non naturale', {
+          description: 'L\'immagine non contiene abbastanza colori naturali tipici delle piante.',
+          duration: 5000
         });
       } else {
-        // Pianta identificata con successo
-        isPlant = true;
-        confidence = Math.min(95, (greenPercentage * 4) + (naturalPercentage * 2) + (brownPercentage * 3));
-        reason = `Pianta rilevata: ${greenPercentage.toFixed(1)}% verde, ${naturalPercentage.toFixed(1)}% colori naturali`;
-        
-        toast.success('✅ Pianta rilevata!', {
-          description: `Pianta identificata con confidenza ${confidence.toFixed(1)}%. Ottima qualità dell'immagine.`,
+        isPlant = false;
+        confidence = Math.max(0, naturalPercentage * 2);
+        reason = `Criteri insufficienti: verde=${greenPercentage.toFixed(1)}%, naturali=${naturalPercentage.toFixed(1)}%`;
+        toast.error('Pianta non identificata', {
+          description: 'Non riesco a identificare chiaramente una pianta in questa immagine.',
           duration: 4000
         });
       }
       
-      console.log(`🔍 Analisi rigorosa: Verde=${greenPercentage.toFixed(1)}%, Naturale=${naturalPercentage.toFixed(1)}%, Artificiale=${artificialPercentage.toFixed(1)}%, Pelle=${skinPercentage.toFixed(1)}%`);
-      console.log(`🔍 Risultato finale: isPianta=${isPlant}, confidenza=${confidence.toFixed(1)}%`);
+      console.log(`🔍 Analisi immagine: Verde=${greenPercentage.toFixed(1)}%, Marrone=${brownPercentage.toFixed(1)}%, Naturale=${naturalPercentage.toFixed(1)}%, Artificiale=${artificialPercentage.toFixed(1)}%`);
+      console.log(`🔍 Risultato: isPianta=${isPlant}, confidenza=${confidence.toFixed(1)}%`);
       
       resolve({ isPlant, confidence, reason });
     };
@@ -225,7 +191,7 @@ export const verifyImageContainsPlant = async (imageFile: File): Promise<{
 };
 
 /**
- * Analisi qualità immagine più rigorosa
+ * Analisi avanzata per verificare che l'immagine sia di qualità sufficiente
  */
 export const analyzeImageQuality = (imageFile: File): {
   isGoodQuality: boolean;
@@ -235,29 +201,21 @@ export const analyzeImageQuality = (imageFile: File): {
   const issues: string[] = [];
   const recommendations: string[] = [];
   
-  // Controlla dimensioni file più rigorosamente
-  if (imageFile.size < 100000) { // < 100KB
-    issues.push('Immagine troppo piccola o molto compressa');
-    recommendations.push('Usa un\'immagine di almeno 100KB per migliore qualità');
+  // Controlla dimensioni file
+  if (imageFile.size < 50000) { // < 50KB
+    issues.push('Immagine troppo piccola o compressa');
+    recommendations.push('Usa un\'immagine di dimensioni maggiori');
   }
   
-  if (imageFile.size > 15000000) { // > 15MB
+  if (imageFile.size > 10000000) { // > 10MB
     issues.push('Immagine troppo grande');
-    recommendations.push('Riduci le dimensioni a meno di 15MB');
+    recommendations.push('Riduci le dimensioni dell\'immagine');
   }
   
-  // Controlla formato più rigorosamente
-  if (!['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/heic'].includes(imageFile.type)) {
+  // Controlla formato
+  if (!['image/jpeg', 'image/jpg', 'image/png', 'image/webp'].includes(imageFile.type)) {
     issues.push('Formato immagine non supportato');
-    recommendations.push('Usa JPG, PNG, WebP o HEIC');
-  }
-  
-  // Controlla nome file per escludere screenshot o immagini generate
-  const fileName = imageFile.name.toLowerCase();
-  if (fileName.includes('screenshot') || fileName.includes('screen') || 
-      fileName.includes('generated') || fileName.includes('artificial')) {
-    issues.push('Il nome file suggerisce che non sia una foto reale');
-    recommendations.push('Usa foto scattate direttamente di piante vere');
+    recommendations.push('Usa JPG, PNG o WebP');
   }
   
   const isGoodQuality = issues.length === 0;

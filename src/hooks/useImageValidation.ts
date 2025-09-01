@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { verifyImageContainsPlant, analyzeImageQuality } from '@/utils/plant-analysis/plantImageVerification';
@@ -20,9 +19,9 @@ export const useImageValidation = () => {
     setValidationResult(null);
 
     try {
-      console.log('🔍 Avvio validazione rigorosa immagine...');
+      console.log('🔍 Avvio validazione rapida immagine...');
       
-      // 1. Controllo qualità rigoroso dell'immagine
+      // 1. Controllo qualità base dell'immagine (veloce)
       const qualityCheck = analyzeImageQuality(imageFile);
       
       if (!qualityCheck.isGoodQuality) {
@@ -34,20 +33,20 @@ export const useImageValidation = () => {
           reason: `Problemi di qualità: ${qualityCheck.issues.join(', ')}`
         };
         
-        toast.error('❌ Immagine non valida', {
+        toast.error('Immagine non valida', {
           description: `${qualityCheck.issues.join(', ')}. ${qualityCheck.recommendations.join(', ')}.`,
-          duration: 6000
+          duration: 5000
         });
         
         setValidationResult(result);
         return result;
       }
 
-      // 2. Controllo RIGOROSO se contiene SOLO una pianta vera
+      // 2. Controllo veloce se contiene una pianta (analisi pixel)
       const plantCheck = await verifyImageContainsPlant(imageFile);
       
       const result = {
-        isValid: plantCheck.isPlant && plantCheck.confidence > 50, // Soglia più alta
+        isValid: plantCheck.isPlant && plantCheck.confidence > 30,
         isPlant: plantCheck.isPlant,
         confidence: plantCheck.confidence,
         qualityIssues: [],
@@ -55,10 +54,31 @@ export const useImageValidation = () => {
       };
 
       if (!result.isValid) {
-        // Il toast è già gestito dentro verifyImageContainsPlant
-        console.log('❌ Immagine respinta:', result.reason);
+        if (!plantCheck.isPlant) {
+          toast.error('Pianta non rilevata', {
+            description: 'Non riesco a identificare una pianta in questa immagine. Assicurati che la pianta sia ben visibile e abbia foglie verdi.',
+            duration: 6000,
+            action: {
+              label: 'Consigli',
+              onClick: () => {
+                toast.info('Consigli per foto migliori', {
+                  description: '• Inquadra foglie, fiori o parti verdi della pianta\n• Usa buona illuminazione naturale\n• Evita sfondi troppo uniformi\n• Avvicinati alla pianta per i dettagli',
+                  duration: 8000
+                });
+              }
+            }
+          });
+        } else if (plantCheck.confidence <= 30) {
+          toast.warning('Pianta poco chiara', {
+            description: `La pianta è rilevata ma con bassa confidenza (${plantCheck.confidence.toFixed(1)}%). Prova con un'immagine più chiara.`,
+            duration: 5000
+          });
+        }
       } else {
-        console.log('✅ Immagine validata con successo');
+        toast.success('Pianta rilevata!', {
+          description: `Pianta identificata con confidenza ${plantCheck.confidence.toFixed(1)}%. Procedo con la diagnosi completa.`,
+          duration: 3000
+        });
       }
 
       setValidationResult(result);
@@ -75,9 +95,9 @@ export const useImageValidation = () => {
         reason: 'Errore durante l\'analisi dell\'immagine'
       };
 
-      toast.error('❌ Errore di validazione', {
-        description: 'Errore durante l\'analisi dell\'immagine. Riprova con un\'altra foto di pianta.',
-        duration: 5000
+      toast.error('Errore di validazione', {
+        description: 'Errore durante l\'analisi dell\'immagine. Riprova con un\'altra foto.',
+        duration: 4000
       });
 
       setValidationResult(result);
