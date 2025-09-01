@@ -5,6 +5,7 @@ import { Card } from '@/components/ui/card';
 import { Camera, X, RotateCcw, Zap, ZapOff } from 'lucide-react';
 import { useCamera } from '@/hooks/useCamera';
 import CameraLoading from './camera/CameraLoading';
+import CameraControls from './camera/CameraControls';
 
 interface CameraCaptureProps {
   onCapture: (imageDataUrl: string) => void;
@@ -35,7 +36,6 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
     const imageDataUrl = capturePhoto();
     if (imageDataUrl) {
       console.log('📸 Photo captured successfully, keeping camera active for potential retakes');
-      // Non fermare la fotocamera qui - lascia che sia il componente padre a decidere
       onCapture(imageDataUrl);
     }
   };
@@ -50,6 +50,9 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
     console.log('🔄 Switch camera button clicked');
     switchCamera();
   };
+
+  // Check if we're on mobile
+  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
   if (error) {
     return (
@@ -70,11 +73,11 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
   }
 
   return (
-    <div className="min-h-screen bg-black relative">
+    <div className="min-h-screen bg-black relative overflow-hidden">
       {/* Video Stream */}
       <video
         ref={videoRef}
-        className="w-full h-full object-cover"
+        className="w-full h-full object-cover absolute inset-0"
         playsInline
         muted
         autoPlay
@@ -86,64 +89,43 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
       {/* Loading Overlay */}
       <CameraLoading visible={isLoading} />
 
-      {/* Camera Controls */}
+      {/* Top Controls (Flash and Switch Camera) */}
       {!isLoading && stream && (
-        <>
-          {/* Top Controls */}
-          <div className="absolute top-4 left-4 right-4 flex justify-between items-center">
+        <div className="absolute top-4 right-4 flex gap-2 z-10">
+          {hasFlash && (
             <Button
-              onClick={handleCancel}
+              onClick={toggleFlash}
               variant="secondary"
               size="sm"
-              className="bg-black bg-opacity-50 text-white border-white"
+              className={`bg-white/20 backdrop-blur-sm border border-white/30 shadow-lg ${
+                flashEnabled ? 'text-yellow-300' : 'text-white'
+              }`}
             >
-              <X className="h-4 w-4 mr-2" />
-              Annulla
+              {flashEnabled ? <Zap className="h-4 w-4" /> : <ZapOff className="h-4 w-4" />}
             </Button>
+          )}
 
-            <div className="flex gap-2">
-              {hasFlash && (
-                <Button
-                  onClick={toggleFlash}
-                  variant="secondary"
-                  size="sm"
-                  className={`bg-black bg-opacity-50 border-white ${
-                    flashEnabled ? 'text-yellow-400' : 'text-white'
-                  }`}
-                >
-                  {flashEnabled ? <Zap className="h-4 w-4" /> : <ZapOff className="h-4 w-4" />}
-                </Button>
-              )}
+          <Button
+            onClick={handleSwitchCamera}
+            variant="secondary"
+            size="sm"
+            className="bg-white/20 backdrop-blur-sm border border-white/30 text-white shadow-lg"
+          >
+            <RotateCcw className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
 
-              <Button
-                onClick={handleSwitchCamera}
-                variant="secondary"
-                size="sm"
-                className="bg-black bg-opacity-50 text-white border-white"
-              >
-                <RotateCcw className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-
-          {/* Bottom Controls */}
-          <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2">
-            <Button
-              onClick={handleCapture}
-              size="lg"
-              className="bg-white text-black hover:bg-gray-200 rounded-full w-16 h-16 p-0"
-            >
-              <Camera className="h-8 w-8" />
-            </Button>
-          </div>
-
-          {/* Camera Instructions */}
-          <div className="absolute bottom-24 left-1/2 transform -translate-x-1/2 text-center">
-            <p className="text-white text-sm bg-black bg-opacity-50 px-4 py-2 rounded-lg">
-              Posiziona la pianta nell'inquadratura e tocca per scattare
-            </p>
-          </div>
-        </>
+      {/* Camera Controls */}
+      {!isLoading && stream && (
+        <CameraControls
+          onCapture={handleCapture}
+          onCancel={handleCancel}
+          isMobile={isMobile}
+          canFlipCamera={true}
+          onFlipCamera={handleSwitchCamera}
+          isProcessing={false}
+        />
       )}
     </div>
   );
