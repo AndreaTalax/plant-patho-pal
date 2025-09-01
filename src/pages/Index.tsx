@@ -15,6 +15,8 @@ import { usePlantInfo } from "@/context/PlantInfoContext";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
+type TabType = 'diagnose' | 'shop' | 'profile' | 'chat' | 'library' | 'expert';
+
 const Index = () => {
   const { isMasterAccount, isAuthenticated, isProfileComplete, loading, userProfile } = useAuth();
   const { plantInfo } = usePlantInfo();
@@ -23,7 +25,7 @@ const Index = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [activeTab, setActiveTab] = useState<string>(isMasterAccount ? "expert" : "diagnose");
+  const [activeTab, setActiveTab] = useState<TabType>(isMasterAccount ? "expert" : "diagnose");
   const suppressAutoOpenRef = useRef(false);
 
   useEffect(() => {
@@ -152,7 +154,7 @@ const Index = () => {
     };
   }, [isMasterAccount, canAccessTabs, toast, t, activeTab]);
 
-  const handleSetActiveTab = (tab: string) => {
+  const handleSetActiveTab = (tab: TabType) => {
     if (isMasterAccount && tab === "diagnose") {
       setActiveTab("expert");
       return;
@@ -223,7 +225,7 @@ const Index = () => {
         setActiveTab={handleSetActiveTab}
         showExpertTab={isMasterAccount}
         plantInfoComplete={plantInfo.infoComplete}
-        canAccessTabs={canAccessTabs}
+        canAccessTabs={hasFirstDiagnosis || (plantInfo.infoComplete && (plantInfo.useAI || plantInfo.sendToExpert))}
       />
     </div>
   );

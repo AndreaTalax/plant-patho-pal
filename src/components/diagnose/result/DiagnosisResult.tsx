@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { CheckCircle, AlertTriangle, Info } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
@@ -241,13 +240,8 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
 
       <div className="mt-4">
         <ActionButtons
-          onStartNewAnalysis={onStartNewAnalysis}
-          onSaveDiagnosis={handleSaveDiagnosis}
-          onChatWithExpert={handleChatWithExpert}
-          saveLoading={resolvedSaveLoading}
-          hasValidAnalysis={!!effectiveDiagnosis}
-          useAI={true}
-          diagnosisData={diagnosisData}
+          onRetry={onStartNewAnalysis}
+          isRetrying={false}
         />
       </div>
     </div>
