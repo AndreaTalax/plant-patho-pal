@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/context/ThemeContext";
@@ -8,14 +9,13 @@ import ChatTab from "@/components/ChatTab";
 import LibraryTab from "@/components/LibraryTab";
 import ShopTab from "@/components/ShopTab";
 import ProfileTab from "@/components/ProfileTab";
-import ExpertTab from "@/components/ExpertTab";
 import BottomNavigation from "@/components/BottomNavigation";
 import { ensureStorageBuckets } from "@/utils/storageSetup";
 import { usePlantInfo } from "@/context/PlantInfoContext";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
-type TabType = 'diagnose' | 'shop' | 'profile' | 'chat' | 'library' | 'expert';
+type TabType = 'diagnose' | 'shop' | 'profile' | 'chat' | 'library';
 
 const Index = () => {
   const { isMasterAccount, isAuthenticated, isProfileComplete, loading, userProfile } = useAuth();
@@ -25,7 +25,7 @@ const Index = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [activeTab, setActiveTab] = useState<TabType>(isMasterAccount ? "expert" : "diagnose");
+  const [activeTab, setActiveTab] = useState<TabType>("diagnose");
   const suppressAutoOpenRef = useRef(false);
 
   useEffect(() => {
@@ -57,23 +57,12 @@ const Index = () => {
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const tabParam = params.get('tab');
-    const validTabs: TabType[] = ['diagnose', 'shop', 'profile', 'chat', 'library', 'expert'];
+    const validTabs: TabType[] = ['diagnose', 'shop', 'profile', 'chat', 'library'];
     
     if (tabParam && validTabs.includes(tabParam as TabType)) {
-      const validTab = tabParam as TabType;
-      if (isMasterAccount && validTab === 'diagnose') {
-        setActiveTab('expert');
-      } else {
-        setActiveTab(validTab);
-      }
+      setActiveTab(tabParam as TabType);
     }
-  }, [location.search, isMasterAccount]);
-
-  useEffect(() => {
-    if (isMasterAccount && activeTab === "diagnose") {
-      setActiveTab("expert");
-    }
-  }, [isMasterAccount, activeTab]);
+  }, [location.search]);
 
   // Se l'utente ha una conversazione attiva, apri automaticamente la chat
   useEffect(() => {
@@ -100,11 +89,6 @@ const Index = () => {
     autoOpenChatIfMessages();
   }, [isAuthenticated, userProfile?.id, isMasterAccount, activeTab, location.search]);
 
-  // Non forzare più il redirect; l'utente può navigare liberamente tra le tab
-  useEffect(() => {
-    // intentionally left blank
-  }, [canAccessTabs, activeTab, isMasterAccount]);
-
   useEffect(() => {
     const handleSwitchTab = (event: CustomEvent) => {
       console.log("🎧 Index.tsx - handleSwitchTab called");
@@ -117,12 +101,6 @@ const Index = () => {
       
       const newTab = event.detail as TabType;
       console.log("🎧 New tab requested:", newTab);
-
-      if (isMasterAccount && newTab === "diagnose") {
-        console.log("🎧 Master account + diagnose -> Setting to expert");
-        setActiveTab("expert");
-        return;
-      }
       
       // Se l'utente chiede esplicitamente Diagnosi, non auto-aprire la chat
       if (newTab === "diagnose") {
@@ -158,10 +136,6 @@ const Index = () => {
   }, [isMasterAccount, canAccessTabs, toast, t, activeTab]);
 
   const handleSetActiveTab = (tab: TabType) => {
-    if (isMasterAccount && tab === "diagnose") {
-      setActiveTab("expert");
-      return;
-    }
     // Consenti la navigazione a tutte le tab; nessun redirect forzato
 
     if (tab === 'chat') {
@@ -188,19 +162,6 @@ const Index = () => {
   }
 
   const renderTabContent = () => {
-    if (isMasterAccount) {
-      switch (activeTab) {
-        case "expert":
-          return <ExpertTab />;
-        case "shop":
-          return <ShopTab />;
-        case "profile":
-          return <ProfileTab />;
-        default:
-          return <ExpertTab />;
-      }
-    }
-    
     switch (activeTab) {
       case "diagnose":
         return <DiagnoseTab />;

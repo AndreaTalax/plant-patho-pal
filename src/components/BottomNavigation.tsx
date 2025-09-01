@@ -1,8 +1,8 @@
 
 import React from 'react';
-import { Leaf, ShoppingBag, User, MessageCircle, BookOpen, Stethoscope } from 'lucide-react';
+import { Leaf, ShoppingBag, User, MessageCircle, BookOpen } from 'lucide-react';
 
-type TabType = 'diagnose' | 'shop' | 'profile' | 'chat' | 'library' | 'expert';
+type TabType = 'diagnose' | 'shop' | 'profile' | 'chat' | 'library';
 
 interface BottomNavigationProps {
   activeTab: TabType;
@@ -28,7 +28,6 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
     { id: 'shop' as TabType, icon: ShoppingBag, label: 'Shop' },
     { id: 'library' as TabType, icon: BookOpen, label: 'Libreria' },
     { id: 'chat' as TabType, icon: MessageCircle, label: 'Chat' },
-    { id: 'expert' as TabType, icon: Stethoscope, label: 'Esperto' },
     { id: 'profile' as TabType, icon: User, label: 'Profilo' },
   ];
 
