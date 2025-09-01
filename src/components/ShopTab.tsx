@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { ShoppingCart } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import CartDialog from "@/components/shop/CartDialog";
+import FloatingCartButton from "@/components/shop/FloatingCartButton";
 import { useShoppingCart } from "@/hooks/useShoppingCart";
 import { ProductCard } from "@/components/shop/ProductCard";
 import { Input } from "@/components/ui/input";
@@ -28,6 +29,7 @@ const ShopTab = () => {
   }, [searchTerm, priceRange]);
 
   const totalPrice = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  const totalItems = cartItems.reduce((sum, item) => sum + item.quantity, 0);
 
   return (
     <div className="space-y-6 pb-24 pt-8 px-4">
@@ -44,7 +46,7 @@ const ShopTab = () => {
             Carrello
             {cartItems.length > 0 && (
               <Badge variant="destructive" className="ml-2 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs">
-                {cartItems.length}
+                {totalItems}
               </Badge>
             )}
           </Button>
@@ -86,6 +88,12 @@ const ShopTab = () => {
           />
         ))}
       </div>
+
+      {/* Floating Cart Button */}
+      <FloatingCartButton 
+        itemCount={totalItems}
+        onClick={() => setShowCart(true)}
+      />
 
       <CartDialog
         isOpen={showCart}
