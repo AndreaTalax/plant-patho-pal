@@ -27,14 +27,19 @@ const Index = () => {
   const [activeTab, setActiveTab] = useState<string>(isMasterAccount ? "expert" : "diagnose");
   const suppressAutoOpenRef = useRef(false);
 
+  // Reindirizza al login se non autenticato
   useEffect(() => {
     if (!loading && !isAuthenticated) {
       console.log('🔒 Utente non autenticato, reindirizzamento al login...');
       navigate('/login');
+      return;
     }
   }, [isAuthenticated, loading, navigate]);
 
-  // Removed the profile completion check - users can access all tabs directly
+  // Se ancora in caricamento o non autenticato, non renderizzare nulla
+  if (loading || !isAuthenticated) {
+    return null;
+  }
 
   const hasFirstDiagnosis =
     typeof window !== 'undefined' && (
@@ -157,21 +162,6 @@ const Index = () => {
     }
     setActiveTab(tab);
   };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-drplant-green/5 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-drplant-green mx-auto mb-4"></div>
-          <p className="text-gray-600">{t("loading")}</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!isAuthenticated) {
-    return null;
-  }
 
   const renderTabContent = () => {
     if (isMasterAccount) {
