@@ -1,5 +1,3 @@
-
-
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/context/ThemeContext";
@@ -58,12 +56,15 @@ const Index = () => {
   // Legge il tab dalla querystring (es. /?tab=diagnose) e lo applica con priorità
   useEffect(() => {
     const params = new URLSearchParams(location.search);
-    const tabParam = params.get('tab') as TabType;
-    if (tabParam && ['diagnose', 'shop', 'profile', 'chat', 'library', 'expert'].includes(tabParam)) {
-      if (isMasterAccount && tabParam === 'diagnose') {
+    const tabParam = params.get('tab');
+    const validTabs: TabType[] = ['diagnose', 'shop', 'profile', 'chat', 'library', 'expert'];
+    
+    if (tabParam && validTabs.includes(tabParam as TabType)) {
+      const validTab = tabParam as TabType;
+      if (isMasterAccount && validTab === 'diagnose') {
         setActiveTab('expert');
       } else {
-        setActiveTab(tabParam);
+        setActiveTab(validTab);
       }
     }
   }, [location.search, isMasterAccount]);
@@ -141,11 +142,7 @@ const Index = () => {
       // Accesso aperto alle altre tab anche se canAccessTabs è false
       // (nessun redirect automatico)
       // Non auto-aprire la chat quando l'utente sceglie altre tab
-      if (newTab === 'chat') {
-        suppressAutoOpenRef.current = false;
-      } else {
-        suppressAutoOpenRef.current = true;
-      }
+      suppressAutoOpenRef.current = true;
       console.log("🎧 Setting active tab to:", newTab);
       setActiveTab(newTab);
       console.log("🎧 Tab switch completed");
@@ -235,4 +232,3 @@ const Index = () => {
 };
 
 export default Index;
-
