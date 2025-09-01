@@ -1,11 +1,10 @@
+
 import React, { useEffect, useState } from 'react';
 import { toast } from '@/components/ui/sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { ShoppingBag, Star, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { useCart } from '@/context/CartContext';
-import CartDrawer from '@/components/shop/CartDrawer';
 
 interface SelectedProduct {
   id: string;
@@ -29,7 +28,6 @@ const ShopTab = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
-  const { addItem } = useCart();
 
   useEffect(() => {
     // Controlla se c'è un prodotto selezionato dalla diagnosi
@@ -81,30 +79,16 @@ const ShopTab = () => {
 
   const categories = ['all', ...Array.from(new Set(products.map(p => p.category).filter(Boolean)))];
 
-  const handleAddToCart = (product: Product) => {
-    if (product.stock_quantity === 0) {
-      toast.error('Prodotto non disponibile');
-      return;
-    }
-
-    addItem({
-      id: product.id,
-      name: product.name,
-      price: product.price,
-      image_url: product.image_url
-    });
+  const handleProductClick = (product: Product) => {
+    toast.info(`Prodotto selezionato: ${product.name}`);
+    // Qui potresti implementare l'aggiunta al carrello o altre azioni
   };
 
   return (
     <div className="space-y-6">
       <div className="text-center">
-        <div className="flex items-center justify-between">
-          <div className="flex-1">
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Negozio</h2>
-            <p className="text-gray-600">Trova i prodotti migliori per le tue piante</p>
-          </div>
-          <CartDrawer />
-        </div>
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">Negozio</h2>
+        <p className="text-gray-600">Trova i prodotti migliori per le tue piante</p>
       </div>
 
       {/* Prodotto selezionato dalla diagnosi */}
@@ -146,7 +130,8 @@ const ShopTab = () => {
           {filteredProducts.map((product) => (
             <div
               key={product.id}
-              className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm hover:shadow-md transition-shadow"
+              className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+              onClick={() => handleProductClick(product)}
             >
               <div className="flex items-start gap-3">
                 <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden">
@@ -199,7 +184,6 @@ const ShopTab = () => {
                 className="w-full mt-3 bg-green-600 hover:bg-green-700"
                 size="sm"
                 disabled={product.stock_quantity === 0}
-                onClick={() => handleAddToCart(product)}
               >
                 <ShoppingBag className="w-4 h-4 mr-2" />
                 {product.stock_quantity === 0 ? 'Esaurito' : 'Aggiungi al carrello'}
