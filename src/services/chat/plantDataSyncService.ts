@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { MARCO_NIGRO_ID } from '@/components/phytopathologist';
 import { PlantInfo } from '@/context/PlantInfoContext';
@@ -10,7 +9,7 @@ export class PlantDataSyncService {
    */
   static async syncPlantDataToChat(userId: string, plantInfo: PlantInfo, imageUrl?: string, uploadedFile?: File): Promise<{ success: boolean; finalImageUrl?: string }> {
     try {
-      console.log('🔄 Syncing plant data to existing chat...', { userId, plantInfo, imageUrl });
+      console.log('🔄 Syncing plant data to existing chat...', { userId, plantInfo, imageUrl, hasFile: !!uploadedFile });
 
       // Ottieni la sessione per l'autenticazione
       const { data: { session } } = await supabase.auth.getSession();
@@ -19,32 +18,46 @@ export class PlantDataSyncService {
         return { success: false };
       }
 
-      // Upload image to Supabase Storage if it's a blob URL
       let finalImageUrl = imageUrl;
-      if (imageUrl && imageUrl.startsWith('blob:') && uploadedFile) {
-        console.log('📸 Uploading image to Supabase Storage...');
-        const fileName = `${Date.now()}.jpg`;
-        const filePath = `${userId}/${fileName}`;
-        
-        const { data: storageData, error: storageError } = await supabase.storage
-          .from('plant-images')
-          .upload(filePath, uploadedFile, {
-            cacheControl: '3600',
-            upsert: false
-          });
 
-        if (storageError) {
-          console.error('❌ Error uploading image to storage:', storageError);
-          finalImageUrl = undefined; // Continue without image if upload fails
-        } else {
-          // Get public URL
-          const { data: urlData } = supabase.storage
-            .from('plant-images')
-            .getPublicUrl(filePath);
-          
-          finalImageUrl = urlData.publicUrl;
-          console.log('✅ Image uploaded to storage:', finalImageUrl);
+      // Gestione migliorata dell'upload dell'immagine
+      if (imageUrl || uploadedFile) {
+        console.log('📸 Processing plant image...', {
+          imageUrl: imageUrl?.substring(0, 50) + '...',
+          hasFile: !!uploadedFile,
+          isBlobUrl: imageUrl?.startsWith('blob:')
+        });
+
+        // Se abbiamo un file direttamente, caricalo
+        if (uploadedFile) {
+          finalImageUrl = await this.uploadImageToStorage(uploadedFile, userId);
         }
+        // Se abbiamo solo un blob URL, convertilo e caricalo
+        else if (imageUrl && imageUrl.startsWith('blob:')) {
+          try {
+            const response = await fetch(imageUrl);
+            const blob = await response.blob();
+            const file = new File([blob], `plant-${Date.now()}.jpg`, { type: 'image/jpeg' });
+            finalImageUrl = await this.uploadImageToStorage(file, userId);
+          } catch (error) {
+            console.error('❌ Error converting blob to file:', error);
+            finalImageUrl = imageUrl; // Fallback al blob URL originale
+          }
+        }
+        // Se abbiamo un data URL (base64), convertilo e caricalo
+        else if (imageUrl && imageUrl.startsWith('data:image/')) {
+          try {
+            const response = await fetch(imageUrl);
+            const blob = await response.blob();
+            const file = new File([blob], `plant-${Date.now()}.jpg`, { type: 'image/jpeg' });
+            finalImageUrl = await this.uploadImageToStorage(file, userId);
+          } catch (error) {
+            console.error('❌ Error converting data URL to file:', error);
+            finalImageUrl = imageUrl; // Fallback al data URL originale
+          }
+        }
+
+        console.log('✅ Final image URL prepared:', finalImageUrl?.substring(0, 50) + '...');
       }
 
       // Trova la conversazione esistente
@@ -64,7 +77,6 @@ export class PlantDataSyncService {
       let conversationId: string;
 
       if (!conversations || conversations.length === 0) {
-        // Genera un nuovo ID di conversazione
         conversationId = crypto.randomUUID();
         console.log('🆕 Creating new conversation with ID:', conversationId);
       } else {
@@ -97,9 +109,9 @@ export class PlantDataSyncService {
 
       console.log('✅ Plant data message sent successfully');
 
-      // Se c'è un'immagine, inviala come messaggio separato
+      // Se c'è un'immagine, inviala SEMPRE come messaggio separato
       if (finalImageUrl) {
-        console.log('📸 Sending plant image...');
+        console.log('📸 Sending plant image as separate message...');
         const imageMessage = `📸 Immagine della pianta per la diagnosi`;
         
         const { data: imageResult, error: imageError } = await supabase.functions.invoke('send-message', {
@@ -117,10 +129,13 @@ export class PlantDataSyncService {
 
         if (imageError) {
           console.error('❌ Error sending plant image:', imageError);
-          return { success: false };
+          // Non fallire l'intera operazione per un errore nell'immagine
+          toast.warning('Dati inviati ma errore nell\'invio dell\'immagine');
+        } else {
+          console.log('✅ Plant image sent successfully');
         }
-
-        console.log('✅ Plant image sent successfully');
+      } else {
+        console.log('ℹ️ No image to send');
       }
 
       // Se ci sono risultati AI, inviali come messaggio separato
@@ -143,22 +158,64 @@ export class PlantDataSyncService {
 
         if (aiError) {
           console.error('❌ Error sending AI diagnosis:', aiError);
-          return { success: false };
+        } else {
+          console.log('✅ AI diagnosis sent successfully');
         }
-
-        console.log('✅ AI diagnosis sent successfully');
       }
 
       console.log('✅ Plant data synced successfully to chat');
       
       // Emetti evento per notificare che i dati sono stati sincronizzati
-      window.dispatchEvent(new CustomEvent('plantDataSynced'));
+      window.dispatchEvent(new CustomEvent('plantDataSynced', { 
+        detail: { conversationId, finalImageUrl }
+      }));
       
       return { success: true, finalImageUrl };
 
     } catch (error) {
       console.error('❌ Error syncing plant data to chat:', error);
       return { success: false };
+    }
+  }
+
+  /**
+   * Upload dell'immagine su Supabase Storage
+   */
+  private static async uploadImageToStorage(file: File, userId: string): Promise<string> {
+    try {
+      console.log('📤 Uploading image to Supabase Storage...', {
+        fileName: file.name,
+        fileSize: file.size,
+        fileType: file.type
+      });
+
+      const fileExt = file.name.split('.').pop() || 'jpg';
+      const fileName = `${userId}/plant-${Date.now()}.${fileExt}`;
+      
+      const { data: storageData, error: storageError } = await supabase.storage
+        .from('plant-images')
+        .upload(fileName, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
+
+      if (storageError) {
+        console.error('❌ Error uploading image to storage:', storageError);
+        throw storageError;
+      }
+
+      // Get public URL
+      const { data: urlData } = supabase.storage
+        .from('plant-images')
+        .getPublicUrl(fileName);
+      
+      const publicUrl = urlData.publicUrl;
+      console.log('✅ Image uploaded to storage:', publicUrl);
+      return publicUrl;
+
+    } catch (error) {
+      console.error('❌ Error in uploadImageToStorage:', error);
+      throw error;
     }
   }
 
@@ -232,7 +289,7 @@ export class PlantDataSyncService {
   }
 
   /**
-   * Verifica se i dati della pianta sono già stati sincronizzati
+   * Verifica se i dati della pianta sono già stati sincronizzati OGGI
    */
   static async isPlantDataSynced(userId: string): Promise<boolean> {
     try {
@@ -249,27 +306,34 @@ export class PlantDataSyncService {
 
       const conversationId = conversations[0].id;
 
-      // Poi cerca i messaggi con metadata di sincronizzazione
+      // Cerca messaggi inviati oggi con dati della pianta
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
       const { data: messages, error: msgError } = await supabase
         .from('messages')
-        .select('metadata')
+        .select('content, sent_at')
         .eq('conversation_id', conversationId)
-        .not('metadata', 'is', null);
+        .gte('sent_at', today.toISOString())
+        .ilike('content', '%DATI AUTOMATICI DELLA PIANTA%');
 
       if (msgError || !messages) {
         return false;
       }
 
-      // Controlla se esiste già un messaggio con dati della pianta sincronizzati
-      const hasSyncedData = messages.some((msg: any) => 
-        msg.metadata && 
-        (msg.metadata.type === 'plant_data_sync' || msg.metadata.autoSynced === true)
-      );
-
-      return hasSyncedData;
+      // Se ci sono messaggi con dati della pianta inviati oggi
+      return messages.length > 0;
     } catch (error) {
       console.error('Error checking plant data sync status:', error);
       return false;
     }
+  }
+
+  /**
+   * Forza la re-sincronizzazione dei dati della pianta
+   */
+  static async forceSyncPlantData(userId: string, plantInfo: PlantInfo, imageUrl?: string, uploadedFile?: File): Promise<{ success: boolean; finalImageUrl?: string }> {
+    console.log('🔄 Force syncing plant data...');
+    return this.syncPlantDataToChat(userId, plantInfo, imageUrl, uploadedFile);
   }
 }

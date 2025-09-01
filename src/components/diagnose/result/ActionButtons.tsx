@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { MessageCircle, Save, Repeat } from 'lucide-react';
@@ -44,17 +45,34 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
       // Aggiorna il context
       setPlantInfo(updatedPlantInfo);
 
+      // Prepara il file dell'immagine se disponibile
+      let imageFile: File | undefined;
+      if (uploadedImage && typeof uploadedImage !== 'string') {
+        imageFile = uploadedImage;
+      } else if (typeof uploadedImage === 'string' && uploadedImage.startsWith('blob:')) {
+        // Converte il blob URL in File
+        try {
+          const response = await fetch(uploadedImage);
+          const blob = await response.blob();
+          imageFile = new File([blob], `plant-${Date.now()}.jpg`, { type: 'image/jpeg' });
+        } catch (error) {
+          console.warn('Could not convert blob to file:', error);
+        }
+      }
+
       // Sincronizza automaticamente i dati con la chat
       const syncResult = await PlantDataSyncService.syncPlantDataToChat(
         user.id, 
         updatedPlantInfo, 
         updatedPlantInfo.uploadedImageUrl,
-        typeof uploadedImage !== 'string' ? uploadedImage : undefined
+        imageFile
       );
 
       if (syncResult.success) {
-        console.log('✅ Dati sincronizzati con successo alla chat');
-        toast.success('Dati inviati automaticamente all\'esperto!');
+        console.log('✅ Dati e immagine sincronizzati con successo alla chat');
+        toast.success('Dati e immagine inviati automaticamente all\'esperto!', {
+          description: 'Tutte le informazioni sono state trasmesse'
+        });
         
         // Use the navigation utility to redirect to chat
         NavigationUtils.redirectToChat();
