@@ -2,7 +2,10 @@
 import React, { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Send, X, Mic, Square, AlertCircle } from "lucide-react";
-import { toast } from "sonner";
+import { enhancedToast } from "@/components/ui/enhanced-toast";
+import { AudioWaveform } from "@/components/audio/AudioWaveform";
+import { accessibilityManager, voiceOverAnnouncements } from "@/utils/accessibility";
+import { triggerHaptic } from "@/utils/hapticFeedback";
 import { supabase } from '@/integrations/supabase/client';
 
 interface AudioRecorderProps {
@@ -28,6 +31,7 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
+  const [recordingStream, setRecordingStream] = useState<MediaStream | null>(null);
 
   const checkMicrophonePermission = async () => {
     try {
@@ -52,14 +56,18 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({
     } catch (error) {
       console.error('❌ Permesso microfono negato:', error);
       setPermissionDenied(true);
-      toast.error('Permesso microfono negato. Abilita l\'accesso al microfono nelle impostazioni del browser.');
+      enhancedToast.error('Permesso microfono negato', {
+        description: 'Abilita l\'accesso al microfono nelle impostazioni del browser.'
+      });
       return false;
     }
   };
 
   const startRecording = async () => {
     if (!navigator.mediaDevices?.getUserMedia) {
-      toast.error("Il tuo browser non supporta la registrazione audio");
+      enhancedToast.error("Browser non supportato", {
+        description: "Il tuo browser non supporta la registrazione audio"
+      });
       return;
     }
 
@@ -85,6 +93,10 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({
       });
       
       streamRef.current = stream;
+      setRecordingStream(stream);
+      
+      triggerHaptic('medium');
+      voiceOverAnnouncements.audioRecordingStarted();
       audioChunksRef.current = [];
       
       const mediaRecorder = new MediaRecorder(stream, {
@@ -109,17 +121,21 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({
           streamRef.current.getTracks().forEach(track => track.stop());
           streamRef.current = null;
         }
+        setRecordingStream(null);
+        
+        triggerHaptic('success');
+        voiceOverAnnouncements.audioRecordingStopped();
       };
 
       mediaRecorder.onerror = (event) => {
         console.error('❌ Errore MediaRecorder:', event);
-        toast.error('Errore durante la registrazione');
+        enhancedToast.error('Errore durante la registrazione');
         stopRecording();
       };
 
       mediaRecorder.start(100);
       console.log('✅ Registrazione avviata');
-      toast.success('🎤 Registrazione avviata');
+      enhancedToast.success('🎤 Registrazione avviata');
       
     } catch (error: any) {
       console.error('❌ Errore accesso microfono:', error);
@@ -127,9 +143,13 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({
       
       if (error.name === 'NotAllowedError') {
         setPermissionDenied(true);
-        toast.error('Permesso microfono negato. Clicca sull\'icona del microfono nella barra dell\'indirizzo per abilitarlo.');
+        enhancedToast.error('Permesso microfono negato', {
+          description: 'Clicca sull\'icona del microfono nella barra dell\'indirizzo per abilitarlo.'
+        });
       } else {
-        toast.error("Errore nell'accedere al microfono. Verifica le impostazioni del browser.");
+        enhancedToast.error("Errore microfono", {
+          description: "Errore nell'accedere al microfono. Verifica le impostazioni del browser."
+        });
       }
     }
   };
@@ -146,6 +166,7 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({
       streamRef.current.getTracks().forEach(track => track.stop());
       streamRef.current = null;
     }
+    setRecordingStream(null);
   };
 
   const resetAudio = () => {
@@ -189,15 +210,17 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({
 
         console.log('✅ Audio inviato con successo');
         resetAudio();
-        toast.success('🎵 Messaggio vocale inviato!');
+        enhancedToast.success('🎵 Messaggio vocale inviato!');
+        voiceOverAnnouncements.messageSent();
       } else {
         await onSendAudio(audioBlob);
         resetAudio();
-        toast.success('🎵 Messaggio vocale inviato!');
+        enhancedToast.success('🎵 Messaggio vocale inviato!');
+        voiceOverAnnouncements.messageSent();
       }
     } catch (error) {
       console.error('❌ Errore invio audio:', error);
-      toast.error('Errore nell\'invio del messaggio vocale');
+      enhancedToast.error('Errore invio messaggio vocale');
     } finally {
       setIsProcessing(false);
     }
@@ -264,20 +287,35 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({
           </Button>
         </div>
       ) : isRecording ? (
-        <div className="flex items-center gap-3 text-red-600 font-semibold bg-red-50 px-3 py-2 rounded-lg border border-red-200">
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
-            <span>Registrazione in corso...</span>
+        <div className="space-y-2">
+          {/* Waveform Visualization */}
+          <div className="h-12 bg-red-50 rounded-lg border border-red-200 overflow-hidden">
+            <AudioWaveform
+              audioStream={recordingStream}
+              isRecording={true}
+              className="w-full h-full"
+              color="#dc2626"
+              backgroundColor="rgba(220, 38, 38, 0.1)"
+            />
           </div>
-          <Button 
-            variant="destructive" 
-            onClick={stopRecording} 
-            size="sm"
-            className="ml-auto"
-          >
-            <Square className="h-4 w-4 mr-1" />
-            Stop
-          </Button>
+          
+          {/* Recording Controls */}
+          <div className="flex items-center gap-3 text-red-600 font-semibold bg-red-50 px-3 py-2 rounded-lg border border-red-200">
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
+              <span>Registrazione in corso...</span>
+            </div>
+            <Button 
+              variant="destructive" 
+              onClick={stopRecording} 
+              size="sm"
+              className="ml-auto"
+              aria-label="Ferma registrazione"
+            >
+              <Square className="h-4 w-4 mr-1" />
+              Stop
+            </Button>
+          </div>
         </div>
       ) : (
         <Button

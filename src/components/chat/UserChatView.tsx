@@ -40,7 +40,11 @@ const UserChatView = ({ userId }: UserChatViewProps) => {
         onBackClick={handleBackClick} 
         isConnected={false}
       />
-      <MessageList messages={messages} />
+      <MessageList 
+        messages={messages} 
+        isTyping={isSending}
+        typingUser="Esperto"
+      />
       <MessageInput 
         conversationId="temp-conversation"
         senderId={userId}

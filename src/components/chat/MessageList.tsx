@@ -4,13 +4,16 @@ import ChatMessage from './ChatMessage';
 import { Message } from './types';
 import { MessageCircle, Sparkles } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { TypingIndicator } from '@/components/ui/typing-animation';
 
 interface MessageListProps {
   messages: Message[];
   isExpertView?: boolean;
+  isTyping?: boolean;
+  typingUser?: string;
 }
 
-const MessageList = ({ messages, isExpertView = false }: MessageListProps) => {
+const MessageList = ({ messages, isExpertView = false, isTyping = false, typingUser }: MessageListProps) => {
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll to bottom when new messages arrive
@@ -96,6 +99,25 @@ const MessageList = ({ messages, isExpertView = false }: MessageListProps) => {
                     </div>
                   );
                 })}
+                
+                {/* Typing Indicator */}
+                {isTyping && (
+                  <div className="w-full flex justify-start">
+                    <div className="bg-white/90 backdrop-blur-sm rounded-2xl px-4 py-3 shadow-sm border border-gray-200/50 max-w-xs">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
+                          <span className="text-xs font-medium text-gray-600">
+                            {typingUser ? typingUser.charAt(0).toUpperCase() : 'E'}
+                          </span>
+                        </div>
+                        <TypingIndicator 
+                          show={true} 
+                          message={typingUser ? `${typingUser} sta scrivendo` : 'Sta scrivendo'}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
               </>
             )}
           </div>
