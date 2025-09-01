@@ -33,27 +33,30 @@ const ShopTab = () => {
 
   return (
     <div className="space-y-6 pb-24 pt-8 px-4">
-      <div className="text-center">
-        <div className="flex items-center justify-center gap-4 mb-2">
+      {/* Header with prominent cart button */}
+      <div className="flex items-center justify-between mb-6">
+        <div>
           <h2 className="text-2xl font-bold text-gray-900">Negozio</h2>
-          <Button
-            onClick={() => setShowCart(true)}
-            variant="outline"
-            size="sm"
-            className="relative"
-          >
-            <ShoppingCart className="h-4 w-4 mr-2" />
-            Carrello
-            {cartItems.length > 0 && (
-              <Badge variant="destructive" className="ml-2 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs">
-                {totalItems}
-              </Badge>
-            )}
-          </Button>
+          <p className="text-gray-600">
+            Trova i prodotti migliori per la cura delle tue piante
+          </p>
         </div>
-        <p className="text-gray-600">
-          Trova i prodotti migliori per la cura delle tue piante
-        </p>
+        <Button
+          onClick={() => setShowCart(true)}
+          size="lg"
+          className="relative bg-green-600 hover:bg-green-700 text-white px-6 py-3 text-base font-semibold shadow-lg"
+        >
+          <ShoppingCart className="h-5 w-5 mr-2" />
+          Carrello
+          {totalItems > 0 && (
+            <Badge 
+              variant="destructive" 
+              className="ml-2 h-6 w-6 rounded-full p-0 flex items-center justify-center text-sm font-bold animate-pulse"
+            >
+              {totalItems > 99 ? '99+' : totalItems}
+            </Badge>
+          )}
+        </Button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

@@ -17,13 +17,13 @@ const FloatingCartButton: React.FC<FloatingCartButtonProps> = ({ itemCount, onCl
       <Button
         onClick={onClick}
         size="lg"
-        className="relative rounded-full w-14 h-14 bg-green-600 hover:bg-green-700 shadow-lg"
+        className="relative rounded-full w-16 h-16 bg-green-600 hover:bg-green-700 shadow-2xl hover:shadow-3xl transition-all duration-300 animate-bounce"
       >
-        <ShoppingCart className="h-6 w-6 text-white" />
+        <ShoppingCart className="h-7 w-7 text-white" />
         {itemCount > 0 && (
           <Badge 
             variant="destructive" 
-            className="absolute -top-2 -right-2 h-6 w-6 rounded-full p-0 flex items-center justify-center text-xs font-bold"
+            className="absolute -top-2 -right-2 h-7 w-7 rounded-full p-0 flex items-center justify-center text-sm font-bold border-2 border-white animate-pulse"
           >
             {itemCount > 99 ? '99+' : itemCount}
           </Badge>
