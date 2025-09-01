@@ -13,8 +13,11 @@ import {
 import { toast } from 'sonner';
 import { uploadPlantImage } from '@/utils/imageStorage';
 import { useAuth } from '@/context/AuthContext';
-import AudioRecorder from '@/components/chat/AudioRecorder';
 import EmojiPicker from '@/components/chat/EmojiPicker';
+import { VoiceRecorder } from '@/components/chat/VoiceRecorder';
+import { QuickReplies } from '@/components/chat/QuickReplies';
+import { TypingIndicator } from '@/components/chat/TypingIndicator';
+import { useEnhancedChat } from '@/hooks/useEnhancedChat';
 
 interface MessageBoardProps {
   onSendMessage: (message: string, imageUrl?: string) => Promise<void>;
@@ -38,9 +41,12 @@ export const MessageBoard: React.FC<MessageBoardProps> = ({
   const [message, setMessage] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [showQuickReplies, setShowQuickReplies] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const typingTimeoutRef = useRef<NodeJS.Timeout>();
   const { userProfile } = useAuth();
+  const { quickReplies, startTyping, stopTyping } = useEnhancedChat();
 
   // Auto-resize textarea
   useEffect(() => {
@@ -54,12 +60,23 @@ export const MessageBoard: React.FC<MessageBoardProps> = ({
     if (!message.trim() || isSending || !isConnected) return;
 
     try {
+      // Haptic feedback
+      if ('vibrate' in navigator) {
+        navigator.vibrate(50);
+      }
+
       await onSendMessage(message.trim());
       setMessage('');
+      setShowQuickReplies(false);
       
       // Reset textarea height
       if (textareaRef.current) {
         textareaRef.current.style.height = 'auto';
+      }
+
+      // Stop typing indicator
+      if (conversationId && senderId) {
+        stopTyping(conversationId, senderId);
       }
     } catch (error) {
       console.error('Errore invio messaggio:', error);
@@ -72,6 +89,33 @@ export const MessageBoard: React.FC<MessageBoardProps> = ({
       e.preventDefault();
       handleSend();
     }
+  };
+
+  const handleMessageChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const value = e.target.value;
+    setMessage(value);
+
+    // Typing indicator logic
+    if (conversationId && senderId) {
+      if (value.trim()) {
+        startTyping(conversationId, senderId);
+        
+        // Clear existing timeout
+        if (typingTimeoutRef.current) {
+          clearTimeout(typingTimeoutRef.current);
+        }
+        
+        // Set new timeout to stop typing
+        typingTimeoutRef.current = setTimeout(() => {
+          stopTyping(conversationId, senderId);
+        }, 2000);
+      } else {
+        stopTyping(conversationId, senderId);
+      }
+    }
+
+    // Show/hide quick replies based on empty input
+    setShowQuickReplies(value.trim() === '');
   };
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -101,7 +145,6 @@ export const MessageBoard: React.FC<MessageBoardProps> = ({
       toast.error('Errore nel caricamento dell\'immagine');
     } finally {
       setIsUploading(false);
-      // Reset file input
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
@@ -112,29 +155,42 @@ export const MessageBoard: React.FC<MessageBoardProps> = ({
     fileInputRef.current?.click();
   };
 
-  const handleAudioSend = async (audioBlob: Blob) => {
-    console.log('🎵 Gestione invio audio dal MessageBoard');
-    // L'AudioRecorder gestisce già l'upload tramite la funzione edge
-  };
-
   const handleEmojiSelect = (emoji: any) => {
     if (emoji?.native) {
       setMessage(prev => prev + emoji.native);
       setShowEmojiPicker(false);
       
-      // Focus back to textarea
       if (textareaRef.current) {
         textareaRef.current.focus();
       }
     }
   };
 
+  const handleQuickReplySelect = (reply: string) => {
+    setMessage(reply);
+    setShowQuickReplies(false);
+    
+    if (textareaRef.current) {
+      textareaRef.current.focus();
+    }
+  };
+
+  const handleVoiceMessageSent = async (audioUrl: string) => {
+    await onSendMessage('🎵 Messaggio vocale', audioUrl);
+  };
+
   const isDisabled = disabled || !isConnected || isSending || isUploading;
+
+  // Typing indicator (simulated - in real app you'd get this from realtime)
+  const typingUsers: string[] = []; // This would come from your realtime subscription
 
   return (
     <div className="bg-white border-t border-gray-200 shadow-lg">
+      {/* Typing Indicator */}
+      <TypingIndicator userNames={typingUsers} />
+
       <div className="p-4">
-        {/* Connection Status - Sempre visibile quando disconnesso */}
+        {/* Connection Status */}
         {!isConnected && (
           <div className="mb-3 p-2 bg-red-50 border border-red-200 rounded-lg">
             <div className="flex items-center space-x-2">
@@ -146,14 +202,16 @@ export const MessageBoard: React.FC<MessageBoardProps> = ({
           </div>
         )}
 
-        {/* Audio Recorder */}
-        <AudioRecorder 
-          onSendAudio={handleAudioSend}
-          disabled={isDisabled}
-          conversationId={conversationId}
-          senderId={senderId}
-          recipientId={recipientId}
-        />
+        {/* Voice Recorder */}
+        {conversationId && senderId && recipientId && (
+          <VoiceRecorder
+            conversationId={conversationId}
+            senderId={senderId}
+            recipientId={recipientId}
+            onSendVoiceMessage={handleVoiceMessageSent}
+            disabled={isDisabled}
+          />
+        )}
 
         {/* Message Input Area */}
         <div className="space-y-3">
@@ -161,7 +219,7 @@ export const MessageBoard: React.FC<MessageBoardProps> = ({
             <Textarea
               ref={textareaRef}
               value={message}
-              onChange={(e) => setMessage(e.target.value)}
+              onChange={handleMessageChange}
               onKeyPress={handleKeyPress}
               placeholder={
                 isDisabled 
@@ -262,6 +320,15 @@ export const MessageBoard: React.FC<MessageBoardProps> = ({
             </span>
           </div>
         </div>
+
+        {/* Quick Replies */}
+        {showQuickReplies && !message.trim() && (
+          <QuickReplies
+            replies={quickReplies}
+            onSelect={handleQuickReplySelect}
+            className="mt-4"
+          />
+        )}
       </div>
     </div>
   );
