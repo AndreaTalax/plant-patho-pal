@@ -1,74 +1,185 @@
 
 import { useState } from "react";
-import UserInfoForm from "./UserInfoForm";
-import PlantInfoForm from "./PlantInfoForm";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Camera, Upload, ArrowLeft } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
+import { usePlantDiagnosis } from "@/hooks/usePlantDiagnosis";
+import DiagnosisResult from "./DiagnosisResult";
+import CameraCapture from "./CameraCapture";
+import { PlantInfo } from "./types";
 
-/**
-* Builds a diagnosis message by combining personal user data and plant information.
-* @example
-* buildDiagnosisMessage(user, plant)
-* Returns a formatted string with user and plant details.
-* @param {any} user - Contains personal information such as name and email.
-* @param {any} plant - Contains plant details such as name, environment (indoor/outdoor), and symptoms.
-* @returns {string} A formatted message that consolidates user and plant information into a readable format.
-* @description
-*   - Constructs the message using template literals for clarity and readability.
-*   - Handles missing plant names by displaying a placeholder value ("-").
-*/
-function buildDiagnosisMessage(user: any, plant: any) {
-  return `
-👤 **Dati personali**
-Nome: ${user.nome} ${user.cognome}
-Email: ${user.email}
-
-🌱 **Dati pianta**
-Nome: ${plant.name || "-"}
-Ambiente: ${plant.isIndoor ? "Interno" : "Esterno"}
-Frequenza irrigazione: ${plant.wateringFrequency}
-Esposizione luce: ${plant.lightExposure}
-Sintomi: ${plant.symptoms}
-`.trim();
+interface DiagnoseWizardProps {
+  onBack?: () => void;
 }
 
-async function sendAllToExpertChat(user: any, plant: any) {
-  // For now, we'll just log the data
-  // This function will be properly implemented when chat service is available
-  console.log("Sending to expert chat:", buildDiagnosisMessage(user, plant));
-}
+const DiagnoseWizard = ({ onBack }: DiagnoseWizardProps) => {
+  const { userProfile } = useAuth();
+  const [currentStep, setCurrentStep] = useState<'method' | 'camera' | 'result'>('method');
+  const [showCamera, setShowCamera] = useState(false);
+  
+  const {
+    uploadedImage,
+    diagnosisResult,
+    diagnosedDisease,
+    analysisProgress,
+    analysisDetails,
+    isAnalyzing,
+    handleImageUpload,
+    captureImage,
+    resetDiagnosis,
+    saveDiagnosis,
+    isSaving
+  } = usePlantDiagnosis();
 
-/**
- * Component that manages the diagnostic steps for the wizard.
- * @example
- * <DiagnoseWizard />
- * // Renders the UserInfoForm for the first step, 
- * // and transitions to PlantInfoForm upon completion.
- * @param {React.Component} None - This function represents a functional React component and does not take traditional arguments.
- * @returns {JSX.Element} The rendered form elements for the current step of the wizard.
- * @description
- *   - Manages the state transitions between different steps of the wizard.
- *   - Utilizes React's useState for step and user information management.
- *   - Handles asynchronous operation when sending data to an expert chat.
- */
-export default function DiagnoseWizard() {
-  const [step, setStep] = useState(0);
-  const [userInfo, setUserInfo] = useState(null);
-
-  const handleUserInfoComplete = (data: any) => {
-    setUserInfo(data);
-    setStep(1);
+  // Salta direttamente alla selezione del metodo dato che abbiamo i dati utente dall'auth
+  const plantInfo: PlantInfo = {
+    nome: userProfile?.firstName || userProfile?.first_name || 'Utente',
+    cognome: userProfile?.lastName || userProfile?.last_name || '',
+    email: userProfile?.email || '',
+    infoComplete: true,
+    useAI: true,
+    sendToExpert: false
   };
 
-  const handlePlantInfoComplete = async (plantData: any) => {
-    if (userInfo) {
-      await sendAllToExpertChat(userInfo, plantData);
-      // Prosegui con flow...
+  const handleMethodSelect = (method: 'camera' | 'upload') => {
+    if (method === 'camera') {
+      setShowCamera(true);
+      setCurrentStep('camera');
+    } else {
+      // Trigger file input for upload
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'image/*';
+      input.onchange = (e) => {
+        const file = (e.target as HTMLInputElement).files?.[0];
+        if (file) {
+          handleImageUpload(file);
+          setCurrentStep('result');
+        }
+      };
+      input.click();
     }
   };
 
+  const handleCameraCapture = async () => {
+    await captureImage();
+    setShowCamera(false);
+    setCurrentStep('result');
+  };
+
+  const handleStartOver = () => {
+    resetDiagnosis();
+    setCurrentStep('method');
+    setShowCamera(false);
+  };
+
+  if (currentStep === 'camera' && showCamera) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-4">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setShowCamera(false);
+              setCurrentStep('method');
+            }}
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Indietro
+          </Button>
+          <h2 className="text-xl font-semibold">Scatta una foto</h2>
+        </div>
+        
+        <CameraCapture
+          onCapture={handleCameraCapture}
+          onCancel={() => {
+            setShowCamera(false);
+            setCurrentStep('method');
+          }}
+        />
+      </div>
+    );
+  }
+
+  if (currentStep === 'result' && (uploadedImage || isAnalyzing)) {
+    return (
+      <DiagnosisResult
+        image={uploadedImage}
+        result={diagnosisResult}
+        disease={diagnosedDisease}
+        analysisProgress={analysisProgress}
+        analysisDetails={analysisDetails}
+        isAnalyzing={isAnalyzing}
+        onStartOver={handleStartOver}
+        onSave={saveDiagnosis}
+        isSaving={isSaving}
+        plantInfo={plantInfo}
+      />
+    );
+  }
+
   return (
-    <>
-      {step === 0 && <UserInfoForm onComplete={handleUserInfoComplete} />}
-      {step === 1 && <PlantInfoForm onComplete={handlePlantInfoComplete} />}
-    </>
+    <div className="space-y-6">
+      {onBack && (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onBack}
+          className="mb-4"
+        >
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Indietro
+        </Button>
+      )}
+
+      <div className="text-center space-y-2">
+        <h2 className="text-2xl font-bold text-gray-900">Diagnosi della Pianta</h2>
+        <p className="text-gray-600">
+          Scegli come vuoi acquisire l'immagine della tua pianta
+        </p>
+      </div>
+
+      <div className="grid gap-4">
+        <Card className="cursor-pointer hover:bg-gray-50 transition-colors">
+          <CardContent className="p-6" onClick={() => handleMethodSelect('camera')}>
+            <div className="flex items-center space-x-4">
+              <div className="p-3 bg-drplant-green/10 rounded-full">
+                <Camera className="h-6 w-6 text-drplant-green" />
+              </div>
+              <div className="flex-1">
+                <CardTitle className="text-lg">Scatta una foto</CardTitle>
+                <CardDescription>
+                  Usa la fotocamera del dispositivo per catturare l'immagine
+                </CardDescription>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="cursor-pointer hover:bg-gray-50 transition-colors">
+          <CardContent className="p-6" onClick={() => handleMethodSelect('upload')}>
+            <div className="flex items-center space-x-4">
+              <div className="p-3 bg-drplant-blue/10 rounded-full">
+                <Upload className="h-6 w-6 text-drplant-blue" />
+              </div>
+              <div className="flex-1">
+                <CardTitle className="text-lg">Carica foto</CardTitle>
+                <CardDescription>
+                  Seleziona un'immagine dalla galleria del dispositivo
+                </CardDescription>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="text-center text-sm text-gray-500 mt-6">
+        <p>💡 Per migliori risultati, assicurati che l'immagine sia ben illuminata e mostri chiaramente i sintomi della pianta</p>
+      </div>
+    </div>
   );
-}
+};
+
+export default DiagnoseWizard;
