@@ -100,14 +100,14 @@ export class PlantDataSyncService {
       // Se c'è un'immagine, inviala come messaggio separato
       if (finalImageUrl) {
         console.log('📸 Sending plant image...');
-        const imageMessage = `📸 Immagine della pianta`;
+        const imageMessage = `📸 Immagine della pianta per la diagnosi`;
         
         const { data: imageResult, error: imageError } = await supabase.functions.invoke('send-message', {
           body: {
             conversationId,
             recipientId: MARCO_NIGRO_ID,
             text: imageMessage,
-            imageUrl: finalImageUrl, // Use the Supabase Storage URL
+            imageUrl: finalImageUrl,
             products: null
           },
           headers: {
@@ -121,6 +121,32 @@ export class PlantDataSyncService {
         }
 
         console.log('✅ Plant image sent successfully');
+      }
+
+      // Se ci sono risultati AI, inviali come messaggio separato
+      if (plantInfo.aiDiagnosis) {
+        console.log('🤖 Sending AI diagnosis results...');
+        const aiMessage = this.buildAIDiagnosisMessage(plantInfo.aiDiagnosis);
+        
+        const { data: aiResult, error: aiError } = await supabase.functions.invoke('send-message', {
+          body: {
+            conversationId,
+            recipientId: MARCO_NIGRO_ID,
+            text: aiMessage,
+            imageUrl: null,
+            products: null
+          },
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+        });
+
+        if (aiError) {
+          console.error('❌ Error sending AI diagnosis:', aiError);
+          return { success: false };
+        }
+
+        console.log('✅ AI diagnosis sent successfully');
       }
 
       console.log('✅ Plant data synced successfully to chat');
@@ -140,12 +166,12 @@ export class PlantDataSyncService {
    * Costruisce un messaggio formattato con i dati della pianta
    */
   private static buildPlantDataMessage(plantInfo: PlantInfo, imageUrl?: string): string {
-    let message = `🌿 **Dati della pianta inseriti automaticamente**\n\n`;
+    let message = `🌿 **DATI AUTOMATICI DELLA PIANTA**\n\n`;
     
     if (plantInfo.name && plantInfo.name !== 'Pianta non identificata') {
       message += `🏷️ **Nome pianta:** ${plantInfo.name}\n`;
     } else {
-      message += `🏷️ **Nome pianta:** Non identificata\n`;
+      message += `🏷️ **Nome pianta:** Non identificata - richiede identificazione\n`;
     }
     
     message += `🏠 **Ambiente:** ${plantInfo.isIndoor ? 'Interno' : 'Esterno'}\n`;
@@ -166,7 +192,41 @@ export class PlantDataSyncService {
       message += `📸 **Immagine:** Allegata\n`;
     }
     
-    message += `\n*Questi dati sono stati inseriti automaticamente dal sistema di diagnosi.*`;
+    message += `\n*Questi dati sono stati inviati automaticamente dal sistema Dr.Plant per la consultazione.*`;
+    
+    return message;
+  }
+
+  /**
+   * Costruisce un messaggio con i risultati dell'analisi AI
+   */
+  private static buildAIDiagnosisMessage(aiDiagnosis: any): string {
+    let message = `🤖 **ANALISI AI AUTOMATICA**\n\n`;
+    
+    if (aiDiagnosis?.consensus?.mostLikelyPlant) {
+      const plant = aiDiagnosis.consensus.mostLikelyPlant;
+      message += `🌱 **Pianta identificata:** ${plant.plantName}\n`;
+      if (plant.scientificName) {
+        message += `🔬 **Nome scientifico:** ${plant.scientificName}\n`;
+      }
+      message += `📊 **Confidenza:** ${Math.round(plant.confidence || 0)}%\n\n`;
+    }
+    
+    if (aiDiagnosis?.consensus?.mostLikelyDisease) {
+      const disease = aiDiagnosis.consensus.mostLikelyDisease;
+      message += `⚠️ **Problema rilevato:** ${disease.disease}\n`;
+      message += `📊 **Confidenza:** ${Math.round(disease.confidence || 0)}%\n`;
+      if (disease.symptoms && disease.symptoms.length > 0) {
+        message += `🔍 **Sintomi:** ${disease.symptoms.join(', ')}\n`;
+      }
+      if (disease.treatments && disease.treatments.length > 0) {
+        message += `💊 **Trattamenti suggeriti:** ${disease.treatments.join(', ')}\n`;
+      }
+    } else {
+      message += `✅ **Stato:** Pianta apparentemente sana secondo l'AI\n`;
+    }
+    
+    message += `\n*Questa è un'analisi automatica AI. Per una diagnosi professionale accurata, descrivi i sintomi che osservi.*`;
     
     return message;
   }
