@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
@@ -444,8 +443,6 @@ export const ExpertRealTimeChat: React.FC = () => {
                         <ChatMessage 
                           message={message} 
                           isExpert={true}
-                          userAvatar={selectedConversation.user_profile?.avatar_url}
-                          userName={`${selectedConversation.user_profile?.first_name} ${selectedConversation.user_profile?.last_name}`}
                         />
                       </div>
                     ))}
