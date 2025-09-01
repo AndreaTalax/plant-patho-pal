@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+
+import { useEffect, useState, useRef } from 'react';
 import { ConsultationDataService } from '@/services/chat/consultationDataService';
 import { usePlantInfo } from '@/context/PlantInfoContext';
 import { useAuth } from '@/context/AuthContext';
@@ -20,23 +21,27 @@ export const ChatInitializer: React.FC<ChatInitializerProps> = ({
   const { plantInfo } = usePlantInfo();
   const { userProfile } = useAuth();
   const [isProcessing, setIsProcessing] = useState(false);
-  const [retryCount, setRetryCount] = useState(0);
+  const attemptedRef = useRef(false);
 
-  // INVIO AUTOMATICO GARANTITO dei dati di consultazione
+  // INVIO AUTOMATICO GARANTITO dei dati di consultazione - UNA SOLA VOLTA
   useEffect(() => {
-    const sendDataGuaranteed = async () => {
-      // Condizioni per l'invio automatico
+    const sendDataOnce = async () => {
+      // Verifica condizioni e previeni tentativi multipli
       if (
         !activeChat ||
         !currentConversationId ||
         !userProfile ||
         autoDataSent ||
-        isProcessing
+        isProcessing ||
+        attemptedRef.current
       ) {
         return;
       }
 
       console.log('🚀 [CHAT-INIT] Avvio invio automatico dati consultazione...');
+      
+      // Marca come tentato per evitare loop
+      attemptedRef.current = true;
       setIsProcessing(true);
 
       try {
@@ -45,7 +50,6 @@ export const ChatInitializer: React.FC<ChatInitializerProps> = ({
         if (alreadySent) {
           console.log('✅ [CHAT-INIT] Dati già inviati precedentemente');
           setAutoDataSent(true);
-          setIsProcessing(false);
           return;
         }
 
@@ -88,7 +92,6 @@ export const ChatInitializer: React.FC<ChatInitializerProps> = ({
         if (success) {
           console.log('[CHAT-INIT] ✅ INVIO COMPLETATO CON SUCCESSO');
           setAutoDataSent(true);
-          setRetryCount(0);
           
           toast.success('✅ Dati inviati automaticamente all\'esperto!', {
             description: `Informazioni ${plantData.imageUrl ? 'e foto ' : ''}inviate a Marco Nigro`,
@@ -99,9 +102,9 @@ export const ChatInitializer: React.FC<ChatInitializerProps> = ({
         }
 
       } catch (error) {
-        console.error('[CHAT-INIT] ❌ ERRORE CRITICO:', error);
-        setRetryCount(prev => prev + 1);
+        console.error('[CHAT-INIT] ❌ ERRORE:', error);
         
+        // Solo un toast di errore, senza retry automatico
         toast.error('❌ Errore invio automatico dati', {
           description: 'I dati non sono stati inviati automaticamente. Puoi inviarli manualmente nella chat.',
           duration: 4000,
@@ -111,11 +114,11 @@ export const ChatInitializer: React.FC<ChatInitializerProps> = ({
       }
     };
 
-    // Avvio immediato quando le condizioni sono soddisfatte
-    if (activeChat && currentConversationId && userProfile && !autoDataSent && !isProcessing) {
+    // Esegui solo se non è mai stato tentato
+    if (activeChat && currentConversationId && userProfile && !autoDataSent && !attemptedRef.current) {
       console.log('[CHAT-INIT] 🎯 Condizioni soddisfatte - avvio invio automatico...');
-      // Piccolo delay per assicurare che la chat sia completamente inizializzata
-      const timer = setTimeout(sendDataGuaranteed, 500);
+      // Delay piccolo per assicurare inizializzazione
+      const timer = setTimeout(sendDataOnce, 1000);
       return () => clearTimeout(timer);
     }
   }, [
@@ -124,60 +127,15 @@ export const ChatInitializer: React.FC<ChatInitializerProps> = ({
     userProfile,
     autoDataSent,
     setAutoDataSent,
-    plantInfo,
-    isProcessing,
-    retryCount
+    plantInfo
   ]);
 
-  // Controllo dati salvati offline per invio differito
+  // Reset del tentativo quando cambia conversazione
   useEffect(() => {
-    const checkPendingData = async () => {
-      if (!currentConversationId || autoDataSent || isProcessing) return;
-
-      try {
-        const pendingDataStr = localStorage.getItem('pendingChatData');
-        if (!pendingDataStr) return;
-
-        const pendingData = JSON.parse(pendingDataStr);
-        
-        // Controlla se i dati sono recenti (ultimi 10 minuti)
-        const isRecent = (Date.now() - pendingData.timestamp) < 10 * 60 * 1000;
-        
-        if (isRecent && pendingData.conversationId === currentConversationId) {
-          console.log('[CHAT-INIT] 🔄 Tentativo invio dati offline salvati...');
-          
-          const success = await ConsultationDataService.sendInitialConsultationData(
-            pendingData.conversationId,
-            pendingData.plantData,
-            pendingData.userData,
-            pendingData.plantData.useAI || false
-          );
-
-          if (success) {
-            localStorage.removeItem('pendingChatData');
-            setAutoDataSent(true);
-            toast.success('✅ Dati offline inviati!', {
-              description: 'I dati salvati sono stati inviati con successo',
-              duration: 3000,
-            });
-          }
-        } else {
-          // Rimuovi dati obsoleti
-          localStorage.removeItem('pendingChatData');
-        }
-      } catch (error) {
-        console.error('[CHAT-INIT] ❌ Errore controllo dati offline:', error);
-      }
-    };
-
-    // Controlla ogni 30 secondi per dati offline
-    const interval = setInterval(checkPendingData, 30000);
-    
-    // Controllo immediato
-    checkPendingData();
-
-    return () => clearInterval(interval);
-  }, [currentConversationId, autoDataSent, isProcessing, setAutoDataSent]);
+    if (currentConversationId) {
+      attemptedRef.current = false;
+    }
+  }, [currentConversationId]);
 
   return null; // Componente solo logico
 };

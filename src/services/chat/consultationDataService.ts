@@ -19,7 +19,6 @@ export class ConsultationDataService {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         console.error('❌ No valid session');
-        toast.error('Sessione non valida, esegui di nuovo l\'accesso');
         return false;
       }
 
@@ -64,8 +63,7 @@ export class ConsultationDataService {
         .from('messages')
         .select('id')
         .eq('conversation_id', conversationId)
-        .eq('metadata->autoSent', true)
-        .eq('metadata->messageType', 'consultation_data')
+        .or('metadata->>autoSent.eq.true,metadata->>messageType.eq.consultation_data')
         .limit(1);
 
       if (error) {
@@ -85,7 +83,6 @@ export class ConsultationDataService {
    * Marca i dati come inviati (per compatibilità)
    */
   static async markConsultationDataSent(conversationId: string): Promise<void> {
-    // Non necessario con il nuovo sistema, ma manteniamo per compatibilità
     console.log('📝 Consultation data marked as sent for:', conversationId);
   }
 }
