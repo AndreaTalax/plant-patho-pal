@@ -1,8 +1,8 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { toast } from '@/components/ui/sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { ShoppingBag, Star, Package } from 'lucide-react';
+import { ShoppingBag, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useCart } from '@/hooks/useCart';
@@ -44,7 +44,13 @@ const ShopTab = () => {
     closeCart
   } = useCart();
 
+  // Evita doppi caricamenti (es. StrictMode in sviluppo)
+  const loadedRef = useRef(false);
+
   useEffect(() => {
+    if (loadedRef.current) return;
+    loadedRef.current = true;
+
     // Controlla se c'è un prodotto selezionato dalla diagnosi
     const storedProduct = localStorage.getItem('selectedProduct');
     if (storedProduct) {
@@ -58,22 +64,24 @@ const ShopTab = () => {
       }
     }
 
-    // Carica tutti i prodotti dal database
+    // Carica tutti i prodotti dal database (solo una volta)
     loadProducts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-    // Controlla se l'utente è tornato da un pagamento
+  // Gestione parametri URL (solo al mount)
+  useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('payment') === 'success') {
       toast.success('Pagamento completato con successo!');
       clearCart();
-      // Pulisci l'URL
       window.history.replaceState({}, document.title, window.location.pathname);
     } else if (urlParams.get('payment') === 'cancelled') {
       toast.info('Pagamento annullato');
-      // Pulisci l'URL
       window.history.replaceState({}, document.title, window.location.pathname);
     }
-  }, [clearCart]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const loadProducts = async () => {
     try {
@@ -97,22 +105,25 @@ const ShopTab = () => {
     }
   };
 
-  const filterProductsByCategory = (category: string) => {
+  const filterProductsByCategory = useCallback((category: string) => {
     setSelectedCategory(category);
-  };
+  }, []);
 
-  const filteredProducts = selectedCategory === 'all' 
-    ? products 
-    : products.filter(product => product.category?.toLowerCase() === selectedCategory.toLowerCase());
+  const categories = useMemo(() => {
+    return ['all', ...Array.from(new Set(products.map(p => p.category).filter(Boolean)))];
+  }, [products]);
 
-  const categories = ['all', ...Array.from(new Set(products.map(p => p.category).filter(Boolean)))];
+  const filteredProducts = useMemo(() => {
+    return selectedCategory === 'all' 
+      ? products 
+      : products.filter(product => product.category?.toLowerCase() === selectedCategory.toLowerCase());
+  }, [products, selectedCategory]);
 
-  const handleAddToCart = (product: Product) => {
+  const handleAddToCart = useCallback((product: Product) => {
     if (product.stock_quantity === 0) {
       toast.error('Prodotto esaurito');
       return;
     }
-    
     addItem({
       id: product.id,
       name: product.name,
@@ -120,7 +131,7 @@ const ShopTab = () => {
       image_url: product.image_url,
       description: product.description
     });
-  };
+  }, [addItem]);
 
   return (
     <div className="space-y-6">
@@ -194,6 +205,7 @@ const ShopTab = () => {
                     <img 
                       src={product.image_url} 
                       alt={product.name}
+                      loading="lazy"
                       className="w-full h-full object-cover"
                     />
                   ) : (
