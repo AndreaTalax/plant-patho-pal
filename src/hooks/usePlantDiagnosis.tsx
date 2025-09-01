@@ -158,6 +158,21 @@ export const usePlantDiagnosis = () => {
         console.log('📸 Immagine caricata:', imageUrl);
       }
 
+      // Serialize complex objects to JSON-compatible format
+      const diagnosisResultData = {
+        confidence: Math.min(70, Math.round(plant?.confidence || 0)),
+        isHealthy: !disease,
+        disease: disease?.disease || 'Nessuna malattia rilevata',
+        description: diagnosisResult,
+        analysisDetails: analysisDetails ? JSON.parse(JSON.stringify(analysisDetails)) : null,
+        treatments: disease?.treatments || [],
+        causes: disease?.additionalInfo?.cause || '',
+        severity: disease?.severity || 'N/A',
+        timestamp: new Date().toISOString(),
+        // Serialize fullResults to JSON-compatible format
+        fullResults: results ? JSON.parse(JSON.stringify(results)) : null
+      };
+
       const diagnosisData = {
         user_id: user.id,
         plant_type: plant?.plantName || 'Pianta sconosciuta',
@@ -165,18 +180,7 @@ export const usePlantDiagnosis = () => {
         symptoms: diagnosedDisease?.symptoms?.join(', ') || disease?.symptoms?.join(', ') || 'Nessun sintomo specifico',
         image_url: imageUrl,
         status: 'completed',
-        diagnosis_result: {
-          confidence: Math.min(70, Math.round(plant?.confidence || 0)),
-          isHealthy: !disease,
-          disease: disease?.disease || 'Nessuna malattia rilevata',
-          description: diagnosisResult,
-          analysisDetails: analysisDetails ? JSON.parse(JSON.stringify(analysisDetails)) : null,
-          treatments: disease?.treatments || [],
-          causes: disease?.additionalInfo?.cause || '',
-          severity: disease?.severity || 'N/A',
-          timestamp: new Date().toISOString(),
-          fullResults: results // Salva tutti i risultati per riferimento futuro
-        }
+        diagnosis_result: diagnosisResultData as any // Cast to satisfy TypeScript
       };
 
       console.log('📝 Dati diagnosi completi da salvare:', diagnosisData);

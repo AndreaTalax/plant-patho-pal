@@ -1,8 +1,9 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { ShoppingCart } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { CartDialog } from "@/components/shop/CartDialog";
+import CartDialog from "@/components/shop/CartDialog";
 import { useShoppingCart } from "@/hooks/useShoppingCart";
 import { ProductCard } from "@/components/shop/ProductCard";
 import { Input } from "@/components/ui/input";
@@ -16,7 +17,6 @@ const ShopTab = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [priceRange, setPriceRange] = useState([0, 200]);
   const [filteredProducts, setFilteredProducts] = useState(products);
-  const recommendedProduct = products[0]; // Placeholder for a real recommendation
 
   useEffect(() => {
     const filtered = products.filter(product => {
@@ -27,8 +27,10 @@ const ShopTab = () => {
     setFilteredProducts(filtered);
   }, [searchTerm, priceRange]);
 
+  const totalPrice = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+
   return (
-    <div className="space-y-6 pb-24 pt-4">
+    <div className="space-y-6 pb-24 pt-8 px-4">
       <div className="text-center">
         <div className="flex items-center justify-center gap-4 mb-2">
           <h2 className="text-2xl font-bold text-gray-900">Negozio</h2>
@@ -86,12 +88,13 @@ const ShopTab = () => {
       </div>
 
       <CartDialog
-        open={showCart}
-        onOpenChange={setShowCart}
-        cartItems={cartItems}
+        isOpen={showCart}
+        onClose={() => setShowCart(false)}
+        items={cartItems}
         onRemoveItem={handleRemoveFromCart}
         onUpdateQuantity={handleUpdateQuantity}
         onClearCart={clearCart}
+        totalPrice={totalPrice}
       />
     </div>
   );

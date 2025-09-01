@@ -1,8 +1,9 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { ShoppingCart } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { CartDialog } from './CartDialog';
+import CartDialog from './CartDialog';
 import { ProductCard } from './ProductCard';
 import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
@@ -22,42 +23,42 @@ const PRODUCTS: Product[] = [
     name: "Concime Biologico",
     description: "Concime organico per tutte le piante",
     price: 19.99,
-    imageUrl: "/images/products/concime.jpg",
+    imageUrl: "/placeholder.svg",
   },
   {
     id: "2",
     name: "Insetticida Naturale",
     description: "Protezione naturale contro gli insetti",
     price: 14.50,
-    imageUrl: "/images/products/insetticida.jpg",
+    imageUrl: "/placeholder.svg",
   },
   {
     id: "3",
     name: "Terriccio Universale",
     description: "Terriccio di alta qualità per ogni tipo di pianta",
     price: 12.00,
-    imageUrl: "/images/products/terriccio.jpg",
+    imageUrl: "/placeholder.svg",
   },
   {
     id: "4",
     name: "Vaso Autoirrigante",
     description: "Vaso moderno con sistema di autoirrigazione",
     price: 25.00,
-    imageUrl: "/images/products/vaso.jpg",
+    imageUrl: "/placeholder.svg",
   },
   {
     id: "5",
     name: "Kit di Germinazione",
     description: "Tutto il necessario per far crescere le tue piante",
     price: 29.99,
-    imageUrl: "/images/products/kit.jpg",
+    imageUrl: "/placeholder.svg",
   },
   {
     id: "6",
     name: "Forbici da Potatura",
     description: "Forbici professionali per la cura delle piante",
     price: 21.00,
-    imageUrl: "/images/products/forbici.jpg",
+    imageUrl: "/placeholder.svg",
   },
 ];
 
@@ -83,8 +84,6 @@ const ShopTab = () => {
   const [recommendedProduct, setRecommendedProduct] = useState<Product | null>(null);
 
   useEffect(() => {
-    // Simula il recupero del prodotto raccomandato dalla diagnosi
-    // In una vera implementazione, questo verrebbe da un'API
     const recommended = PRODUCTS[Math.floor(Math.random() * PRODUCTS.length)];
     setRecommendedProduct(recommended);
   }, []);
@@ -137,8 +136,17 @@ const ShopTab = () => {
     return searchMatch && filterMatch && priceMatch;
   });
 
+  // Convert CartItem[] to the format expected by CartDialog
+  const cartItemsForDialog = cartItems.map(item => ({
+    ...item.product,
+    quantity: item.quantity,
+    image_url: item.product.imageUrl
+  }));
+
+  const totalPrice = cartItems.reduce((sum, item) => sum + (item.product.price * item.quantity), 0);
+
   return (
-    <div className="space-y-6 pb-24 pt-4">
+    <div className="space-y-6 pb-24 pt-8 px-4">
       <div className="text-center">
         <div className="flex items-center justify-center gap-4 mb-2">
           <h2 className="text-2xl font-bold text-gray-900">Negozio</h2>
@@ -232,19 +240,20 @@ const ShopTab = () => {
         {filteredProducts.map((product) => (
           <ProductCard
             key={product.id}
-            product={product}
-            onAddToCart={handleAddToCart}
+            product={{...product, image_url: product.imageUrl}}
+            onAddToCart={() => handleAddToCart(product)}
           />
         ))}
       </div>
 
       <CartDialog
-        open={showCart}
-        onOpenChange={setShowCart}
-        cartItems={cartItems}
+        isOpen={showCart}
+        onClose={() => setShowCart(false)}
+        items={cartItemsForDialog}
         onRemoveItem={handleRemoveFromCart}
         onUpdateQuantity={handleUpdateQuantity}
         onClearCart={clearCart}
+        totalPrice={totalPrice}
       />
     </div>
   );
