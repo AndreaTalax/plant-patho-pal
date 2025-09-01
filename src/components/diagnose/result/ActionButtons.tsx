@@ -43,32 +43,51 @@ const ActionButtons = ({
   const navigate = useNavigate();
   const [showAuthDialog, setShowAuthDialog] = useState(false);
   const [showPaywallModal, setShowPaywallModal] = useState(false);
+  const [isSendingToChat, setIsSendingToChat] = useState(false);
   
   const isAuthenticated = !!user;
 
-  // Redirect più robusto al tab Chat con fallback multipli e retry
-  const goToChatTab = () => {
-    const dispatchSwitch = () => {
-      try {
-        const event = new CustomEvent('switchTab', { detail: 'chat' });
-        window.dispatchEvent(event);
-        // Alcuni listener potrebbero essere su document
-        document.dispatchEvent(event as any);
-        // Fallback messaggistica
-        window.postMessage({ type: 'SWITCH_TAB', tab: 'chat' }, '*');
-        // Fallback persistenza
-        try { localStorage.setItem('activeTab', 'chat'); } catch {}
-        console.log('➡️ Forzato passaggio al tab Chat');
-      } catch (e) {
-        console.warn('⚠️ Impossibile dispatchare switchTab:', e);
-      }
-    };
-
-    // Naviga e poi dispatcha più volte (listeners potrebbero non essere pronti)
-    navigate('/');
-    setTimeout(dispatchSwitch, 100);
-    setTimeout(dispatchSwitch, 400);
-    setTimeout(dispatchSwitch, 1000);
+  // Funzione migliorata per il redirect alla chat
+  const redirectToChat = () => {
+    console.log('🎯 Redirecting to chat tab...');
+    
+    // Metodo 1: Event dispatch immediato
+    const switchEvent = new CustomEvent('switchTab', { detail: 'chat' });
+    window.dispatchEvent(switchEvent);
+    document.dispatchEvent(switchEvent as any);
+    
+    // Metodo 2: Messaggio postMessage
+    window.postMessage({ type: 'SWITCH_TAB', tab: 'chat' }, '*');
+    
+    // Metodo 3: LocalStorage per persistenza
+    try {
+      localStorage.setItem('activeTab', 'chat');
+      localStorage.setItem('forceTabSwitch', 'chat');
+    } catch (e) {
+      console.warn('LocalStorage not available:', e);
+    }
+    
+    // Metodo 4: Navigate con stato
+    navigate('/', { 
+      state: { 
+        activeTab: 'chat',
+        openExpertChat: true,
+        timestamp: Date.now()
+      } 
+    });
+    
+    // Metodo 5: Retry con delay per assicurarsi che funzioni
+    setTimeout(() => {
+      window.dispatchEvent(new CustomEvent('switchTab', { detail: 'chat' }));
+      window.postMessage({ type: 'SWITCH_TAB', tab: 'chat' }, '*');
+    }, 100);
+    
+    setTimeout(() => {
+      window.dispatchEvent(new CustomEvent('switchTab', { detail: 'chat' }));
+      window.postMessage({ type: 'SWITCH_TAB', tab: 'chat' }, '*');
+    }, 500);
+    
+    console.log('✅ Chat redirect executed with multiple methods');
   };
   
   const startChatWithExpert = async () => {
@@ -82,54 +101,74 @@ const ActionButtons = ({
       return;
     }
 
+    setIsSendingToChat(true);
+
     try {
-      console.log("🚀 Starting chat with expert, diagnosisData:", diagnosisData);
+      console.log("🚀 Starting comprehensive chat with expert...");
+      console.log("📋 Diagnosis data:", diagnosisData);
       
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
-        toast.error('Sessione non valida, esegui di nuovo l’accesso');
+        toast.error('Sessione non valida, esegui di nuovo l\'accesso');
         return;
       }
       
-      const plantType = diagnosisData?.plantType || diagnosisData?.plantInfo?.name || 'Non specificato';
-      const symptoms = diagnosisData?.symptoms || diagnosisData?.plantInfo?.symptoms || 'Non specificati';
+      // Prepara dati completi per l'invio
+      const plantType = diagnosisData?.plantType || diagnosisData?.plantInfo?.name || 'Pianta da identificare';
+      const symptoms = diagnosisData?.symptoms || diagnosisData?.plantInfo?.symptoms || 'Sintomi da descrivere';
       const imageUrl = diagnosisData?.imageUrl || null;
+      const diagnosisResult = diagnosisData?.diagnosisResult || null;
       
-      console.log("📋 Prepared data (preview) - plantType:", plantType, "symptoms:", symptoms, "imageUrl:", imageUrl);
+      console.log("📊 Prepared data:", { plantType, symptoms, imageUrl: !!imageUrl, diagnosisResult: !!diagnosisResult });
       
-      // Crea/avvia conversazione con l'esperto
-      const { data: conversation, error: convError } = await supabase
+      // Crea/trova conversazione con l'esperto
+      const { data: existingConversation } = await supabase
         .from('conversations')
-        .insert({
-          user_id: user.id,
-          expert_id: MARCO_NIGRO_ID,
-          title: `Consulenza per ${plantType}`,
-          status: 'active'
-        })
-        .select()
-        .single();
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('expert_id', MARCO_NIGRO_ID)
+        .eq('status', 'active')
+        .order('created_at', { ascending: false })
+        .limit(1);
 
-      if (convError) {
-        console.error("❌ Error creating conversation:", convError);
-        throw convError;
+      let conversation = existingConversation?.[0];
+
+      if (!conversation) {
+        const { data: newConversation, error: convError } = await supabase
+          .from('conversations')
+          .insert({
+            user_id: user.id,
+            expert_id: MARCO_NIGRO_ID,
+            title: `Consulenza per ${plantType}`,
+            status: 'active'
+          })
+          .select()
+          .single();
+
+        if (convError) {
+          console.error("❌ Error creating conversation:", convError);
+          throw convError;
+        }
+        conversation = newConversation;
       }
 
-      console.log("✅ Conversation created:", conversation);
+      console.log("✅ Conversation ready:", conversation.id);
 
-      // Messaggio iniziale "umano" (opzionale)
-      let initialMessage = `🌱 **Nuova richiesta di consulenza**\n\n**Tipo di pianta:** ${plantType}\n**Sintomi osservati:** ${symptoms}`;
-
-      if (diagnosisData?.diagnosisResult) {
-        initialMessage += `\n\n🤖 **Analisi AI precedente (riassunto):**\n${typeof diagnosisData.diagnosisResult === 'string' 
-          ? diagnosisData.diagnosisResult 
-          : '```json\n' + JSON.stringify(diagnosisData.diagnosisResult, null, 2) + '\n```'}`;
+      // Prepara messaggio iniziale dell'utente
+      let initialMessage = `🌱 **Nuova richiesta di consulenza**\n\n`;
+      initialMessage += `**Tipo di pianta:** ${plantType}\n`;
+      initialMessage += `**Sintomi:** ${symptoms}\n`;
+      
+      if (diagnosisResult) {
+        initialMessage += `\n🤖 **Analisi AI:**\n`;
+        initialMessage += typeof diagnosisResult === 'string' 
+          ? diagnosisResult 
+          : '```json\n' + JSON.stringify(diagnosisResult, null, 2) + '\n```';
       }
+      
+      initialMessage += `\n\nCiao Marco, ho bisogno del tuo aiuto per questa pianta. Puoi darmi una diagnosi professionale?`;
 
-      initialMessage += `\n\n${imageUrl ? '📸 **Immagine allegata**\n\n' : ''}Ciao Marco, ho bisogno del tuo aiuto per questa pianta. Puoi darmi una diagnosi professionale?`;
-
-      console.log("📝 Initial message:", initialMessage);
-
-      // Invia messaggio iniziale via Edge Function "send-message"
+      // Invia messaggio iniziale
       const { error: sendMsgError } = await supabase.functions.invoke('send-message', {
         body: {
           conversationId: conversation.id,
@@ -144,19 +183,20 @@ const ActionButtons = ({
       });
 
       if (sendMsgError) {
-        console.error("❌ Error sending initial message via edge function:", sendMsgError);
-        // Non blocchiamo il flusso
+        console.error("❌ Error sending initial message:", sendMsgError);
+      } else {
+        console.log("✅ Initial message sent");
       }
 
       // Invia immagine separatamente se presente
       if (imageUrl) {
-        console.log("📸 Sending image message via edge function:", imageUrl);
-        const { error: imageMessageError } = await supabase.functions.invoke('send-message', {
+        console.log("📸 Sending image to expert...");
+        const { error: imageError } = await supabase.functions.invoke('send-message', {
           body: {
             conversationId: conversation.id,
             recipientId: MARCO_NIGRO_ID,
-            text: '📸 Immagine della pianta',
-            imageUrl,
+            text: '📸 Immagine della pianta per la consultazione',
+            imageUrl: imageUrl,
             products: null
           },
           headers: {
@@ -164,22 +204,24 @@ const ActionButtons = ({
           },
         });
 
-        if (imageMessageError) {
-          console.error("⚠️ Error sending image message:", imageMessageError);
+        if (imageError) {
+          console.error("⚠️ Error sending image:", imageError);
+        } else {
+          console.log("✅ Image sent successfully");
         }
       }
 
-      // ➊ INVIO AUTOMATICO DATI COMPLETI
+      // Invia dati completi tramite il servizio automatico
       const plantData = {
-        symptoms: diagnosisData?.symptoms || diagnosisData?.plantInfo?.symptoms || 'Da descrivere durante la consulenza',
+        symptoms: symptoms,
         wateringFrequency: diagnosisData?.plantInfo?.wateringFrequency || 'Da specificare',
         sunExposure: diagnosisData?.plantInfo?.lightExposure || 'Da specificare',
         environment: diagnosisData?.plantInfo?.isIndoor !== undefined 
           ? (diagnosisData?.plantInfo?.isIndoor ? 'Interno' : 'Esterno') 
           : 'Da specificare',
-        plantName: diagnosisData?.plantType || diagnosisData?.plantInfo?.name || 'Specie da identificare',
-        imageUrl: diagnosisData?.imageUrl || null,
-        aiDiagnosis: diagnosisData?.diagnosisResult,
+        plantName: plantType,
+        imageUrl: imageUrl,
+        aiDiagnosis: diagnosisResult,
         useAI: !!useAI,
         sendToExpert: true
       };
@@ -192,51 +234,58 @@ const ActionButtons = ({
         birthPlace: userProfile?.birth_place || userProfile?.birthPlace || 'Non specificato'
       };
 
-      toast.message('Invio in corso...', { description: 'Sto inviando la tua analisi e aprendo la chat' });
-
-      console.log("🔄 Sending automatic consultation data via edge function...", { hasUser: !!userData.email, hasPlant: !!plantData.plantName, useAI });
-
-      const sent = await ConsultationDataService.sendInitialConsultationData(
+      console.log("📤 Sending comprehensive consultation data...");
+      
+      const dataSent = await ConsultationDataService.sendInitialConsultationData(
         conversation.id,
         plantData,
         userData,
         !!useAI
       );
 
-      if (!sent) {
-        console.warn("⚠️ Automatic consultation data send failed (will still open chat).");
-        toast.warning('Attenzione', { description: 'Chat aperta ma invio dati non completato. Puoi inviarli manualmente.' });
+      if (!dataSent) {
+        console.warn("⚠️ Automatic data send partially failed");
+        toast.warning('Chat avviata', { 
+          description: 'Messaggi inviati, ma alcuni dati potrebbero non essere stati trasmessi completamente.'
+        });
       } else {
-        console.log("✅ Automatic consultation data sent.");
-        toast.success('✅ Chat avviata con il fitopatologo!', {
-          description: 'Dati e analisi AI inviati automaticamente',
+        console.log("✅ All data sent successfully");
+        toast.success('✅ Chat avviata con successo!', {
+          description: 'Foto, diagnosi e dati inviati automaticamente a Marco Nigro',
           duration: 4000
         });
       }
 
-      // Vai alla chat con redirect robusto
-      goToChatTab();
+      // Esegui il redirect alla chat con metodi multipli
+      console.log("🎯 Executing chat redirect...");
+      redirectToChat();
 
     } catch (error: any) {
-      console.error("❌ Errore nell'avvio della chat:", error);
+      console.error("❌ Error in chat setup:", error);
       toast.error("❌ Errore nell'avvio della chat", {
         description: error?.message || 'Riprova più tardi',
         duration: 4000
       });
+    } finally {
+      setIsSendingToChat(false);
     }
   };
   
-  // Forza sempre l'avvio della chat e l'invio automatico
   const handleChatWithExpert = async () => {
+    console.log("🎯 handleChatWithExpert called");
+    
+    // Esegui sempre l'handler personalizzato se presente
     try {
       if (onChatWithExpert) {
+        console.log("🔄 Executing custom onChatWithExpert handler...");
         await Promise.resolve(onChatWithExpert());
       }
     } catch (e) {
-      console.warn('⚠️ onChatWithExpert handler ha generato un errore, procedo comunque con l’invio automatico.', e);
-    } finally {
-      await startChatWithExpert();
+      console.warn('⚠️ Custom handler error:', e);
     }
+    
+    // Esegui sempre il nostro flusso principale
+    await startChatWithExpert();
   };
 
   const handleSaveDiagnosis = async () => {
@@ -252,11 +301,11 @@ const ActionButtons = ({
     }
 
     try {
-      console.log("💾 Tentativo di salvataggio diagnosi...");
+      console.log("💾 Attempting to save diagnosis...");
       await onSaveDiagnosis();
-      console.log("✅ Diagnosi salvata con successo");
+      console.log("✅ Diagnosis saved successfully");
     } catch (error) {
-      console.error("❌ Errore nel salvataggio:", error);
+      console.error("❌ Error saving diagnosis:", error);
       toast.error("❌ Errore nel salvare la diagnosi");
     }
   };
@@ -291,10 +340,25 @@ const ActionButtons = ({
         }`}
         variant={hasExpertChatAccess ? 'default' : 'outline'}
         onClick={handleChatWithExpert}
+        disabled={isSendingToChat}
       >
-        {!hasExpertChatAccess && <Crown className="h-4 w-4" />}
-        <MessageCircle className="h-4 w-4" />
-        <span>{hasExpertChatAccess ? 'Invia analisi in chat al fitopatologo' : 'Chat Premium con Esperto'}</span>
+        {isSendingToChat ? (
+          <>
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <span>Invio in corso...</span>
+          </>
+        ) : (
+          <>
+            {!hasExpertChatAccess && <Crown className="h-4 w-4" />}
+            <MessageCircle className="h-4 w-4" />
+            <span>
+              {hasExpertChatAccess 
+                ? 'Vai alla Chat' 
+                : 'Chat Premium con Esperto'
+              }
+            </span>
+          </>
+        )}
       </Button>
       
       <Button 
