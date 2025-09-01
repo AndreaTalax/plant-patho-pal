@@ -1,15 +1,13 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Brain, MessageCircle, Zap, Users, Crown, Lock, TestTube } from 'lucide-react';
 import { usePremiumStatus } from '@/services/premiumService';
 import { useAuth } from '@/context/AuthContext';
-import { toast } from 'sonner';
 import AIAccuracyStats from './AIAccuracyStats';
 import { PremiumPaywallModal } from "./PremiumPaywallModal";
-import { useState } from "react";
 
 interface DiagnosisOptionsProps {
   onSelectAI: () => void;
@@ -28,12 +26,30 @@ const DiagnosisOptions: React.FC<DiagnosisOptionsProps> = ({
   remainingFreeDiagnoses = 3,
   hasActiveSubscription = false
 }) => {
-  const { hasExpertChatAccess, hasUnlimitedDiagnosis, isTestAdmin, upgradeMessage } = usePremiumStatus();
+  const { 
+    hasExpertChatAccess, 
+    hasUnlimitedDiagnosis, 
+    isTestAdmin, 
+    upgradeMessage,
+    freeLimitMessage,
+    canUseAIDiagnosis
+  } = usePremiumStatus();
   const { userProfile } = useAuth();
   const [paywallOpen, setPaywallOpen] = useState(false);
 
   const isTestUser = userProfile?.email === 'test@gmail.com';
-  const canUseDiagnosis = hasUnlimitedDiagnosis || canUseFreeDiagnosis || hasActiveSubscription;
+  const hasUsedAllFreeDiagnoses = remainingFreeDiagnoses === 0;
+  
+  // Logica per diagnosi AI: premium sempre ok, utenti normali solo se hanno diagnosi rimanenti
+  const canUseDiagnosis = hasUnlimitedDiagnosis || (canUseFreeDiagnosis && !hasUsedAllFreeDiagnoses) || hasActiveSubscription;
+
+  const handleAISelection = () => {
+    if (!canUseDiagnosis && !isTestUser) {
+      setPaywallOpen(true);
+      return;
+    }
+    onSelectAI();
+  };
 
   const handleExpertSelection = () => {
     if (!hasExpertChatAccess && !isTestUser) {
@@ -78,8 +94,8 @@ const DiagnosisOptions: React.FC<DiagnosisOptionsProps> = ({
                   Premium
                 </Badge>
               ) : (
-                <Badge variant="secondary" className="bg-green-100 text-green-800">
-                  {canUseFreeDiagnosis ? `${remainingFreeDiagnoses}/3 Gratis` : 'Limite Raggiunto'}
+                <Badge variant="secondary" className={`${canUseFreeDiagnosis && !hasUsedAllFreeDiagnoses ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                  {canUseFreeDiagnosis && !hasUsedAllFreeDiagnoses ? `${remainingFreeDiagnoses}/3 Gratis` : 'Limite Raggiunto'}
                 </Badge>
               )}
             </div>
@@ -99,12 +115,12 @@ const DiagnosisOptions: React.FC<DiagnosisOptionsProps> = ({
               </div>
               <div className="flex items-center gap-2">
                 <MessageCircle className="h-4 w-4 text-purple-600" />
-                <span>Invio automatico all'esperto</span>
+                <span>Possibilità di consultare l'esperto</span>
               </div>
             </div>
             
             <Button 
-              onClick={onSelectAI}
+              onClick={handleAISelection}
               className="w-full"
               disabled={!canUseDiagnosis && !isTestUser}
               variant={(!canUseDiagnosis && !isTestUser) ? "outline" : "default"}
@@ -118,7 +134,7 @@ const DiagnosisOptions: React.FC<DiagnosisOptionsProps> = ({
                 <span className="text-blue-600">Accesso illimitato per test</span>
               ) : hasActiveSubscription || hasUnlimitedDiagnosis ? (
                 <span className="text-blue-600">Illimitato con Premium</span>
-              ) : canUseFreeDiagnosis ? (
+              ) : canUseFreeDiagnosis && !hasUsedAllFreeDiagnoses ? (
                 <span className="text-green-600">
                   {remainingFreeDiagnoses} diagnosi gratuite rimanenti
                 </span>
@@ -131,8 +147,8 @@ const DiagnosisOptions: React.FC<DiagnosisOptionsProps> = ({
           </CardContent>
         </Card>
 
-        {/* Opzione Esperto */}
-        <Card className={`relative transition-all hover:shadow-lg`}>
+        {/* Opzione Chat con Esperto */}
+        <Card className="relative transition-all hover:shadow-lg">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="flex items-center gap-2 text-lg">
@@ -144,7 +160,7 @@ const DiagnosisOptions: React.FC<DiagnosisOptionsProps> = ({
                   <TestTube className="h-3 w-3 mr-1" />
                   Test
                 </Badge>
-              ) : !hasExpertChatAccess && (
+              ) : (
                 <Badge variant="secondary" className="bg-amber-100 text-amber-800">
                   <Crown className="h-3 w-3 mr-1" />
                   Premium
@@ -180,29 +196,27 @@ const DiagnosisOptions: React.FC<DiagnosisOptionsProps> = ({
               {hasExpertChatAccess || isTestUser ? 'Chat con Esperto' : 'Richiede Premium'}
             </Button>
             
-            {!hasExpertChatAccess && !isTestUser && (
-              <p className="text-xs text-amber-600 text-center">
-                Disponibile per utenti Premium
-              </p>
-            )}
-            
-            {isTestUser && (
-              <p className="text-xs text-blue-600 text-center">
-                Accesso completo per test
-              </p>
-            )}
+            <p className="text-xs text-center">
+              {isTestUser ? (
+                <span className="text-blue-600">Accesso completo per test</span>
+              ) : !hasExpertChatAccess ? (
+                <span className="text-amber-600">Disponibile per utenti Premium</span>
+              ) : (
+                <span className="text-green-600">Accesso Premium attivo</span>
+              )}
+            </p>
           </CardContent>
         </Card>
       </div>
       
       <div className="bg-gray-50 rounded-lg p-4">
         <p className="text-sm text-gray-700 text-center">
-          <strong>Raccomandazione:</strong> Inizia con l'analisi AI gratuita, poi passa alla consulenza premium 
-          per una valutazione professionale completa.
+          <strong>Nota:</strong> Gli utenti normali hanno 3 diagnosi AI gratuite. 
+          La chat con l'esperto richiede sempre l'abbonamento Premium.
         </p>
       </div>
       
-      {/* Paywall modale per la chat esperto */}
+      {/* Paywall modal */}
       <PremiumPaywallModal
         open={paywallOpen}
         onClose={() => setPaywallOpen(false)}

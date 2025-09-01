@@ -1,18 +1,29 @@
+
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { PremiumService } from '@/services/premiumService';
 
 const FREE_DIAGNOSES_LIMIT = 3;
 
 export const useDiagnosisLimits = () => {
-  const { user } = useAuth();
+  const { user, userProfile } = useAuth();
   const [diagnosesUsed, setDiagnosesUsed] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Verifica se l'utente ha accesso Premium
+  const hasUnlimitedAccess = PremiumService.hasUnlimitedDiagnosis(userProfile?.email);
 
   // Carica il numero di diagnosi utilizzate
   const loadDiagnosisUsage = async () => {
     if (!user?.id) return;
+
+    // Se ha accesso illimitato, non serve controllare l'usage  
+    if (hasUnlimitedAccess) {
+      setDiagnosesUsed(0);
+      return;
+    }
 
     try {
       const { data, error } = await supabase
@@ -35,6 +46,11 @@ export const useDiagnosisLimits = () => {
   // Incrementa il contatore di diagnosi utilizzate
   const incrementDiagnosisUsage = async () => {
     if (!user?.id) return false;
+
+    // Se ha accesso illimitato, non incrementare il contatore
+    if (hasUnlimitedAccess) {
+      return true;
+    }
 
     setIsLoading(true);
     try {
@@ -81,18 +97,28 @@ export const useDiagnosisLimits = () => {
 
   // Verifica se l'utente può usare la diagnosi AI gratuita
   const canUseFreeDiagnosis = () => {
+    // Utenti Premium hanno sempre accesso
+    if (hasUnlimitedAccess) {
+      return true;
+    }
+    
+    // Utenti normali solo se non hanno esaurito le diagnosi gratuite
     return diagnosesUsed < FREE_DIAGNOSES_LIMIT;
   };
 
   // Ottiene il numero di diagnosi gratuite rimanenti
   const getRemainingFreeDiagnoses = () => {
+    if (hasUnlimitedAccess) {
+      return Infinity; // Illimitate per Premium
+    }
+    
     return Math.max(0, FREE_DIAGNOSES_LIMIT - diagnosesUsed);
   };
 
   // Carica i dati all'inizio
   useEffect(() => {
     loadDiagnosisUsage();
-  }, [user?.id]);
+  }, [user?.id, hasUnlimitedAccess]);
 
   return {
     diagnosesUsed,
@@ -101,6 +127,7 @@ export const useDiagnosisLimits = () => {
     incrementDiagnosisUsage,
     isLoading,
     FREE_DIAGNOSES_LIMIT,
-    refreshUsage: loadDiagnosisUsage
+    refreshUsage: loadDiagnosisUsage,
+    hasUnlimitedAccess
   };
 };

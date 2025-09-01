@@ -26,18 +26,23 @@ export class PremiumService {
   }
 
   /**
-   * Verifica se l'utente può usare la chat con l'esperto (ora premium)
+   * Verifica se l'utente può usare la chat con l'esperto (sempre premium)
    */
   static canUseExpertChat(userEmail: string | undefined): boolean {
     return this.hasExpertChatAccess(userEmail);
   }
 
   /**
-   * Verifica se l'utente può usare la diagnosi AI (ora gratuita per tutti)
+   * Verifica se l'utente può usare la diagnosi AI (3 gratuite + illimitato per premium)
    */
-  static canUseAIDiagnosis(userEmail: string | undefined): boolean {
-    // AI è sempre disponibile per tutti
-    return true;
+  static canUseAIDiagnosis(userEmail: string | undefined, hasUsedFreeDiagnoses: boolean = false): boolean {
+    // Account premium hanno sempre accesso
+    if (userEmail && this.hasExpertChatAccess(userEmail)) {
+      return true;
+    }
+    
+    // Utenti normali: solo se non hanno esaurito le diagnosi gratuite
+    return !hasUsedFreeDiagnoses;
   }
 
   /**
@@ -46,7 +51,7 @@ export class PremiumService {
   static hasUnlimitedDiagnosis(userEmail: string | undefined): boolean {
     if (!userEmail) return false;
     
-    // Account di test hanno sempre accesso illimitato
+    // Account premium hanno sempre accesso illimitato
     return PREMIUM_TEST_EMAILS.includes(userEmail.toLowerCase());
   }
 
@@ -63,7 +68,14 @@ export class PremiumService {
    * Ottiene il messaggio da mostrare per l'upgrade premium
    */
   static getPremiumUpgradeMessage(): string {
-    return "La chat con l'esperto fitopatologo è disponibile nella versione Premium. Aggiorna il tuo piano per accedere alla consulenza personalizzata.";
+    return "Aggiorna a Premium per accedere alla chat con l'esperto fitopatologo e a diagnosi AI illimitate.";
+  }
+
+  /**
+   * Ottiene il messaggio per il limite delle diagnosi AI gratuite
+   */
+  static getFreeDiagnosisLimitMessage(): string {
+    return "Hai esaurito le 3 diagnosi AI gratuite. Aggiorna a Premium per diagnosi illimitate e chat con l'esperto.";
   }
 }
 
@@ -74,16 +86,17 @@ export const usePremiumStatus = () => {
   const { userProfile } = useAuth();
   
   const hasExpertChatAccess = PremiumService.canUseExpertChat(userProfile?.email);
-  const hasAIAccess = PremiumService.canUseAIDiagnosis(userProfile?.email);
   const hasUnlimitedDiagnosis = PremiumService.hasUnlimitedDiagnosis(userProfile?.email);
   const isTestAdmin = PremiumService.isTestAdmin(userProfile?.email);
   
   return {
-    hasAIAccess,
     hasExpertChatAccess,
     hasUnlimitedDiagnosis,
     isTestAdmin,
     isPremium: hasExpertChatAccess,
-    upgradeMessage: PremiumService.getPremiumUpgradeMessage()
+    upgradeMessage: PremiumService.getPremiumUpgradeMessage(),
+    freeLimitMessage: PremiumService.getFreeDiagnosisLimitMessage(),
+    canUseAIDiagnosis: (hasUsedFreeDiagnoses: boolean) => 
+      PremiumService.canUseAIDiagnosis(userProfile?.email, hasUsedFreeDiagnoses)
   };
 };

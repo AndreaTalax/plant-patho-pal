@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Crown, MessageCircle, Check } from "lucide-react";
+import { Crown, MessageCircle, Check, Brain } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -10,12 +10,14 @@ interface PremiumPaywallModalProps {
   open: boolean;
   onClose: () => void;
   onSuccess?: () => void;
+  isForDiagnosis?: boolean;
 }
 
 export const PremiumPaywallModal: React.FC<PremiumPaywallModalProps> = ({
   open,
   onClose,
-  onSuccess
+  onSuccess,
+  isForDiagnosis = false
 }) => {
   const [loading, setLoading] = useState(false);
 
@@ -47,13 +49,25 @@ export const PremiumPaywallModal: React.FC<PremiumPaywallModalProps> = ({
             <Crown className="w-5 h-5" /> Passa a DrPlant Premium
           </DialogTitle>
           <DialogDescription>
-            Ottieni l'accesso diretto al nostro fitopatologo esperto Marco Nigro per consulenze personalizzate.<br/>
-            <span className="text-drplant-green font-medium block mt-2">Abbonamento mensile, annullabile in ogni momento!</span>
+            {isForDiagnosis ? (
+              <>
+                Hai esaurito le 3 diagnosi AI gratuite. Con Premium ottieni diagnosi illimitate e accesso diretto al fitopatologo esperto.<br/>
+                <span className="text-drplant-green font-medium block mt-2">Abbonamento mensile, annullabile in ogni momento!</span>
+              </>
+            ) : (
+              <>
+                Ottieni l'accesso diretto al nostro fitopatologo esperto Marco Nigro per consulenze personalizzate.<br/>
+                <span className="text-drplant-green font-medium block mt-2">Abbonamento mensile, annullabile in ogni momento!</span>
+              </>
+            )}
           </DialogDescription>
         </DialogHeader>
         <ul className="mt-4 space-y-3">
           <li className="flex items-center gap-2 text-green-700">
             <Check className="w-4 h-4" /> Chat diretta con fitopatologo qualificato
+          </li>
+          <li className="flex items-center gap-2 text-green-700">
+            <Check className="w-4 h-4" /> Diagnosi AI illimitate
           </li>
           <li className="flex items-center gap-2 text-green-700">
             <Check className="w-4 h-4" /> Consulenza personalizzata per le tue piante
@@ -71,7 +85,10 @@ export const PremiumPaywallModal: React.FC<PremiumPaywallModalProps> = ({
         </div>
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
           <p className="text-blue-800 text-sm">
-            💡 <strong>Ricorda:</strong> La diagnosi AI rimane sempre gratuita per tutti gli utenti!
+            💡 <strong>Ricorda:</strong> {isForDiagnosis ? 
+              'Con Premium avrai diagnosi illimitate e chat esperto!' : 
+              'Include anche diagnosi AI illimitate!'
+            }
           </p>
         </div>
         <Button
@@ -79,7 +96,15 @@ export const PremiumPaywallModal: React.FC<PremiumPaywallModalProps> = ({
           className="w-full bg-drplant-green hover:bg-drplant-green-dark text-lg"
           disabled={loading}
         >
-          <MessageCircle className="mr-2 w-5 h-5" /> Abbonati per Chat Esperto
+          {isForDiagnosis ? (
+            <>
+              <Brain className="mr-2 w-5 h-5" /> Abbonati per Diagnosi Illimitate
+            </>
+          ) : (
+            <>
+              <MessageCircle className="mr-2 w-5 h-5" /> Abbonati per Chat Esperto
+            </>
+          )}
         </Button>
         <Button
           onClick={onClose}
