@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Save, AlertCircle, MessageCircle, Loader2, RefreshCw, Crown } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -58,16 +59,16 @@ const ActionButtons = ({
     }
 
     try {
-      console.log("Starting chat with expert, diagnosisData:", diagnosisData);
+      console.log("🚀 Starting chat with expert, diagnosisData:", diagnosisData);
       
       // Prepare diagnosis data for the expert
       const plantType = diagnosisData?.plantType || diagnosisData?.plantInfo?.name || 'Non specificato';
       const symptoms = diagnosisData?.symptoms || diagnosisData?.plantInfo?.symptoms || 'Non specificati';
       const imageUrl = diagnosisData?.imageUrl || null;
       
-      console.log("Prepared data - plantType:", plantType, "symptoms:", symptoms, "imageUrl:", imageUrl);
+      console.log("📋 Prepared data - plantType:", plantType, "symptoms:", symptoms, "imageUrl:", imageUrl);
       
-      // Create the conversation
+      // Create the conversation first
       const { data: conversation, error: convError } = await supabase
         .from('conversations')
         .insert({
@@ -80,56 +81,69 @@ const ActionButtons = ({
         .single();
 
       if (convError) {
-        console.error("Error creating conversation:", convError);
+        console.error("❌ Error creating conversation:", convError);
         throw convError;
       }
 
-      console.log("Conversation created:", conversation);
+      console.log("✅ Conversation created:", conversation);
 
-      // Create initial message with diagnosis data
-      const initialMessage = `🌱 **Nuova richiesta di consulenza**
+      // Create initial message with diagnosis data including AI analysis
+      let initialMessage = `🌱 **Nuova richiesta di consulenza**
 
 **Tipo di pianta:** ${plantType}
-**Sintomi osservati:** ${symptoms}
+**Sintomi osservati:** ${symptoms}`;
 
-${imageUrl ? '📸 **Immagine allegata**' : ''}
+      // Add AI diagnosis data if available
+      if (diagnosisData?.diagnosisResult && useAI) {
+        initialMessage += `\n\n🤖 **Analisi AI precedente:**
+${JSON.stringify(diagnosisData.diagnosisResult, null, 2)}`;
+      }
 
-Ciao Marco, ho bisogno del tuo aiuto per questa pianta. Puoi darmi una diagnosi professionale?`;
+      initialMessage += `\n\n${imageUrl ? '📸 **Immagine allegata**\n\n' : ''}Ciao Marco, ho bisogno del tuo aiuto per questa pianta. Puoi darmi una diagnosi professionale?`;
 
-      console.log("Initial message:", initialMessage);
+      console.log("📝 Initial message:", initialMessage);
 
-      // Insert the initial message with both content and text fields
+      // Insert the initial message
       const { error: messageError } = await supabase
         .from('messages')
         .insert({
           conversation_id: conversation.id,
           sender_id: user.id,
           recipient_id: MARCO_NIGRO_ID,
-          content: initialMessage, // Required field
-          text: initialMessage // Also populate text field
+          content: initialMessage,
+          text: initialMessage,
+          metadata: {
+            plantType: plantType,
+            symptoms: symptoms,
+            aiAnalysis: diagnosisData?.diagnosisResult || null,
+            autoSent: true
+          }
         });
 
       if (messageError) {
-        console.error("Error sending message:", messageError);
+        console.error("❌ Error sending message:", messageError);
         throw messageError;
       }
 
       // If there's an image, send it as a separate message
       if (imageUrl) {
-        console.log("Sending image message:", imageUrl);
-        const imageMessage = imageUrl;
+        console.log("📸 Sending image message:", imageUrl);
         const { error: imageMessageError } = await supabase
           .from('messages')
           .insert({
             conversation_id: conversation.id,
             sender_id: user.id,
             recipient_id: MARCO_NIGRO_ID,
-            content: imageMessage, // Required field
-            text: imageMessage // Also populate text field
+            content: imageUrl,
+            text: 'Immagine della pianta',
+            metadata: {
+              isImage: true,
+              autoSent: true
+            }
           });
 
         if (imageMessageError) {
-          console.error("Error sending image message:", imageMessageError);
+          console.error("⚠️ Error sending image message:", imageMessageError);
           // Non blocchiamo per l'immagine, continuiamo
         }
       }
@@ -141,11 +155,17 @@ Ciao Marco, ho bisogno del tuo aiuto per questa pianta. Puoi darmi una diagnosi 
         window.dispatchEvent(event);
       }, 100);
       
-      toast.success('Chat avviata con il fitopatologo!');
+      toast.success('✅ Chat avviata con il fitopatologo!', {
+        description: 'Dati e analisi AI inviati automaticamente',
+        duration: 4000
+      });
 
     } catch (error) {
-      console.error("Errore nell'avvio della chat:", error);
-      toast.error("Errore nell'avvio della chat");
+      console.error("❌ Errore nell'avvio della chat:", error);
+      toast.error("❌ Errore nell'avvio della chat", {
+        description: error.message || 'Riprova più tardi',
+        duration: 4000
+      });
     }
   };
   
@@ -157,11 +177,33 @@ Ciao Marco, ho bisogno del tuo aiuto per questa pianta. Puoi darmi una diagnosi 
     }
   };
 
+  const handleSaveDiagnosis = async () => {
+    if (!onSaveDiagnosis) {
+      console.log("❌ onSaveDiagnosis handler not provided");
+      toast.error("Funzione di salvataggio non disponibile");
+      return;
+    }
+
+    if (!user) {
+      setShowAuthDialog(true);
+      return;
+    }
+
+    try {
+      console.log("💾 Tentativo di salvataggio diagnosi...");
+      await onSaveDiagnosis();
+      console.log("✅ Diagnosi salvata con successo");
+    } catch (error) {
+      console.error("❌ Errore nel salvataggio:", error);
+      toast.error("❌ Errore nel salvare la diagnosi");
+    }
+  };
+
   return (
     <div className="space-y-3 pt-2">
       {useAI && hasValidAnalysis && onSaveDiagnosis && (
         <Button 
-          onClick={onSaveDiagnosis}
+          onClick={handleSaveDiagnosis}
           className="w-full bg-drplant-blue hover:bg-drplant-blue-dark flex items-center justify-center gap-2"
           disabled={saveLoading}
         >

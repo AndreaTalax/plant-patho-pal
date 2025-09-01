@@ -1,301 +1,250 @@
-
-import React, { useEffect, useState } from 'react';
-import { toast } from '@/components/ui/sonner';
-import { supabase } from '@/integrations/supabase/client';
-import { ShoppingBag, Star, Package } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { useCart } from '@/hooks/useCart';
-import CartDialog from '@/components/shop/CartDialog';
-
-interface SelectedProduct {
-  id: string;
-  name: string;
-  fromDiagnosis: boolean;
-}
+import React, { useState, useEffect } from 'react';
+import { Button } from "@/components/ui/button";
+import { ShoppingCart } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { CartDialog } from './CartDialog';
+import { ProductCard } from './ProductCard';
+import { Input } from "@/components/ui/input";
+import { Slider } from "@/components/ui/slider";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface Product {
   id: string;
   name: string;
-  description?: string;
+  description: string;
   price: number;
-  category?: string;
-  image_url?: string;
-  stock_quantity?: number;
-  is_active: boolean;
+  imageUrl: string;
+}
+
+const PRODUCTS: Product[] = [
+  {
+    id: "1",
+    name: "Concime Biologico",
+    description: "Concime organico per tutte le piante",
+    price: 19.99,
+    imageUrl: "/images/products/concime.jpg",
+  },
+  {
+    id: "2",
+    name: "Insetticida Naturale",
+    description: "Protezione naturale contro gli insetti",
+    price: 14.50,
+    imageUrl: "/images/products/insetticida.jpg",
+  },
+  {
+    id: "3",
+    name: "Terriccio Universale",
+    description: "Terriccio di alta qualità per ogni tipo di pianta",
+    price: 12.00,
+    imageUrl: "/images/products/terriccio.jpg",
+  },
+  {
+    id: "4",
+    name: "Vaso Autoirrigante",
+    description: "Vaso moderno con sistema di autoirrigazione",
+    price: 25.00,
+    imageUrl: "/images/products/vaso.jpg",
+  },
+  {
+    id: "5",
+    name: "Kit di Germinazione",
+    description: "Tutto il necessario per far crescere le tue piante",
+    price: 29.99,
+    imageUrl: "/images/products/kit.jpg",
+  },
+  {
+    id: "6",
+    name: "Forbici da Potatura",
+    description: "Forbici professionali per la cura delle piante",
+    price: 21.00,
+    imageUrl: "/images/products/forbici.jpg",
+  },
+];
+
+const FILTERS = [
+  "Concimi",
+  "Insetticidi",
+  "Terricci",
+  "Vasi",
+  "Attrezzi",
+];
+
+interface CartItem {
+  product: Product;
+  quantity: number;
 }
 
 const ShopTab = () => {
-  const [selectedProduct, setSelectedProduct] = useState<SelectedProduct | null>(null);
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [showCart, setShowCart] = useState(false);
+  const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedFilters, setSelectedFilters] = useState<string[]>([]);
+  const [priceRange, setPriceRange] = useState<number[]>([0, 30]);
+  const [recommendedProduct, setRecommendedProduct] = useState<Product | null>(null);
 
-  const {
-    items: cartItems,
-    isOpen: isCartOpen,
-    addItem,
-    removeItem,
-    updateQuantity,
-    clearCart,
-    getTotalPrice,
-    getTotalItems,
-    openCart,
-    closeCart
-  } = useCart();
-
-  // Carica i prodotti solo una volta al mount del componente
   useEffect(() => {
-    let mounted = true;
-
-    const initializeShop = async () => {
-      // Controlla se c'è un prodotto selezionato dalla diagnosi
-      const storedProduct = localStorage.getItem('selectedProduct');
-      if (storedProduct && mounted) {
-        try {
-          const product = JSON.parse(storedProduct);
-          setSelectedProduct(product);
-          localStorage.removeItem('selectedProduct');
-          toast.info(`Prodotto raccomandato dalla diagnosi: ${product.name}`);
-        } catch (error) {
-          console.error('Error parsing selected product:', error);
-        }
-      }
-
-      // Carica i prodotti dal database solo una volta
-      if (mounted) {
-        await loadProducts();
-      }
-    };
-
-    initializeShop();
-
-    return () => {
-      mounted = false;
-    };
-  }, []); // Dipendenze vuote per eseguire solo al mount
-
-  // Gestisci i parametri URL separatemente
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('payment') === 'success') {
-      toast.success('Pagamento completato con successo!');
-      clearCart();
-      window.history.replaceState({}, document.title, window.location.pathname);
-    } else if (urlParams.get('payment') === 'cancelled') {
-      toast.info('Pagamento annullato');
-      window.history.replaceState({}, document.title, window.location.pathname);
-    }
-  }, [clearCart]);
-
-  const loadProducts = async () => {
-    try {
-      setLoading(true);
-      console.log('📦 Caricamento prodotti...');
-      
-      const { data, error } = await supabase.functions.invoke('get-products');
-      
-      if (error) {
-        console.error('Error loading products:', error);
-        toast.error('Errore nel caricamento dei prodotti');
-        return;
-      }
-
-      if (data?.products) {
-        console.log('✅ Prodotti caricati:', data.products.length);
-        setProducts(data.products);
-      }
-    } catch (error) {
-      console.error('Error loading products:', error);
-      toast.error('Errore nel caricamento dei prodotti');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const filterProductsByCategory = (category: string) => {
-    console.log('🔍 Filtro categoria:', category);
-    setSelectedCategory(category);
-  };
-
-  const filteredProducts = selectedCategory === 'all' 
-    ? products 
-    : products.filter(product => product.category?.toLowerCase() === selectedCategory.toLowerCase());
-
-  const categories = ['all', ...Array.from(new Set(products.map(p => p.category).filter(Boolean)))];
+    // Simula il recupero del prodotto raccomandato dalla diagnosi
+    // In una vera implementazione, questo verrebbe da un'API
+    const recommended = PRODUCTS[Math.floor(Math.random() * PRODUCTS.length)];
+    setRecommendedProduct(recommended);
+  }, []);
 
   const handleAddToCart = (product: Product) => {
-    if (product.stock_quantity === 0) {
-      toast.error('Prodotto esaurito');
-      return;
+    const existingItem = cartItems.find((item) => item.product.id === product.id);
+    if (existingItem) {
+      const updatedItems = cartItems.map((item) =>
+        item.product.id === product.id
+          ? { ...item, quantity: item.quantity + 1 }
+          : item
+      );
+      setCartItems(updatedItems);
+    } else {
+      setCartItems([...cartItems, { product, quantity: 1 }]);
     }
-    
-    console.log('🛒 Aggiunto al carrello:', product.name);
-    addItem({
-      id: product.id,
-      name: product.name,
-      price: product.price,
-      image_url: product.image_url,
-      description: product.description
-    });
   };
 
+  const handleRemoveFromCart = (productId: string) => {
+    const updatedItems = cartItems.filter((item) => item.product.id !== productId);
+    setCartItems(updatedItems);
+  };
+
+  const handleUpdateQuantity = (productId: string, newQuantity: number) => {
+    if (newQuantity < 1) {
+      handleRemoveFromCart(productId);
+      return;
+    }
+    const updatedItems = cartItems.map((item) =>
+      item.product.id === productId ? { ...item, quantity: newQuantity } : item
+    );
+    setCartItems(updatedItems);
+  };
+
+  const clearCart = () => {
+    setCartItems([]);
+  };
+
+  const filteredProducts = PRODUCTS.filter((product) => {
+    const searchMatch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      product.description.toLowerCase().includes(searchQuery.toLowerCase());
+
+    const filterMatch = selectedFilters.length === 0 || selectedFilters.some(filter =>
+      product.name.toLowerCase().includes(filter.toLowerCase()) ||
+      product.description.toLowerCase().includes(filter.toLowerCase())
+    );
+
+    const priceMatch = product.price >= priceRange[0] && product.price <= priceRange[1];
+
+    return searchMatch && filterMatch && priceMatch;
+  });
+
   return (
-    <div className="space-y-6 pb-24">
+    <div className="space-y-6 pb-24 pt-4">
       <div className="text-center">
         <div className="flex items-center justify-center gap-4 mb-2">
           <h2 className="text-2xl font-bold text-gray-900">Negozio</h2>
           <Button
-            onClick={openCart}
+            onClick={() => setShowCart(true)}
             variant="outline"
+            size="sm"
             className="relative"
           >
-            <ShoppingBag className="w-4 h-4 mr-2" />
+            <ShoppingCart className="h-4 w-4 mr-2" />
             Carrello
-            {getTotalItems() > 0 && (
-              <Badge 
-                variant="default" 
-                className="absolute -top-2 -right-2 bg-green-600 hover:bg-green-700"
-              >
-                {getTotalItems()}
+            {cartItems.length > 0 && (
+              <Badge variant="destructive" className="ml-2 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs">
+                {cartItems.length}
               </Badge>
             )}
           </Button>
         </div>
-        <p className="text-gray-600">Trova i prodotti migliori per le tue piante</p>
+        <p className="text-gray-600">
+          Trova i prodotti migliori per la cura delle tue piante
+        </p>
       </div>
 
-      {/* Prodotto selezionato dalla diagnosi */}
-      {selectedProduct && (
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-          <h3 className="font-semibold text-green-800 mb-2">
-            Prodotto raccomandato dalla diagnosi
-          </h3>
-          <p className="text-green-700">{selectedProduct.name}</p>
-          <p className="text-sm text-green-600 mt-1">
-            Questo prodotto è stato suggerito in base alla tua diagnosi
-          </p>
+      {/* Prodotto raccomandato dalla diagnosi */}
+      {recommendedProduct && (
+        <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+          <h3 className="font-semibold text-green-800 mb-2">Prodotto raccomandato dalla diagnosi</h3>
+          <div className="flex items-center gap-3">
+            <div className="flex-1">
+              <h4 className="font-medium text-green-700">{recommendedProduct.name}</h4>
+              <p className="text-sm text-green-600">{recommendedProduct.description}</p>
+            </div>
+            <div className="text-right">
+              <p className="font-bold text-green-800">€{recommendedProduct.price}</p>
+              <Button
+                onClick={() => handleAddToCart(recommendedProduct)}
+                size="sm"
+                className="mt-2 bg-green-600 hover:bg-green-700"
+              >
+                Aggiungi
+              </Button>
+            </div>
+          </div>
         </div>
       )}
 
-      {/* Filtri per categoria */}
-      <div className="flex flex-wrap gap-2 justify-center">
-        {categories.map((category) => (
-          <Button
-            key={category}
-            variant={selectedCategory === category ? "default" : "outline"}
-            size="sm"
-            onClick={() => filterProductsByCategory(category)}
-            className="capitalize"
-          >
-            {category === 'all' ? 'Tutti' : category}
-          </Button>
+      {/* Search and Filters */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Input
+          type="search"
+          placeholder="Cerca prodotti..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+        />
+
+        <ScrollArea className="col-span-1 md:col-span-1 h-40">
+          <div className="flex flex-col gap-2">
+            {FILTERS.map((filter) => (
+              <label key={filter} className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  className="accent-drplant-green rounded"
+                  checked={selectedFilters.includes(filter)}
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      setSelectedFilters([...selectedFilters, filter]);
+                    } else {
+                      setSelectedFilters(selectedFilters.filter((f) => f !== filter));
+                    }
+                  }}
+                />
+                <span>{filter}</span>
+              </label>
+            ))}
+          </div>
+        </ScrollArea>
+
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Prezzo: €{priceRange[0]} - €{priceRange[1]}</p>
+          <Slider
+            defaultValue={priceRange}
+            max={30}
+            step={1}
+            onValueChange={(value) => setPriceRange(value)}
+          />
+        </div>
+      </div>
+
+      {/* Product Listing */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {filteredProducts.map((product) => (
+          <ProductCard
+            key={product.id}
+            product={product}
+            onAddToCart={handleAddToCart}
+          />
         ))}
       </div>
 
-      {/* Lista prodotti */}
-      {loading ? (
-        <div className="text-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
-          <p className="mt-2 text-gray-600">Caricamento prodotti...</p>
-        </div>
-      ) : filteredProducts.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredProducts.map((product) => (
-            <div
-              key={product.id}
-              className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm hover:shadow-md transition-shadow"
-            >
-              <div className="flex items-start gap-3">
-                <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden">
-                  {product.image_url ? (
-                    <img 
-                      src={product.image_url} 
-                      alt={product.name}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <Package className="w-8 h-8 text-gray-400" />
-                  )}
-                </div>
-                
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-gray-900 truncate">
-                    {product.name}
-                  </h3>
-                  
-                  {product.description && (
-                    <p className="text-sm text-gray-600 mt-1 line-clamp-2">
-                      {product.description}
-                    </p>
-                  )}
-                  
-                  <div className="flex items-center justify-between mt-2">
-                    <span className="font-bold text-lg text-green-600">
-                      €{product.price.toFixed(2)}
-                    </span>
-                    
-                    {product.category && (
-                      <Badge variant="secondary" className="text-xs">
-                        {product.category}
-                      </Badge>
-                    )}
-                  </div>
-                  
-                  {product.stock_quantity !== undefined && (
-                    <p className="text-xs text-gray-500 mt-1">
-                      {product.stock_quantity > 0 
-                        ? `${product.stock_quantity} disponibili`
-                        : 'Esaurito'
-                      }
-                    </p>
-                  )}
-                </div>
-              </div>
-              
-              <Button 
-                className="w-full mt-3 bg-green-600 hover:bg-green-700"
-                size="sm"
-                disabled={product.stock_quantity === 0}
-                onClick={() => handleAddToCart(product)}
-              >
-                <ShoppingBag className="w-4 h-4 mr-2" />
-                {product.stock_quantity === 0 ? 'Esaurito' : 'Aggiungi al carrello'}
-              </Button>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className="text-center py-8">
-          <Package className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">
-            Nessun prodotto trovato
-          </h3>
-          <p className="text-gray-600">
-            {selectedCategory === 'all' 
-              ? 'Non ci sono prodotti disponibili al momento.'
-              : `Nessun prodotto nella categoria "${selectedCategory}".`
-            }
-          </p>
-          <Button 
-            onClick={loadProducts}
-            variant="outline"
-            className="mt-4"
-          >
-            Ricarica prodotti
-          </Button>
-        </div>
-      )}
-
-      {/* Dialog del carrello */}
       <CartDialog
-        isOpen={isCartOpen}
-        onClose={closeCart}
-        items={cartItems}
-        onUpdateQuantity={updateQuantity}
-        onRemoveItem={removeItem}
+        open={showCart}
+        onOpenChange={setShowCart}
+        cartItems={cartItems}
+        onRemoveItem={handleRemoveFromCart}
+        onUpdateQuantity={handleUpdateQuantity}
         onClearCart={clearCart}
-        totalPrice={getTotalPrice()}
       />
     </div>
   );
