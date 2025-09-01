@@ -12,10 +12,12 @@ import BottomNavigation from "@/components/BottomNavigation";
 import ExpertDashboard from "@/components/expert/ExpertDashboard";
 import { MARCO_NIGRO_ID } from "@/components/phytopathologist";
 
+type TabType = 'diagnose' | 'shop' | 'profile' | 'chat' | 'library';
+
 const Index = () => {
   const { isAuthenticated, userProfile, loading } = useAuth();
   const { t } = useTheme();
-  const [activeTab, setActiveTab] = useState("diagnose");
+  const [activeTab, setActiveTab] = useState<TabType>("diagnose");
 
   // Check if current user is Marco Nigro (expert)
   const isMarcoNigro = userProfile?.id === MARCO_NIGRO_ID || 
@@ -24,6 +26,13 @@ const Index = () => {
   useEffect(() => {
     if (!loading && !isAuthenticated) {
       window.location.href = '/login';
+    }
+
+    // Handle URL tab parameter
+    const urlParams = new URLSearchParams(window.location.search);
+    const tabParam = urlParams.get('tab');
+    if (tabParam && ['diagnose', 'shop', 'profile', 'chat', 'library'].includes(tabParam)) {
+      setActiveTab(tabParam as TabType);
     }
   }, [isAuthenticated, loading]);
 
@@ -69,13 +78,17 @@ const Index = () => {
     }
   };
 
+  const handleTabChange = (tab: TabType) => {
+    setActiveTab(tab);
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
       <main className="pb-16">
         {renderActiveTab()}
       </main>
-      <BottomNavigation activeTab={activeTab} onTabChange={setActiveTab} />
+      <BottomNavigation activeTab={activeTab} onTabChange={handleTabChange} />
     </div>
   );
 };
