@@ -76,8 +76,12 @@ const ShopTab = () => {
       const productList = data.products || [];
       setProducts(productList);
 
-      // Estrai le categorie uniche
-      const uniqueCategories = [...new Set(productList.map((p: Product) => p.category).filter(Boolean))];
+      // Estrai le categorie uniche con proper typing
+      const uniqueCategories = [...new Set(
+        productList
+          .map((p: Product) => p.category)
+          .filter((category): category is string => Boolean(category))
+      )];
       setCategories(uniqueCategories);
     } catch (error) {
       console.error('Error fetching products:', error);
