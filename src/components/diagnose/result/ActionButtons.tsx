@@ -6,12 +6,11 @@ import { useAuth } from "@/context/AuthContext";
 import { useState } from "react";
 import { AuthRequiredDialog } from "@/components/auth/AuthRequiredDialog";
 import { supabase } from "@/integrations/supabase/client";
-// import { EXPERT } from '@/components/chat/types'; // Rimosso: usiamo sempre MARCO_NIGRO_ID per coerenza backend
 import { MARCO_NIGRO_ID } from '@/components/phytopathologist';
 import { toast } from "sonner";
 import { usePremiumStatus } from "@/services/premiumService";
 import { PremiumPaywallModal } from "../PremiumPaywallModal";
-import { ConsultationDataService } from '@/services/chat/consultationDataService'; // NEW
+import { ConsultationDataService } from '@/services/chat/consultationDataService';
 
 interface ActionButtonsProps {
   onStartNewAnalysis: () => void;
@@ -39,13 +38,38 @@ const ActionButtons = ({
   useAI = false,
   diagnosisData
 }: ActionButtonsProps) => {
-  const { user, userProfile } = useAuth(); // UPDATED: also get userProfile
+  const { user, userProfile } = useAuth();
   const { hasExpertChatAccess } = usePremiumStatus();
   const navigate = useNavigate();
   const [showAuthDialog, setShowAuthDialog] = useState(false);
   const [showPaywallModal, setShowPaywallModal] = useState(false);
   
   const isAuthenticated = !!user;
+
+  // Redirect più robusto al tab Chat con fallback multipli e retry
+  const goToChatTab = () => {
+    const dispatchSwitch = () => {
+      try {
+        const event = new CustomEvent('switchTab', { detail: 'chat' });
+        window.dispatchEvent(event);
+        // Alcuni listener potrebbero essere su document
+        document.dispatchEvent(event as any);
+        // Fallback messaggistica
+        window.postMessage({ type: 'SWITCH_TAB', tab: 'chat' }, '*');
+        // Fallback persistenza
+        try { localStorage.setItem('activeTab', 'chat'); } catch {}
+        console.log('➡️ Forzato passaggio al tab Chat');
+      } catch (e) {
+        console.warn('⚠️ Impossibile dispatchare switchTab:', e);
+      }
+    };
+
+    // Naviga e poi dispatcha più volte (listeners potrebbero non essere pronti)
+    navigate('/');
+    setTimeout(dispatchSwitch, 100);
+    setTimeout(dispatchSwitch, 400);
+    setTimeout(dispatchSwitch, 1000);
+  };
   
   const startChatWithExpert = async () => {
     if (!isAuthenticated) {
@@ -61,7 +85,6 @@ const ActionButtons = ({
     try {
       console.log("🚀 Starting chat with expert, diagnosisData:", diagnosisData);
       
-      // Ottieni la sessione per autorizzare l'edge function
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         toast.error('Sessione non valida, esegui di nuovo l’accesso');
@@ -79,7 +102,7 @@ const ActionButtons = ({
         .from('conversations')
         .insert({
           user_id: user.id,
-          expert_id: MARCO_NIGRO_ID, // Usa sempre l’ID esperto coerente col backend
+          expert_id: MARCO_NIGRO_ID,
           title: `Consulenza per ${plantType}`,
           status: 'active'
         })
@@ -93,7 +116,7 @@ const ActionButtons = ({
 
       console.log("✅ Conversation created:", conversation);
 
-      // Messaggio iniziale "umano" (manteniamo, opzionale)
+      // Messaggio iniziale "umano" (opzionale)
       let initialMessage = `🌱 **Nuova richiesta di consulenza**\n\n**Tipo di pianta:** ${plantType}\n**Sintomi osservati:** ${symptoms}`;
 
       if (diagnosisData?.diagnosisResult) {
@@ -106,7 +129,7 @@ const ActionButtons = ({
 
       console.log("📝 Initial message:", initialMessage);
 
-      // Invia messaggio iniziale via Edge Function "send-message" (con token)
+      // Invia messaggio iniziale via Edge Function "send-message"
       const { error: sendMsgError } = await supabase.functions.invoke('send-message', {
         body: {
           conversationId: conversation.id,
@@ -122,10 +145,10 @@ const ActionButtons = ({
 
       if (sendMsgError) {
         console.error("❌ Error sending initial message via edge function:", sendMsgError);
-        // Non blocchiamo il flusso per questo, proseguiamo con l'invio automatico dati
+        // Non blocchiamo il flusso
       }
 
-      // Se c’è un’immagine, inviala come messaggio separato (sempre via edge function)
+      // Invia immagine separatamente se presente
       if (imageUrl) {
         console.log("📸 Sending image message via edge function:", imageUrl);
         const { error: imageMessageError } = await supabase.functions.invoke('send-message', {
@@ -143,11 +166,10 @@ const ActionButtons = ({
 
         if (imageMessageError) {
           console.error("⚠️ Error sending image message:", imageMessageError);
-          // Non blocchiamo per l'immagine, continuiamo
         }
       }
 
-      // ➊ INVIO AUTOMATICO DATI COMPLETI (edge function dedicata)
+      // ➊ INVIO AUTOMATICO DATI COMPLETI
       const plantData = {
         symptoms: diagnosisData?.symptoms || diagnosisData?.plantInfo?.symptoms || 'Da descrivere durante la consulenza',
         wateringFrequency: diagnosisData?.plantInfo?.wateringFrequency || 'Da specificare',
@@ -170,6 +192,8 @@ const ActionButtons = ({
         birthPlace: userProfile?.birth_place || userProfile?.birthPlace || 'Non specificato'
       };
 
+      toast.message('Invio in corso...', { description: 'Sto inviando la tua analisi e aprendo la chat' });
+
       console.log("🔄 Sending automatic consultation data via edge function...", { hasUser: !!userData.email, hasPlant: !!plantData.plantName, useAI });
 
       const sent = await ConsultationDataService.sendInitialConsultationData(
@@ -181,21 +205,17 @@ const ActionButtons = ({
 
       if (!sent) {
         console.warn("⚠️ Automatic consultation data send failed (will still open chat).");
+        toast.warning('Attenzione', { description: 'Chat aperta ma invio dati non completato. Puoi inviarli manualmente.' });
       } else {
         console.log("✅ Automatic consultation data sent.");
+        toast.success('✅ Chat avviata con il fitopatologo!', {
+          description: 'Dati e analisi AI inviati automaticamente',
+          duration: 4000
+        });
       }
 
-      // Vai alla chat
-      navigate('/');
-      setTimeout(() => {
-        const event = new CustomEvent('switchTab', { detail: 'chat' });
-        window.dispatchEvent(event);
-      }, 100);
-      
-      toast.success('✅ Chat avviata con il fitopatologo!', {
-        description: 'Dati e analisi AI inviati automaticamente',
-        duration: 4000
-      });
+      // Vai alla chat con redirect robusto
+      goToChatTab();
 
     } catch (error: any) {
       console.error("❌ Errore nell'avvio della chat:", error);
@@ -206,11 +226,16 @@ const ActionButtons = ({
     }
   };
   
-  const handleChatWithExpert = () => {
-    if (onChatWithExpert) {
-      onChatWithExpert();
-    } else {
-      startChatWithExpert();
+  // Forza sempre l'avvio della chat e l'invio automatico
+  const handleChatWithExpert = async () => {
+    try {
+      if (onChatWithExpert) {
+        await Promise.resolve(onChatWithExpert());
+      }
+    } catch (e) {
+      console.warn('⚠️ onChatWithExpert handler ha generato un errore, procedo comunque con l’invio automatico.', e);
+    } finally {
+      await startChatWithExpert();
     }
   };
 
