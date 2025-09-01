@@ -1,291 +1,382 @@
 
-import { useState, useEffect, useCallback } from 'react';
-import { useAuth } from '@/context/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
+import { useState, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
-import { DatabaseMessage } from '@/services/chat/types';
-import { MARCO_NIGRO_ID } from '@/components/phytopathologist';
-import { ConversationService } from '@/services/chat/conversationService';
-import { MessageService } from '@/services/chat/messageService';
-
-// Funzioni di debug per diagnosticare problemi della chat
-const validateChatParameters = (userId: string, expertId: string) => {
-  const errors: string[] = [];
-  
-  if (!userId || typeof userId !== 'string' || userId.trim() === '') {
-    errors.push('userId non valido o mancante');
-  }
-  
-  if (!expertId || typeof expertId !== 'string' || expertId.trim() === '') {
-    errors.push('expertId non valido o mancante');
-  }
-  
-  // Controlla se gli ID hanno un formato valido (UUID)
-  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-  if (userId && !uuidRegex.test(userId.trim())) {
-    errors.push('userId non è un UUID valido');
-  }
-  
-  if (expertId && !uuidRegex.test(expertId.trim())) {
-    errors.push('expertId non è un UUID valido');
-  }
-  
-  return errors;
-};
-
-const logSupabaseOperation = (operation: string, params: any) => {
-  console.group(`🔍 Debug Operazione Supabase: ${operation}`);
-  console.log('📦 Parametri:', JSON.stringify(params, null, 2));
-  console.log('🕐 Timestamp:', new Date().toISOString());
-  console.log('🔗 Supabase Project:', 'otdmqmpxukifoxjlgzmq');
-  console.groupEnd();
-};
-
-const analyzeSupabaseError = (error: any, operation: string) => {
-  console.group(`❌ Analisi Errore Supabase: ${operation}`);
-  console.log('📊 Error code:', error?.code);
-  console.log('📝 Error message:', error?.message);
-  console.log('🔍 Error details:', error?.details);
-  console.log('💡 Error hint:', error?.hint);
-  console.log('🔗 Error context:', error);
-  console.groupEnd();
-};
-
-const testSupabaseConnection = async () => {
-  try {
-    console.log('🧪 Test connessione Supabase...');
-    
-    const { data, error } = await supabase
-      .from('conversations')
-      .select('count')
-      .limit(1);
-    
-    if (error) {
-      console.log('⚠️ Errore test connessione:', error);
-      analyzeSupabaseError(error, 'connection-test');
-    } else {
-      console.log('✅ Supabase connesso correttamente');
-    }
-    
-  } catch (error) {
-    console.error('❌ Supabase non raggiungibile:', error);
-  }
-};
+import { supabase, EXPERT_ID } from '@/integrations/supabase/client';
+import { Message, DatabaseConversation } from '@/components/chat/types';
+import {
+  loadMessages,
+  convertToUIMessage,
+  sendMessage as sendMessageService
+} from '@/components/chat/chatService';
 
 export const useUserChatRealtime = (userId: string) => {
-  const [activeChat, setActiveChat] = useState<any>(null);
-  const [messages, setMessages] = useState<DatabaseMessage[]>([]);
+  const [activeChat, setActiveChat] = useState<string | null>(null);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [currentDbConversation, setCurrentDbConversation] = useState<DatabaseConversation | null>(null);
   const [isSending, setIsSending] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
-  const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
-  const [initializationError, setInitializationError] = useState<string | null>(null);
-  const [isInitializing, setIsInitializing] = useState(false);
+  const [subscription, setSubscription] = useState<any>(null);
+  const [isInitialized, setIsInitialized] = useState(false);
   
-  const { user } = useAuth();
-
-  // Inizializzazione chat con fallback robusto e debug
-  const startChatWithExpert = useCallback(async () => {
-    if (isInitializing) {
-      console.log('🔄 useUserChatRealtime: Inizializzazione già in corso');
-      return;
+  // Add refs to prevent multiple simultaneous operations
+  const initializingRef = useRef(false);
+  const loadingMessagesRef = useRef(false);
+  
+  // Rate limiting for API calls
+  const rateLimitRef = useRef<Map<string, number>>(new Map());
+  
+  const canMakeRequest = (key: string, minInterval: number = 2000) => {
+    const now = Date.now();
+    const lastRequest = rateLimitRef.current.get(key) || 0;
+    if (now - lastRequest < minInterval) {
+      console.log(`⏳ Rate limiting ${key}, waiting...`);
+      return false;
     }
-
-    try {
-      setIsInitializing(true);
-      setInitializationError(null);
-      
-      // Validazione parametri con debug
-      const validationErrors = validateChatParameters(userId, MARCO_NIGRO_ID);
-      if (validationErrors.length > 0) {
-        const errorMessage = `Errori di validazione: ${validationErrors.join(', ')}`;
-        console.error('❌ Validazione fallita:', errorMessage);
-        throw new Error(errorMessage);
-      }
-
-      console.log('🚀 useUserChatRealtime: Avvio chat con esperto per:', userId);
-      logSupabaseOperation('findOrCreateConversation', { userId, expertId: MARCO_NIGRO_ID });
-
-      // Test connessione Supabase prima di procedere
-      await testSupabaseConnection();
-
-      // Trova o crea conversazione usando il servizio diretto
-      const conversation = await ConversationService.findOrCreateConversation(userId);
-      
-      if (!conversation) {
-        throw new Error('Impossibile creare o trovare la conversazione');
-      }
-
-      setActiveChat(conversation);
-      setCurrentConversationId(conversation.id);
-
-      // Carica messaggi esistenti con fallback e debug
-      try {
-        logSupabaseOperation('loadMessages', { conversationId: conversation.id });
-        const existingMessages = await MessageService.loadMessages(conversation.id);
-        
-        console.log('🔍 Messages loaded from database:', {
-          count: existingMessages?.length || 0,
-          messages: existingMessages?.map(m => ({
-            id: m.id,
-            sender_id: m.sender_id,
-            text: (m.content || m.text || '').substring(0, 50),
-            sent_at: m.sent_at
-          })) || []
-        });
-        
-        setMessages(existingMessages || []);
-        console.log('✅ useUserChatRealtime: Messaggi caricati:', existingMessages?.length || 0);
-      } catch (messageError) {
-        console.warn('⚠️ useUserChatRealtime: Impossibile caricare messaggi esistenti:', messageError);
-        analyzeSupabaseError(messageError, 'loadMessages');
-        setMessages([]); // Fallback a lista vuota
-      }
-
-      // Configura sottoscrizione real-time con fallback
-      try {
-        const channel = supabase
-          .channel(`conversation_${conversation.id}`)
-          .on(
-            'postgres_changes',
-            {
-              event: 'INSERT',
-              schema: 'public',
-              table: 'messages',
-              filter: `conversation_id=eq.${conversation.id}`
-            },
-            (payload) => {
-              console.log('📨 useUserChatRealtime: Nuovo messaggio ricevuto:', payload.new);
-              const newMessage = payload.new as DatabaseMessage;
-              
-              console.log('🔍 New message details:', {
-                id: newMessage.id,
-                sender_id: newMessage.sender_id,
-                userId: userId,
-                marcoId: MARCO_NIGRO_ID,
-                isFromUser: newMessage.sender_id === userId,
-                isFromExpert: newMessage.sender_id === MARCO_NIGRO_ID
-              });
-              
-              setMessages(prev => {
-                // Evita duplicati
-                const exists = prev.some(msg => msg.id === newMessage.id);
-                if (exists) {
-                  console.log('⚠️ useUserChatRealtime: Messaggio già esistente, ignorato');
-                  return prev;
-                }
-                
-                const newMessages = [...prev, newMessage];
-                console.log('✅ useUserChatRealtime: Messaggio aggiunto, totale:', newMessages.length);
-                return newMessages;
-              });
-            }
-          )
-          .subscribe((status) => {
-            console.log('🔗 useUserChatRealtime: Stato sottoscrizione:', status);
-            setIsConnected(status === 'SUBSCRIBED');
-          });
-
-        // Cleanup function
-        return () => {
-          try {
-            channel.unsubscribe();
-          } catch (error) {
-            console.warn('⚠️ useUserChatRealtime: Errore durante cleanup sottoscrizione:', error);
-          }
-        };
-      } catch (realtimeError) {
-        console.warn('⚠️ useUserChatRealtime: Errore configurazione real-time:', realtimeError);
-        setIsConnected(false); // Funziona comunque senza real-time
-      }
-
-      console.log('✅ useUserChatRealtime: Inizializzazione completata con successo');
-
-    } catch (error) {
-      console.error('❌ useUserChatRealtime: Errore inizializzazione:', error);
-      setInitializationError(error instanceof Error ? error.message : 'Errore sconosciuto');
-    } finally {
-      setIsInitializing(false);
+    rateLimitRef.current.set(key, now);
+    return true;
+  };
+  
+  // Funzione per caricare i messaggi esistenti
+  const loadExistingMessages = async (conversationId: string, retryCount = 0) => {
+    if (loadingMessagesRef.current) {
+      console.log('📚 Already loading messages, skipping...');
+      return false;
     }
-  }, [userId, isInitializing]);
-
-  // Gestore invio messaggi con fallback
-  const handleSendMessage = useCallback(async (
-    text: string, 
-    imageUrl?: string
-  ) => {
-    if (!activeChat || !currentConversationId || isSending) {
-      console.log('⚠️ useUserChatRealtime: Condizioni invio non soddisfatte');
-      return;
+    
+    if (!canMakeRequest(`load-messages-${conversationId}`, 1000)) {
+      return false;
     }
-
-    if (!text?.trim() && !imageUrl) {
-      toast.error('Il messaggio non può essere vuoto');
-      return;
-    }
-
-    setIsSending(true);
+    
+    loadingMessagesRef.current = true;
     
     try {
-      console.log('📤 useUserChatRealtime: Invio messaggio:', { 
-        text: text?.slice(0, 50), 
-        hasImage: !!imageUrl,
-        userId: userId,
-        conversationId: currentConversationId
+      console.log('📚 Loading existing messages for conversation:', conversationId);
+      
+      const messagesData = await loadMessages(conversationId);
+      
+      console.log('📬 Raw messages loaded:', messagesData);
+      
+      if (messagesData && messagesData.length > 0) {
+        const convertedMessages = messagesData.map(msg => {
+          const converted = convertToUIMessage(msg);
+          console.log('🔄 Converting message:', { original: msg, converted });
+          return converted;
+        });
+        
+        console.log('✅ Setting messages:', convertedMessages);
+        setMessages(convertedMessages);
+        return true;
+      } else {
+        console.log('📭 No existing messages, setting welcome message');
+        const welcomeMessage = { 
+          id: 'welcome-1', 
+          sender: 'expert' as const, 
+          text: '👋 Ciao! Sono Marco, il fitopatologo. Come posso aiutarti con le tue piante?', 
+          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) 
+        };
+        setMessages([welcomeMessage]);
+        return true;
+      }
+    } catch (error) {
+      console.error('❌ Error loading existing messages:', error);
+      
+      // Exponential backoff for retries
+      if (retryCount < 2) {
+        const delay = Math.pow(2, retryCount) * 2000;
+        console.log(`🔄 Retrying message load in ${delay}ms...`);
+        setTimeout(() => {
+          loadExistingMessages(conversationId, retryCount + 1);
+        }, delay);
+        return false;
+      }
+      
+      // Fallback welcome message
+      setMessages([{ 
+        id: 'welcome-error', 
+        sender: 'expert' as const, 
+        text: '👋 Ciao! Sono Marco, il fitopatologo. Come posso aiutarti con le tue piante?', 
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) 
+      }]);
+      return false;
+    } finally {
+      loadingMessagesRef.current = false;
+    }
+  };
+
+  // Inizializzazione della chat expert
+  useEffect(() => {
+    if (!userId || isInitialized || initializingRef.current) return;
+    
+    const initializeExpertChat = async () => {
+      if (initializingRef.current) {
+        console.log('🔄 Already initializing, skipping...');
+        return;
+      }
+      
+      if (!canMakeRequest(`init-chat-${userId}`, 3000)) {
+        console.log('⏳ Rate limiting initialization...');
+        return;
+      }
+      
+      initializingRef.current = true;
+      
+      try {
+        console.log("🔄 Initializing expert chat for user:", userId);
+        
+        // Cerca conversazione esistente
+        const { data: conversationList, error } = await supabase
+          .from('conversations')
+          .select('*')
+          .eq('user_id', userId)
+          .eq('expert_id', EXPERT_ID)
+          .order('created_at', { ascending: false })
+          .limit(1);
+
+        if (error) {
+          console.error("❌ Error fetching conversation:", error);
+          throw new Error("Errore nel caricamento della conversazione");
+        }
+
+        let conversation = conversationList?.[0];
+
+        if (!conversation) {
+          console.log("🆕 No conversation found, creating new one...");
+          const { data: newConversation, error: createError } = await supabase
+            .from('conversations')
+            .insert({
+              user_id: userId,
+              expert_id: EXPERT_ID,
+              title: 'Consulenza esperto',
+              status: 'active'
+            })
+            .select()
+            .single();
+
+          if (createError) {
+            console.error("❌ Error creating conversation:", createError);
+            throw new Error("Errore nella creazione della conversazione");
+          }
+
+          conversation = newConversation;
+          console.log("✅ New conversation created:", conversation.id);
+        } else {
+          console.log("✅ Found existing conversation:", conversation.id);
+        }
+        
+        setCurrentDbConversation(conversation);
+        setActiveChat('expert');
+        
+        // Carica i messaggi esistenti
+        await loadExistingMessages(conversation.id);
+        
+        setIsInitialized(true);
+        console.log("✅ Chat initialized successfully");
+        toast.success("Chat collegata con successo!");
+        
+      } catch (error) {
+        console.error("❌ Error initializing expert chat:", error);
+        toast.error("Errore nell'inizializzazione della chat. Riprova.");
+      } finally {
+        initializingRef.current = false;
+      }
+    };
+    
+    initializeExpertChat();
+  }, [userId, isInitialized]);
+
+  // Setup real-time subscription
+  useEffect(() => {
+    if (!currentDbConversation?.id || !isInitialized) return;
+    
+    console.log('🔄 Setting up realtime subscription for conversation:', currentDbConversation.id);
+    
+    // Cleanup subscription precedente
+    if (subscription) {
+      try {
+        subscription.unsubscribe();
+        supabase.removeChannel(subscription);
+      } catch (error) {
+        console.warn('⚠️ Error cleaning up old subscription:', error);
+      }
+    }
+    
+    const messagesSubscription = supabase
+      .channel(`messages-channel-${currentDbConversation.id}-${Date.now()}`)
+      .on('postgres_changes', 
+        { 
+          event: 'INSERT', 
+          schema: 'public', 
+          table: 'messages',
+          filter: `conversation_id=eq.${currentDbConversation.id}`
+        }, 
+        (payload) => {
+          try {
+            console.log('📨 New realtime message received:', payload.new);
+            const newMsg = payload.new;
+            const formattedMessage = convertToUIMessage(newMsg as any);
+
+            setMessages(prev => {
+              const messageExists = prev.some(msg => msg.id === formattedMessage.id);
+              if (messageExists) {
+                console.log('⚠️ Message already exists, skipping:', formattedMessage.id);
+                return prev;
+              }
+              
+              const withoutTemp = prev.filter(msg => {
+                if (!msg.id.startsWith('temp-')) return true;
+                
+                const contentMatches = msg.text.trim() === formattedMessage.text.trim() && 
+                                     msg.sender === formattedMessage.sender;
+                
+                if (contentMatches) {
+                  console.log('🧹 Removing temporary message:', msg.id);
+                  return false;
+                }
+                return true;
+              });
+              
+              console.log('✅ Adding new message to UI:', formattedMessage.id);
+              return [...withoutTemp, formattedMessage];
+            });
+            
+            if (formattedMessage.sender === 'expert') {
+              toast.info("Nuova risposta dal fitopatologo!", {
+                description: "Controlla la chat per leggere la risposta",
+                duration: 4000
+              });
+            }
+          } catch (error) {
+            console.error('❌ Error handling realtime message:', error);
+          }
+        }
+      )
+      .subscribe((status, err) => {
+        console.log('🔗 Subscription status:', status, err);
+        setIsConnected(status === 'SUBSCRIBED');
+        
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ Realtime connected successfully');
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('❌ Realtime connection failed:', err);
+          setIsConnected(false);
+        } else if (status === 'TIMED_OUT') {
+          console.error('⏰ Realtime connection timed out');
+          setIsConnected(false);
+        }
       });
 
-      const success = await MessageService.sendMessage(
-        currentConversationId,
+    setSubscription(messagesSubscription);
+
+    return () => {
+      console.log('🔌 Cleaning up realtime subscription...');
+      try {
+        if (messagesSubscription) {
+          messagesSubscription.unsubscribe();
+          supabase.removeChannel(messagesSubscription);
+        }
+      } catch (error) {
+        console.warn('⚠️ Error during subscription cleanup:', error);
+      }
+      setSubscription(null);
+    };
+  }, [currentDbConversation?.id, userId, isInitialized]);
+  
+  const handleSendMessage = async (text: string, imageUrl?: string) => {
+    if ((!text.trim() && !imageUrl)) {
+      toast.error("Il messaggio non può essere vuoto");
+      return;
+    }
+
+    if (isSending) {
+      console.log('⚠️ Already sending a message, skipping');
+      return;
+    }
+
+    if (!currentDbConversation?.id) {
+      toast.error("Chat non disponibile");
+      return;
+    }
+
+    console.log('📤 Starting to send message:', { text, imageUrl });
+    setIsSending(true);
+
+    // Create temporary message for immediate UI feedback
+    const tempMessage: Message = {
+      id: `temp-${Date.now()}-${Math.random()}`,
+      sender: 'user',
+      text: text || "📸 Immagine allegata",
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      ...(imageUrl ? { image_url: imageUrl } : {})
+    };
+    
+    console.log('⌛ Adding temporary message:', tempMessage.id);
+    setMessages(prev => [...prev, tempMessage]);
+
+    try {
+      console.log('🚀 Sending to backend...');
+      const result = await sendMessageService(
+        currentDbConversation.id,
         userId,
-        text || '📸 Immagine allegata',
+        EXPERT_ID,
+        text || "📸 Immagine allegata",
         imageUrl
       );
 
-      if (!success) {
-        throw new Error('Invio fallito');
+      console.log('🚚 Backend response:', result);
+
+      if (!result) {
+        console.error('❌ Backend returned null/false');
+        setMessages(prev => prev.filter(msg => msg.id !== tempMessage.id));
+        toast.error("Errore nell'invio del messaggio");
+        return;
       }
 
-      console.log('✅ useUserChatRealtime: Messaggio inviato con successo');
-      
-      // Ricarica messaggi dopo l'invio (fallback se real-time non funziona)
-      setTimeout(async () => {
-        try {
-          const refreshedMessages = await MessageService.loadMessages(currentConversationId);
-          console.log('🔄 useUserChatRealtime: Messaggi ricaricati dopo invio:', refreshedMessages?.length || 0);
-          setMessages(refreshedMessages || []);
-        } catch (error) {
-          console.warn('⚠️ useUserChatRealtime: Impossibile ricaricare messaggi:', error);
-        }
+      console.log('✅ Message sent successfully');
+
+      // Reload messages after send
+      setTimeout(() => {
+        console.log('🔄 Reloading messages after send...');
+        loadExistingMessages(currentDbConversation.id);
       }, 1000);
-      
+
     } catch (error) {
-      console.error('❌ useUserChatRealtime: Errore invio messaggio:', error);
-      toast.error('Errore nell\'invio del messaggio');
+      console.error('❌ Error sending message:', error);
+      setMessages(prev => prev.filter(msg => msg.id !== tempMessage.id));
+      toast.error("Errore nell'invio del messaggio");
     } finally {
       setIsSending(false);
     }
-  }, [activeChat, currentConversationId, userId, isSending]);
+  };
 
-  // Reset stato chat
-  const resetChat = useCallback(() => {
-    console.log('🔄 useUserChatRealtime: Reset stato chat');
-    setActiveChat(null);
-    setMessages([]);
-    setCurrentConversationId(null);
-    setIsConnected(false);
-    setInitializationError(null);
-    setIsInitializing(false);
-  }, []);
+  const startChatWithExpert = async () => {
+    console.log('🎯 startChatWithExpert called');
+    if (!activeChat && !isInitialized && !initializingRef.current) {
+      setIsInitialized(false); // Force re-initialization
+    }
+  };
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (subscription) {
+        try {
+          subscription.unsubscribe();
+          supabase.removeChannel(subscription);
+        } catch (error) {
+          console.warn('⚠️ Error during final cleanup:', error);
+        }
+      }
+    };
+  }, [subscription]);
 
   return {
     activeChat,
+    setActiveChat,
     messages,
     isSending,
     isConnected,
     handleSendMessage,
     startChatWithExpert,
-    currentConversationId,
-    initializationError,
-    resetChat,
-    isInitializing
+    currentConversationId: currentDbConversation?.id || null,
   };
 };

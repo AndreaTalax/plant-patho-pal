@@ -2,10 +2,9 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { FileText } from 'lucide-react';
-import { RealTimeChatWrapper } from '@/components/chat/RealTimeChatWrapper';
+import UserChatView from '@/components/chat/UserChatView';
 import { NavigationUtils } from '@/utils/navigationUtils';
 import { useAuth } from '@/context/AuthContext';
-import { MARCO_NIGRO_ID } from '@/components/phytopathologist';
 
 const ChatTab = () => {
   const { user } = useAuth();
@@ -43,26 +42,9 @@ const ChatTab = () => {
         </Button>
       </div>
       
-      <RealTimeChatWrapper
-        conversationId="temp-conversation-id" // This will be replaced with actual conversation logic
-        userId={user.id}
-      >
-        {({ messages, isConnected, sendMessage, refreshMessages }) => (
-          <div className="space-y-4">
-            <div className="flex items-center gap-2 text-sm text-gray-500">
-              <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`} />
-              {isConnected ? 'Connesso' : 'Disconnesso'}
-            </div>
-            
-            <div className="bg-white rounded-lg shadow p-4">
-              <p className="text-gray-600">
-                Chat in tempo reale - {messages.length} messaggi caricati
-              </p>
-              {/* Here you can add the actual chat interface */}
-            </div>
-          </div>
-        )}
-      </RealTimeChatWrapper>
+      <div className="h-96 border rounded-lg">
+        <UserChatView userId={user.id} />
+      </div>
     </div>
   );
 };
