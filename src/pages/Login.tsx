@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,12 +18,20 @@ const Login = () => {
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, isAuthenticated } = useAuth();
   const { language, setLanguage, t } = useTheme();
   const [showForgotPassword, setShowForgotPassword] = useState(false);
 
   // Get admin credentials from the centralized service
   const adminCredentials = getWhitelistedCredentials();
+
+  // Se già autenticato, reindirizza direttamente alla home
+  useEffect(() => {
+    if (isAuthenticated) {
+      console.log("🔁 Utente già autenticato, reindirizzo alla home");
+      navigate("/", { replace: true });
+    }
+  }, [isAuthenticated, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,10 +69,10 @@ const Login = () => {
           description: isAdminEmail ? "Benvenuto, Amministratore!" : t("welcomeMessage"),
           dismissible: true
         });
-        
-        setTimeout(() => {
-          navigate("/", { replace: true });
-        }, 1000);
+
+        // Ferma subito il loading e reindirizza immediatamente
+        setIsLoading(false);
+        navigate("/", { replace: true });
       } else {
         console.log('❌ Login failed for:', email);
         toast.error(t("loginFailed"), {
@@ -81,6 +89,7 @@ const Login = () => {
         dismissible: true
       });
     } finally {
+      // In ogni caso, assicuriamoci di chiudere il loading
       setIsLoading(false);
     }
   };
@@ -177,6 +186,7 @@ const Login = () => {
                 type="submit" 
                 className="w-full bg-gradient-to-r from-drplant-blue to-drplant-blue-dark hover:from-drplant-blue-dark hover:to-drplant-blue-dark transition-all duration-300"
                 disabled={isLoading}
+                aria-busy={isLoading}
               >
                 {isLoading ? t("loginInProgress") : t("login")}
               </Button>
