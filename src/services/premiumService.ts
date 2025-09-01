@@ -89,7 +89,11 @@ export const usePremiumStatus = () => {
   const hasUnlimitedDiagnosis = PremiumService.hasUnlimitedDiagnosis(userProfile?.email);
   const isTestAdmin = PremiumService.isTestAdmin(userProfile?.email);
   
+  // hasAIAccess per compatibilità - indica se l'utente ha accesso base all'AI (anche gratuito)
+  const hasAIAccess = true; // Tutti hanno accesso base all'AI (con limite per utenti normali)
+  
   return {
+    hasAIAccess,
     hasExpertChatAccess,
     hasUnlimitedDiagnosis,
     isTestAdmin,
