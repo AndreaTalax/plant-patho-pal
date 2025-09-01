@@ -13,6 +13,7 @@ import { useAuth } from '@/context/AuthContext';
 import { PlantDataSyncService } from '@/services/chat/plantDataSyncService';
 import { AutoExpertNotificationService } from '@/components/chat/AutoExpertNotificationService';
 import { toast } from 'sonner';
+import { NavigationUtils } from '@/utils/navigationUtils';
 
 interface DiagnosisStagesProps {
   stage: 'info' | 'capture' | 'options' | 'result';
@@ -131,19 +132,8 @@ const DiagnosisStages: React.FC<DiagnosisStagesProps> = ({
     if (onChatWithExpert) {
       onChatWithExpert();
     } else {
-      // Navigate to homepage and switch to chat tab
-      navigate('/');
-      setTimeout(() => {
-        console.log("🔄 Triggering chat tab switch...");
-        const event = new CustomEvent('switchTab', { detail: 'chat' });
-        window.dispatchEvent(event);
-        
-        // Also refresh the chat to ensure latest data is shown
-        setTimeout(() => {
-          const refreshEvent = new CustomEvent('refreshChat');
-          window.dispatchEvent(refreshEvent);
-        }, 200);
-      }, 100);
+      // Use the navigation utility to redirect to chat
+      NavigationUtils.redirectToChat();
     }
   };
 

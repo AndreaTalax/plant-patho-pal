@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { MessageCircle, Save, Repeat } from 'lucide-react';
@@ -7,6 +6,7 @@ import { usePlantDiagnosis } from '@/hooks/usePlantDiagnosis';
 import { PlantDataSyncService } from '@/services/chat/plantDataSyncService';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
+import { NavigationUtils } from '@/utils/navigationUtils';
 
 interface ActionButtonsProps {
   onRetry: () => void;
@@ -56,16 +56,12 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
         console.log('✅ Dati sincronizzati con successo alla chat');
         toast.success('Dati inviati automaticamente all\'esperto!');
         
-        // Reindirizza alla chat
-        const currentUrl = new URL(window.location.href);
-        currentUrl.searchParams.set('tab', 'chat');
-        window.location.href = currentUrl.toString();
+        // Use the navigation utility to redirect to chat
+        NavigationUtils.redirectToChat();
       } else {
         toast.error('Errore nell\'invio automatico dei dati');
-        // Reindirizza comunque alla chat
-        const currentUrl = new URL(window.location.href);
-        currentUrl.searchParams.set('tab', 'chat');
-        window.location.href = currentUrl.toString();
+        // Redirect to chat anyway
+        NavigationUtils.redirectToChat();
       }
       
     } catch (error) {
