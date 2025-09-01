@@ -76,10 +76,12 @@ const ShopTab = () => {
       setProducts(productList);
 
       // Estrai le categorie uniche con proper typing
-      const categoryList = productList
+      const validCategories = productList
         .map((p: Product) => p.category)
-        .filter((category): category is string => typeof category === 'string' && category.length > 0);
-      const uniqueCategories: string[] = [...new Set(categoryList)];
+        .filter((category: string | undefined): category is string => {
+          return typeof category === 'string' && category.length > 0;
+        });
+      const uniqueCategories = [...new Set(validCategories)];
       setCategories(uniqueCategories);
     } catch (error) {
       console.error('Error fetching products:', error);
