@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -22,6 +21,7 @@ import { UserManagement } from "./components/admin/UserManagement";
 import { NotificationSettings } from "./components/notifications/NotificationSettings";
 import { NotificationProvider } from "./components/notifications/NotificationProvider";
 import TestDiagnosi from "./pages/TestDiagnosi";
+import ConnectionIndicator from '@/components/mobile/ConnectionIndicator';
 
 const queryClient = new QueryClient();
 
@@ -33,40 +33,43 @@ const AppWithPresence = ({ children }: { children: React.ReactNode }) => {
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <ThemeProvider>
-        <AuthProvider>
-          <NotificationProvider>
-            <AppWithPresence>
-              <PlantInfoProvider>
-                <TooltipProvider>
-                  <Toaster />
-                <Router>
-                  <Routes>
-                    <Route path="/" element={<Index />} />
-                    <Route path="/login" element={<Login />} />
-                    <Route path="/signup" element={<SignUp />} />
-                    <Route path="/complete-profile" element={<CompleteProfile />} />
-                    <Route path="/reset-password" element={<ResetPassword />} />
-                    <Route path="/about" element={<AboutUs />} />
-                    <Route path="/services" element={<Services />} />
-                    <Route path="/contact" element={<Contact />} />
-                    <Route path="/saved-articles" element={<SavedArticles />} />
-                    <Route path="/cdc-dashboard" element={<CDCDashboard />} />
-                    <Route path="/user-management" element={<UserManagement />} />
-                    <Route path="/notification-settings" element={<NotificationSettings />} />
-                    <Route path="/test-diagnosi" element={<TestDiagnosi />} />
-                    <Route path="/404" element={<NotFound />} />
-                    <Route path="*" element={<Navigate to="/404" replace />} />
-                  </Routes>
-                </Router>
-                </TooltipProvider>
-              </PlantInfoProvider>
-            </AppWithPresence>
-          </NotificationProvider>
-        </AuthProvider>
-      </ThemeProvider>
-    </QueryClientProvider>
+    <>
+      <ConnectionIndicator />
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider>
+          <AuthProvider>
+            <NotificationProvider>
+              <AppWithPresence>
+                <PlantInfoProvider>
+                  <TooltipProvider>
+                    <Toaster />
+                    <Router>
+                      <Routes>
+                        <Route path="/" element={<Index />} />
+                        <Route path="/login" element={<Login />} />
+                        <Route path="/signup" element={<SignUp />} />
+                        <Route path="/complete-profile" element={<CompleteProfile />} />
+                        <Route path="/reset-password" element={<ResetPassword />} />
+                        <Route path="/about" element={<AboutUs />} />
+                        <Route path="/services" element={<Services />} />
+                        <Route path="/contact" element={<Contact />} />
+                        <Route path="/saved-articles" element={<SavedArticles />} />
+                        <Route path="/cdc-dashboard" element={<CDCDashboard />} />
+                        <Route path="/user-management" element={<UserManagement />} />
+                        <Route path="/notification-settings" element={<NotificationSettings />} />
+                        <Route path="/test-diagnosi" element={<TestDiagnosi />} />
+                        <Route path="/404" element={<NotFound />} />
+                        <Route path="*" element={<Navigate to="/404" replace />} />
+                      </Routes>
+                    </Router>
+                  </TooltipProvider>
+                </PlantInfoProvider>
+              </AppWithPresence>
+            </NotificationProvider>
+          </AuthProvider>
+        </ThemeProvider>
+      </QueryClientProvider>
+    </>
   );
 }
 
