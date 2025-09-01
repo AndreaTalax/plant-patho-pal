@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/context/ThemeContext";
@@ -56,8 +57,8 @@ const Index = () => {
   // Legge il tab dalla querystring (es. /?tab=diagnose) e lo applica con priorità
   useEffect(() => {
     const params = new URLSearchParams(location.search);
-    const tabParam = params.get('tab');
-    if (tabParam) {
+    const tabParam = params.get('tab') as TabType;
+    if (tabParam && ['diagnose', 'shop', 'profile', 'chat', 'library', 'expert'].includes(tabParam)) {
       if (isMasterAccount && tabParam === 'diagnose') {
         setActiveTab('expert');
       } else {
@@ -112,7 +113,7 @@ const Index = () => {
       console.log("🎧 Current state - canAccessTabs:", canAccessTabs);
       console.log("🎧 Current state - activeTab:", activeTab);
       
-      const newTab = event.detail;
+      const newTab = event.detail as TabType;
       console.log("🎧 New tab requested:", newTab);
 
       if (isMasterAccount && newTab === "diagnose") {
@@ -223,9 +224,6 @@ const Index = () => {
       <BottomNavigation 
         activeTab={activeTab} 
         setActiveTab={handleSetActiveTab}
-        showExpertTab={isMasterAccount}
-        plantInfoComplete={plantInfo.infoComplete}
-        canAccessTabs={hasFirstDiagnosis || (plantInfo.infoComplete && (plantInfo.useAI || plantInfo.sendToExpert))}
       />
     </div>
   );
