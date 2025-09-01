@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/context/ThemeContext";
@@ -15,9 +14,8 @@ import { ensureStorageBuckets } from "@/utils/storageSetup";
 import { usePlantInfo } from "@/context/PlantInfoContext";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-
 const Index = () => {
-  const { isMasterAccount, isAuthenticated, loading, userProfile } = useAuth();
+  const { isMasterAccount, isAuthenticated, isProfileComplete, loading, userProfile } = useAuth();
   const { plantInfo } = usePlantInfo();
   const { toast } = useToast();
   const { t } = useTheme();
@@ -27,19 +25,19 @@ const Index = () => {
   const [activeTab, setActiveTab] = useState<string>(isMasterAccount ? "expert" : "diagnose");
   const suppressAutoOpenRef = useRef(false);
 
-  // Reindirizza al login se non autenticato
   useEffect(() => {
     if (!loading && !isAuthenticated) {
       console.log('🔒 Utente non autenticato, reindirizzamento al login...');
       navigate('/login');
-      return;
     }
   }, [isAuthenticated, loading, navigate]);
 
-  // Se ancora in caricamento o non autenticato, non renderizzare nulla
-  if (loading || !isAuthenticated) {
-    return null;
-  }
+  useEffect(() => {
+    if (!loading && isAuthenticated && !isProfileComplete && !isMasterAccount) {
+      console.log('📝 Profilo incompleto, reindirizzamento al completamento profilo...');
+      navigate('/complete-profile');
+    }
+  }, [isAuthenticated, isProfileComplete, isMasterAccount, loading, navigate]);
 
   const hasFirstDiagnosis =
     typeof window !== 'undefined' && (
@@ -95,6 +93,11 @@ const Index = () => {
     };
     autoOpenChatIfMessages();
   }, [isAuthenticated, userProfile?.id, isMasterAccount, activeTab, location.search]);
+
+  // Non forzare più il redirect; l'utente può navigare liberamente tra le tab
+  useEffect(() => {
+    // intentionally left blank
+  }, [canAccessTabs, activeTab, isMasterAccount]);
 
   useEffect(() => {
     const handleSwitchTab = (event: CustomEvent) => {
@@ -162,6 +165,21 @@ const Index = () => {
     }
     setActiveTab(tab);
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-drplant-green/5 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-drplant-green mx-auto mb-4"></div>
+          <p className="text-gray-600">{t("loading")}</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated || (!isProfileComplete && !isMasterAccount)) {
+    return null;
+  }
 
   const renderTabContent = () => {
     if (isMasterAccount) {

@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { isWhitelistedEmail, getExpectedPassword } from './credentialsService';
@@ -10,80 +11,111 @@ import { ensureProfileExists } from './profileService';
 export const authenticateWhitelistedUser = async (email: string, password: string): Promise<{ success: boolean }> => {
   const expectedPassword = getExpectedPassword(email);
   
-  console.log('🔐 Login per email whitelisted:', email);
-  console.log('🔑 Password attesa:', expectedPassword);
-
-  // Verifica prima la password corretta
-  if (password !== expectedPassword) {
-    console.log('❌ Password non corrisponde a quella attesa');
-    throw new Error('Invalid login credentials');
-  }
-
-  console.log('✅ Password corretta, procedo con login Supabase per:', email);
+  console.log('Email nella whitelist rilevata:', email);
+  
+  // Supporta password aggiornate: niente controllo su password hardcoded
+  console.log('Account whitelisted: provo login con la password fornita per', email);
+  
 
   try {
-    // Tenta il login diretto con Supabase
-    const { data, error } = await supabase.auth.signInWithPassword({
+    // Prova login diretto con Supabase usando la password fornita
+    let { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({
       email,
-      password,
+      password: password,
     });
 
-    if (data.user && data.session && !error) {
-      console.log('✅ Login Supabase riuscito per:', email);
-      await ensureProfileExists(data.user.id, email);
+    if (loginData.user && loginData.session && !loginError) {
+      console.log('Login Supabase riuscito con password originale per:', email);
+      await ensureProfileExists(loginData.user.id, email);
       return { success: true };
     }
 
-    console.log('❌ Login Supabase fallito, errore:', error?.message);
-    
-    // Se il login fallisce, prova a creare/recuperare l'account
-    console.log('🔄 Tentativo di creazione/recupero account per:', email);
-    
-    const { data: signupData, error: signupError } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          first_name: email === 'test@gmail.com' ? 'Test' : 'User',
-          last_name: email === 'test@gmail.com' ? 'User' : 'Name'
-        }
-      }
-    });
-    
-    if (signupData.user || (signupError && signupError.message.includes('already registered'))) {
-      console.log('✅ Account creato/esistente, riprovo login per:', email);
-      
-      // Attendi un momento prima di riprovare
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      const { data: retryData, error: retryError } = await supabase.auth.signInWithPassword({
+    // Se fallisce con la password inserita, prova con la password whitelisted (se definita), poi con temp123
+    if (expectedPassword && password !== expectedPassword) {
+      console.log('Login con password fornita fallito, provo con password whitelisted per:', email);
+      const { data: wlLoginData, error: wlLoginError } = await supabase.auth.signInWithPassword({
         email,
-        password,
+        password: expectedPassword,
       });
 
-      if (retryData.user && retryData.session && !retryError) {
-        console.log('✅ Login riuscito al secondo tentativo per:', email);
-        await ensureProfileExists(retryData.user.id, email);
+      if (wlLoginData.user && wlLoginData.session && !wlLoginError) {
+        console.log('Login riuscito con password whitelisted per:', email);
+        await ensureProfileExists(wlLoginData.user.id, email);
         return { success: true };
       }
     }
 
-    throw new Error('Impossibile completare il login per l\'account amministratore');
+    console.log('Login con password fornita/whitelisted fallito, provo con temp123 per:', email);
+    
+    const { data: tempLoginData, error: tempLoginError } = await supabase.auth.signInWithPassword({
+      email,
+      password: 'temp123',
+    });
+
+    if (tempLoginData.user && tempLoginData.session && !tempLoginError) {
+      console.log('Login Supabase riuscito con temp123 per:', email);
+      await ensureProfileExists(tempLoginData.user.id, email);
+      return { success: true };
+    }
+
+    // Se entrambi i login falliscono, l'account non esiste - crealo
+    console.log('Nessun login riuscito, creo account per:', email);
+    
+    const { data: signupData, error: signupError } = await supabase.auth.signUp({
+      email,
+      password: 'temp123',
+      options: {
+        data: {
+          first_name: email === 'agrotecnicomarconigro@gmail.com' ? 'Marco' : 
+                     email === 'test@gmail.com' ? 'Test' : 
+                     email === 'talaiaandrea@gmail.com' ? 'Andrea' : 'User',
+          last_name: email === 'agrotecnicomarconigro@gmail.com' ? 'Nigro' : 
+                    email === 'test@gmail.com' ? 'User' : 
+                    email === 'talaiaandrea@gmail.com' ? 'Talaia' : 'Name'
+        }
+      }
+    });
+    
+    // Gestisce sia account creati che esistenti
+    if (signupData.user || (signupError && signupError.message.includes('already registered'))) {
+      console.log('Account creato/esistente, provo login finale con temp123 per:', email);
+      
+      // Aspetta un momento
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      // Login finale
+      const { data: finalLoginData, error: finalLoginError } = await supabase.auth.signInWithPassword({
+        email,
+        password: 'temp123',
+      });
+
+      if (finalLoginData.user && finalLoginData.session && !finalLoginError) {
+        console.log('Login finale riuscito per:', email);
+        await ensureProfileExists(finalLoginData.user.id, email);
+        return { success: true };
+      } else {
+        console.error('Login finale fallito:', finalLoginError);
+        throw new Error('Impossibile completare il login per l\'account amministratore');
+      }
+    } else {
+      console.error('Errore durante la creazione dell\'account:', signupError);
+      throw new Error('Impossibile creare l\'account amministratore');
+    }
   } catch (authError) {
-    console.error('❌ Errore durante autenticazione whitelisted:', authError);
+    console.error('Errore durante autenticazione whitelisted:', authError);
     throw new Error('Errore durante l\'autenticazione dell\'account amministratore');
   }
 };
 
 export const authenticateRegularUser = async (email: string, password: string): Promise<{ success: boolean }> => {
-  console.log('🔐 Tentativo login normale per:', email);
+  console.log('Tentativo login normale per:', email);
   const { data, error } = await supabase.auth.signInWithPassword({
     email,
     password,
   });
 
   if (data.user && data.session && !error) {
-    console.log('✅ Login normale riuscito per:', email);
+    console.log('Login normale riuscito per:', email);
     return { success: true };
   }
   

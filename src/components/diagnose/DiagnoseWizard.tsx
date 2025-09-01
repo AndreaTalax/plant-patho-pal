@@ -1,5 +1,4 @@
 
-
 import { useState } from "react";
 import UserInfoForm from "./UserInfoForm";
 import PlantInfoForm from "./PlantInfoForm";
@@ -43,6 +42,7 @@ async function sendAllToExpertChat(user: any, plant: any) {
  * <DiagnoseWizard />
  * // Renders the UserInfoForm for the first step, 
  * // and transitions to PlantInfoForm upon completion.
+ * @param {React.Component} None - This function represents a functional React component and does not take traditional arguments.
  * @returns {JSX.Element} The rendered form elements for the current step of the wizard.
  * @description
  *   - Manages the state transitions between different steps of the wizard.
