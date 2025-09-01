@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { toast } from '@/components/ui/sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -72,16 +73,17 @@ const ShopTab = () => {
       if (!response.ok) throw new Error('Failed to fetch products');
       
       const data = await response.json();
-      const productList = data.products || [];
+
+      // Ensure strong typing so downstream arrays are string[]
+      const productList: Product[] = (data.products ?? []) as Product[];
       setProducts(productList);
 
-      // Estrai le categorie uniche con proper typing
-      const validCategories = productList
+      // Estrai le categorie uniche con typing sicuro
+      const validCategories: string[] = productList
         .map((p: Product) => p.category)
-        .filter((category: string | undefined): category is string => {
-          return typeof category === 'string' && category.length > 0;
-        });
-      const uniqueCategories = [...new Set(validCategories)];
+        .filter((category): category is string => typeof category === 'string' && category.length > 0);
+
+      const uniqueCategories: string[] = Array.from(new Set<string>(validCategories));
       setCategories(uniqueCategories);
     } catch (error) {
       console.error('Error fetching products:', error);
@@ -213,3 +215,4 @@ const ShopTab = () => {
 };
 
 export default ShopTab;
+
