@@ -1,4 +1,3 @@
-
 import { useEffect, useMemo, useState } from 'react';
 import { usePlantAnalysis } from './usePlantAnalysis';
 import { usePlantImageUpload } from './usePlantImageUpload';
@@ -129,12 +128,11 @@ export const usePlantDiagnosis = () => {
         results
       });
 
-      // Upload dell'immagine se necessario
+      // Upload immagine se necessario
       let imageUrl = '';
       if (typeof uploadedImage === 'string') {
         imageUrl = uploadedImage;
       } else {
-        // Upload dell'immagine al bucket Supabase
         const fileExt = 'jpg';
         const fileName = `${user.id}/${Date.now()}.${fileExt}`;
         
@@ -158,7 +156,7 @@ export const usePlantDiagnosis = () => {
         console.log('📸 Immagine caricata:', imageUrl);
       }
 
-      // Serialize complex objects to JSON-compatible format
+      // Crea un payload JSON-safe
       const diagnosisResultData = {
         confidence: Math.min(70, Math.round(plant?.confidence || 0)),
         isHealthy: !disease,
@@ -169,9 +167,11 @@ export const usePlantDiagnosis = () => {
         causes: disease?.additionalInfo?.cause || '',
         severity: disease?.severity || 'N/A',
         timestamp: new Date().toISOString(),
-        // Serialize fullResults to JSON-compatible format
         fullResults: results ? JSON.parse(JSON.stringify(results)) : null
       };
+
+      // IMPORTANT: serializza per garantire il tipo Json atteso dal client
+      const safeDiagnosisResult = JSON.parse(JSON.stringify(diagnosisResultData)) as any;
 
       const diagnosisData = {
         user_id: user.id,
@@ -180,14 +180,14 @@ export const usePlantDiagnosis = () => {
         symptoms: diagnosedDisease?.symptoms?.join(', ') || disease?.symptoms?.join(', ') || 'Nessun sintomo specifico',
         image_url: imageUrl,
         status: 'completed',
-        diagnosis_result: diagnosisResultData as any // Cast to satisfy TypeScript
+        diagnosis_result: safeDiagnosisResult as any
       };
 
       console.log('📝 Dati diagnosi completi da salvare:', diagnosisData);
 
       const { data, error } = await supabase
         .from('diagnoses')
-        .insert(diagnosisData)
+        .insert(diagnosisData as any)
         .select()
         .single();
 
@@ -202,7 +202,7 @@ export const usePlantDiagnosis = () => {
         duration: 4000
       });
 
-      return data; // Ritorna i dati salvati
+      return data;
 
     } catch (error: any) {
       console.error('❌ Errore nel salvare la diagnosi:', error);
@@ -221,7 +221,7 @@ export const usePlantDiagnosis = () => {
         duration: 6000
       });
 
-      throw error; // Rilancia l'errore per gestione upstream
+      throw error;
     } finally {
       setIsSaving(false);
     }

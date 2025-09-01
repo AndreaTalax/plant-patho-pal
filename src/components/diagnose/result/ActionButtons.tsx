@@ -6,7 +6,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useState } from "react";
 import { AuthRequiredDialog } from "@/components/auth/AuthRequiredDialog";
 import { supabase } from "@/integrations/supabase/client";
-import { EXPERT } from '@/components/chat/types';
+// import { EXPERT } from '@/components/chat/types'; // Rimosso: usiamo sempre MARCO_NIGRO_ID per coerenza backend
 import { MARCO_NIGRO_ID } from '@/components/phytopathologist';
 import { toast } from "sonner";
 import { usePremiumStatus } from "@/services/premiumService";
@@ -38,7 +38,7 @@ const ActionButtons = ({
   useAI = false,
   diagnosisData
 }: ActionButtonsProps) => {
-  const { user, userProfile } = useAuth();
+  const { user } = useAuth();
   const { hasExpertChatAccess } = usePremiumStatus();
   const navigate = useNavigate();
   const [showAuthDialog, setShowAuthDialog] = useState(false);
@@ -52,7 +52,6 @@ const ActionButtons = ({
       return;
     }
 
-    // Controlla se l'utente ha accesso premium
     if (!hasExpertChatAccess) {
       setShowPaywallModal(true);
       return;
@@ -61,19 +60,25 @@ const ActionButtons = ({
     try {
       console.log("🚀 Starting chat with expert, diagnosisData:", diagnosisData);
       
-      // Prepare diagnosis data for the expert
+      // Ottieni la sessione per autorizzare l'edge function
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error('Sessione non valida, esegui di nuovo l’accesso');
+        return;
+      }
+      
       const plantType = diagnosisData?.plantType || diagnosisData?.plantInfo?.name || 'Non specificato';
       const symptoms = diagnosisData?.symptoms || diagnosisData?.plantInfo?.symptoms || 'Non specificati';
       const imageUrl = diagnosisData?.imageUrl || null;
       
       console.log("📋 Prepared data - plantType:", plantType, "symptoms:", symptoms, "imageUrl:", imageUrl);
       
-      // Create the conversation first
+      // Crea/avvia conversazione con l'esperto
       const { data: conversation, error: convError } = await supabase
         .from('conversations')
         .insert({
           user_id: user.id,
-          expert_id: EXPERT.id,
+          expert_id: MARCO_NIGRO_ID, // Usa sempre l’ID esperto coerente col backend
           title: `Consulenza per ${plantType}`,
           status: 'active'
         })
@@ -87,60 +92,54 @@ const ActionButtons = ({
 
       console.log("✅ Conversation created:", conversation);
 
-      // Create initial message with diagnosis data including AI analysis
-      let initialMessage = `🌱 **Nuova richiesta di consulenza**
+      // Messaggio iniziale
+      let initialMessage = `🌱 **Nuova richiesta di consulenza**\n\n**Tipo di pianta:** ${plantType}\n**Sintomi osservati:** ${symptoms}`;
 
-**Tipo di pianta:** ${plantType}
-**Sintomi osservati:** ${symptoms}`;
-
-      // Add AI diagnosis data if available
-      if (diagnosisData?.diagnosisResult && useAI) {
-        initialMessage += `\n\n🤖 **Analisi AI precedente:**
-${JSON.stringify(diagnosisData.diagnosisResult, null, 2)}`;
+      // Allego anche il risultato AI, se disponibile
+      if (diagnosisData?.diagnosisResult) {
+        initialMessage += `\n\n🤖 **Analisi AI precedente (riassunto):**\n${typeof diagnosisData.diagnosisResult === 'string' 
+          ? diagnosisData.diagnosisResult 
+          : '```json\n' + JSON.stringify(diagnosisData.diagnosisResult, null, 2) + '\n```'}`;
       }
 
       initialMessage += `\n\n${imageUrl ? '📸 **Immagine allegata**\n\n' : ''}Ciao Marco, ho bisogno del tuo aiuto per questa pianta. Puoi darmi una diagnosi professionale?`;
 
       console.log("📝 Initial message:", initialMessage);
 
-      // Insert the initial message
-      const { error: messageError } = await supabase
-        .from('messages')
-        .insert({
-          conversation_id: conversation.id,
-          sender_id: user.id,
-          recipient_id: MARCO_NIGRO_ID,
-          content: initialMessage,
+      // Invia messaggio via Edge Function "send-message" (con token)
+      const { data: sendMsgData, error: sendMsgError } = await supabase.functions.invoke('send-message', {
+        body: {
+          conversationId: conversation.id,
+          recipientId: MARCO_NIGRO_ID,
           text: initialMessage,
-          metadata: {
-            plantType: plantType,
-            symptoms: symptoms,
-            aiAnalysis: diagnosisData?.diagnosisResult || null,
-            autoSent: true
-          }
-        });
+          imageUrl: null,
+          products: null
+        },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
 
-      if (messageError) {
-        console.error("❌ Error sending message:", messageError);
-        throw messageError;
+      if (sendMsgError) {
+        console.error("❌ Error sending initial message via edge function:", sendMsgError);
+        throw sendMsgError;
       }
 
-      // If there's an image, send it as a separate message
+      // Se c’è un’immagine, inviala come messaggio separato (sempre via edge function)
       if (imageUrl) {
-        console.log("📸 Sending image message:", imageUrl);
-        const { error: imageMessageError } = await supabase
-          .from('messages')
-          .insert({
-            conversation_id: conversation.id,
-            sender_id: user.id,
-            recipient_id: MARCO_NIGRO_ID,
-            content: imageUrl,
-            text: 'Immagine della pianta',
-            metadata: {
-              isImage: true,
-              autoSent: true
-            }
-          });
+        console.log("📸 Sending image message via edge function:", imageUrl);
+        const { error: imageMessageError } = await supabase.functions.invoke('send-message', {
+          body: {
+            conversationId: conversation.id,
+            recipientId: MARCO_NIGRO_ID,
+            text: '📸 Immagine della pianta',
+            imageUrl,
+            products: null
+          },
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+        });
 
         if (imageMessageError) {
           console.error("⚠️ Error sending image message:", imageMessageError);
@@ -148,7 +147,7 @@ ${JSON.stringify(diagnosisData.diagnosisResult, null, 2)}`;
         }
       }
 
-      // Navigate to chat
+      // Vai alla chat
       navigate('/');
       setTimeout(() => {
         const event = new CustomEvent('switchTab', { detail: 'chat' });
@@ -160,7 +159,7 @@ ${JSON.stringify(diagnosisData.diagnosisResult, null, 2)}`;
         duration: 4000
       });
 
-    } catch (error) {
+    } catch (error: any) {
       console.error("❌ Errore nell'avvio della chat:", error);
       toast.error("❌ Errore nell'avvio della chat", {
         description: error.message || 'Riprova più tardi',
