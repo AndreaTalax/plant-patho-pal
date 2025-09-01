@@ -36,20 +36,25 @@ async function sendAllToExpertChat(user: any, plant: any) {
   console.log("Sending to expert chat:", buildDiagnosisMessage(user, plant));
 }
 
+interface DiagnoseWizardProps {
+  onBack?: () => void;
+  onComplete?: () => void;
+}
+
 /**
  * Component that manages the diagnostic steps for the wizard.
  * @example
  * <DiagnoseWizard />
  * // Renders the UserInfoForm for the first step, 
  * // and transitions to PlantInfoForm upon completion.
- * @param {React.Component} None - This function represents a functional React component and does not take traditional arguments.
+ * @param {DiagnoseWizardProps} props - Optional callback functions for navigation.
  * @returns {JSX.Element} The rendered form elements for the current step of the wizard.
  * @description
  *   - Manages the state transitions between different steps of the wizard.
  *   - Utilizes React's useState for step and user information management.
  *   - Handles asynchronous operation when sending data to an expert chat.
  */
-export default function DiagnoseWizard() {
+export default function DiagnoseWizard({ onBack, onComplete }: DiagnoseWizardProps) {
   const [step, setStep] = useState(0);
   const [userInfo, setUserInfo] = useState(null);
 
@@ -61,6 +66,9 @@ export default function DiagnoseWizard() {
   const handlePlantInfoComplete = async (plantData: any) => {
     if (userInfo) {
       await sendAllToExpertChat(userInfo, plantData);
+      if (onComplete) {
+        onComplete();
+      }
       // Prosegui con flow...
     }
   };

@@ -1,10 +1,9 @@
-
 import React, { useState, useEffect } from 'react';
 import { Camera, Upload, FileImage, Lightbulb } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import DiagnoseWizard from './diagnose/DiagnoseWizard';
-import DiagnosisHistory from './diagnose/DiagnosisHistory';
+import { DiagnosisHistory } from './diagnose/DiagnosisHistory';
 import { useAuth } from '@/context/AuthContext';
 import { usePlantInfo } from '@/context/PlantInfoContext';
 import { useToast } from '@/hooks/use-toast';
@@ -60,19 +59,14 @@ const DiagnoseTab = () => {
   // Show wizard if active
   if (showWizard) {
     return (
-      <DiagnoseWizard 
-        onBack={handleBackToHome}
-        onComplete={handleBackToHome}
-      />
+      <DiagnoseWizard />
     );
   }
 
   // Show history if active  
   if (showHistory) {
     return (
-      <DiagnosisHistory 
-        onBack={handleBackToHome}
-      />
+      <DiagnosisHistory />
     );
   }
 
