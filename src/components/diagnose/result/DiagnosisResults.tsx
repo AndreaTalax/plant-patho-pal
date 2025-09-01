@@ -1,3 +1,4 @@
+
 import React from 'react';
 import {
   AlertTriangle,
@@ -12,26 +13,14 @@ import { toast } from '@/components/ui/sonner';
 import { ConfidenceBadge } from '@/components/diagnose/ConfidenceBadge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { type CombinedAnalysisResult } from '@/types/analysis';
-import ProductSuggestions from './ProductSuggestions';
 
 interface DiagnosisResultsProps {
   results: CombinedAnalysisResult;
   isFallback?: boolean;
-  onNavigateToShop?: (productId: string, productName: string) => void;
 }
 
-export const DiagnosisResults: React.FC<DiagnosisResultsProps> = ({ 
-  results, 
-  isFallback = false,
-  onNavigateToShop 
-}) => {
+export const DiagnosisResults: React.FC<DiagnosisResultsProps> = ({ results, isFallback = false }) => {
   const { mostLikelyPlant } = results.consensus;
-
-  const handleProductClick = (productId: string, productName: string) => {
-    if (onNavigateToShop) {
-      onNavigateToShop(productId, productName);
-    }
-  };
 
   return (
     <div className="space-y-6 p-6 bg-gradient-to-br from-green-50 to-blue-50 rounded-xl border border-green-200">
@@ -185,16 +174,6 @@ export const DiagnosisResults: React.FC<DiagnosisResultsProps> = ({
                     <span className="text-sm text-gray-600">{disease.treatments.join(', ')}</span>
                   </div>
                 )}
-
-                {/* Prodotti consigliati per questa malattia */}
-                <div className="mt-3">
-                  <h6 className="text-sm font-medium text-gray-700 mb-2">Prodotti consigliati:</h6>
-                  <ProductSuggestions 
-                    diseaseName={disease.disease} 
-                    maxItems={3}
-                    onProductClick={handleProductClick}
-                  />
-                </div>
               </div>
             ))}
           </div>

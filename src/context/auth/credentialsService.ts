@@ -5,7 +5,7 @@
 
 export const getWhitelistedCredentials = () => ({
   'agrotecnicomarconigro@gmail.com': 'marconigro93',
-  'test@gmail.com': 'test123', // Account di test completo
+  'test@gmail.com': 'test123',
   'premium@gmail.com': 'premium123',
   'talaiaandrea@gmail.com': 'test123'
 });
@@ -22,51 +22,23 @@ export const getExpectedPassword = (email: string): string | null => {
 };
 
 export const determineUserRole = (email: string): string => {
-  const emailLower = email.toLowerCase();
-  
-  if (emailLower === 'agrotecnicomarconigro@gmail.com') {
+  if (email === 'agrotecnicomarconigro@gmail.com') {
     return 'admin';
-  } else if (emailLower === 'test@gmail.com') {
-    return 'admin'; // Account di test con privilegi admin
-  } else if (emailLower.includes('marco') || emailLower.includes('fitopatologo')) {
+  } else if (email === 'test@gmail.com') {
+    return 'admin';
+  } else if (email.includes('marco') || email.includes('fitopatologo')) {
     return 'expert';
   }
   return 'user';
 };
 
 export const getUserDisplayName = (email: string): { firstName: string; lastName: string } => {
-  const emailLower = email.toLowerCase();
-  
-  switch (emailLower) {
+  switch (email) {
     case 'agrotecnicomarconigro@gmail.com':
       return { firstName: 'Marco', lastName: 'Nigro' };
     case 'test@gmail.com':
-      return { firstName: 'Test', lastName: 'Admin' };
-    case 'premium@gmail.com':
-      return { firstName: 'Premium', lastName: 'User' };
-    case 'talaiaandrea@gmail.com':
-      return { firstName: 'Andrea', lastName: 'Talaia' };
+      return { firstName: 'Test', lastName: 'User' };
     default:
       return { firstName: 'User', lastName: 'Name' };
   }
-};
-
-/**
- * Verifica se l'utente è un account di test con accesso completo
- */
-export const isTestAccount = (email: string): boolean => {
-  const emailLower = email.toLowerCase();
-  return [
-    'test@gmail.com',
-    'agrotecnicomarconigro@gmail.com',
-    'premium@gmail.com',
-    'talaiaandrea@gmail.com'
-  ].includes(emailLower);
-};
-
-/**
- * Verifica se l'utente può accedere a funzionalità di testing
- */
-export const canAccessTestFeatures = (email: string): boolean => {
-  return isTestAccount(email);
 };

@@ -1,10 +1,11 @@
-import React from 'react';
-import { CheckCircle, AlertTriangle, Info } from 'lucide-react';
+
+import React, { useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import ImageDisplay from './ImageDisplay';
 import PlantInfoCard from './PlantInfoCard';
-import { ActionButtons } from './ActionButtons';
-import ProductSuggestions from './ProductSuggestions';
+import ActionButtons from './ActionButtons';
+import { AutoExpertNotificationService } from '@/components/chat/AutoExpertNotificationService';
+import ProductSuggestions from './ProductSuggestions'; // Aggiunta: sezione prodotti consigliati
 
 interface Disease {
   name: string;
@@ -54,6 +55,7 @@ interface DiagnosisResultProps {
   saveLoading?: boolean;
   isAnalyzing: boolean;
   hasExpertChatAccess?: boolean;
+  // Consente compatibilità con chiamanti che usano "analysisData"
   analysisData?: any;
 }
 
@@ -70,7 +72,7 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
   saveLoading,
   isAnalyzing,
   hasExpertChatAccess,
-  analysisData,
+  analysisData, // nuova prop opzionale per compatibilità
 }) => {
   const { user } = useAuth();
 
@@ -92,7 +94,7 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
     return <div className="text-center">Nessuna immagine da mostrare.</div>;
   }
 
-  // Prepara i dati della diagnosi per l'invio all'esperto
+  // Prepara i dati della diagnosi per l'invio all'esperto con tutte le proprietà richieste
   const diagnosisData = {
     plantType: plantInfo?.name || effectiveDiagnosis?.name || 'Pianta non identificata',
     plantVariety: analysisDetails?.multiServiceInsights?.plantSpecies || '',
@@ -103,43 +105,71 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
     isHealthy: resolvedIsHealthy,
   };
 
-  // Funzione per gestire il click su "Chat con l'esperto" - ora mostra paywall se non premium
+  // Invio automatico dei dati AI all'esperto quando disponibili (solo per utenti premium)
+  useEffect(() => {
+    const sendAutomaticDiagnosis = async () => {
+      // Invia solo se l'utente ha accesso premium e c'è una diagnosi valida
+      if (!user || !resolvedHasExpertChatAccess || !effectiveDiagnosis || isAnalyzing) {
+        return;
+      }
+
+      // Aspetta un momento per assicurarsi che tutti i dati siano pronti
+      const timeoutId = setTimeout(async () => {
+        try {
+          console.log('🤖 Invio automatico dati AI all\'esperto:', diagnosisData);
+          
+          await AutoExpertNotificationService.sendDiagnosisToExpert(
+            user.id,
+            diagnosisData
+          );
+          
+          console.log('✅ Dati AI inviati automaticamente all\'esperto');
+        } catch (error) {
+          console.error('❌ Errore nell\'invio automatico all\'esperto:', error);
+        }
+      }, 2000);
+      
+      return () => {
+        clearTimeout(timeoutId);
+      };
+    };
+
+    sendAutomaticDiagnosis();
+  }, [user, resolvedHasExpertChatAccess, effectiveDiagnosis, imageSrc, isAnalyzing, resolvedConfidence, resolvedIsHealthy]);
+
+  // Funzione per gestire il click su "Chat con l'esperto" - invia sempre i dati
   const handleChatWithExpert = async () => {
-    console.log('🗣️ Click su Chat con l\'esperto');
+    console.log('🗣️ Click su Chat con l\'esperto, invio dati della diagnosi...');
     
     if (!user) {
       console.error('❌ Utente non autenticato');
       return;
     }
 
-    // Se l'utente non ha accesso premium, la funzione onChatWithExpert dovrebbe mostrare il paywall
-    // L'invio automatico avverrà solo dopo il pagamento e l'upgrade
-    if (onChatWithExpert) {
-      await onChatWithExpert();
+    try {
+      // Invia sempre i dati della diagnosi quando si clicca "Chat con l'esperto"
+      console.log('📤 Invio dati diagnosi all\'esperto:', diagnosisData);
+      
+      await AutoExpertNotificationService.sendDiagnosisToExpert(
+        user.id,
+        diagnosisData
+      );
+      
+      console.log('✅ Dati diagnosi inviati all\'esperto con successo');
+      
+      // Poi chiama la funzione originale per aprire la chat
+      if (onChatWithExpert) {
+        await onChatWithExpert();
+      }
+    } catch (error) {
+      console.error('❌ Errore nell\'invio dati all\'esperto:', error);
+      
+      // Anche in caso di errore, prova ad aprire la chat
+      if (onChatWithExpert) {
+        await onChatWithExpert();
+      }
     }
   };
-
-  const getStatusIcon = (status) => {
-    switch (status?.toLowerCase()) {
-      case 'healthy':
-        return <CheckCircle size={24} color="#4CAF50" />
-      case 'diseased':
-        return <AlertTriangle size={24} color="#FF9800" />
-      default:
-        return <Info size={24} color="#2196F3" />
-    }
-  }
-
-  const getStatusColor = (status) => {
-    switch (status?.toLowerCase()) {
-      case 'healthy':
-        return '#4CAF50'
-      case 'diseased':
-        return '#FF9800'
-      default:
-        return '#2196F3'
-    }
-  }
 
   return (
     <div className="space-y-2 px-2">
@@ -190,7 +220,7 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
         </div>
       )}
 
-      {/* Sezione prodotti consigliati */}
+      {/* Sezione prodotti consigliati - reinserita */}
       <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-100">
         <h2 className="text-lg font-semibold">Prodotti consigliati</h2>
         <p className="text-sm text-muted-foreground mb-2">
@@ -240,8 +270,13 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
 
       <div className="mt-4">
         <ActionButtons
-          onRetry={onStartNewAnalysis}
-          isRetrying={false}
+          onStartNewAnalysis={onStartNewAnalysis}
+          onSaveDiagnosis={handleSaveDiagnosis}
+          onChatWithExpert={handleChatWithExpert}
+          saveLoading={resolvedSaveLoading}
+          hasValidAnalysis={!!effectiveDiagnosis}
+          useAI={true}
+          diagnosisData={diagnosisData}
         />
       </div>
     </div>

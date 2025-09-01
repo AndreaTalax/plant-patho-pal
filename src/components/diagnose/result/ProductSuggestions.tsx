@@ -1,10 +1,10 @@
+
 import React, { useEffect, useMemo, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 
 interface ProductSuggestionsProps {
   diseaseName: string;
   maxItems?: number;
-  onProductClick?: (productId: string, productName: string) => void;
 }
 
 interface ProductItem {
@@ -95,11 +95,7 @@ function dedupeProducts(items: ProductItem[]): ProductItem[] {
   return Array.from(map.values());
 }
 
-const ProductSuggestions: React.FC<ProductSuggestionsProps> = ({ 
-  diseaseName, 
-  maxItems = 3, 
-  onProductClick 
-}) => {
+const ProductSuggestions: React.FC<ProductSuggestionsProps> = ({ diseaseName, maxItems = 3 }) => {
   const [products, setProducts] = useState<ProductItem[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -125,7 +121,7 @@ const ProductSuggestions: React.FC<ProductSuggestionsProps> = ({
         // Deduplica e limita
         let merged = dedupeProducts(found).slice(0, maxItems);
 
-        // Fallback finale se ancora vuoto: tenta con termini "universali"
+        // Fallback finale se ancora vuoto: tenta con termini “universali”
         if (merged.length === 0) {
           const fallbackTerms = ['olio di neem', 'fungicida', 'insetticida'];
           const fb = await Promise.allSettled(fallbackTerms.map((t) => fetchBySearch(t)));
@@ -150,40 +146,25 @@ const ProductSuggestions: React.FC<ProductSuggestionsProps> = ({
     return () => { cancelled = true; };
   }, [diseaseName, searchTerms, maxItems]);
 
-  const handleProductClick = (product: ProductItem) => {
-    // Salva il prodotto selezionato per il negozio
-    localStorage.setItem('selectedProduct', JSON.stringify({
-      id: product.id,
-      name: product.name,
-      fromDiagnosis: true
-    }));
-    
-    if (onProductClick) {
-      onProductClick(product.id, product.name);
-    }
-    
-    // Naviga al negozio
-    const event = new CustomEvent('switchTab', { detail: 'shop' });
-    window.dispatchEvent(event);
-  };
-
   if (loading) return <div className="text-sm text-muted-foreground">Caricamento prodotti…</div>;
   if (!products.length) return <div className="text-sm text-muted-foreground">Nessun prodotto trovato</div>;
 
   return (
     <div className="flex flex-wrap gap-2">
       {products.map((p) => (
-        <button
+        <a
           key={p.id}
-          onClick={() => handleProductClick(p)}
-          className="inline-flex items-center gap-2 px-3 py-1 rounded-md border bg-background hover:bg-accent hover:text-accent-foreground transition cursor-pointer"
+          href={p.url || '#'}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-2 px-3 py-1 rounded-md border bg-background hover:bg-accent hover:text-accent-foreground transition"
         >
           <Badge variant="outline" className="text-xs">Shop</Badge>
           <span className="text-sm font-medium">{p.name}</span>
           {typeof p.price === 'number' && (
             <span className="text-xs text-muted-foreground">€{p.price.toFixed(2)}</span>
           )}
-        </button>
+        </a>
       ))}
     </div>
   );

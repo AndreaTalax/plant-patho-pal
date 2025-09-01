@@ -3,8 +3,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { MessageSquare, Archive, Circle, Clock, Calendar } from 'lucide-react';
-import { formatDistanceToNow, format } from 'date-fns';
+import { MessageSquare, Archive, Circle } from 'lucide-react';
+import { formatDistanceToNow } from 'date-fns';
 import { it } from 'date-fns/locale';
 import {
   AlertDialog,
@@ -40,7 +40,7 @@ export default function ConversationCard({
 
   // Get priority badge for conversation
   const getPriorityBadge = () => {
-    const lastMessageTime = conversation.last_message_at ? new Date(conversation.last_message_at) : null;
+    const lastMessageTime = conversation.last_message_timestamp ? new Date(conversation.last_message_timestamp) : null;
     const now = new Date();
     const hoursDiff = lastMessageTime ? Math.abs(now.getTime() - lastMessageTime.getTime()) / (1000 * 60 * 60) : 0;
     
@@ -55,17 +55,6 @@ export default function ConversationCard({
     }
     
     return <Badge variant="default" className="text-xs bg-green-100 text-green-700">Recente</Badge>;
-  };
-
-  // Format date and time information
-  const formatDateTime = (dateString: string) => {
-    const date = new Date(dateString);
-    return format(date, 'dd/MM/yyyy HH:mm', { locale: it });
-  };
-
-  const formatRelativeTime = (dateString: string) => {
-    const date = new Date(dateString);
-    return formatDistanceToNow(date, { addSuffix: true, locale: it });
   };
 
   return (
@@ -102,26 +91,16 @@ export default function ConversationCard({
                   {getPriorityBadge()}
                 </div>
               </div>
-              <div className="text-sm text-gray-500 break-words overflow-wrap-anywhere line-clamp-2 mb-2">
+              <div className="text-sm text-gray-500 break-words overflow-wrap-anywhere line-clamp-2">
                 {conversation.last_message_text || 'Nessun messaggio'}
               </div>
-              
-              {/* Informazioni temporali */}
-              <div className="space-y-1">
-                {/* Data creazione conversazione */}
-                <div className="flex items-center gap-1 text-xs text-gray-400">
-                  <Calendar className="h-3 w-3" />
-                  <span>Creata: {formatDateTime(conversation.created_at)}</span>
-                </div>
-                
-                {/* Data ultimo messaggio */}
-                {conversation.last_message_at && (
-                  <div className="flex items-center gap-1 text-xs text-gray-600">
-                    <Clock className="h-3 w-3" />
-                    <span>Ultimo messaggio: {formatDateTime(conversation.last_message_at)}</span>
-                    <span className="text-gray-400">({formatRelativeTime(conversation.last_message_at)})</span>
-                  </div>
-                )}
+              <div className="text-xs text-gray-400 mt-1 truncate">
+                {conversation.last_message_timestamp && 
+                  formatDistanceToNow(new Date(conversation.last_message_timestamp), {
+                    addSuffix: true,
+                    locale: it
+                  })
+                }
               </div>
             </div>
           </div>

@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -27,8 +26,6 @@ export const DiagnosisHistory = () => {
     
     setIsLoading(true);
     try {
-      console.log('🔄 Caricamento cronologia diagnosi per utente:', userProfile.id);
-      
       // Load diagnosis history from Supabase
       const { data: diagnosesData, error } = await supabase
         .from('diagnoses')
@@ -37,12 +34,8 @@ export const DiagnosisHistory = () => {
         .order('created_at', { ascending: false })
         .limit(20);
 
-      if (error) {
-        console.error('❌ Errore nel caricamento diagnosi:', error);
-        throw error;
-      }
+      if (error) throw error;
       
-      console.log('✅ Diagnosi caricate:', diagnosesData?.length || 0);
       setDiagnoses(diagnosesData || []);
       
       // Calculate basic statistics
@@ -69,20 +62,6 @@ export const DiagnosisHistory = () => {
     } catch (error) {
       console.error('Error submitting feedback:', error);
       toast.error('Errore nell\'invio del feedback');
-    }
-  };
-
-  const formatDate = (dateString: string) => {
-    try {
-      const date = new Date(dateString);
-      return date.toLocaleDateString('it-IT', {
-        day: '2-digit',
-        month: '2-digit', 
-        year: 'numeric'
-      });
-    } catch (error) {
-      console.error('Error formatting date:', error);
-      return 'Data non valida';
     }
   };
 
@@ -159,14 +138,14 @@ export const DiagnosisHistory = () => {
                     {diagnosis.image_url && (
                       <img 
                         src={diagnosis.image_url} 
-                        alt={diagnosis.plant_type || 'Pianta'}
+                        alt={diagnosis.plant_name || 'Pianta'}
                         className="w-16 h-16 rounded-lg object-cover"
                       />
                     )}
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
-                        <h3 className="font-semibold text-lg">{diagnosis.plant_type || 'Pianta sconosciuta'}</h3>
-                        {diagnosis.diagnosis_result?.isHealthy ? (
+                        <h3 className="font-semibold text-lg">{diagnosis.plant_name || 'Pianta sconosciuta'}</h3>
+                        {diagnosis.is_healthy ? (
                           <CheckCircle className="w-5 h-5 text-green-600" />
                         ) : (
                           <AlertTriangle className="w-5 h-5 text-orange-600" />
@@ -176,16 +155,16 @@ export const DiagnosisHistory = () => {
                       <div className="flex items-center gap-4 text-sm text-muted-foreground mb-3">
                         <span className="flex items-center gap-1">
                           <Clock className="w-4 h-4" />
-                          {formatDate(diagnosis.created_at)}
+                          {new Date(diagnosis.created_at).toLocaleDateString('it-IT')}
                         </span>
-                        {diagnosis.diagnosis_result?.confidence && (
-                          <span>Confidenza: {Math.round(diagnosis.diagnosis_result.confidence)}%</span>
+                        {diagnosis.confidence && (
+                          <span>Confidenza: {Math.round(diagnosis.confidence)}%</span>
                         )}
                       </div>
                       
-                      {diagnosis.diagnosis_result?.description && (
+                      {diagnosis.diagnosis_details && (
                         <div className="mb-3">
-                          <p className="text-sm">{diagnosis.diagnosis_result.description}</p>
+                          <p className="text-sm">{diagnosis.diagnosis_details}</p>
                         </div>
                       )}
                       
