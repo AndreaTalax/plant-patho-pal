@@ -5,15 +5,19 @@
 export class FallbackSuggestionsService {
   
   /**
-   * Piante comuni da casa che vengono spesso fotografate
+   * Piante comuni organizzate per categorie
    */
   private static commonHouseplants = [
-    { name: 'Monstera Deliciosa', scientific: 'Monstera deliciosa', confidence: 45 },
-    { name: 'Pothos', scientific: 'Epipremnum aureum', confidence: 42 },
-    { name: 'Filodendro', scientific: 'Philodendron hederaceum', confidence: 40 },
-    { name: 'Sansevieria', scientific: 'Sansevieria trifasciata', confidence: 38 },
-    { name: 'Ficus', scientific: 'Ficus elastica', confidence: 35 },
-    { name: 'Spathiphyllum', scientific: 'Spathiphyllum wallisii', confidence: 33 }
+    { name: 'Basilico', scientific: 'Ocimum basilicum', confidence: 50, category: 'herb' },
+    { name: 'Menta', scientific: 'Mentha spicata', confidence: 48, category: 'herb' },
+    { name: 'Rosmarino', scientific: 'Rosmarinus officinalis', confidence: 46, category: 'herb' },
+    { name: 'Pothos', scientific: 'Epipremnum aureum', confidence: 45, category: 'houseplant' },
+    { name: 'Monstera Deliciosa', scientific: 'Monstera deliciosa', confidence: 43, category: 'houseplant' },
+    { name: 'Filodendro', scientific: 'Philodendron hederaceum', confidence: 40, category: 'houseplant' },
+    { name: 'Sansevieria', scientific: 'Sansevieria trifasciata', confidence: 38, category: 'houseplant' },
+    { name: 'Ficus', scientific: 'Ficus elastica', confidence: 35, category: 'houseplant' },
+    { name: 'Aloe Vera', scientific: 'Aloe barbadensis', confidence: 44, category: 'succulent' },
+    { name: 'Echeveria', scientific: 'Echeveria elegans', confidence: 42, category: 'succulent' }
   ];
 
   /**

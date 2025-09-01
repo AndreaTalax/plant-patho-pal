@@ -78,7 +78,9 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
         text: msg.content || msg.text || '',
         time: new Date(msg.sent_at).toLocaleTimeString([], { 
           hour: '2-digit', 
-          minute: '2-digit' 
+          minute: '2-digit',
+          day: '2-digit',
+          month: '2-digit'
         }),
         image_url: msg.image_url || undefined
       };

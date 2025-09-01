@@ -122,33 +122,39 @@ export const usePlantDiagnosis = () => {
       const plant = results.consensus.mostLikelyPlant;
       const disease = results.consensus.mostLikelyDisease;
 
-      console.log('🔄 Salvando diagnosi...', {
+      console.log('💾 Salvando diagnosi migliorata...', {
         user_id: user.id,
-        diagnosisResult,
-        diagnosedDisease,
-        analysisDetails
+        plant: plant?.plantName,
+        confidence: plant?.confidence,
+        hasDisease: !!disease
       });
 
-      const imageUrl = typeof uploadedImage === 'string' ? uploadedImage : `temp_image_${Date.now()}.jpg`;
+      // Converti l'immagine in URL permanente se necessario
+      let permanentImageUrl = uploadedImage;
+      if (typeof uploadedImage === 'string' && uploadedImage.startsWith('blob:')) {
+        permanentImageUrl = `diagnosi_${user.id}_${Date.now()}.jpg`;
+      }
 
       const diagnosisData = {
         user_id: user.id,
-        plant_type: plant?.plantName || 'Pianta sconosciuta',
+        plant_type: plant?.plantName || 'Pianta non identificata',
         plant_variety: plant?.scientificName || '',
-        symptoms: diagnosedDisease?.symptoms?.join(', ') || 'Nessun sintomo specifico',
-        image_url: imageUrl,
+        symptoms: diagnosedDisease?.symptoms?.join(', ') || 'Nessun sintomo rilevato',
+        image_url: permanentImageUrl,
         status: 'completed',
         diagnosis_result: {
-          confidence: Math.min(70, Math.round(plant?.confidence || 0)),
+          confidence: Math.min(75, Math.round(plant?.confidence || 0)),
           isHealthy: !disease,
-          disease: disease?.disease || 'Nessuna',
-          description: diagnosisResult,
+          disease: disease?.disease || null,
+          description: diagnosisResult || `Identificata come ${plant?.plantName || 'pianta sconosciuta'}`,
           analysisDetails: analysisDetails ? JSON.parse(JSON.stringify(analysisDetails)) : null,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
+          aiProvider: plant?.provider || 'unknown',
+          isFallback: results.consensus?.providersUsed?.includes('fallback') || false
         }
       };
 
-      console.log('📝 Dati diagnosi da salvare:', diagnosisData);
+      console.log('📝 Salvando diagnosi:', diagnosisData);
 
       const { data, error } = await supabase
         .from('diagnoses')
@@ -161,18 +167,20 @@ export const usePlantDiagnosis = () => {
         throw error;
       }
 
-      console.log('✅ Diagnosi salvata con successo:', data);
-      toast.success('✅ Diagnosi salvata con successo!', {
-        description: 'La tua diagnosi è stata salvata nella cronologia',
-        duration: 4000
+      console.log('✅ Diagnosi salvata con ID:', data.id);
+      toast.success('✅ Diagnosi salvata!', {
+        description: `${plant?.plantName || 'Pianta'} salvata nella tua cronologia`,
+        duration: 3000
       });
 
     } catch (error: any) {
-      console.error('❌ Errore nel salvare la diagnosi:', error);
+      console.error('❌ Errore salvataggio diagnosi:', error);
       
-      let errorMessage = 'Errore nel salvare la diagnosi';
+      let errorMessage = 'Impossibile salvare la diagnosi';
       if (error.message?.includes('row-level security')) {
-        errorMessage = 'Permessi insufficienti. Assicurati di essere autenticato.';
+        errorMessage = 'Errore di autenticazione. Riprova dopo aver effettuato il login.';
+      } else if (error.code === '23503') {
+        errorMessage = 'Errore di riferimento nel database. Contatta il supporto.';
       } else if (error.message) {
         errorMessage = `Errore: ${error.message}`;
       }

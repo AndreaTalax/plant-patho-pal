@@ -34,41 +34,59 @@ export interface GlobalIdentificationResult {
 
 export class GlobalPlantIdentificationService {
   /**
-   * Identifica pianta usando tutte le API disponibili
+   * Identifica pianta usando il nuovo sistema intelligente
    */
   static async identifyPlantGlobally(imageBase64: string): Promise<GlobalIdentificationResult> {
     try {
-      console.log('🚀 Avvio identificazione globale...');
+      console.log('🧠 Avvio identificazione intelligente...');
       
+      // Prima prova con il nuovo sistema intelligente
+      const { data: intelligentData, error: intelligentError } = await supabase.functions.invoke('intelligent-plant-diagnosis', {
+        body: { imageBase64 }
+      });
+
+      if (!intelligentError && intelligentData?.success) {
+        console.log('✅ Identificazione intelligente completata:', {
+          plants: intelligentData.plantIdentification?.length || 0,
+          diseases: intelligentData.diseases?.length || 0,
+          isFallback: intelligentData.isFallback
+        });
+
+        return {
+          plantIdentification: intelligentData.plantIdentification || [],
+          diseases: intelligentData.diseases || [],
+          success: intelligentData.success,
+          isFallback: intelligentData.isFallback,
+          fallbackMessage: intelligentData.fallbackMessage
+        };
+      }
+
+      // Se fallisce, prova con il sistema globale tradizionale
+      console.log('🔄 Tentativo con sistema globale tradizionale...');
       const { data, error } = await supabase.functions.invoke('global-plant-identification', {
         body: { imageBase64 }
       });
 
-      if (error) {
-        console.error('❌ Errore identificazione globale:', error);
-        // Ritorna suggerimenti di fallback invece di fallire completamente
-        console.log('🔄 Generando suggerimenti di fallback...');
-        return this.generateEnhancedFallback();
+      if (!error && data?.success && (data.plantIdentification.length > 0 || data.diseases.length > 0)) {
+        console.log('✅ Identificazione globale completata:', {
+          plants: data.plantIdentification?.length || 0,
+          diseases: data.diseases?.length || 0
+        });
+
+        return {
+          plantIdentification: data.plantIdentification || [],
+          diseases: data.diseases || [],
+          eppoInfo: data.eppoInfo,
+          success: data.success
+        };
       }
 
-      if (!data || !data.success || (data.plantIdentification.length === 0 && data.diseases.length === 0)) {
-        console.log('⚠️ Identificazione API fallita, generando suggerimenti...');
-        return this.generateEnhancedFallback();
-      }
+      // Se tutto fallisce, usa il fallback migliorato
+      console.log('⚠️ Tutti i sistemi di identificazione falliti, usando fallback migliorato...');
+      return this.generateEnhancedFallback();
 
-      console.log('✅ Identificazione globale completata:', {
-        plants: data.plantIdentification?.length || 0,
-        diseases: data.diseases?.length || 0
-      });
-
-      return {
-        plantIdentification: data.plantIdentification || [],
-        diseases: data.diseases || [],
-        eppoInfo: data.eppoInfo,
-        success: data.success
-      };
     } catch (error) {
-      console.error('❌ Errore servizio identificazione globale:', error);
+      console.error('❌ Errore servizio identificazione:', error);
       console.log('🔄 Utilizzando sistema di fallback...');
       return this.generateEnhancedFallback();
     }
