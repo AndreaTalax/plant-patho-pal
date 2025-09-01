@@ -1,8 +1,9 @@
+
 import React, { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
-import { ImageIcon, Camera, Upload, Loader2 } from 'lucide-react';
+import { ImageIcon, Camera, Upload, Loader2, Trash2 } from 'lucide-react';
 import { usePlantInfo } from '@/context/PlantInfoContext';
-import CameraCapture from '@/components/camera/CameraCapture';
+import CameraCapture from '@/components/diagnose/CameraCapture';
 import { useImageValidation } from '@/hooks/useImageValidation';
 import { toast } from 'sonner';
 
@@ -152,7 +153,7 @@ export const ScanMethods: React.FC<ScanMethodsProps> = ({
           {showCamera && (
             <CameraCapture
               onCapture={handleCameraCapture}
-              onClose={() => setShowCamera(false)}
+              onCancel={() => setShowCamera(false)}
             />
           )}
         </>
@@ -166,7 +167,7 @@ export const ScanMethods: React.FC<ScanMethodsProps> = ({
             />
             <div className="absolute top-2 right-2">
               <Button
-                onClick={() => onImageCapture(null)}
+                onClick={() => onImageCapture('')}
                 variant="secondary"
                 size="icon"
               >

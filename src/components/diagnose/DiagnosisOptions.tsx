@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { CheckCircle, Circle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -9,31 +10,45 @@ interface DiagnosisOptionsProps {
   onOptionChange: (option: 'ai' | 'expert') => void;
   uploadedImage: string | File | null;
   onStartDiagnosis: () => void;
+  onSelectAI?: () => Promise<void> | void;
+  onSelectExpert?: () => void;
+  hasAIAccess?: boolean;
 }
 
 export const DiagnosisOptions: React.FC<DiagnosisOptionsProps> = ({
   onOptionChange,
   uploadedImage,
-  onStartDiagnosis
+  onStartDiagnosis,
+  onSelectAI,
+  onSelectExpert,
+  hasAIAccess = true
 }) => {
   const { plantInfo, setPlantInfo } = usePlantInfo();
 
   const handleAIToggle = () => {
-    setPlantInfo(prev => ({
-      ...prev,
-      useAI: !prev.useAI,
+    const updatedInfo = {
+      ...plantInfo,
+      useAI: !plantInfo.useAI,
       sendToExpert: false // Disabilita l'altra opzione
-    }));
+    };
+    setPlantInfo(updatedInfo);
     onOptionChange('ai');
+    if (onSelectAI) {
+      onSelectAI();
+    }
   };
 
   const handleExpertToggle = () => {
-    setPlantInfo(prev => ({
-      ...prev,
-      sendToExpert: !prev.sendToExpert,
+    const updatedInfo = {
+      ...plantInfo,
+      sendToExpert: !plantInfo.sendToExpert,
       useAI: false // Disabilita l'altra opzione
-    }));
+    };
+    setPlantInfo(updatedInfo);
     onOptionChange('expert');
+    if (onSelectExpert) {
+      onSelectExpert();
+    }
   };
 
   return (
@@ -55,14 +70,27 @@ export const DiagnosisOptions: React.FC<DiagnosisOptionsProps> = ({
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-2">
               <h3 className="font-semibold text-gray-900">Diagnosi con Intelligenza Artificiale</h3>
-              <Badge variant="outline" className="text-xs">
-                Veloce
-              </Badge>
+              {hasAIAccess ? (
+                <Badge variant="outline" className="text-xs">
+                  Veloce
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="text-xs bg-orange-50 text-orange-600 border-orange-200">
+                  Premium
+                </Badge>
+              )}
             </div>
             <p className="text-sm text-gray-600 mb-3">
-              Ricevi un'analisi rapida e automatizzata della tua pianta.
-              Ideale per identificare problemi comuni e ottenere suggerimenti.
+              {hasAIAccess 
+                ? "Ricevi un'analisi rapida e automatizzata della tua pianta. Ideale per identificare problemi comuni e ottenere suggerimenti."
+                : "Funzionalità premium: analisi AI avanzata per diagnosi rapide e accurate."
+              }
             </p>
+            {!hasAIAccess && (
+              <p className="text-xs text-orange-600 font-medium">
+                Aggiorna a Premium per accedere alla diagnosi AI
+              </p>
+            )}
           </div>
         </div>
       </div>
@@ -109,10 +137,10 @@ export const DiagnosisOptions: React.FC<DiagnosisOptionsProps> = ({
       {!plantInfo.sendToExpert && (
         <Button
           onClick={onStartDiagnosis}
-          disabled={!plantInfo.useAI || !plantInfo.infoComplete}
-          className="bg-drplant-green hover:bg-drplant-green/90 text-white w-full"
+          disabled={!plantInfo.useAI || !plantInfo.infoComplete || !hasAIAccess}
+          className="bg-drplant-green hover:bg-drplant-green/90 text-white w-full disabled:opacity-50"
         >
-          Avvia Diagnosi AI
+          {hasAIAccess ? 'Avvia Diagnosi AI' : 'Aggiorna a Premium per Diagnosi AI'}
         </Button>
       )}
     </div>

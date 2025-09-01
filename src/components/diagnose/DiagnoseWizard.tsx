@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import PlantInfoForm from "./PlantInfoForm";
 import ImageCaptureMethods from "./ImageCaptureMethods";
@@ -175,6 +174,9 @@ export default function DiagnoseWizard() {
         )}
 
         <DiagnosisOptions
+          onOptionChange={(option) => {}}
+          uploadedImage={uploadedImage}
+          onStartDiagnosis={handleSelectAI}
           onSelectAI={handleSelectAI}
           onSelectExpert={handleSelectExpert}
           hasAIAccess={true}
