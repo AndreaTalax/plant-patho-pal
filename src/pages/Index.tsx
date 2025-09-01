@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/context/ThemeContext";
@@ -14,8 +15,9 @@ import { ensureStorageBuckets } from "@/utils/storageSetup";
 import { usePlantInfo } from "@/context/PlantInfoContext";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+
 const Index = () => {
-  const { isMasterAccount, isAuthenticated, isProfileComplete, loading, userProfile } = useAuth();
+  const { isMasterAccount, isAuthenticated, loading, userProfile } = useAuth();
   const { plantInfo } = usePlantInfo();
   const { toast } = useToast();
   const { t } = useTheme();
@@ -32,12 +34,7 @@ const Index = () => {
     }
   }, [isAuthenticated, loading, navigate]);
 
-  useEffect(() => {
-    if (!loading && isAuthenticated && !isProfileComplete && !isMasterAccount) {
-      console.log('📝 Profilo incompleto, reindirizzamento al completamento profilo...');
-      navigate('/complete-profile');
-    }
-  }, [isAuthenticated, isProfileComplete, isMasterAccount, loading, navigate]);
+  // Removed the profile completion check - users can access all tabs directly
 
   const hasFirstDiagnosis =
     typeof window !== 'undefined' && (
@@ -93,11 +90,6 @@ const Index = () => {
     };
     autoOpenChatIfMessages();
   }, [isAuthenticated, userProfile?.id, isMasterAccount, activeTab, location.search]);
-
-  // Non forzare più il redirect; l'utente può navigare liberamente tra le tab
-  useEffect(() => {
-    // intentionally left blank
-  }, [canAccessTabs, activeTab, isMasterAccount]);
 
   useEffect(() => {
     const handleSwitchTab = (event: CustomEvent) => {
@@ -177,7 +169,7 @@ const Index = () => {
     );
   }
 
-  if (!isAuthenticated || (!isProfileComplete && !isMasterAccount)) {
+  if (!isAuthenticated) {
     return null;
   }
 
