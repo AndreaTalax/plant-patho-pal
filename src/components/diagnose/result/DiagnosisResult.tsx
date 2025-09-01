@@ -1,9 +1,8 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { useAuth } from '@/context/AuthContext';
 import ImageDisplay from './ImageDisplay';
 import PlantInfoCard from './PlantInfoCard';
 import ActionButtons from './ActionButtons';
-import { AutoExpertNotificationService } from '@/components/chat/AutoExpertNotificationService';
 import ProductSuggestions from './ProductSuggestions';
 
 interface Disease {
@@ -103,39 +102,43 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
     isHealthy: resolvedIsHealthy,
   };
 
-  // Funzione per gestire il click su "Chat con l'esperto" - invia automaticamente i dati AI
+  // Funzione per gestire il click su "Chat con l'esperto" - ora mostra paywall se non premium
   const handleChatWithExpert = async () => {
-    console.log('🗣️ Click su Chat con l\'esperto, invio automatico dati AI...');
+    console.log('🗣️ Click su Chat con l\'esperto');
     
     if (!user) {
       console.error('❌ Utente non autenticato');
       return;
     }
 
-    try {
-      // Invia automaticamente i dati della diagnosi AI quando si clicca "Chat con l'esperto"
-      console.log('📤 Invio automatico dati diagnosi AI all\'esperto:', diagnosisData);
-      
-      await AutoExpertNotificationService.sendDiagnosisToExpert(
-        user.id,
-        diagnosisData
-      );
-      
-      console.log('✅ Dati diagnosi AI inviati automaticamente con successo');
-      
-      // Poi chiama la funzione originale per aprire la chat
-      if (onChatWithExpert) {
-        await onChatWithExpert();
-      }
-    } catch (error) {
-      console.error('❌ Errore nell\'invio automatico dati all\'esperto:', error);
-      
-      // Anche in caso di errore, prova ad aprire la chat
-      if (onChatWithExpert) {
-        await onChatWithExpert();
-      }
+    // Se l'utente non ha accesso premium, la funzione onChatWithExpert dovrebbe mostrare il paywall
+    // L'invio automatico avverrà solo dopo il pagamento e l'upgrade
+    if (onChatWithExpert) {
+      await onChatWithExpert();
     }
   };
+
+  const getStatusIcon = (status) => {
+    switch (status?.toLowerCase()) {
+      case 'healthy':
+        return <CheckCircle size={24} color="#4CAF50" />
+      case 'diseased':
+        return <AlertTriangle size={24} color="#FF9800" />
+      default:
+        return <Info size={24} color="#2196F3" />
+    }
+  }
+
+  const getStatusColor = (status) => {
+    switch (status?.toLowerCase()) {
+      case 'healthy':
+        return '#4CAF50'
+      case 'diseased':
+        return '#FF9800'
+      default:
+        return '#2196F3'
+    }
+  }
 
   return (
     <div className="space-y-2 px-2">
