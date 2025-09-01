@@ -7,6 +7,7 @@ import ChatHeader from './user/ChatHeader';
 import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { convertToUIMessage } from './utils/messageConverter';
 
 interface SimpleRealtimeChatViewProps {
   userId: string;
@@ -34,7 +35,9 @@ export const SimpleRealtimeChatView: React.FC<SimpleRealtimeChatViewProps> = ({
         if (error) {
           console.error('Error loading messages:', error);
         } else {
-          setMessages(data || []);
+          // Convert database messages to UI format
+          const uiMessages = (data || []).map(convertToUIMessage);
+          setMessages(uiMessages);
         }
       } catch (error) {
         console.error('Error in loadMessages:', error);
@@ -59,7 +62,8 @@ export const SimpleRealtimeChatView: React.FC<SimpleRealtimeChatViewProps> = ({
         (payload) => {
           console.log('Real-time message update:', payload);
           if (payload.eventType === 'INSERT') {
-            setMessages(prev => [...prev, payload.new]);
+            const uiMessage = convertToUIMessage(payload.new);
+            setMessages(prev => [...prev, uiMessage]);
           }
         }
       )
@@ -116,8 +120,7 @@ export const SimpleRealtimeChatView: React.FC<SimpleRealtimeChatViewProps> = ({
         ) : (
           <MessageList 
             messages={messages}
-            currentUserId={userId}
-            isLoading={false}
+            isExpertView={false}
           />
         )}
       </div>
