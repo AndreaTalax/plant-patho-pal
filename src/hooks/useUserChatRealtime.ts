@@ -17,6 +17,8 @@ export const useUserChatRealtime = (userId: string) => {
   const [isConnected, setIsConnected] = useState(false);
   const [subscription, setSubscription] = useState<any>(null);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [initializationError, setInitializationError] = useState<string | null>(null);
+  const [isInitializing, setIsInitializing] = useState(false);
   
   // Add refs to prevent multiple simultaneous operations
   const initializingRef = useRef(false);
@@ -119,6 +121,8 @@ export const useUserChatRealtime = (userId: string) => {
       }
       
       initializingRef.current = true;
+      setIsInitializing(true);
+      setInitializationError(null);
       
       try {
         console.log("🔄 Initializing expert chat for user:", userId);
@@ -175,9 +179,11 @@ export const useUserChatRealtime = (userId: string) => {
         
       } catch (error) {
         console.error("❌ Error initializing expert chat:", error);
+        setInitializationError(error instanceof Error ? error.message : "Errore sconosciuto");
         toast.error("Errore nell'inizializzazione della chat. Riprova.");
       } finally {
         initializingRef.current = false;
+        setIsInitializing(false);
       }
     };
     
@@ -355,6 +361,25 @@ export const useUserChatRealtime = (userId: string) => {
     }
   };
 
+  const resetChat = () => {
+    console.log('🔄 Resetting chat state');
+    setIsInitialized(false);
+    setInitializationError(null);
+    setMessages([]);
+    setActiveChat(null);
+    setCurrentDbConversation(null);
+    setIsConnected(false);
+    if (subscription) {
+      try {
+        subscription.unsubscribe();
+        supabase.removeChannel(subscription);
+      } catch (error) {
+        console.warn('⚠️ Error during reset cleanup:', error);
+      }
+    }
+    setSubscription(null);
+  };
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
@@ -378,5 +403,8 @@ export const useUserChatRealtime = (userId: string) => {
     handleSendMessage,
     startChatWithExpert,
     currentConversationId: currentDbConversation?.id || null,
+    initializationError,
+    resetChat,
+    isInitializing
   };
 };
