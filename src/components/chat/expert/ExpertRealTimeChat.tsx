@@ -443,7 +443,7 @@ export const ExpertRealTimeChat: React.FC = () => {
                       <div key={message.id} className="w-full">
                         <ChatMessage 
                           message={message} 
-                          isExpertView={true}
+                          isExpert={true}
                           userAvatar={selectedConversation.user_profile?.avatar_url}
                           userName={`${selectedConversation.user_profile?.first_name} ${selectedConversation.user_profile?.last_name}`}
                         />
