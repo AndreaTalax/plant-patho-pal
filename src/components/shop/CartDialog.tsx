@@ -52,7 +52,6 @@ const CartDialog: React.FC<CartDialogProps> = ({
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${(await import('@/integrations/supabase/client')).supabase.auth.getSession()).data.session?.access_token}`
         },
         body: JSON.stringify({
           items: items.map(item => ({
