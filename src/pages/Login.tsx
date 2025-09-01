@@ -11,6 +11,7 @@ import { LockKeyhole, Mail, Globe } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/context/ThemeContext";
 import ForgotPasswordModal from "@/components/auth/ForgotPasswordModal";
+import { getWhitelistedCredentials } from "@/context/auth/credentialsService";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -21,11 +22,8 @@ const Login = () => {
   const { language, setLanguage, t } = useTheme();
   const [showForgotPassword, setShowForgotPassword] = useState(false);
 
-  const adminCredentials = {
-    'agrotecnicomarconigro@gmail.com': 'marconigro93',
-    'test@gmail.com': 'test123',
-    'premium@gmail.com': 'premium123'
-  };
+  // Get admin credentials from the centralized service
+  const adminCredentials = getWhitelistedCredentials();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,15 +40,15 @@ const Login = () => {
     }
 
     try {
-      console.log('Starting login process for:', email);
+      console.log('🔐 Starting login process for:', email);
       
       const emailLower = email.trim().toLowerCase();
       const isAdminEmail = Object.keys(adminCredentials).includes(emailLower);
       
       if (isAdminEmail) {
-        console.log('Account amministrativo rilevato:', email);
+        console.log('✅ Account amministrativo rilevato:', email);
         toast.info(t("loginInProgress"), {
-          description: "Accesso con credenziali speciali",
+          description: "Accesso con credenziali speciali in corso...",
           duration: 2000
         });
       }
@@ -58,7 +56,7 @@ const Login = () => {
       const result = await login(email.trim(), password);
       
       if (result.success) {
-        console.log('Login successful');
+        console.log('✅ Login successful for:', email);
         toast.success(t("loginSuccessful"), {
           description: isAdminEmail ? "Benvenuto, Amministratore!" : t("welcomeMessage"),
           dismissible: true
@@ -66,17 +64,18 @@ const Login = () => {
         
         setTimeout(() => {
           navigate("/", { replace: true });
-        }, 500);
+        }, 1000);
       } else {
+        console.log('❌ Login failed for:', email);
         toast.error(t("loginFailed"), {
           description: isAdminEmail ? 
-            "Problemi con l'account amministratore. Verifica le credenziali." : 
+            "Verifica le credenziali dell'account amministratore." : 
             "Credenziali non valide. Riprova.",
           dismissible: true
         });
       }
     } catch (error: any) {
-      console.error("Login error:", error);
+      console.error("❌ Login error:", error);
       toast.error(t("loginFailed"), {
         description: error.message || t("somethingWentWrong"),
         dismissible: true
@@ -90,7 +89,6 @@ const Login = () => {
     <div className="h-screen w-full bg-gradient-to-b from-drplant-blue-light via-white to-drplant-green/10 flex flex-col items-center justify-center px-4">
       <div className="absolute top-0 left-0 w-full h-64 bg-drplant-blue-light/30 -z-10 rounded-b-[50%]" />
       <div className="absolute bottom-0 right-0 w-full h-64 bg-drplant-green/20 -z-10 rounded-t-[30%]" />
-
 
       <div className="w-full max-w-md">
         <div className="text-center mb-8">

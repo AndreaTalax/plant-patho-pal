@@ -1,21 +1,51 @@
-import React, { useEffect } from 'react';
-import { usePushNotifications } from '@/hooks/usePushNotifications';
+
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
 
-export function NotificationProvider({ children }: { children: React.ReactNode }) {
-  const { userProfile } = useAuth();
-  const { isSupported, permission } = usePushNotifications();
+interface NotificationContextType {
+  // Add notification context properties as needed
+}
+
+const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
+
+export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  // Safely check if we're inside AuthProvider before using useAuth
+  let auth = null;
+  
+  try {
+    auth = useAuth();
+  } catch (error) {
+    // If useAuth fails (outside AuthProvider), we'll handle it gracefully
+    console.log('🔄 NotificationProvider initializing without auth context');
+  }
+
+  const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
-    if (userProfile && isSupported) {
-      console.log('🔔 Notification Status:', {
-        userId: userProfile.id,
-        email: userProfile.email,
-        supported: isSupported,
-        permissionGranted: permission === 'granted'
-      });
+    // Only initialize notifications if we have auth context
+    if (auth?.user) {
+      console.log('🔔 Initializing notifications for user:', auth.user.email);
+      // Initialize notification logic here when needed
     }
-  }, [userProfile, isSupported, permission]);
+    setIsInitialized(true);
+  }, [auth?.user]);
 
-  return <>{children}</>;
-}
+  const value: NotificationContextType = {
+    // Notification context values
+  };
+
+  return (
+    <NotificationContext.Provider value={value}>
+      {children}
+    </NotificationContext.Provider>
+  );
+};
+
+export const useNotifications = () => {
+  const context = useContext(NotificationContext);
+  if (context === undefined) {
+    throw new Error('useNotifications must be used within a NotificationProvider');
+  }
+  return context;
+};
