@@ -45,9 +45,9 @@ const Header = () => {
 
   const menuItems = [
     { name: 'Home', icon: Home, path: '/?tab=diagnose' },
-    { name: 'About Us', icon: Info, path: '/about' },
-    { name: 'Services', icon: Briefcase, path: '/services' },
-    { name: 'Contact', icon: Phone, path: '/contact' },
+    { name: 'Chi Siamo', icon: Info, path: '/about' },
+    { name: 'Servizi', icon: Briefcase, path: '/services' },
+    { name: 'Contatti', icon: Phone, path: '/contact' },
   ];
 
   return (
@@ -97,7 +97,7 @@ const Header = () => {
                   className="flex items-center space-x-2 border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400"
                 >
                   <LogOut className="h-4 w-4" />
-                  <span>Logout</span>
+                  <span>Esci</span>
                 </Button>
               </div>
             ) : (
@@ -154,7 +154,7 @@ const Header = () => {
                       className="w-full flex items-center justify-center space-x-2 border-red-300 text-red-600 hover:bg-red-50"
                     >
                       <LogOut className="h-4 w-4" />
-                      <span>Logout</span>
+                      <span>Esci</span>
                     </Button>
                   </div>
                 ) : (
