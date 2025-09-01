@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { ConsultationDataService } from '@/services/chat/consultationDataService';
 import { usePlantInfo } from '@/context/PlantInfoContext';
@@ -78,72 +77,35 @@ export const ChatInitializer: React.FC<ChatInitializerProps> = ({
           hasImage: !!plantData.imageUrl 
         });
 
-        // INVIO CON RETRY AUTOMATICO
-        let success = false;
-        let attempts = 0;
-        const maxAttempts = 3;
+        // Usa il nuovo servizio edge function
+        const success = await ConsultationDataService.sendInitialConsultationData(
+          currentConversationId,
+          plantData,
+          userData,
+          plantInfo?.useAI || false
+        );
 
-        while (!success && attempts < maxAttempts) {
-          attempts++;
-          console.log(`[CHAT-INIT] 📤 Tentativo invio ${attempts}/${maxAttempts}`);
+        if (success) {
+          console.log('[CHAT-INIT] ✅ INVIO COMPLETATO CON SUCCESSO');
+          setAutoDataSent(true);
+          setRetryCount(0);
           
-          try {
-            success = await ConsultationDataService.sendInitialConsultationData(
-              currentConversationId,
-              plantData,
-              userData,
-              plantInfo?.useAI || false
-            );
-
-            if (success) {
-              console.log('[CHAT-INIT] ✅ INVIO COMPLETATO CON SUCCESSO');
-              setAutoDataSent(true);
-              setRetryCount(0);
-              
-              toast.success('✅ Dati inviati automaticamente all\'esperto!', {
-                description: `Informazioni ${plantData.imageUrl ? 'e foto ' : ''}inviate a Marco Nigro`,
-                duration: 3000,
-              });
-              break;
-            }
-          } catch (error) {
-            console.error(`[CHAT-INIT] ❌ Tentativo ${attempts} fallito:`, error);
-          }
-
-          // Attesa prima del prossimo tentativo
-          if (!success && attempts < maxAttempts) {
-            const delay = Math.min(1000 * attempts, 3000);
-            console.log(`[CHAT-INIT] ⏳ Attendo ${delay}ms prima del prossimo tentativo...`);
-            await new Promise(resolve => setTimeout(resolve, delay));
-          }
-        }
-
-        if (!success) {
-          console.warn('[CHAT-INIT] ⚠️ Tutti i tentativi falliti, salvo per invio differito');
-          setRetryCount(prev => prev + 1);
-          
-          // Salva dati per invio differito (localStorage come fallback)
-          try {
-            localStorage.setItem('pendingChatData', JSON.stringify({
-              conversationId: currentConversationId,
-              plantData,
-              userData,
-              timestamp: Date.now()
-            }));
-            console.log('[CHAT-INIT] 💾 Dati salvati per invio differito');
-            
-            toast.info('📝 Dati salvati per invio differito', {
-              description: 'Verranno inviati quando la connessione si ristabilirà',
-              duration: 4000,
-            });
-          } catch (storageError) {
-            console.error('[CHAT-INIT] ❌ Errore salvataggio offline:', storageError);
-          }
+          toast.success('✅ Dati inviati automaticamente all\'esperto!', {
+            description: `Informazioni ${plantData.imageUrl ? 'e foto ' : ''}inviate a Marco Nigro`,
+            duration: 3000,
+          });
+        } else {
+          throw new Error('Servizio di invio fallito');
         }
 
       } catch (error) {
         console.error('[CHAT-INIT] ❌ ERRORE CRITICO:', error);
         setRetryCount(prev => prev + 1);
+        
+        toast.error('❌ Errore invio automatico dati', {
+          description: 'I dati non sono stati inviati automaticamente. Puoi inviarli manualmente nella chat.',
+          duration: 4000,
+        });
       } finally {
         setIsProcessing(false);
       }

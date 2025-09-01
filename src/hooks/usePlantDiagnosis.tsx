@@ -156,22 +156,23 @@ export const usePlantDiagnosis = () => {
         console.log('📸 Immagine caricata:', imageUrl);
       }
 
-      // Crea un payload JSON-safe
+      // Crea un payload JSON-safe completamente serializzabile
       const diagnosisResultData = {
         confidence: Math.min(70, Math.round(plant?.confidence || 0)),
         isHealthy: !disease,
         disease: disease?.disease || 'Nessuna malattia rilevata',
         description: diagnosisResult,
-        analysisDetails: analysisDetails ? JSON.parse(JSON.stringify(analysisDetails)) : null,
         treatments: disease?.treatments || [],
         causes: disease?.additionalInfo?.cause || '',
         severity: disease?.severity || 'N/A',
         timestamp: new Date().toISOString(),
-        fullResults: results ? JSON.parse(JSON.stringify(results)) : null
+        // Serializza i risultati completi come stringa JSON
+        analysisDetails: analysisDetails ? JSON.stringify(analysisDetails) : null,
+        fullResults: results ? JSON.stringify(results) : null
       };
 
-      // IMPORTANT: serializza per garantire il tipo Json atteso dal client
-      const safeDiagnosisResult = JSON.parse(JSON.stringify(diagnosisResultData)) as any;
+      // Assicurati che tutto sia JSON-safe
+      const safeDiagnosisResult = JSON.parse(JSON.stringify(diagnosisResultData));
 
       const diagnosisData = {
         user_id: user.id,
@@ -180,14 +181,14 @@ export const usePlantDiagnosis = () => {
         symptoms: diagnosedDisease?.symptoms?.join(', ') || disease?.symptoms?.join(', ') || 'Nessun sintomo specifico',
         image_url: imageUrl,
         status: 'completed',
-        diagnosis_result: safeDiagnosisResult as any
+        diagnosis_result: safeDiagnosisResult
       };
 
       console.log('📝 Dati diagnosi completi da salvare:', diagnosisData);
 
       const { data, error } = await supabase
         .from('diagnoses')
-        .insert(diagnosisData as any)
+        .insert(diagnosisData)
         .select()
         .single();
 
