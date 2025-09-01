@@ -22,3 +22,28 @@ export const getExpectedPassword = (email: string): string => {
 export const getWhitelistedCredentials = () => {
   return WHITELISTED_CREDENTIALS;
 };
+
+export const determineUserRole = (email: string): string => {
+  const emailLower = email.toLowerCase();
+  if (emailLower === 'test@gmail.com') {
+    return 'admin';
+  }
+  return 'user';
+};
+
+export const getUserDisplayName = (email: string): { firstName: string; lastName: string } => {
+  const emailLower = email.toLowerCase();
+  
+  switch (emailLower) {
+    case 'agrotecnicomarconigro@gmail.com':
+      return { firstName: 'Marco', lastName: 'Nigro' };
+    case 'test@gmail.com':
+      return { firstName: 'Test', lastName: 'User' };
+    case 'premium@gmail.com':
+      return { firstName: 'Premium', lastName: 'User' };
+    default:
+      // For non-whitelisted users, extract name from email
+      const username = email.split('@')[0];
+      return { firstName: username, lastName: '' };
+  }
+};
