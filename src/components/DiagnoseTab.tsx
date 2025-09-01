@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { usePlantInfo } from "@/context/PlantInfoContext";
 import DiagnoseWizard from "./diagnose/DiagnoseWizard";
-import DiagnosisHistory from "./diagnose/DiagnosisHistory";
+import { DiagnosisHistory } from "./diagnose/DiagnosisHistory";
 import { Button } from "@/components/ui/button";
 import { History, Scan } from "lucide-react";
 

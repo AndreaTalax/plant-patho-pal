@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Camera, Upload, ArrowLeft } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { usePlantDiagnosis } from "@/hooks/usePlantDiagnosis";
-import DiagnosisResult from "./DiagnosisResult";
+import DiagnosisResult from "./result/DiagnosisResult";
 import CameraCapture from "./CameraCapture";
 import { PlantInfo } from "./types";
 
@@ -34,9 +34,11 @@ const DiagnoseWizard = ({ onBack }: DiagnoseWizardProps) => {
 
   // Salta direttamente alla selezione del metodo dato che abbiamo i dati utente dall'auth
   const plantInfo: PlantInfo = {
-    nome: userProfile?.firstName || userProfile?.first_name || 'Utente',
-    cognome: userProfile?.lastName || userProfile?.last_name || '',
-    email: userProfile?.email || '',
+    name: userProfile?.firstName || userProfile?.first_name || 'Utente',
+    isIndoor: true,
+    wateringFrequency: '',
+    lightExposure: '',
+    symptoms: '',
     infoComplete: true,
     useAI: true,
     sendToExpert: false
@@ -63,7 +65,7 @@ const DiagnoseWizard = ({ onBack }: DiagnoseWizardProps) => {
   };
 
   const handleCameraCapture = async () => {
-    await captureImage();
+    await captureImage('', null);
     setShowCamera(false);
     setCurrentStep('result');
   };
@@ -106,16 +108,14 @@ const DiagnoseWizard = ({ onBack }: DiagnoseWizardProps) => {
   if (currentStep === 'result' && (uploadedImage || isAnalyzing)) {
     return (
       <DiagnosisResult
-        image={uploadedImage}
-        result={diagnosisResult}
-        disease={diagnosedDisease}
-        analysisProgress={analysisProgress}
+        imageSrc={uploadedImage || ''}
+        diagnosedDisease={diagnosedDisease}
         analysisDetails={analysisDetails}
-        isAnalyzing={isAnalyzing}
-        onStartOver={handleStartOver}
-        onSave={saveDiagnosis}
-        isSaving={isSaving}
         plantInfo={plantInfo}
+        isAnalyzing={isAnalyzing}
+        onStartNewAnalysis={handleStartOver}
+        onSaveDiagnosis={saveDiagnosis}
+        saveLoading={isSaving}
       />
     );
   }
