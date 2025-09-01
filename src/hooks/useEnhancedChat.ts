@@ -151,19 +151,12 @@ export const useEnhancedChat = () => {
     "❌ Non funziona"
   ];
 
-  // Message reactions
+  // Message reactions - temporaneamente disabilitata fino al prossimo deploy Supabase
   const addReaction = useCallback(async (messageId: string, emoji: string, userId: string) => {
     try {
-      const { error } = await supabase
-        .from('message_reactions')
-        .upsert({
-          message_id: messageId,
-          user_id: userId,
-          emoji: emoji
-        });
-
-      if (error) throw error;
-
+      // Temporarily disabled until Supabase types are updated
+      console.log('Adding reaction:', { messageId, emoji, userId });
+      
       // Haptic feedback
       if ('vibrate' in navigator) {
         navigator.vibrate(25);
