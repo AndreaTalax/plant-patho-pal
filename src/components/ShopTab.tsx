@@ -5,6 +5,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { ShoppingBag, Star, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { useCart } from '@/hooks/useCart';
+import CartDialog from '@/components/shop/CartDialog';
 
 interface SelectedProduct {
   id: string;
@@ -29,6 +31,19 @@ const ShopTab = () => {
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
 
+  const {
+    items: cartItems,
+    isOpen: isCartOpen,
+    addItem,
+    removeItem,
+    updateQuantity,
+    clearCart,
+    getTotalPrice,
+    getTotalItems,
+    openCart,
+    closeCart
+  } = useCart();
+
   useEffect(() => {
     // Controlla se c'è un prodotto selezionato dalla diagnosi
     const storedProduct = localStorage.getItem('selectedProduct');
@@ -45,7 +60,20 @@ const ShopTab = () => {
 
     // Carica tutti i prodotti dal database
     loadProducts();
-  }, []);
+
+    // Controlla se l'utente è tornato da un pagamento
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('payment') === 'success') {
+      toast.success('Pagamento completato con successo!');
+      clearCart();
+      // Pulisci l'URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+    } else if (urlParams.get('payment') === 'cancelled') {
+      toast.info('Pagamento annullato');
+      // Pulisci l'URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, [clearCart]);
 
   const loadProducts = async () => {
     try {
@@ -79,15 +107,43 @@ const ShopTab = () => {
 
   const categories = ['all', ...Array.from(new Set(products.map(p => p.category).filter(Boolean)))];
 
-  const handleProductClick = (product: Product) => {
-    toast.info(`Prodotto selezionato: ${product.name}`);
-    // Qui potresti implementare l'aggiunta al carrello o altre azioni
+  const handleAddToCart = (product: Product) => {
+    if (product.stock_quantity === 0) {
+      toast.error('Prodotto esaurito');
+      return;
+    }
+    
+    addItem({
+      id: product.id,
+      name: product.name,
+      price: product.price,
+      image_url: product.image_url,
+      description: product.description
+    });
   };
 
   return (
     <div className="space-y-6">
       <div className="text-center">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Negozio</h2>
+        <div className="flex items-center justify-center gap-4 mb-2">
+          <h2 className="text-2xl font-bold text-gray-900">Negozio</h2>
+          {getTotalItems() > 0 && (
+            <Button
+              onClick={openCart}
+              variant="outline"
+              className="relative"
+            >
+              <ShoppingBag className="w-4 h-4 mr-2" />
+              Carrello
+              <Badge 
+                variant="default" 
+                className="absolute -top-2 -right-2 bg-green-600 hover:bg-green-700"
+              >
+                {getTotalItems()}
+              </Badge>
+            </Button>
+          )}
+        </div>
         <p className="text-gray-600">Trova i prodotti migliori per le tue piante</p>
       </div>
 
@@ -130,8 +186,7 @@ const ShopTab = () => {
           {filteredProducts.map((product) => (
             <div
               key={product.id}
-              className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
-              onClick={() => handleProductClick(product)}
+              className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm hover:shadow-md transition-shadow"
             >
               <div className="flex items-start gap-3">
                 <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden">
@@ -184,6 +239,7 @@ const ShopTab = () => {
                 className="w-full mt-3 bg-green-600 hover:bg-green-700"
                 size="sm"
                 disabled={product.stock_quantity === 0}
+                onClick={() => handleAddToCart(product)}
               >
                 <ShoppingBag className="w-4 h-4 mr-2" />
                 {product.stock_quantity === 0 ? 'Esaurito' : 'Aggiungi al carrello'}
@@ -212,6 +268,17 @@ const ShopTab = () => {
           </Button>
         </div>
       )}
+
+      {/* Dialog del carrello */}
+      <CartDialog
+        isOpen={isCartOpen}
+        onClose={closeCart}
+        items={cartItems}
+        onUpdateQuantity={updateQuantity}
+        onRemoveItem={removeItem}
+        onClearCart={clearCart}
+        totalPrice={getTotalPrice()}
+      />
     </div>
   );
 };

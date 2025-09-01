@@ -151,9 +151,20 @@ const ProductSuggestions: React.FC<ProductSuggestionsProps> = ({
   }, [diseaseName, searchTerms, maxItems]);
 
   const handleProductClick = (product: ProductItem) => {
+    // Salva il prodotto selezionato per il negozio
+    localStorage.setItem('selectedProduct', JSON.stringify({
+      id: product.id,
+      name: product.name,
+      fromDiagnosis: true
+    }));
+    
     if (onProductClick) {
       onProductClick(product.id, product.name);
     }
+    
+    // Naviga al negozio
+    const event = new CustomEvent('switchTab', { detail: 'shop' });
+    window.dispatchEvent(event);
   };
 
   if (loading) return <div className="text-sm text-muted-foreground">Caricamento prodotti…</div>;
