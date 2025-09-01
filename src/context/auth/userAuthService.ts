@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { isWhitelistedEmail, getExpectedPassword } from './credentialsService';
@@ -11,101 +10,80 @@ import { ensureProfileExists } from './profileService';
 export const authenticateWhitelistedUser = async (email: string, password: string): Promise<{ success: boolean }> => {
   const expectedPassword = getExpectedPassword(email);
   
-  console.log('Email nella whitelist rilevata:', email);
-  console.log('Account whitelisted: avvio tentativi multipli di login per', email);
+  console.log('🔐 Login per email whitelisted:', email);
+  console.log('🔑 Password attesa:', expectedPassword);
 
-  // Proviamo una lista di password candidate per massimizzare le probabilità di accesso
-  // Ordine: password inserita, password attesa dalla whitelist, fallback note.
-  const candidatePasswords = Array.from(
-    new Set(
-      [
-        password,
-        expectedPassword || undefined,
-        'ciao5',   // fallback noto usato in passato per account whitelisted
-        'test123', // fallback comune
-        'temp123', // fallback usato dal flusso di creazione
-      ].filter(Boolean)
-    )
-  ) as string[];
+  // Verifica prima la password corretta
+  if (password !== expectedPassword) {
+    console.log('❌ Password non corrisponde a quella attesa');
+    throw new Error('Invalid login credentials');
+  }
 
-  const tryLogin = async (pwd: string) => {
-    console.log(`Tentativo login Supabase per ${email} con password candidata...`);
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password: pwd,
-    });
-    if (data.user && data.session && !error) {
-      console.log(`Login riuscito per ${email} con una password candidata.`);
-      await ensureProfileExists(data.user.id, email);
-      return true;
-    }
-    console.log(`Login fallito per ${email} con una password candidata.`, error?.message);
-    return false;
-  };
+  console.log('✅ Password corretta, procedo con login Supabase per:', email);
 
   try {
-    // Prova tutte le password candidate una dopo l'altra
-    for (const candidate of candidatePasswords) {
-      const ok = await tryLogin(candidate);
-      if (ok) return { success: true };
+    // Tenta il login diretto con Supabase
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (data.user && data.session && !error) {
+      console.log('✅ Login Supabase riuscito per:', email);
+      await ensureProfileExists(data.user.id, email);
+      return { success: true };
     }
 
-    // Se tutti i tentativi falliscono, prova a creare l'account (se già esiste, gestiamo di seguito)
-    console.log('Nessun login riuscito, provo a creare account (o recuperare) per:', email);
+    console.log('❌ Login Supabase fallito, errore:', error?.message);
+    
+    // Se il login fallisce, prova a creare/recuperare l'account
+    console.log('🔄 Tentativo di creazione/recupero account per:', email);
     
     const { data: signupData, error: signupError } = await supabase.auth.signUp({
       email,
-      password: 'temp123',
+      password,
       options: {
         data: {
-          first_name: email === 'agrotecnicomarconigro@gmail.com' ? 'Marco' : 
-                     email === 'test@gmail.com' ? 'Test' : 
-                     email === 'talaiaandrea@gmail.com' ? 'Andrea' : 'User',
-          last_name: email === 'agrotecnicomarconigro@gmail.com' ? 'Nigro' : 
-                    email === 'test@gmail.com' ? 'User' : 
-                    email === 'talaiaandrea@gmail.com' ? 'Talaia' : 'Name'
+          first_name: email === 'test@gmail.com' ? 'Test' : 'User',
+          last_name: email === 'test@gmail.com' ? 'User' : 'Name'
         }
       }
     });
     
-    // Gestisce sia account creati che esistenti
     if (signupData.user || (signupError && signupError.message.includes('already registered'))) {
-      console.log('Account creato/esistente. Attendo e riprovo login finale con le password candidate per:', email);
+      console.log('✅ Account creato/esistente, riprovo login per:', email);
       
-      // Attendi un attimo prima di riprovare
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Attendi un momento prima di riprovare
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
-      // Tenta nuovamente: mettiamo "temp123" all'inizio perché è la password di creazione
-      const finalCandidates = Array.from(
-        new Set(['temp123', ...candidatePasswords])
-      );
+      const { data: retryData, error: retryError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-      for (const candidate of finalCandidates) {
-        const ok = await tryLogin(candidate);
-        if (ok) return { success: true };
+      if (retryData.user && retryData.session && !retryError) {
+        console.log('✅ Login riuscito al secondo tentativo per:', email);
+        await ensureProfileExists(retryData.user.id, email);
+        return { success: true };
       }
-
-      console.error('Login finale fallito per tutte le password candidate');
-      throw new Error('Impossibile completare il login per l\'account amministratore');
-    } else {
-      console.error('Errore durante la creazione dell\'account:', signupError);
-      throw new Error('Impossibile creare l\'account amministratore');
     }
+
+    throw new Error('Impossibile completare il login per l\'account amministratore');
   } catch (authError) {
-    console.error('Errore durante autenticazione whitelisted:', authError);
+    console.error('❌ Errore durante autenticazione whitelisted:', authError);
     throw new Error('Errore durante l\'autenticazione dell\'account amministratore');
   }
 };
 
 export const authenticateRegularUser = async (email: string, password: string): Promise<{ success: boolean }> => {
-  console.log('Tentativo login normale per:', email);
+  console.log('🔐 Tentativo login normale per:', email);
   const { data, error } = await supabase.auth.signInWithPassword({
     email,
     password,
   });
 
   if (data.user && data.session && !error) {
-    console.log('Login normale riuscito per:', email);
+    console.log('✅ Login normale riuscito per:', email);
     return { success: true };
   }
   

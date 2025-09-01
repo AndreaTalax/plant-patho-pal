@@ -38,6 +38,8 @@ export const getUserDisplayName = (email: string): { firstName: string; lastName
       return { firstName: 'Marco', lastName: 'Nigro' };
     case 'test@gmail.com':
       return { firstName: 'Test', lastName: 'User' };
+    case 'talaiaandrea@gmail.com':
+      return { firstName: 'Andrea', lastName: 'Talaia' };
     default:
       return { firstName: 'User', lastName: 'Name' };
   }
