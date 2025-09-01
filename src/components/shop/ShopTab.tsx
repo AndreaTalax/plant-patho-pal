@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { toast } from '@/components/ui/sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -140,7 +141,7 @@ const ShopTab = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-24">
       <div className="text-center">
         <div className="flex items-center justify-center gap-4 mb-2">
           <h2 className="text-2xl font-bold text-gray-900">Negozio</h2>
