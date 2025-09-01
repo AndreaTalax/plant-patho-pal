@@ -2,8 +2,9 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { UserChatViewRealtime } from './chat/UserChatViewRealtime';
+import { SimpleRealtimeChatView } from './chat/SimpleRealtimeChatView';
 import { ConnectionStatus } from './ConnectionStatus';
-import { MessageCircle, Crown, FileText } from 'lucide-react';
+import { MessageCircle, Crown, FileText, TestTube } from 'lucide-react';
 import { usePremiumStatus } from '@/services/premiumService';
 import { Button } from '@/components/ui/button';
 import { PremiumPaywallModal } from './diagnose/PremiumPaywallModal';
@@ -12,6 +13,7 @@ import { MARCO_NIGRO_ID } from '@/components/phytopathologist';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ChatTestButton } from './chat/ChatTestButton';
+import { RealtimeChatTestButton } from './chat/RealtimeChatTestButton';
 
 interface ActiveConversation {
   id: string;
@@ -22,12 +24,15 @@ interface ActiveConversation {
 }
 
 const ChatTab = () => {
-  const { isAuthenticated, user } = useAuth();
-  const { hasExpertChatAccess } = usePremiumStatus();
+  const { isAuthenticated, user, userProfile } = useAuth();
+  const { hasExpertChatAccess, isTestAdmin } = usePremiumStatus();
   const [showPaywall, setShowPaywall] = useState(false);
   const [activeConversations, setActiveConversations] = useState<ActiveConversation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
+
+  const isTestUser = userProfile?.email === 'test@gmail.com';
+  const canAccessChat = hasExpertChatAccess || isTestUser;
 
   // Controlla le conversazioni attive dell'utente
   useEffect(() => {
@@ -120,8 +125,8 @@ const ChatTab = () => {
     );
   }
 
-  // Se l'utente non ha accesso premium alla chat E non ha conversazioni attive
-  if (!hasExpertChatAccess && activeConversations.length === 0) {
+  // Se l'utente non ha accesso premium alla chat E non ha conversazioni attive E non è un tester
+  if (!canAccessChat && activeConversations.length === 0) {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-2xl mx-auto text-center">
@@ -163,11 +168,19 @@ const ChatTab = () => {
       return (
         <div className="h-[calc(100vh-8rem)]">
           <ConnectionStatus />
-          <UserChatViewRealtime 
-            userId={user.id} 
-            conversationId={selectedConversationId}
-            onBackToList={() => setSelectedConversationId(null)}
-          />
+          {isTestUser ? (
+            <SimpleRealtimeChatView 
+              userId={user.id} 
+              conversationId={selectedConversationId}
+              onBackToList={() => setSelectedConversationId(null)}
+            />
+          ) : (
+            <UserChatViewRealtime 
+              userId={user.id} 
+              conversationId={selectedConversationId}
+              onBackToList={() => setSelectedConversationId(null)}
+            />
+          )}
         </div>
       );
     }
@@ -177,7 +190,15 @@ const ChatTab = () => {
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto">
           <div className="mb-6">
-            <h2 className="text-2xl font-bold mb-2">Le tue conversazioni attive</h2>
+            <div className="flex items-center gap-2 mb-2">
+              <h2 className="text-2xl font-bold">Le tue conversazioni attive</h2>
+              {isTestUser && (
+                <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+                  <TestTube className="h-3 w-3 mr-1" />
+                  Test Account
+                </Badge>
+              )}
+            </div>
             <p className="text-gray-600">
               Continua le conversazioni con il fitopatologo Marco Nigro
             </p>
@@ -233,7 +254,12 @@ const ChatTab = () => {
           </div>
 
           <div className="mt-8 space-y-4">
-            <ChatTestButton />
+            {isTestUser && (
+              <div className="flex gap-2 justify-center">
+                <ChatTestButton />
+                <RealtimeChatTestButton />
+              </div>
+            )}
             <div className="text-center">
               <Button
                 onClick={() => {
@@ -258,7 +284,15 @@ const ChatTab = () => {
     <div className="container mx-auto px-4 py-8">
       <div className="max-w-2xl mx-auto text-center">
         <MessageCircle className="h-16 w-16 mx-auto mb-6 text-drplant-green" />
-        <h2 className="text-2xl font-bold mb-4">Chat con il Fitopatologo</h2>
+        <div className="flex items-center justify-center gap-2 mb-4">
+          <h2 className="text-2xl font-bold">Chat con il Fitopatologo</h2>
+          {isTestUser && (
+            <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+              <TestTube className="h-3 w-3 mr-1" />
+              Test
+            </Badge>
+          )}
+        </div>
         <p className="text-gray-600 mb-6">
           Per iniziare una conversazione con il nostro esperto Marco Nigro, 
           effettua prima una diagnosi dalla sezione "Diagnosi" e scegli la 
@@ -273,17 +307,26 @@ const ChatTab = () => {
           </p>
         </div>
         
-        <Button
-          onClick={() => {
-            const event = new CustomEvent('switchTab', { detail: { tab: 'diagnose' } });
-            window.dispatchEvent(event);
-          }}
-          className="bg-drplant-green hover:bg-drplant-green-dark"
-          size="lg"
-        >
-          <FileText className="h-5 w-5 mr-2" />
-          Vai alla Diagnosi
-        </Button>
+        <div className="space-y-4">
+          <Button
+            onClick={() => {
+              const event = new CustomEvent('switchTab', { detail: { tab: 'diagnose' } });
+              window.dispatchEvent(event);
+            }}
+            className="bg-drplant-green hover:bg-drplant-green-dark"
+            size="lg"
+          >
+            <FileText className="h-5 w-5 mr-2" />
+            Vai alla Diagnosi
+          </Button>
+          
+          {isTestUser && (
+            <div className="flex gap-2 justify-center mt-4">
+              <ChatTestButton />
+              <RealtimeChatTestButton />
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

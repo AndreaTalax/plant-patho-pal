@@ -4,7 +4,14 @@ import { useAuth } from '@/context/AuthContext';
 export const PREMIUM_TEST_EMAILS = [
   'test@gmail.com',
   'agrotecnicomarconigro@gmail.com',
+  'premium@gmail.com',
+  'talaiaandrea@gmail.com',
   // Aggiungi altri email di test qui
+];
+
+export const ADMIN_TEST_EMAILS = [
+  'test@gmail.com',
+  'agrotecnicomarconigro@gmail.com',
 ];
 
 export class PremiumService {
@@ -14,7 +21,7 @@ export class PremiumService {
   static hasExpertChatAccess(userEmail: string | undefined): boolean {
     if (!userEmail) return false;
     
-    // Per ora, accesso gratuito per email di test
+    // Account di test hanno sempre accesso
     return PREMIUM_TEST_EMAILS.includes(userEmail.toLowerCase());
   }
 
@@ -26,11 +33,30 @@ export class PremiumService {
   }
 
   /**
-   * Verifica se l'utente può usare la diagnosi AI (ora gratuita)
+   * Verifica se l'utente può usare la diagnosi AI (ora gratuita per tutti)
    */
   static canUseAIDiagnosis(userEmail: string | undefined): boolean {
-    // AI è ora sempre disponibile
+    // AI è sempre disponibile per tutti
     return true;
+  }
+
+  /**
+   * Verifica se l'utente ha accesso illimitato alle diagnosi
+   */
+  static hasUnlimitedDiagnosis(userEmail: string | undefined): boolean {
+    if (!userEmail) return false;
+    
+    // Account di test hanno sempre accesso illimitato
+    return PREMIUM_TEST_EMAILS.includes(userEmail.toLowerCase());
+  }
+
+  /**
+   * Verifica se l'utente è un admin di test
+   */
+  static isTestAdmin(userEmail: string | undefined): boolean {
+    if (!userEmail) return false;
+    
+    return ADMIN_TEST_EMAILS.includes(userEmail.toLowerCase());
   }
 
   /**
@@ -49,10 +75,14 @@ export const usePremiumStatus = () => {
   
   const hasExpertChatAccess = PremiumService.canUseExpertChat(userProfile?.email);
   const hasAIAccess = PremiumService.canUseAIDiagnosis(userProfile?.email);
+  const hasUnlimitedDiagnosis = PremiumService.hasUnlimitedDiagnosis(userProfile?.email);
+  const isTestAdmin = PremiumService.isTestAdmin(userProfile?.email);
   
   return {
     hasAIAccess,
     hasExpertChatAccess,
+    hasUnlimitedDiagnosis,
+    isTestAdmin,
     isPremium: hasExpertChatAccess,
     upgradeMessage: PremiumService.getPremiumUpgradeMessage()
   };
