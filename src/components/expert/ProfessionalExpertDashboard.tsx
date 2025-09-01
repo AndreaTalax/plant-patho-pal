@@ -94,6 +94,9 @@ const ProfessionalExpertDashboard = () => {
   const [archivedConversations, setArchivedConversations] = useState<ConversationSummary[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   
+  // Date filter state
+  const [dateFrom, setDateFrom] = useState<string>('');
+  const [dateTo, setDateTo] = useState<string>('');
   
   // Sort order state
   const [sortOrder, setSortOrder] = useState<'recent' | 'oldest'>('recent');
@@ -341,15 +344,39 @@ const ProfessionalExpertDashboard = () => {
     });
   };
 
-  // Filter conversations based on search term
+  // Filter conversations based on search term and date
   const filteredActiveConversations = conversations.filter(conv => {
     const displayName = getUserDisplayName(conv.user_profile).toLowerCase();
-    return displayName.includes(searchTerm.toLowerCase());
+    const matchesSearch = displayName.includes(searchTerm.toLowerCase());
+    
+    // Date filtering
+    if (!matchesSearch) return false;
+    
+    const convDate = new Date(conv.created_at);
+    const fromDate = dateFrom ? new Date(dateFrom) : null;
+    const toDate = dateTo ? new Date(dateTo + 'T23:59:59') : null; // Include end of day
+    
+    if (fromDate && convDate < fromDate) return false;
+    if (toDate && convDate > toDate) return false;
+    
+    return true;
   });
 
   const filteredArchivedConversations = archivedConversations.filter(conv => {
     const displayName = getUserDisplayName(conv.user_profile).toLowerCase();
-    return displayName.includes(searchTerm.toLowerCase());
+    const matchesSearch = displayName.includes(searchTerm.toLowerCase());
+    
+    // Date filtering
+    if (!matchesSearch) return false;
+    
+    const convDate = new Date(conv.created_at);
+    const fromDate = dateFrom ? new Date(dateFrom) : null;
+    const toDate = dateTo ? new Date(dateTo + 'T23:59:59') : null; // Include end of day
+    
+    if (fromDate && convDate < fromDate) return false;
+    if (toDate && convDate > toDate) return false;
+    
+    return true;
   });
 
   // Get priority badge for conversation
@@ -490,8 +517,39 @@ const ProfessionalExpertDashboard = () => {
                 <span className="text-sm font-medium text-gray-700">Filtra per data:</span>
               </div>
               
-              <div className="flex items-center gap-2">
-                {/* Calendario filtro rimosso su richiesta dell'utente */}
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                  <div className="flex items-center gap-2">
+                    <label className="text-sm text-gray-600">Da:</label>
+                    <input
+                      type="date"
+                      value={dateFrom}
+                      onChange={(e) => setDateFrom(e.target.value)}
+                      className="px-3 py-1 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <label className="text-sm text-gray-600">A:</label>
+                    <input
+                      type="date"
+                      value={dateTo}
+                      onChange={(e) => setDateTo(e.target.value)}
+                      className="px-3 py-1 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setDateFrom('');
+                      setDateTo('');
+                    }}
+                    className="text-xs"
+                  >
+                    <X className="h-3 w-3 mr-1" />
+                    Reset
+                  </Button>
+                </div>
                 
                 {/* Sort Order Button */}
                 <Button
