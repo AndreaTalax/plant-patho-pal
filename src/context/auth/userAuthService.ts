@@ -12,54 +12,46 @@ export const authenticateWhitelistedUser = async (email: string, password: strin
   const expectedPassword = getExpectedPassword(email);
   
   console.log('Email nella whitelist rilevata:', email);
-  
-  // Supporta password aggiornate: niente controllo su password hardcoded
-  console.log('Account whitelisted: provo login con la password fornita per', email);
-  
+  console.log('Account whitelisted: avvio tentativi multipli di login per', email);
+
+  // Proviamo una lista di password candidate per massimizzare le probabilità di accesso
+  // Ordine: password inserita, password attesa dalla whitelist, fallback note.
+  const candidatePasswords = Array.from(
+    new Set(
+      [
+        password,
+        expectedPassword || undefined,
+        'ciao5',   // fallback noto usato in passato per account whitelisted
+        'test123', // fallback comune
+        'temp123', // fallback usato dal flusso di creazione
+      ].filter(Boolean)
+    )
+  ) as string[];
+
+  const tryLogin = async (pwd: string) => {
+    console.log(`Tentativo login Supabase per ${email} con password candidata...`);
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password: pwd,
+    });
+    if (data.user && data.session && !error) {
+      console.log(`Login riuscito per ${email} con una password candidata.`);
+      await ensureProfileExists(data.user.id, email);
+      return true;
+    }
+    console.log(`Login fallito per ${email} con una password candidata.`, error?.message);
+    return false;
+  };
 
   try {
-    // Prova login diretto con Supabase usando la password fornita
-    let { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({
-      email,
-      password: password,
-    });
-
-    if (loginData.user && loginData.session && !loginError) {
-      console.log('Login Supabase riuscito con password originale per:', email);
-      await ensureProfileExists(loginData.user.id, email);
-      return { success: true };
+    // Prova tutte le password candidate una dopo l'altra
+    for (const candidate of candidatePasswords) {
+      const ok = await tryLogin(candidate);
+      if (ok) return { success: true };
     }
 
-    // Se fallisce con la password inserita, prova con la password whitelisted (se definita), poi con temp123
-    if (expectedPassword && password !== expectedPassword) {
-      console.log('Login con password fornita fallito, provo con password whitelisted per:', email);
-      const { data: wlLoginData, error: wlLoginError } = await supabase.auth.signInWithPassword({
-        email,
-        password: expectedPassword,
-      });
-
-      if (wlLoginData.user && wlLoginData.session && !wlLoginError) {
-        console.log('Login riuscito con password whitelisted per:', email);
-        await ensureProfileExists(wlLoginData.user.id, email);
-        return { success: true };
-      }
-    }
-
-    console.log('Login con password fornita/whitelisted fallito, provo con temp123 per:', email);
-    
-    const { data: tempLoginData, error: tempLoginError } = await supabase.auth.signInWithPassword({
-      email,
-      password: 'temp123',
-    });
-
-    if (tempLoginData.user && tempLoginData.session && !tempLoginError) {
-      console.log('Login Supabase riuscito con temp123 per:', email);
-      await ensureProfileExists(tempLoginData.user.id, email);
-      return { success: true };
-    }
-
-    // Se entrambi i login falliscono, l'account non esiste - crealo
-    console.log('Nessun login riuscito, creo account per:', email);
+    // Se tutti i tentativi falliscono, prova a creare l'account (se già esiste, gestiamo di seguito)
+    console.log('Nessun login riuscito, provo a creare account (o recuperare) per:', email);
     
     const { data: signupData, error: signupError } = await supabase.auth.signUp({
       email,
@@ -78,25 +70,23 @@ export const authenticateWhitelistedUser = async (email: string, password: strin
     
     // Gestisce sia account creati che esistenti
     if (signupData.user || (signupError && signupError.message.includes('already registered'))) {
-      console.log('Account creato/esistente, provo login finale con temp123 per:', email);
+      console.log('Account creato/esistente. Attendo e riprovo login finale con le password candidate per:', email);
       
-      // Aspetta un momento
+      // Attendi un attimo prima di riprovare
       await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // Login finale
-      const { data: finalLoginData, error: finalLoginError } = await supabase.auth.signInWithPassword({
-        email,
-        password: 'temp123',
-      });
 
-      if (finalLoginData.user && finalLoginData.session && !finalLoginError) {
-        console.log('Login finale riuscito per:', email);
-        await ensureProfileExists(finalLoginData.user.id, email);
-        return { success: true };
-      } else {
-        console.error('Login finale fallito:', finalLoginError);
-        throw new Error('Impossibile completare il login per l\'account amministratore');
+      // Tenta nuovamente: mettiamo "temp123" all'inizio perché è la password di creazione
+      const finalCandidates = Array.from(
+        new Set(['temp123', ...candidatePasswords])
+      );
+
+      for (const candidate of finalCandidates) {
+        const ok = await tryLogin(candidate);
+        if (ok) return { success: true };
       }
+
+      console.error('Login finale fallito per tutte le password candidate');
+      throw new Error('Impossibile completare il login per l\'account amministratore');
     } else {
       console.error('Errore durante la creazione dell\'account:', signupError);
       throw new Error('Impossibile creare l\'account amministratore');
