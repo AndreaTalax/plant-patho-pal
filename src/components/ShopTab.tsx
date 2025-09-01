@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { toast } from '@/components/ui/sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -138,22 +137,22 @@ const ShopTab = () => {
       <div className="text-center">
         <div className="flex items-center justify-center gap-4 mb-2">
           <h2 className="text-2xl font-bold text-gray-900">Negozio</h2>
-          {getTotalItems() > 0 && (
-            <Button
-              onClick={openCart}
-              variant="outline"
-              className="relative"
-            >
-              <ShoppingBag className="w-4 h-4 mr-2" />
-              Carrello
+          <Button
+            onClick={openCart}
+            variant="outline"
+            className="relative"
+          >
+            <ShoppingBag className="w-4 h-4 mr-2" />
+            Carrello
+            {getTotalItems() > 0 && (
               <Badge 
                 variant="default" 
                 className="absolute -top-2 -right-2 bg-green-600 hover:bg-green-700"
               >
                 {getTotalItems()}
               </Badge>
-            </Button>
-          )}
+            )}
+          </Button>
         </div>
         <p className="text-gray-600">Trova i prodotti migliori per le tue piante</p>
       </div>
