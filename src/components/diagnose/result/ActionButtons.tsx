@@ -11,6 +11,7 @@ import { MARCO_NIGRO_ID } from '@/components/phytopathologist';
 import { toast } from "sonner";
 import { usePremiumStatus } from "@/services/premiumService";
 import { PremiumPaywallModal } from "../PremiumPaywallModal";
+import { ConsultationDataService } from '@/services/chat/consultationDataService'; // NEW
 
 interface ActionButtonsProps {
   onStartNewAnalysis: () => void;
@@ -38,7 +39,7 @@ const ActionButtons = ({
   useAI = false,
   diagnosisData
 }: ActionButtonsProps) => {
-  const { user } = useAuth();
+  const { user, userProfile } = useAuth(); // UPDATED: also get userProfile
   const { hasExpertChatAccess } = usePremiumStatus();
   const navigate = useNavigate();
   const [showAuthDialog, setShowAuthDialog] = useState(false);
@@ -71,7 +72,7 @@ const ActionButtons = ({
       const symptoms = diagnosisData?.symptoms || diagnosisData?.plantInfo?.symptoms || 'Non specificati';
       const imageUrl = diagnosisData?.imageUrl || null;
       
-      console.log("📋 Prepared data - plantType:", plantType, "symptoms:", symptoms, "imageUrl:", imageUrl);
+      console.log("📋 Prepared data (preview) - plantType:", plantType, "symptoms:", symptoms, "imageUrl:", imageUrl);
       
       // Crea/avvia conversazione con l'esperto
       const { data: conversation, error: convError } = await supabase
@@ -92,10 +93,9 @@ const ActionButtons = ({
 
       console.log("✅ Conversation created:", conversation);
 
-      // Messaggio iniziale
+      // Messaggio iniziale "umano" (manteniamo, opzionale)
       let initialMessage = `🌱 **Nuova richiesta di consulenza**\n\n**Tipo di pianta:** ${plantType}\n**Sintomi osservati:** ${symptoms}`;
 
-      // Allego anche il risultato AI, se disponibile
       if (diagnosisData?.diagnosisResult) {
         initialMessage += `\n\n🤖 **Analisi AI precedente (riassunto):**\n${typeof diagnosisData.diagnosisResult === 'string' 
           ? diagnosisData.diagnosisResult 
@@ -106,8 +106,8 @@ const ActionButtons = ({
 
       console.log("📝 Initial message:", initialMessage);
 
-      // Invia messaggio via Edge Function "send-message" (con token)
-      const { data: sendMsgData, error: sendMsgError } = await supabase.functions.invoke('send-message', {
+      // Invia messaggio iniziale via Edge Function "send-message" (con token)
+      const { error: sendMsgError } = await supabase.functions.invoke('send-message', {
         body: {
           conversationId: conversation.id,
           recipientId: MARCO_NIGRO_ID,
@@ -122,7 +122,7 @@ const ActionButtons = ({
 
       if (sendMsgError) {
         console.error("❌ Error sending initial message via edge function:", sendMsgError);
-        throw sendMsgError;
+        // Non blocchiamo il flusso per questo, proseguiamo con l'invio automatico dati
       }
 
       // Se c’è un’immagine, inviala come messaggio separato (sempre via edge function)
@@ -147,6 +147,44 @@ const ActionButtons = ({
         }
       }
 
+      // ➊ INVIO AUTOMATICO DATI COMPLETI (edge function dedicata)
+      const plantData = {
+        symptoms: diagnosisData?.symptoms || diagnosisData?.plantInfo?.symptoms || 'Da descrivere durante la consulenza',
+        wateringFrequency: diagnosisData?.plantInfo?.wateringFrequency || 'Da specificare',
+        sunExposure: diagnosisData?.plantInfo?.lightExposure || 'Da specificare',
+        environment: diagnosisData?.plantInfo?.isIndoor !== undefined 
+          ? (diagnosisData?.plantInfo?.isIndoor ? 'Interno' : 'Esterno') 
+          : 'Da specificare',
+        plantName: diagnosisData?.plantType || diagnosisData?.plantInfo?.name || 'Specie da identificare',
+        imageUrl: diagnosisData?.imageUrl || null,
+        aiDiagnosis: diagnosisData?.diagnosisResult,
+        useAI: !!useAI,
+        sendToExpert: true
+      };
+
+      const userData = {
+        firstName: userProfile?.first_name || userProfile?.firstName || 'Non specificato',
+        lastName: userProfile?.last_name || userProfile?.lastName || 'Non specificato',
+        email: userProfile?.email || 'Non specificato',
+        birthDate: userProfile?.birth_date || userProfile?.birthDate || 'Non specificata',
+        birthPlace: userProfile?.birth_place || userProfile?.birthPlace || 'Non specificato'
+      };
+
+      console.log("🔄 Sending automatic consultation data via edge function...", { hasUser: !!userData.email, hasPlant: !!plantData.plantName, useAI });
+
+      const sent = await ConsultationDataService.sendInitialConsultationData(
+        conversation.id,
+        plantData,
+        userData,
+        !!useAI
+      );
+
+      if (!sent) {
+        console.warn("⚠️ Automatic consultation data send failed (will still open chat).");
+      } else {
+        console.log("✅ Automatic consultation data sent.");
+      }
+
       // Vai alla chat
       navigate('/');
       setTimeout(() => {
@@ -162,7 +200,7 @@ const ActionButtons = ({
     } catch (error: any) {
       console.error("❌ Errore nell'avvio della chat:", error);
       toast.error("❌ Errore nell'avvio della chat", {
-        description: error.message || 'Riprova più tardi',
+        description: error?.message || 'Riprova più tardi',
         duration: 4000
       });
     }
@@ -231,7 +269,7 @@ const ActionButtons = ({
       >
         {!hasExpertChatAccess && <Crown className="h-4 w-4" />}
         <MessageCircle className="h-4 w-4" />
-        <span>{hasExpertChatAccess ? 'Chat con il fitopatologo' : 'Chat Premium con Esperto'}</span>
+        <span>{hasExpertChatAccess ? 'Invia analisi in chat al fitopatologo' : 'Chat Premium con Esperto'}</span>
       </Button>
       
       <Button 
