@@ -1,9 +1,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { MessageList } from './MessageList';
-import { MessageInput } from './MessageInput';
-import { ChatHeader } from './user/ChatHeader';
+import MessageList from './MessageList';
+import MessageInput from './MessageInput';
+import ChatHeader from './user/ChatHeader';
 import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -123,9 +123,10 @@ export const SimpleRealtimeChatView: React.FC<SimpleRealtimeChatViewProps> = ({
       </div>
 
       <MessageInput
+        conversationId={conversationId}
+        senderId={userId}
+        recipientId="marco_nigro_id"
         onSendMessage={handleSendMessage}
-        disabled={false}
-        placeholder="Scrivi un messaggio di test..."
       />
     </div>
   );
