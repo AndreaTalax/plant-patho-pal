@@ -78,17 +78,13 @@ const Index = () => {
     }
   };
 
-  const handleTabChange = (tab: TabType) => {
-    setActiveTab(tab);
-  };
-
   return (
     <div className="min-h-screen bg-background">
       <Header />
       <main className="pb-16">
         {renderActiveTab()}
       </main>
-      <BottomNavigation activeTab={activeTab} onTabChange={handleTabChange} />
+      <BottomNavigation activeTab={activeTab} setActiveTab={setActiveTab} />
     </div>
   );
 };
