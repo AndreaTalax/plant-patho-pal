@@ -1,46 +1,24 @@
 
 /**
- * Service for managing whitelisted account credentials and validation
+ * Centralized service for managing whitelisted credentials
  */
 
-export const getWhitelistedCredentials = () => ({
+// Whitelisted emails and their expected passwords
+const WHITELISTED_CREDENTIALS = Object.freeze({
   'agrotecnicomarconigro@gmail.com': 'marconigro93',
   'test@gmail.com': 'test123',
-  'premium@gmail.com': 'premium123',
-  'talaiaandrea@gmail.com': 'test1234'
+  'premium@gmail.com': 'premium123'
 });
 
 export const isWhitelistedEmail = (email: string): boolean => {
+  return email.toLowerCase() in WHITELISTED_CREDENTIALS;
+};
+
+export const getExpectedPassword = (email: string): string => {
   const emailLower = email.toLowerCase();
-  return Object.keys(getWhitelistedCredentials()).includes(emailLower);
+  return WHITELISTED_CREDENTIALS[emailLower as keyof typeof WHITELISTED_CREDENTIALS] || '';
 };
 
-export const getExpectedPassword = (email: string): string | null => {
-  const emailLower = email.toLowerCase();
-  const credentials = getWhitelistedCredentials();
-  return credentials[emailLower as keyof typeof credentials] || null;
-};
-
-export const determineUserRole = (email: string): string => {
-  if (email === 'agrotecnicomarconigro@gmail.com') {
-    return 'admin';
-  } else if (email === 'test@gmail.com') {
-    return 'admin';
-  } else if (email.includes('marco') || email.includes('fitopatologo')) {
-    return 'expert';
-  }
-  return 'user';
-};
-
-export const getUserDisplayName = (email: string): { firstName: string; lastName: string } => {
-  switch (email) {
-    case 'agrotecnicomarconigro@gmail.com':
-      return { firstName: 'Marco', lastName: 'Nigro' };
-    case 'test@gmail.com':
-      return { firstName: 'Test', lastName: 'User' };
-    case 'talaiaandrea@gmail.com':
-      return { firstName: 'Andrea', lastName: 'Talaia' };
-    default:
-      return { firstName: 'User', lastName: 'Name' };
-  }
+export const getWhitelistedCredentials = () => {
+  return WHITELISTED_CREDENTIALS;
 };
