@@ -1,6 +1,9 @@
 
 project_id = "otdmqmpxukifoxjlgzmq"
 
+[functions.assign-specialist]
+verify_jwt = false
+
 [functions.analyze-plant]
 verify_jwt = false
 

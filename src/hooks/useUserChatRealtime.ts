@@ -143,8 +143,16 @@ export const useUserChatRealtime = (userId: string) => {
 
       // Configura sottoscrizione real-time con fallback
       try {
+        // Ensure we have a valid conversation ID
+        if (!conversation.id || typeof conversation.id !== 'string') {
+          throw new Error('Invalid conversation ID for realtime subscription');
+        }
+
+        const channelName = `conversation_${conversation.id}`;
+        console.log('🔗 Setting up realtime channel:', channelName);
+
         const channel = supabase
-          .channel(`conversation_${conversation.id}`)
+          .channel(channelName)
           .on(
             'postgres_changes',
             {
