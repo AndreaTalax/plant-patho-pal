@@ -323,7 +323,6 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
           )}
         </div>
       )}
-      )}
 
       <div className="mt-4">
         <ActionButtons
