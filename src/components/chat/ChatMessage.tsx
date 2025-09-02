@@ -2,15 +2,27 @@
 import { Message } from './types';
 import { MessageAvatar } from './message/MessageAvatar';
 import { MessageContent } from './message/MessageContent';
+import MessageReactions from './MessageReactions';
 
 interface ChatMessageProps {
   message: Message;
   isExpertView?: boolean;
   userAvatar?: string;
   userName?: string;
+  currentUserId?: string;
+  onAddReaction?: (messageId: string, reactionType: string) => void;
+  onRemoveReaction?: (messageId: string, reactionType: string) => void;
 }
 
-const ChatMessage = ({ message, isExpertView = false, userAvatar, userName }: ChatMessageProps) => {
+const ChatMessage = ({ 
+  message, 
+  isExpertView = false, 
+  userAvatar, 
+  userName, 
+  currentUserId,
+  onAddReaction,
+  onRemoveReaction 
+}: ChatMessageProps) => {
   const isUser = message.sender === 'user';
 
   console.log('🎨 Rendering ChatMessage:', {
@@ -70,6 +82,18 @@ const ChatMessage = ({ message, isExpertView = false, userAvatar, userName }: Ch
         <div className={`text-xs text-gray-500 mt-1 px-1 ${isUser ? 'text-right' : 'text-left'}`}>
           {message.time}
         </div>
+
+        {/* Reazioni ai messaggi */}
+        {currentUserId && onAddReaction && onRemoveReaction && (
+          <MessageReactions
+            messageId={message.id}
+            reactions={message.reactions || []}
+            currentUserId={currentUserId}
+            onAddReaction={onAddReaction}
+            onRemoveReaction={onRemoveReaction}
+            className={isUser ? 'justify-end' : 'justify-start'}
+          />
+        )}
       </div>
       
       {(isExpertView && isUser) && (

@@ -5,7 +5,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import Header from "@/components/Header";
 import DiagnoseTab from "@/components/DiagnoseTab";
 import ChatTab from "@/components/ChatTab";
-import LibraryTab from "@/components/LibraryTab";
+import LibraryTabWithLocation from "@/components/LibraryTabWithLocation";
 import ShopTab from "@/components/ShopTab";
 import ProfileTab from "@/components/ProfileTab";
 import ExpertTab from "@/components/ExpertTab";
@@ -201,7 +201,7 @@ const Index = () => {
       case "chat":
         return <ChatTab />;
       case "library":
-        return <LibraryTab />;
+        return <LibraryTabWithLocation />;
       case "shop":
         return <ShopTab />;
       case "profile":

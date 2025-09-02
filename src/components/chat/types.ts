@@ -1,6 +1,13 @@
 
 import { MARCO_NIGRO_PROFILE } from '@/components/phytopathologist';
 
+export interface Reaction {
+  type: string;
+  count: number;
+  users: string[];
+  emoji: string;
+}
+
 export interface Message {
   id: string;
   text: string;
@@ -11,6 +18,7 @@ export interface Message {
   plantDetails?: any;
   userDetails?: any;
   image_url?: string; // Added image_url field for proper image handling
+  reactions?: Reaction[]; // Added reactions field
 }
 
 export interface Conversation {

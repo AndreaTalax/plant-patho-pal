@@ -9,6 +9,7 @@ import { useAuth } from '@/context/AuthContext';
 import { AccessibleButton } from '@/components/ui/accessible-button';
 import { AccessibleControlPanel } from '@/components/ui/accessible-controls';
 import { voiceOverAnnouncements } from '@/utils/accessibility';
+import { triggerHaptic } from '@/utils/hapticFeedback';
 import AudioRecorder from './AudioRecorder';
 import EmojiPicker from './EmojiPicker';
 
@@ -53,6 +54,10 @@ const MessageInput: React.FC<MessageInputProps> = ({
     try {
       setIsSending(true);
       await onSendMessage(message.trim());
+      
+      // Feedback tattile per messaggio inviato
+      triggerHaptic('message_sent');
+      
       setMessage('');
       
       // Reset textarea height
@@ -92,6 +97,10 @@ const MessageInput: React.FC<MessageInputProps> = ({
     try {
       const imageUrl = await uploadPlantImage(file, userProfile.id);
       await onSendMessage('📸 Immagine allegata', imageUrl);
+      
+      // Feedback tattile per foto inviata
+      triggerHaptic('photo');
+      
       toast.success('Immagine inviata con successo!');
     } catch (error) {
       console.error('Errore upload immagine:', error);
@@ -106,6 +115,9 @@ const MessageInput: React.FC<MessageInputProps> = ({
 
   const handleEmojiSelect = (emoji: any) => {
     if (emoji?.native) {
+      // Feedback tattile per emoji selezionata
+      triggerHaptic('reaction');
+      
       setMessage(prev => prev + emoji.native);
       setShowEmojiPicker(false);
       
