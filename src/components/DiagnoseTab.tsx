@@ -566,12 +566,12 @@ const DiagnoseTab = () => {
         );
 
       case 'result':
-        if (uploadedImage && diagnosedDisease) {
+        if (uploadedImage && (diagnosedDisease || analysisDetails)) {
           return (
             <DiagnosisResult
               imageSrc={uploadedImage}
               plantInfo={plantInfo}
-              analysisData={diagnosedDisease}
+              analysisData={diagnosedDisease || undefined}
               isAnalyzing={false}
               onStartNewAnalysis={handleNewAnalysis}
               onChatWithExpert={handleExpertConsultation}
@@ -579,7 +579,7 @@ const DiagnoseTab = () => {
             />
           );
         } else {
-          // Expert consultation result
+          // Expert consultation result (nessun risultato AI disponibile da mostrare)
           return (
             <div className="text-center space-y-6 py-12">
               <CheckCircle className="h-20 w-20 text-green-500 mx-auto" />

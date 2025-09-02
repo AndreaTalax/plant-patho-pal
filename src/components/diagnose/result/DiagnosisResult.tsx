@@ -289,6 +289,7 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
         />
       </div>
 
+
       {analysisDetails && (
         <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-100">
           <h2 className="text-lg font-semibold">Dettagli dell'analisi</h2>
@@ -321,6 +322,7 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
             </div>
           )}
         </div>
+      )}
       )}
 
       <div className="mt-4">
