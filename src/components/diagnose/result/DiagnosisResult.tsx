@@ -189,34 +189,89 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
         </div>
       </div>
 
+      {/* Sezione possibili nomi della pianta */}
+      <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-100">
+        <h2 className="text-lg font-semibold flex items-center gap-2">
+          🌿 Possibili Nomi della Pianta
+        </h2>
+        <div className="mt-3 space-y-2">
+          {plantInfo?.name && (
+            <div className="p-2 bg-green-50 rounded border-l-4 border-green-400">
+              <p className="font-medium text-green-800">{plantInfo.name}</p>
+              <p className="text-sm text-green-600">Identificazione principale</p>
+            </div>
+          )}
+          {analysisDetails?.multiServiceInsights?.plantSpecies && analysisDetails.multiServiceInsights.plantSpecies !== plantInfo?.name && (
+            <div className="p-2 bg-blue-50 rounded border-l-4 border-blue-400">
+              <p className="font-medium text-blue-800">{analysisDetails.multiServiceInsights.plantSpecies}</p>
+              <p className="text-sm text-blue-600">Nome scientifico/alternativo</p>
+            </div>
+          )}
+          {analysisDetails?.multiServiceInsights?.eppoPlantIdentification && (
+            <div className="p-2 bg-purple-50 rounded border-l-4 border-purple-400">
+              <p className="font-medium text-purple-800">{analysisDetails.multiServiceInsights.eppoPlantIdentification.preferredName}</p>
+              <p className="text-sm text-purple-600">Database EPPO - {analysisDetails.multiServiceInsights.eppoPlantIdentification.scientificName}</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Sezione possibili malattie */}
       {effectiveDiagnosis && (
         <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-100">
-          <h2 className="text-lg font-semibold">Dettagli della malattia</h2>
-          <p><strong>Nome:</strong> {effectiveDiagnosis.name}</p>
-          <p><strong>Descrizione:</strong> {effectiveDiagnosis.description}</p>
-          <p><strong>Cause:</strong> {effectiveDiagnosis.causes}</p>
+          <h2 className="text-lg font-semibold flex items-center gap-2">
+            🦠 Possibili Malattie
+          </h2>
+          <div className="mt-3 space-y-3">
+            <div className="p-3 bg-red-50 rounded border-l-4 border-red-400">
+              <p className="font-semibold text-red-800">{effectiveDiagnosis.name}</p>
+              <p className="text-sm text-red-600 mt-1">{effectiveDiagnosis.description}</p>
+              
+              {effectiveDiagnosis.causes && (
+                <div className="mt-2">
+                  <p className="font-medium text-red-700">Cause:</p>
+                  <p className="text-sm text-red-600">{effectiveDiagnosis.causes}</p>
+                </div>
+              )}
 
-          {effectiveDiagnosis.symptoms && effectiveDiagnosis.symptoms.length > 0 && (
-            <div>
-              <p className="font-semibold mt-2">Sintomi:</p>
-              <ul>
-                {effectiveDiagnosis.symptoms.map((symptom: string, index: number) => (
-                  <li key={index}>{symptom}</li>
-                ))}
-              </ul>
-            </div>
-          )}
+              {effectiveDiagnosis.symptoms && effectiveDiagnosis.symptoms.length > 0 && (
+                <div className="mt-2">
+                  <p className="font-medium text-red-700">Sintomi:</p>
+                  <ul className="text-sm text-red-600 ml-4">
+                    {effectiveDiagnosis.symptoms.map((symptom: string, index: number) => (
+                      <li key={index} className="list-disc">{symptom}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
 
-          {effectiveDiagnosis.treatments && effectiveDiagnosis.treatments.length > 0 && (
-            <div>
-              <p className="font-semibold mt-2">Trattamenti:</p>
-              <ul>
-                {effectiveDiagnosis.treatments.map((treatment: string, index: number) => (
-                  <li key={index}>{treatment}</li>
-                ))}
-              </ul>
+              {effectiveDiagnosis.treatments && effectiveDiagnosis.treatments.length > 0 && (
+                <div className="mt-2">
+                  <p className="font-medium text-red-700">Trattamenti consigliati:</p>
+                  <ul className="text-sm text-red-600 ml-4">
+                    {effectiveDiagnosis.treatments.map((treatment: string, index: number) => (
+                      <li key={index} className="list-disc">{treatment}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
-          )}
+
+            {/* Malattie aggiuntive da EPPO se disponibili */}
+            {analysisDetails?.eppoData?.diseaseMatches && analysisDetails.eppoData.diseaseMatches.length > 0 && (
+              <>
+                {analysisDetails.eppoData.diseaseMatches.slice(0, 2).map((disease: any, index: number) => (
+                  <div key={index} className="p-3 bg-orange-50 rounded border-l-4 border-orange-400">
+                    <p className="font-semibold text-orange-800">{disease.name}</p>
+                    <p className="text-sm text-orange-600">Possibile problema secondario - Database EPPO</p>
+                    {disease.symptoms && (
+                      <p className="text-sm text-orange-600 mt-1">Sintomi: {disease.symptoms.join(', ')}</p>
+                    )}
+                  </div>
+                ))}
+              </>
+            )}
+          </div>
         </div>
       )}
 
