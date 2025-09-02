@@ -7,6 +7,9 @@ import { useCamera } from '@/hooks/useCamera';
 import { useCameraZoom } from '@/hooks/camera/useCameraZoom';
 import { useCameraTimer } from '@/hooks/camera/useCameraTimer';
 import { triggerHaptic } from '@/utils/hapticFeedback';
+import { AccessibleButton } from '@/components/ui/accessible-button';
+import { AccessibleControlPanel, AccessibleTouchArea } from '@/components/ui/accessible-controls';
+import { voiceOverAnnouncements } from '@/utils/accessibility';
 import CameraLoading from './camera/CameraLoading';
 import CameraGrid from './camera/CameraGrid';
 import ZoomControls from './camera/ZoomControls';
@@ -59,6 +62,7 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
   const handleCapture = () => {
     console.log('📸 Capture button clicked');  
     triggerHaptic('medium');
+    voiceOverAnnouncements.photoTaken();
     
     if (timerActive) {
       cancelTimer();
@@ -70,6 +74,7 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
       if (imageDataUrl) {
         console.log('📸 Photo captured successfully, keeping camera active for potential retakes');
         triggerHaptic('success');
+        voiceOverAnnouncements.photoTaken();
         onCapture(imageDataUrl);
       } else {
         triggerHaptic('error');
@@ -77,6 +82,27 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
     };
 
     startTimer(captureAction);
+  };
+
+  // Alternative gesture handlers
+  const handleCaptureAlternatives = {
+    onLongPress: () => {
+      voiceOverAnnouncements.longPressAvailable();
+      setTimerDuration(3); // Set 3s timer on long press
+    },
+    onDoubleClick: () => {
+      handleCapture(); // Double tap for immediate capture
+    },
+    onSwipeUp: () => {
+      if (zoomLevel < 3) {
+        zoomIn();
+      }
+    },
+    onSwipeDown: () => {
+      if (zoomLevel > 1) {
+        zoomOut();
+      }
+    }
   };
 
   const handleCancel = () => {
@@ -150,52 +176,61 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
       {!isLoading && stream && (
         <>
           {/* Top Controls */}
-          <div className="absolute top-4 left-4 right-4 flex justify-between items-center">
-            <Button
+          <AccessibleControlPanel 
+            className="absolute top-4 left-4 right-4 bg-black/50 border-white/20"
+            title="Controlli Fotocamera"
+          >
+            <AccessibleButton
               onClick={handleCancel}
               variant="secondary"
               size="sm"
+              label="Annulla e torna indietro"
               className="bg-black bg-opacity-50 text-white border-white"
+              onSwipeLeft={() => handleCancel()}
             >
               <X className="h-4 w-4 mr-2" />
               Annulla
-            </Button>
+            </AccessibleButton>
 
-            <div className="flex gap-2">
-              <Button
-                onClick={toggleGrid}
+            <AccessibleButton
+              onClick={toggleGrid}
+              variant="secondary"
+              size="sm"
+              label={`${gridVisible ? 'Disattiva' : 'Attiva'} griglia di composizione`}
+              className={`bg-black bg-opacity-50 border-white ${
+                gridVisible ? 'text-green-400 border-green-400' : 'text-white'
+              }`}
+              onLongPress={() => voiceOverAnnouncements.longPressAvailable()}
+            >
+              <Grid3X3 className="h-4 w-4" />
+            </AccessibleButton>
+
+            {hasFlash && (
+              <AccessibleButton
+                onClick={toggleFlash}
                 variant="secondary"
                 size="sm"
+                label={`${flashEnabled ? 'Disattiva' : 'Attiva'} flash`}
                 className={`bg-black bg-opacity-50 border-white ${
-                  gridVisible ? 'text-green-400 border-green-400' : 'text-white'
+                  flashEnabled ? 'text-yellow-400' : 'text-white'
                 }`}
+                onDoubleClick={() => toggleFlash()}
               >
-                <Grid3X3 className="h-4 w-4" />
-              </Button>
+                {flashEnabled ? <Zap className="h-4 w-4" /> : <ZapOff className="h-4 w-4" />}
+              </AccessibleButton>
+            )}
 
-              {hasFlash && (
-                <Button
-                  onClick={toggleFlash}
-                  variant="secondary"
-                  size="sm"
-                  className={`bg-black bg-opacity-50 border-white ${
-                    flashEnabled ? 'text-yellow-400' : 'text-white'
-                  }`}
-                >
-                  {flashEnabled ? <Zap className="h-4 w-4" /> : <ZapOff className="h-4 w-4" />}
-                </Button>
-              )}
-
-              <Button
-                onClick={handleSwitchCamera}
-                variant="secondary"
-                size="sm"
-                className="bg-black bg-opacity-50 text-white border-white"
-              >
-                <RotateCcw className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
+            <AccessibleButton
+              onClick={handleSwitchCamera}
+              variant="secondary"
+              size="sm"
+              label="Cambia fotocamera"
+              className="bg-black bg-opacity-50 text-white border-white"
+              onSwipeRight={() => handleSwitchCamera()}
+            >
+              <RotateCcw className="h-4 w-4" />
+            </AccessibleButton>
+          </AccessibleControlPanel>
 
           {/* Zoom Controls */}
           <ZoomControls
@@ -215,17 +250,23 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
 
           {/* Bottom Controls */}
           <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2">
-            <Button
-              onClick={handleCapture}
-              size="lg"
-              className={`rounded-full w-16 h-16 p-0 transition-all ${
+            <AccessibleTouchArea
+              onPress={handleCapture}
+              onLongPress={handleCaptureAlternatives.onLongPress}
+              onDoubleClick={handleCaptureAlternatives.onDoubleClick}
+              onSwipeUp={handleCaptureAlternatives.onSwipeUp}
+              onSwipeDown={handleCaptureAlternatives.onSwipeDown}
+              label={timerActive ? 'Annulla timer' : 'Scatta foto'}
+              className="rounded-full w-18 h-18 bg-white/90 backdrop-blur"
+            >
+              <div className={`rounded-full w-16 h-16 flex items-center justify-center transition-all ${
                 timerActive 
                   ? 'bg-red-500 text-white hover:bg-red-600' 
                   : 'bg-white text-black hover:bg-gray-200'
-              }`}
-            >
-              {timerActive ? <X className="h-8 w-8" /> : <Camera className="h-8 w-8" />}
-            </Button>
+              }`}>
+                {timerActive ? <X className="h-8 w-8" /> : <Camera className="h-8 w-8" />}
+              </div>
+            </AccessibleTouchArea>
           </div>
 
           {/* Camera Instructions */}

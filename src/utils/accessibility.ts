@@ -182,5 +182,47 @@ export const voiceOverAnnouncements = {
   messageSent: () => accessibilityManager.announce('Messaggio inviato'),
   messageReceived: () => accessibilityManager.announce('Nuovo messaggio ricevuto'),
   diagnosisStarted: () => accessibilityManager.announce('Analisi della pianta in corso'),
-  diagnosisCompleted: () => accessibilityManager.announce('Analisi completata')
+  diagnosisCompleted: () => accessibilityManager.announce('Analisi completata'),
+  gestureDetected: (gesture: string) => accessibilityManager.announce(`Gesto rilevato: ${gesture}`),
+  alternativeMethod: (method: string) => accessibilityManager.announce(`Metodo alternativo: ${method}`),
+  longPressAvailable: () => accessibilityManager.announce('Pressione lunga disponibile per opzioni aggiuntive'),
+  swipeGestureAvailable: () => accessibilityManager.announce('Gesti di scorrimento disponibili'),
+  keyboardNavigationTip: () => accessibilityManager.announce('Usa Tab per navigare, Invio o Spazio per attivare')
+};
+
+/**
+ * Motor accessibility utilities
+ */
+export const motorAccessibility = {
+  // Extended timeout for users who need more time
+  extendedTimeout: (callback: () => void, delay: number = 3000) => {
+    return setTimeout(callback, delay);
+  },
+
+  // Detect if user prefers reduced motion
+  prefersReducedMotion: () => {
+    return window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  },
+
+  // Large touch target helper
+  ensureTouchTarget: (element: HTMLElement, minSize: number = 48) => {
+    const rect = element.getBoundingClientRect();
+    if (rect.width < minSize || rect.height < minSize) {
+      element.style.minWidth = `${minSize}px`;
+      element.style.minHeight = `${minSize}px`;
+      element.style.padding = '8px';
+    }
+  },
+
+  // Voice control simulation
+  voiceCommands: {
+    'scatta foto': () => voiceOverAnnouncements.photoTaken(),
+    'zoom avanti': () => voiceOverAnnouncements.zoomChanged(2),
+    'zoom indietro': () => voiceOverAnnouncements.zoomChanged(1),
+    'attiva flash': () => voiceOverAnnouncements.flashToggled(true),
+    'disattiva flash': () => voiceOverAnnouncements.flashToggled(false),
+    'invia messaggio': () => voiceOverAnnouncements.messageSent(),
+    'inizia registrazione': () => voiceOverAnnouncements.audioRecordingStarted(),
+    'ferma registrazione': () => voiceOverAnnouncements.audioRecordingStopped()
+  }
 };

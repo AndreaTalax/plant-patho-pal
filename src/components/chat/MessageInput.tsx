@@ -6,6 +6,9 @@ import { Send, Image as ImageIcon, Loader2, Smile, Mic } from 'lucide-react';
 import { toast } from 'sonner';
 import { uploadPlantImage } from '@/utils/imageStorage';
 import { useAuth } from '@/context/AuthContext';
+import { AccessibleButton } from '@/components/ui/accessible-button';
+import { AccessibleControlPanel } from '@/components/ui/accessible-controls';
+import { voiceOverAnnouncements } from '@/utils/accessibility';
 import AudioRecorder from './AudioRecorder';
 import EmojiPicker from './EmojiPicker';
 
@@ -146,18 +149,23 @@ const MessageInput: React.FC<MessageInputProps> = ({
         </div>
 
         {/* Action Buttons Row - centered below input */}
-        <div className="flex items-center justify-center gap-2">
+        <AccessibleControlPanel 
+          className="bg-transparent p-0"
+          title="Controlli Messaggio"
+        >
           {/* Emoji Button */}
           {enableEmoji && (
-            <Button
+            <AccessibleButton
               variant="ghost"
               size="sm"
               onClick={() => setShowEmojiPicker(!showEmojiPicker)}
               disabled={isSending || isUploading}
+              label="Seleziona emoji"
               className="h-10 w-10 p-0"
+              onLongPress={() => voiceOverAnnouncements.longPressAvailable()}
             >
               <Smile className="h-5 w-5" />
-            </Button>
+            </AccessibleButton>
           )}
 
           {/* Image Upload */}
@@ -168,19 +176,21 @@ const MessageInput: React.FC<MessageInputProps> = ({
             onChange={handleImageUpload}
             className="hidden"
           />
-          <Button
+          <AccessibleButton
             variant="ghost"
             size="sm"
             onClick={() => fileInputRef.current?.click()}
             disabled={isSending || isUploading}
+            label="Carica immagine"
             className="h-10 w-10 p-0"
+            onSwipeUp={() => fileInputRef.current?.click()}
           >
             {isUploading ? (
               <Loader2 className="h-5 w-5 animate-spin" />
             ) : (
               <ImageIcon className="h-5 w-5" />
             )}
-          </Button>
+          </AccessibleButton>
 
           {/* Audio Recorder Button */}
           {enableAudio && (
@@ -194,19 +204,22 @@ const MessageInput: React.FC<MessageInputProps> = ({
           )}
 
           {/* Send Button */}
-          <Button
+          <AccessibleButton
             onClick={handleSend}
             disabled={!message.trim() || isSending || isUploading}
+            label="Invia messaggio"
             className="h-10 px-4"
             size="sm"
+            onDoubleClick={handleSend}
+            onSwipeRight={handleSend}
           >
             {isSending ? (
               <Loader2 className="h-5 w-5 animate-spin" />
             ) : (
               <Send className="h-5 w-5" />
             )}
-          </Button>
-        </div>
+          </AccessibleButton>
+        </AccessibleControlPanel>
 
         {/* Helper Text - smaller and less prominent */}
         <div className="text-xs text-gray-400 mt-2 text-center">

@@ -3,6 +3,9 @@ import React, { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Send, Image } from 'lucide-react';
+import { AccessibleButton } from '@/components/ui/accessible-button';
+import { AccessibleTouchArea } from '@/components/ui/accessible-controls';
+import { voiceOverAnnouncements } from '@/utils/accessibility';
 
 interface PersistentChatInputProps {
   onSendMessage?: (message: string) => void;
@@ -63,25 +66,30 @@ const PersistentChatInput: React.FC<PersistentChatInputProps> = ({
           </div>
 
           {/* Image Button */}
-          <Button
+          <AccessibleButton
             type="button"
             variant="ghost"
             size="sm"
             onClick={handleImageClick}
             disabled={disabled}
+            label="Seleziona immagine"
             className="h-12 w-12 rounded-2xl bg-gray-50 hover:bg-gray-100 border border-gray-200 flex-shrink-0"
+            onLongPress={() => voiceOverAnnouncements.longPressAvailable()}
+            onSwipeUp={handleImageClick}
           >
             <Image className="h-5 w-5 text-gray-600" />
-          </Button>
+          </AccessibleButton>
 
           {/* Send Button */}
-          <Button
-            onClick={handleSend}
-            disabled={!message.trim() || disabled}
+          <AccessibleTouchArea
+            onPress={handleSend}
+            onDoubleClick={handleSend}
+            onSwipeRight={handleSend}
+            label="Invia messaggio"
             className="h-12 w-12 rounded-2xl bg-drplant-green hover:bg-drplant-green-dark text-white shadow-md flex-shrink-0 disabled:opacity-50"
           >
             <Send className="h-5 w-5" />
-          </Button>
+          </AccessibleTouchArea>
 
           {/* Hidden File Input */}
           <input
