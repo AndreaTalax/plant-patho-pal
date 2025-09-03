@@ -238,36 +238,7 @@ const DiagnoseTab = () => {
         console.log('✅ Dati sincronizzati con successo alla chat');
         setDataSentToExpert(true);
         
-        // Se c'è un'analisi AI, usa l'URL finale dell'immagine di Storage
-        if (includeAnalysis && diagnosedDisease && synced.finalImageUrl) {
-          console.log('🚀 Invio diagnosi AI all\'esperto automaticamente...');
-          const diagnosisData = {
-            plantType: plantInfo.name || 'Pianta non specificata',
-            plantVariety: diagnosedDisease.name,
-            symptoms: plantInfo.symptoms || diagnosedDisease.symptoms?.join(', '),
-            imageUrl: synced.finalImageUrl, // Use the Storage URL returned by sync
-            analysisResult: diagnosedDisease,
-            confidence: diagnosedDisease.confidence || 0,
-            isHealthy: !diagnosedDisease || diagnosedDisease.healthy,
-            plantInfo: {
-              environment: plantInfo.isIndoor ? 'Interno' : 'Esterno',
-              watering: plantInfo.wateringFrequency,
-              lightExposure: plantInfo.lightExposure,
-              symptoms: plantInfo.symptoms
-            }
-          };
-
-          const sentSuccessfully = await AutoExpertNotificationService.sendDiagnosisToExpert(
-            userProfile.id,
-            diagnosisData
-          );
-          
-          if (sentSuccessfully) {
-            console.log('✅ Diagnosi AI inviata con successo all\'esperto');
-          } else {
-            console.error('❌ Fallimento invio diagnosi AI all\'esperto');
-          }
-        }
+        // La diagnosi AI viene inviata solo quando l'utente clicca esplicitamente "Chat con l'esperto"
 
         toast.success('Dati inviati all\'esperto!', {
           description: 'Marco Nigro riceverà tutte le informazioni nella chat.'

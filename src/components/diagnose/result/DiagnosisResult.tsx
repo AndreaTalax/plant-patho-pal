@@ -106,47 +106,7 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
     isHealthy: resolvedIsHealthy,
   };
 
-  // Invio automatico dei dati AI all'esperto quando disponibili (solo per utenti premium)
-  useEffect(() => {
-    const sendAutomaticDiagnosis = async () => {
-      // Invia solo se l'utente ha accesso premium e c'è una diagnosi valida
-      if (!user || !resolvedHasExpertChatAccess || !effectiveDiagnosis || isAnalyzing) {
-        return;
-      }
-
-      // Aspetta un momento per assicurarsi che tutti i dati siano pronti
-      const timeoutId = setTimeout(async () => {
-        try {
-          console.log('🤖 Invio automatico dati AI all\'esperto:', diagnosisData);
-          console.log('📋 Contenuto completo diagnosi:', JSON.stringify(diagnosisData, null, 2));
-          
-          const sentSuccessfully = await AutoExpertNotificationService.sendDiagnosisToExpert(
-            user.id,
-            diagnosisData
-          );
-          
-          if (sentSuccessfully) {
-            console.log('✅ Dati AI inviati automaticamente all\'esperto con successo');
-            toast.success('Diagnosi AI inviata all\'esperto!', {
-              description: 'Il fitopatologo riceverà automaticamente l\'analisi completa'
-            });
-          } else {
-            console.error('❌ Fallimento invio automatico diagnosi AI');
-            toast.error('Errore nell\'invio automatico. Usa "Chat con l\'esperto" per inviare manualmente.');
-          }
-        } catch (error) {
-          console.error('❌ Errore nell\'invio automatico all\'esperto:', error);
-          toast.error('Errore nell\'invio automatico. Usa "Chat con l\'esperto" per inviare manualmente.');
-        }
-      }, 2000);
-      
-      return () => {
-        clearTimeout(timeoutId);
-      };
-    };
-
-    sendAutomaticDiagnosis();
-  }, [user, resolvedHasExpertChatAccess, effectiveDiagnosis, imageSrc, isAnalyzing, resolvedConfidence, resolvedIsHealthy]);
+  // Rimosso invio automatico - la diagnosi viene inviata solo quando l'utente clicca "Chat con l'esperto"
 
   // Funzione per gestire il click su "Chat con l'esperto" - invia sempre i dati
   const handleChatWithExpert = async () => {
