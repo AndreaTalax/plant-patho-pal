@@ -7,6 +7,7 @@ import { AuthProvider } from "@/context/AuthContext";
 import { PlantInfoProvider } from "@/context/PlantInfoContext";
 import { ThemeProvider } from "@/context/ThemeContext";
 import { useUserPresence } from "@/hooks/useUserPresence";
+import { usePostPaymentDiagnosis } from "@/hooks/usePostPaymentDiagnosis";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import SignUp from "./pages/SignUp";
@@ -25,9 +26,10 @@ import TestDiagnosi from "./pages/TestDiagnosi";
 
 const queryClient = new QueryClient();
 
-// Component wrapper to initialize user presence
+// Component wrapper to initialize user presence and post-payment diagnosis
 const AppWithPresence = ({ children }: { children: React.ReactNode }) => {
   useUserPresence();
+  usePostPaymentDiagnosis(); // Gestisce automaticamente l'invio diagnosi dopo il pagamento
   return <>{children}</>;
 };
 

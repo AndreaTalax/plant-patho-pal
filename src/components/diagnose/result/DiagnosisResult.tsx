@@ -7,6 +7,7 @@ import ActionButtons from './ActionButtons';
 import { AutoExpertNotificationService } from '@/components/chat/AutoExpertNotificationService';
 import ProductSuggestions from './ProductSuggestions'; // Aggiunta: sezione prodotti consigliati
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 interface Disease {
   name: string;
@@ -108,18 +109,72 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
 
   // Rimosso invio automatico - la diagnosi viene inviata solo quando l'utente clicca "Chat con l'esperto"
 
-  // Funzione per gestire il click su "Chat con l'esperto" - invia sempre i dati
+  // Funzione per gestire il pagamento e l'invio della diagnosi
+  const handlePayAndSendDiagnosis = async () => {
+    console.log('💳 Iniziando processo di pagamento per diagnosi AI...');
+    
+    if (!user) {
+      console.error('❌ Utente non autenticato');
+      toast.error('Devi essere autenticato per procedere');
+      return;
+    }
+
+    try {
+      // Crea sessione checkout per la diagnosi premium
+      console.log('🔄 Creando sessione Stripe checkout...');
+      const { data, error } = await supabase.functions.invoke('create-checkout', {});
+      
+      if (error) {
+        console.error('❌ Errore creazione checkout:', error);
+        toast.error('Errore durante il processo di pagamento');
+        return;
+      }
+
+      if (data?.url) {
+        console.log('✅ Sessione checkout creata, reindirizzamento a Stripe...');
+        toast.success('Reindirizzamento al pagamento...', {
+          description: 'Dopo il pagamento, la diagnosi sarà inviata automaticamente all\'esperto'
+        });
+        
+        // Salva la diagnosi nel localStorage per inviarla dopo il pagamento
+        localStorage.setItem('pendingDiagnosis', JSON.stringify({
+          userId: user.id,
+          diagnosisData,
+          timestamp: Date.now()
+        }));
+        
+        // Apri Stripe checkout in una nuova tab
+        window.open(data.url, '_blank');
+      } else {
+        throw new Error('URL checkout non ricevuto');
+      }
+    } catch (error) {
+      console.error('❌ Errore nel processo di pagamento:', error);
+      toast.error('Errore durante il processo di pagamento. Riprova più tardi.');
+    }
+  };
+
+  // Funzione per gestire il click su "Chat con l'esperto" - ora richiede pagamento premium
   const handleChatWithExpert = async () => {
-    console.log('🗣️ Click su Chat con l\'esperto, invio dati della diagnosi...');
+    console.log('🗣️ Click su Chat con l\'esperto...');
     
     if (!user) {
       console.error('❌ Utente non autenticato');
       return;
     }
 
+    // Controlla se l'utente ha accesso premium
+    if (!resolvedHasExpertChatAccess) {
+      console.log('⚠️ Utente senza accesso premium, mostrando modal di pagamento');
+      toast.error('Accesso Premium richiesto', {
+        description: 'Acquista l\'abbonamento Premium per chattare con l\'esperto'
+      });
+      return;
+    }
+
     try {
-      // Invia sempre i dati della diagnosi quando si clicca "Chat con l'esperto"
-      console.log('📤 Invio dati diagnosi all\'esperto:', diagnosisData);
+      // Se ha accesso premium, invia la diagnosi e apri la chat
+      console.log('📤 Invio dati diagnosi all\'esperto (utente premium)...');
       
       await AutoExpertNotificationService.sendDiagnosisToExpert(
         user.id,
@@ -127,6 +182,7 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
       );
       
       console.log('✅ Dati diagnosi inviati all\'esperto con successo');
+      toast.success('Diagnosi inviata all\'esperto!');
       
       // Poi chiama la funzione originale per aprire la chat
       if (onChatWithExpert) {
@@ -134,6 +190,7 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
       }
     } catch (error) {
       console.error('❌ Errore nell\'invio dati all\'esperto:', error);
+      toast.error('Errore nell\'invio della diagnosi');
       
       // Anche in caso di errore, prova ad aprire la chat
       if (onChatWithExpert) {
@@ -480,6 +537,7 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
           onStartNewAnalysis={onStartNewAnalysis}
           onSaveDiagnosis={handleSaveDiagnosis}
           onChatWithExpert={handleChatWithExpert}
+          onPayAndSendDiagnosis={handlePayAndSendDiagnosis}
           saveLoading={resolvedSaveLoading}
           hasValidAnalysis={!!effectiveDiagnosis}
           useAI={true}

@@ -15,6 +15,7 @@ interface ActionButtonsProps {
   onStartNewAnalysis: () => void;
   onSaveDiagnosis?: () => void;
   onChatWithExpert?: () => void;
+  onPayAndSendDiagnosis?: () => void; // Nuova funzione per pagamento e invio
   saveLoading?: boolean;
   hasValidAnalysis: boolean;
   useAI?: boolean;
@@ -31,7 +32,8 @@ interface ActionButtonsProps {
 const ActionButtons = ({ 
   onStartNewAnalysis, 
   onSaveDiagnosis, 
-  onChatWithExpert, 
+  onChatWithExpert,
+  onPayAndSendDiagnosis, 
   saveLoading = false,
   hasValidAnalysis,
   useAI = false,
@@ -179,6 +181,19 @@ Ciao Marco, ho bisogno del tuo aiuto per questa pianta. Puoi darmi una diagnosi 
         </Button>
       )}
 
+      {/* Pulsante per pagare e inviare diagnosi AI (per utenti non premium) */}
+      {!hasExpertChatAccess && useAI && hasValidAnalysis && onPayAndSendDiagnosis && (
+        <Button
+          className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-white"
+          onClick={onPayAndSendDiagnosis}
+        >
+          <Crown className="h-4 w-4" />
+          <MessageCircle className="h-4 w-4" />
+          <span>Paga e Invia Diagnosi AI all'Esperto (€9.99/mese)</span>
+        </Button>
+      )}
+
+      {/* Pulsante chat normale per utenti premium */}
       <Button
         className={`w-full flex items-center justify-center gap-2 ${
           hasExpertChatAccess 
@@ -190,7 +205,12 @@ Ciao Marco, ho bisogno del tuo aiuto per questa pianta. Puoi darmi una diagnosi 
       >
         {!hasExpertChatAccess && <Crown className="h-4 w-4" />}
         <MessageCircle className="h-4 w-4" />
-        <span>{hasExpertChatAccess ? 'Chat con il fitopatologo' : 'Chat Premium con Esperto'}</span>
+        <span>
+          {hasExpertChatAccess 
+            ? 'Chat con il fitopatologo' 
+            : (useAI && hasValidAnalysis ? 'Chat Manuale con Esperto' : 'Chat Premium con Esperto')
+          }
+        </span>
       </Button>
       
       <Button 
