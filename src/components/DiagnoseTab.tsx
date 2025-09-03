@@ -240,6 +240,7 @@ const DiagnoseTab = () => {
         
         // Se c'è un'analisi AI, usa l'URL finale dell'immagine di Storage
         if (includeAnalysis && diagnosedDisease && synced.finalImageUrl) {
+          console.log('🚀 Invio diagnosi AI all\'esperto automaticamente...');
           const diagnosisData = {
             plantType: plantInfo.name || 'Pianta non specificata',
             plantVariety: diagnosedDisease.name,
@@ -256,10 +257,16 @@ const DiagnoseTab = () => {
             }
           };
 
-          await AutoExpertNotificationService.sendDiagnosisToExpert(
+          const sentSuccessfully = await AutoExpertNotificationService.sendDiagnosisToExpert(
             userProfile.id,
             diagnosisData
           );
+          
+          if (sentSuccessfully) {
+            console.log('✅ Diagnosi AI inviata con successo all\'esperto');
+          } else {
+            console.error('❌ Fallimento invio diagnosi AI all\'esperto');
+          }
         }
 
         toast.success('Dati inviati all\'esperto!', {

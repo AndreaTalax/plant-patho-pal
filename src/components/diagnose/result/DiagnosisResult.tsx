@@ -6,6 +6,7 @@ import PlantInfoCard from './PlantInfoCard';
 import ActionButtons from './ActionButtons';
 import { AutoExpertNotificationService } from '@/components/chat/AutoExpertNotificationService';
 import ProductSuggestions from './ProductSuggestions'; // Aggiunta: sezione prodotti consigliati
+import { toast } from 'sonner';
 
 interface Disease {
   name: string;
@@ -117,15 +118,25 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
       const timeoutId = setTimeout(async () => {
         try {
           console.log('🤖 Invio automatico dati AI all\'esperto:', diagnosisData);
+          console.log('📋 Contenuto completo diagnosi:', JSON.stringify(diagnosisData, null, 2));
           
-          await AutoExpertNotificationService.sendDiagnosisToExpert(
+          const sentSuccessfully = await AutoExpertNotificationService.sendDiagnosisToExpert(
             user.id,
             diagnosisData
           );
           
-          console.log('✅ Dati AI inviati automaticamente all\'esperto');
+          if (sentSuccessfully) {
+            console.log('✅ Dati AI inviati automaticamente all\'esperto con successo');
+            toast.success('Diagnosi AI inviata all\'esperto!', {
+              description: 'Il fitopatologo riceverà automaticamente l\'analisi completa'
+            });
+          } else {
+            console.error('❌ Fallimento invio automatico diagnosi AI');
+            toast.error('Errore nell\'invio automatico. Usa "Chat con l\'esperto" per inviare manualmente.');
+          }
         } catch (error) {
           console.error('❌ Errore nell\'invio automatico all\'esperto:', error);
+          toast.error('Errore nell\'invio automatico. Usa "Chat con l\'esperto" per inviare manualmente.');
         }
       }, 2000);
       
