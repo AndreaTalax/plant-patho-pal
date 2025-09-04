@@ -415,18 +415,18 @@ const DiagnoseTab = () => {
     switch (currentStage) {
       case 'info':
         return (
-          <>
+          <div className="animate-fade-in">
             <PlantInfoForm 
               onComplete={handlePlantInfoComplete}
               initialData={plantInfo}
             />
             <ChatDataManager />
-          </>
+          </div>
         );
 
       case 'capture':
         return (
-          <div className="space-y-6">
+          <div className="space-y-6 animate-slide-in-right">
             <PlantInfoSummary 
               plantInfo={plantInfo} 
               onEdit={() => setCurrentStage('info')} 
@@ -434,7 +434,7 @@ const DiagnoseTab = () => {
             
             <PhotoInstructions />
             
-            <Card className="w-full max-w-2xl mx-auto">
+            <Card className="w-full max-w-2xl mx-auto hover-scale transition-all duration-300 shadow-lg hover:shadow-xl">
               <div className="p-6">
                 <h3 className="text-xl font-semibold text-center mb-4">
                   📸 Carica una foto della pianta
@@ -449,10 +449,10 @@ const DiagnoseTab = () => {
                   <Button
                     onClick={() => fileInputRef.current?.click()}
                     variant="outline"
-                    className="h-32 flex flex-col items-center justify-center gap-3 border-2 border-dashed border-gray-300 hover:border-gray-400"
+                    className="h-32 flex flex-col items-center justify-center gap-3 border-2 border-dashed border-gray-300 hover:border-gray-400 transition-all duration-300 hover:scale-105 hover:shadow-lg group"
                   >
-                    <Upload className="h-8 w-8 text-gray-500" />
-                    <span className="text-sm">Carica da Galleria</span>
+                    <Upload className="h-8 w-8 text-gray-500 group-hover:text-primary transition-colors duration-300" />
+                    <span className="text-sm group-hover:text-primary transition-colors duration-300">Carica da Galleria</span>
                   </Button>
                   
                   <Button
@@ -461,10 +461,10 @@ const DiagnoseTab = () => {
                       setCameraStoppedByUser(false);
                     }}
                     variant="outline"
-                    className="h-32 flex flex-col items-center justify-center gap-3 border-2 border-dashed border-gray-300 hover:border-gray-400"
+                    className="h-32 flex flex-col items-center justify-center gap-3 border-2 border-dashed border-gray-300 hover:border-gray-400 transition-all duration-300 hover:scale-105 hover:shadow-lg group"
                   >
-                    <Camera className="h-8 w-8 text-gray-500" />
-                    <span className="text-sm">Scatta Foto</span>
+                    <Camera className="h-8 w-8 text-gray-500 group-hover:text-primary transition-colors duration-300" />
+                    <span className="text-sm group-hover:text-primary transition-colors duration-300">Scatta Foto</span>
                   </Button>
                 </div>
                 
@@ -491,7 +491,7 @@ const DiagnoseTab = () => {
 
       case 'options':
         return (
-          <div className="space-y-6">
+          <div className="space-y-6 animate-fade-in">
             <PlantInfoSummary 
               plantInfo={plantInfo} 
               onEdit={() => setCurrentStage('info')} 
@@ -505,17 +505,17 @@ const DiagnoseTab = () => {
             />
             
             {uploadedImage && (
-              <Card className="w-full max-w-2xl mx-auto">
+              <Card className="w-full max-w-2xl mx-auto animate-scale-in hover-scale transition-all duration-300 shadow-lg hover:shadow-xl">
                 <div className="p-4">
                   <h3 className="text-lg font-semibold mb-3">✅ Immagine Verificata</h3>
                   <div className="aspect-square max-w-xs mx-auto rounded-lg overflow-hidden">
                     <img 
                       src={uploadedImage} 
                       alt="Pianta verificata" 
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-cover transition-transform duration-300 hover:scale-110"
                     />
                   </div>
-                  <p className="text-center text-sm text-green-600 mt-2">
+                  <p className="text-center text-sm text-green-600 mt-2 animate-bounce">
                     Pianta rilevata correttamente nell'immagine
                   </p>
                 </div>
@@ -536,42 +536,46 @@ const DiagnoseTab = () => {
 
       case 'analyzing':
         return (
-          <ScanLayout
-            isAnalyzing={isAnalyzing}
-            plantInfo={plantInfo}
-            uploadedImage={uploadedImage}
-          />
+          <div className="animate-fade-in">
+            <ScanLayout
+              isAnalyzing={isAnalyzing}
+              plantInfo={plantInfo}
+              uploadedImage={uploadedImage}
+            />
+          </div>
         );
 
       case 'result':
         if (uploadedImage && (diagnosedDisease || analysisDetails)) {
           return (
-            <DiagnosisResult
-              imageSrc={uploadedImage}
-              plantInfo={plantInfo}
-              analysisData={diagnosedDisease || undefined}
-              isAnalyzing={false}
-              onStartNewAnalysis={handleNewAnalysis}
-              onChatWithExpert={handleExpertConsultation}
-              analysisDetails={analysisDetails}
-            />
+            <div className="animate-slide-in-right">
+              <DiagnosisResult
+                imageSrc={uploadedImage}
+                plantInfo={plantInfo}
+                analysisData={diagnosedDisease || undefined}
+                isAnalyzing={false}
+                onStartNewAnalysis={handleNewAnalysis}
+                onChatWithExpert={handleExpertConsultation}
+                analysisDetails={analysisDetails}
+              />
+            </div>
           );
         } else {
           // Expert consultation result (nessun risultato AI disponibile da mostrare)
           return (
-            <div className="text-center space-y-6 py-12">
-              <CheckCircle className="h-20 w-20 text-green-500 mx-auto" />
-              <h2 className="text-2xl font-bold text-gray-900">
+            <div className="text-center space-y-6 py-12 animate-fade-in">
+              <CheckCircle className="h-20 w-20 text-green-500 mx-auto animate-bounce" />
+              <h2 className="text-2xl font-bold text-gray-900 animate-scale-in">
                 Dati Inviati all'Esperto
               </h2>
-              <p className="text-gray-600 max-w-md mx-auto">
+              <p className="text-gray-600 max-w-md mx-auto animate-fade-in animation-delay-200">
                 Marco Nigro ha ricevuto tutte le informazioni sulla tua pianta e ti risponderà a breve nella chat.
               </p>
-              <div className="space-y-3">
-                <Button onClick={handleNavigateToChat} className="mr-4">
+              <div className="space-y-3 animate-fade-in animation-delay-300">
+                <Button onClick={handleNavigateToChat} className="mr-4 hover-scale transition-all duration-300">
                   Vai alla Chat
                 </Button>
-                <Button onClick={handleNewAnalysis} variant="outline">
+                <Button onClick={handleNewAnalysis} variant="outline" className="hover-scale transition-all duration-300">
                   Nuova Diagnosi
                 </Button>
               </div>
@@ -582,12 +586,12 @@ const DiagnoseTab = () => {
       case 'api-setup':
         const missingApis = apiStatus?.summary?.missing || [];
         return (
-          <div className="space-y-6">
+          <div className="space-y-6 animate-fade-in">
             <div className="text-center mb-6">
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">
+              <h2 className="text-2xl font-bold text-gray-900 mb-2 animate-scale-in">
                 🔧 Configurazione API per Diagnosi AI
               </h2>
-              <p className="text-gray-600">
+              <p className="text-gray-600 animate-fade-in animation-delay-100">
                 Per abilitare la diagnosi AI delle piante, configura almeno una delle API seguenti.
               </p>
             </div>
@@ -625,9 +629,11 @@ const DiagnoseTab = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 p-4">
+    <div className="min-h-screen bg-gradient-to-br from-green-50/70 via-blue-50/30 to-purple-50/50 p-4 transition-all duration-1000">
       <div className="max-w-4xl mx-auto">
-        {renderCurrentStage()}
+        <div className="transition-all duration-500 ease-in-out">
+          {renderCurrentStage()}
+        </div>
       </div>
       
       {/* Payment Required Modal */}
