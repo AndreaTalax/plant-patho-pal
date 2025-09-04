@@ -79,23 +79,15 @@ const SignUp = () => {
               </svg>
             </div>
           </div>
-          <h2 className="text-xl font-semibold mb-2">{t("checkEmailConfirmation")}</h2>
+          <h2 className="text-xl font-semibold mb-2">Controlla la tua email</h2>
           <p className="text-gray-600 mb-6">
-            {t("confirmationEmailSent")} <span className="font-medium">{registeredEmail}</span>.<br />
-            {t("clickLinkToComplete")}
+            Ti abbiamo inviato un'email di conferma a <span className="font-medium">{registeredEmail}</span>.<br />
+            Clicca sul link nell'email per completare la registrazione.
           </p>
-          <div className="mt-4 p-3 bg-blue-50 rounded-md border border-blue-200">
-            <p className="text-sm text-blue-800 font-medium">
-              {t("didntReceiveEmail")}
-            </p>
-            <p className="text-sm text-gray-600 mt-1">
-              {t("checkSpamFolder")}
-            </p>
-          </div>
           <div className="mt-6 space-y-3">
             <Link to="/login">
               <Button className="w-full bg-drplant-green hover:bg-drplant-green/90 text-white">
-                {t("goToLogin")}
+                Vai al Login
               </Button>
             </Link>
             <Link to="/signup">
@@ -107,7 +99,7 @@ const SignUp = () => {
                   setRegisteredEmail("");
                 }}
               >
-                {t("registerAnotherAccount")}
+                Registra un altro account
               </Button>
             </Link>
           </div>
