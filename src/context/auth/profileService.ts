@@ -136,7 +136,18 @@ export const updateUserProfile = async (userId: string, updates: any) => {
 
     if (error) throw error;
     
-    toast.success('Profilo aggiornato con successo!');
+    // Controlla se non è un aggiornamento automatico (come creazione profilo)
+    const isInitialProfileCreation = updates.first_name && updates.last_name && 
+                                   !localStorage.getItem(`profile_toast_shown_${userId}`);
+    
+    if (isInitialProfileCreation) {
+      // Marca che il toast è stato mostrato per questo utente
+      localStorage.setItem(`profile_toast_shown_${userId}`, 'true');
+      toast.success('Profilo creato con successo!');
+    } else if (!updates.is_automatic_update) {
+      // Mostra toast solo per aggiornamenti manuali espliciti
+      toast.success('Profilo aggiornato con successo!');
+    }
   } catch (error: any) {
     console.error('Error updating profile:', error?.message || error);
     toast.error('Errore durante l\'aggiornamento del profilo');
