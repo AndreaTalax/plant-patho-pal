@@ -123,13 +123,14 @@ serve(async (req) => {
 
     console.log("✅ Message inserted successfully:", message.id);
 
-    // Update conversation last message using service role
+    // Update conversation last message and ensure it is ACTIVE
     const { error: updateError } = await supabaseClient
       .from('conversations')
       .update({
         last_message_text: text,
         last_message_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
+        status: 'active'
       })
       .eq('id', conversationId);
 

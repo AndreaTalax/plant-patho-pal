@@ -18,4 +18,4 @@ export const supabase = createClient<Database>(
 );
 
 // Export constants for use in other files
-export const EXPERT_ID = '6ee6b888-8064-40a1-8b26-0658343f4360'; // test@gmail.com user ID
+export const EXPERT_ID = '07c7fe19-33c3-4782-b9a0-4e87c8aa7044'; // Marco Nigro (fitopatologo)

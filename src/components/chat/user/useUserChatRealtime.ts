@@ -174,13 +174,13 @@ export const useUserChatRealtime = (userId: string) => {
           setConnectionRetries(prev => prev + 1);
         }, 15000);
         
-        // Cerca conversazione esistente con timeout
+        // Cerca conversazione esistente con timeout (inclusa anche se archiviata)
         const { data: conversationList, error } = await supabase
           .from('conversations')
           .select('*')
           .eq('user_id', userId)
           .eq('expert_id', EXPERT_ID)
-          .order('created_at', { ascending: false })
+          .order('updated_at', { ascending: false })
           .limit(1);
 
         clearTimeout(initTimeout);
@@ -212,6 +212,17 @@ export const useUserChatRealtime = (userId: string) => {
 
           conversation = newConversation;
           console.log("✅ New conversation created:", conversation.id);
+        } else if (conversation.status !== 'active') {
+          console.log('🔄 Reactivating archived conversation:', conversation.id, conversation.status);
+          const { data: reactivated, error: reactivateError } = await supabase
+            .from('conversations')
+            .update({ status: 'active', updated_at: new Date().toISOString() })
+            .eq('id', conversation.id)
+            .select()
+            .single();
+          if (!reactivateError) {
+            conversation = reactivated;
+          }
         } else {
           console.log("✅ Found existing conversation:", conversation.id);
         }
