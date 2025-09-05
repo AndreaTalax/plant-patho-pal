@@ -1,85 +1,121 @@
-
-import { capitalize } from './plant-part-utils';
 import { plantSpeciesMap } from '../../data/plantDatabase';
 
-/**
- * Enhanced plant name extraction utility
- * Attempts to identify plant names from various sources and formats
- * @param label The classification label from the model
- * @param plantSpeciesMap Map of known plant species
- * @returns The extracted plant name or null if not found
- */
-export function extractPlantName(
-  label: string, 
-  speciesMap: Record<string, string> | null = null
-): string | null {
-  if (!label) return null;
-  
-  // Use the provided map or default to the global plantSpeciesMap
-  const effectiveMap = speciesMap || plantSpeciesMap;
+interface Disease {
+  name: string;
+  confidence: number;
+  symptoms: string[];
+  treatments: string[];
+  cause: string;
+  source: string;
+}
 
-  // Convert label to lowercase for case-insensitive matching
-  const labelLower = label.toLowerCase();
-  let plantName = null;
-  
-  // First check in the plantSpeciesMap
-  if (effectiveMap) {
-    for (const [key, value] of Object.entries(effectiveMap)) {
-      if (labelLower.includes(key.toLowerCase())) {
-        return typeof value === 'string' ? value : key;
-      }
-    }
-  }
-  
-  // If no match in mapping, look for common plant keywords
-  const plantLabels = [
-    'tomato', 'potato', 'apple', 'corn', 'grape', 'strawberry',
-    'pepper', 'lettuce', 'monstera', 'aloe', 'cactus', 'fern', 
-    'ficus', 'jade', 'snake plant', 'rose', 'orchid', 'basil',
-    'mint', 'rosemary', 'lavender', 'cannabis', 'hemp', 
-    'sunflower', 'tulip', 'lily', 'bamboo', 'palm',
-    // Italian plant names
-    'pomodoro', 'patata', 'mela', 'mais', 'uva', 'fragola',
-    'peperone', 'lattuga', 'felce', 'rosa', 'basilico',
-    'menta', 'rosmarino', 'lavanda', 'girasole', 'tulipano',
-    'giglio', 'bambù', 'palma', 'fico', 'orchidea'
-  ];
-  
-  const matchedPlant = plantLabels.find(plant => labelLower.includes(plant));
-  
-  if (matchedPlant) {
-    return capitalize(matchedPlant);
-  }
-  
-  // If still no plant name found, try to extract from words in the label
-  const possiblePlantWords = label.split(/[\s,_-]+/).filter(word => 
-    word.length > 3 && !word.match(/disease|infected|spot|blight|rot|rust|mildew|virus/i)
-  );
-  
-  if (possiblePlantWords.length > 0) {
-    // Use the most likely word as plant name
-    return capitalize(possiblePlantWords[0]);
-  }
-  
-  return "Pianta"; // Return "Plant" in Italian as fallback instead of null
+interface PlantFallback {
+  name: string;
+  scientificName: string;
+  family?: string;
+  confidence: number;
+  source: string;
+}
+
+interface VisualFeatures {
+  hasLargeLeaves: boolean;
+  hasFlowers: boolean;
+  seemsSucculent: boolean;
+  leafColor: string;
+  plantType: 'houseplant' | 'herb' | 'vegetable' | 'flower' | 'tree' | 'succulent' | 'unknown';
+  leafShape?: 'ovale' | 'lanceolata' | 'dentata' | 'rotonda';
+  texture?: 'liscia' | 'rugosa' | 'pelosa' | 'cerosa';
 }
 
 /**
- * Determines the most likely plant type based on the plant name
- * @param plantName The name of the plant
- * @returns The detected plant type or null if not determinable
+ * Fallback intelligente avanzato
+ * Genera suggerimenti di piante e malattie basati sulle caratteristiche visive
  */
-export function detectPlantType(plantName: string | null): string | null {
-  if (!plantName) return null;
-  
-  const nameLower = plantName.toLowerCase();
-  
-  // Map common plant names to their types
-  if (['palm', 'palma'].some(term => nameLower.includes(term))) return 'palm';
-  if (['cactus', 'succulent', 'aloe', 'jade'].some(term => nameLower.includes(term))) return 'succulent';
-  if (['monstera', 'ficus', 'snake plant'].some(term => nameLower.includes(term))) return 'houseplant';
-  if (['tomato', 'potato', 'pepper', 'corn', 'pomodoro', 'patata', 'peperone', 'mais'].some(term => nameLower.includes(term))) return 'vegetable';
-  if (['rose', 'tulip', 'lily', 'orchid', 'rosa', 'tulipano', 'giglio', 'orchidea'].some(term => nameLower.includes(term))) return 'flowering';
-  
-  return null;
+export function generateSuperIntelligentFallback(
+  visualFeatures: VisualFeatures,
+  observations?: string
+): { plants: PlantFallback[]; diseases: Disease[]; message: string } {
+
+  const plants: PlantFallback[] = [];
+  const diseases: Disease[] = [];
+  let message = "Non sono riuscito a identificare con certezza la pianta. Ecco i suggerimenti più probabili:";
+
+  // Database semplificato di malattie comuni e problemi visivi
+  const plantDiseasesMap: Record<string, Disease[]> = {
+    tomato: [
+      { name: 'Peronospora (Late Blight)', confidence: 60, symptoms: ['Macchie scure su foglie e frutti'], treatments: ['Fungicidi specifici', 'Rimuovere piante infette'], cause: 'Phytophthora infestans', source: 'Database Malattie' },
+      { name: 'Septoria Leaf Spot', confidence: 55, symptoms: ['Macchie circolari sulle foglie'], treatments: ['Fungicidi', 'Rimuovere foglie infette'], cause: 'Septoria lycopersici', source: 'Database Malattie' }
+    ],
+    potato: [
+      { name: 'Early Blight', confidence: 60, symptoms: ['Macchie concentriche sulle foglie'], treatments: ['Fungicidi', 'Rotazione colture'], cause: 'Alternaria solani', source: 'Database Malattie' },
+      { name: 'Late Blight', confidence: 65, symptoms: ['Macchie scure sulle foglie e tuberi'], treatments: ['Fungicidi', 'Rimuovere piante infette'], cause: 'Phytophthora infestans', source: 'Database Malattie' }
+    ],
+    apple: [
+      { name: 'Apple Scab', confidence: 60, symptoms: ['Macchie scure su foglie e frutti'], treatments: ['Fungicidi', 'Potatura corretta'], cause: 'Venturia inaequalis', source: 'Database Malattie' },
+      { name: 'Fire Blight', confidence: 55, symptoms: ['Rami e fiori anneriti', 'Siringa batterica'], treatments: ['Potatura e disinfezione strumenti'], cause: 'Erwinia amylovora', source: 'Database Malattie' }
+    ],
+    basil: [
+      { name: 'Downy Mildew', confidence: 60, symptoms: ['Macchie gialle e muffa grigia sotto le foglie'], treatments: ['Rimuovere foglie infette', 'Fungicidi specifici'], cause: 'Peronospora belbahrii', source: 'Database Malattie' }
+    ],
+    rose: [
+      { name: 'Black Spot', confidence: 60, symptoms: ['Macchie nere su foglie'], treatments: ['Rimuovere foglie infette', 'Fungicidi'], cause: 'Diplocarpon rosae', source: 'Database Malattie' },
+      { name: 'Powdery Mildew', confidence: 55, symptoms: ['Polvere bianca su foglie'], treatments: ['Rimuovere foglie infette', 'Fungicidi'], cause: 'Sphaerotheca pannosa', source: 'Database Malattie' }
+    ]
+  };
+
+  // Problemi visivi comuni
+  const visualProblems: Disease[] = [];
+  if (visualFeatures.leafColor !== 'verde') {
+    visualProblems.push({
+      name: 'Clorosi fogliare',
+      confidence: 50,
+      symptoms: [`Foglie ${visualFeatures.leafColor}`],
+      treatments: ['Controllare acqua e luce', 'Fertilizzante bilanciato'],
+      cause: 'Stress ambientale o carenza nutrizionale',
+      source: 'Analisi Visiva'
+    });
+  }
+
+  // Cicla tutte le piante del database
+  Object.entries(plantSpeciesMap).forEach(([key, value]) => {
+    const lowerKey = key.toLowerCase();
+    let matchScore = 50; // base score
+
+    // Aumenta la probabilità se le caratteristiche corrispondono
+    if (visualFeatures.hasLargeLeaves && ['monstera', 'ficus', 'philodendron', 'pothos', 'rubber plant'].some(p => lowerKey.includes(p))) matchScore += 20;
+    if (visualFeatures.seemsSucculent && ['aloe', 'echeveria', 'jade', 'cactus', 'succulent'].some(p => lowerKey.includes(p))) matchScore += 20;
+    if (visualFeatures.hasFlowers && ['rose', 'tulip', 'lily', 'orchid', 'geranium'].some(p => lowerKey.includes(p))) matchScore += 15;
+    if (visualFeatures.plantType && lowerKey.includes(visualFeatures.plantType)) matchScore += 10;
+    if (visualFeatures.leafShape && value.toLowerCase().includes(visualFeatures.leafShape)) matchScore += 5;
+    if (visualFeatures.texture && value.toLowerCase().includes(visualFeatures.texture)) matchScore += 5;
+
+    if (matchScore > 90) matchScore = 90;
+
+    let scientificName = '';
+    if (typeof value === 'string') {
+      const match = value.match(/\((.*?)\)/);
+      scientificName = match ? match[1] : '';
+    }
+
+    plants.push({
+      name: key.replace(/_/g, ' '),
+      scientificName,
+      family: '', // opzionale
+      confidence: matchScore,
+      source: 'Fallback Super Intelligente'
+    });
+
+    // Aggiungi malattie se presenti
+    if (plantDiseasesMap[lowerKey]) {
+      plantDiseasesMap[lowerKey].forEach(d => diseases.push(d));
+    }
+  });
+
+  // Unisci i problemi visivi generali
+  diseases.push(...visualProblems);
+
+  // Ordina le piante per confidenza
+  plants.sort((a, b) => b.confidence - a.confidence);
+
+  return { plants, diseases, message };
 }
