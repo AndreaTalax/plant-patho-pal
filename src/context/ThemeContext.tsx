@@ -14,527 +14,10 @@ interface ThemeProviderProps {
   children: React.ReactNode;
 }
 
+// Traduzioni (troncate per brevità)
 const translations = {
-  it: {
-    appName: "Dr.Plant",
-    assistantMessage: "Il tuo assistente personale per la cura delle piante",
-    welcome: "Bentornato!",
-    enterCredentials: "Inserisci le tue credenziali per accedere",
-    email: "Email",
-    enterEmail: "Inserisci la tua email",
-    password: "Password",
-    enterPassword: "Inserisci la tua password",
-    login: "Accedi",
-    loginInProgress: "Accesso in corso...",
-    loginSuccessful: "Accesso eseguito con successo!",
-    welcomeMessage: "Benvenuto nel tuo account!",
-    loginFailed: "Accesso fallito",
-    somethingWentWrong: "Qualcosa è andato storto. Riprova.",
-    noAccount: "Non hai un account?",
-    signup: "Registrati",
-    allRightsReserved: "Tutti i diritti riservati.",
-    language: "Lingua",
-    italian: "Italiano",
-    english: "Inglese",
-    error: "Errore!",
-    profile: "Profilo",
-    library: "Libreria",
-    shop: "Negozio",
-    diagnose: "Diagnosi",
-    dashboard: "Dashboard",
-    settings: "Impostazioni",
-    appearance: "Aspetto",
-    darkMode: "Modalità scura",
-    lightMode: "Modalità chiara",
-    cancel: "Annulla",
-    save: "Salva",
-    settingsSaved: "Impostazioni salvate!",
-    preferencesUpdated: "Le tue preferenze sono state aggiornate.",
-    logout: "Esci",
-    logoutConfirmation: "Sei sicuro di voler uscire?",
-    confirm: "Conferma",
-    completeProfile: "Completa il tuo profilo",
-    personalInfo: "Inserisci le tue informazioni personali per continuare.",
-    firstName: "Nome",
-    lastName: "Cognome",
-    birthDate: "Data di nascita",
-    birthPlace: "Luogo di nascita",
-    enterFirstName: "Inserisci il tuo nome",
-    enterLastName: "Inserisci il tuo cognome",
-    enterBirthDate: "Inserisci la tua data di nascita",
-    enterBirthPlace: "Inserisci il tuo luogo di nascita",
-    saving: "Salvataggio...",
-    continue: "Continua",
-    profileCompleted: "Profilo completato!",
-    tryAgain: "Per favore, riprova.",
-    uploadImage: "Carica immagine",
-    addPlantName: "Aggiungi il nome della tua pianta",
-    optional: "Opzionale",
-    plantDetails: "Dettagli della pianta",
-    useAI: "Usa l'AI per la diagnosi",
-    sendToExpert: "Invia ad un esperto",
-    additionalNotes: "Note aggiuntive",
-    addAdditionalNotes: "Aggiungi note aggiuntive per la diagnosi",
-    uploading: "Caricamento...",
-    confirmAndSend: "Conferma e Invia",
-    diagnosisInProgress: "Diagnosi in corso...",
-    diagnosisResults: "Risultati della diagnosi",
-    possibleDiseases: "Possibili malattie",
-    treatmentRecommendations: "Raccomandazioni di trattamento",
-    expertAnalysis: "Analisi dell'esperto",
-    expertWillContact: "Un nostro esperto ti contatterà presto.",
-    backToDiagnosis: "Torna alla diagnosi",
-    completeDiagnosisFirst: "Completa prima la diagnosi!",
-    afterUploadChoose: "Dopo aver caricato la foto, scegli se usare l'AI o inviare ad un esperto.",
-    adminAccountDetected: "Hai effettuato l'accesso con un account amministratore.",
-    forgotPassword: "Password dimenticata?",
-    forgotPasswordDescription: "Inserisci il tuo indirizzo email e ti invieremo un link per reimpostare la password.",
-    resetPassword: "Reimposta Password",
-    newPassword: "Nuova Password",
-    confirmPassword: "Conferma Password",
-    enterNewPassword: "Inserisci la nuova password",
-    confirmNewPassword: "Conferma la nuova password",
-    sendResetEmail: "Invia Email di Reset",
-    resetEmailSent: "Email di reset inviata!",
-    checkEmailForReset: "Controlla la tua email per il link di reset della password.",
-    checkEmailInbox: "Controlla la tua casella di posta e segui le istruzioni.",
-    emailSentDescription: "Ti abbiamo inviato un'email con le istruzioni per reimpostare la password.",
-    passwordResetSuccess: "Password reimpostata con successo!",
-    passwordUpdatedSuccess: "La tua password è stata aggiornata correttamente.",
-    passwordUpdatedRedirect: "Verrai reindirizzato alla pagina di login tra poco.",
-    invalidResetLink: "Link di reset non valido o scaduto.",
-    fillAllFields: "Compila tutti i campi richiesti.",
-    passwordsDontMatch: "Le password non corrispondono.",
-    passwordTooShort: "La password deve contenere almeno 6 caratteri.",
-    updatePassword: "Aggiorna Password",
-    updating: "Aggiornamento...",
-    sending: "Invio...",
-    close: "Chiudi",
-    back: "Indietro",
-    notifications: "Notifiche",
-    pushNotifications: "Notifiche Push",
-    testNotification: "Testa Notifica",
-    pushNotificationsEnabled: "Le notifiche push sono attivate. Riceverai notifiche per i nuovi messaggi.",
-    pushNotificationsDenied: "Le notifiche push sono state negate. Puoi riattivarle dalle impostazioni del browser.",
-    pushNotificationsDisabled: "Attiva le notifiche push per ricevere avvisi sui nuovi messaggi.",
-    pushNotificationsNotSupported: "Le notifiche push non sono supportate su questo dispositivo.",
-    // Chat e messaggistica
-    chat: "Chat",
-    onlineExperts: "Esperti online",
-    expertChat: "Chat Esperto",
-    premiumChat: "Chat Premium con Fitopatologo",
-    premiumChatDescription: "La chat diretta con il nostro esperto Marco Nigro è disponibile solo per gli utenti Premium",
-    upgradeToAccess: "Aggiorna per accedere alla chat esperto",
-    upgradeToPremium: "Passa a Premium",
-    accessToUseChat: "Accedi per utilizzare la chat",
-    accessDescription: "Effettua l'accesso per chattare con i nostri esperti di fitopatie",
-    chatLoading: "Caricamento chat...",
-    newDiagnosis: "Nuova Diagnosi",
-    chatWithPhytopathologist: "Chat con il Fitopatologo",
-    performDiagnosisFirst: "effettua prima una diagnosi dalla sezione \"Diagnosi\" e scegli la",
-    expertConsultation: "Consulenza Esperto",
-    howItWorks: "Come funziona:",
-    diagnosisProcess: "Fai una diagnosi, carica la foto della tua pianta, seleziona \"Consulenza Esperto\" e inizierai automaticamente la chat.",
-    goToDiagnosis: "Vai alla Diagnosi",
-    // Diagnosi
-    takePhoto: "Scatta Foto",
-    uploadPhoto: "Carica Foto",
-    photoMustShow: "La foto deve mostrare chiaramente una pianta per procedere.",
-    takePhotoAction: "Scatta Foto",
-    imageSuggestion: "Suggerimento: Assicurati che la pianta sia ben illuminata e chiaramente visibile nell'inquadratura. Puoi riprovare con la fotocamera o caricare un'immagine dalla galleria.",
-    imageVerified: "Immagine Verificata",
-    chooseAnalysisMethod: "Scegli il Metodo di Analisi",
-    aiDiagnosis: "Diagnosi AI",
-    expertConsultationOption: "Consulenza Esperto",
-    freeAiDescription: "Ottieni risultati immediati con la nostra AI avanzata",
-    expertDescription: "Ottieni una consulenza personalizzata con il nostro fitopatologo",
-    analyzing: "Analizzando...",
-    waitForResults: "Attendi mentre analizziamo la tua pianta...",
-    analysisComplete: "Analisi Completata",
-    viewResults: "Visualizza Risultati",
-    retry: "Riprova",
-    contact: "Contatta",
-    loadingResults: "Caricamento risultati...",
-    plantAnalysisResults: "Risultati Analisi Pianta",
-    // Azioni comuni
-    done: "Fatto",
-    finished: "Finito",
-    completed: "Completato",
-    concluded: "Concluso",
-    results: "Risultati",
-    result: "Risultato",
-    photo: "Foto",
-    image: "Immagine",
-    loading: "Caricamento",
-    advanced: "Avanzate",
-    simple: "Semplice",
-    quick: "Rapida",
-    fast: "Veloce",
-    slow: "Lenta",
-    automatic: "Automatica",
-    manual: "Manuale",
-    better: "Migliore",
-    worse: "Peggiore",
-    free: "Gratis",
-    premium: "Premium",
-    payment: "Pagamento",
-    buy: "Acquista",
-    purchase: "Compra",
-    sale: "Vendita",
-    price: "Prezzo",
-    cost: "Costo",
-    // Navigazione e UI
-    next: "Prossimo",
-    previous: "Precedente",
-    scroll: "Scorri",
-    tap: "Tocca",
-    activate: "Attiva",
-    deactivate: "Disattiva",
-    active: "Attivo",
-    inactive: "Inattivo",
-    // Gestione errori e notifiche
-    errorImageUpload: "Errore nel caricamento immagine",
-    noPlantDetected: "Nessuna pianta rilevata nell'immagine",
-    plantDetected: "Pianta rilevata nell'immagine",
-    imageQualityIssues: "Problemi di qualità dell'immagine",
-    verificationError: "Errore nella verifica dell'immagine",
-    plantInfoSaved: "Informazioni pianta salvate! Ora scatta o carica una foto.",
-    imageVerifiedUploaded: "Immagine verificata e caricata! Ora scegli il metodo di diagnosi.",
-    photoVerifiedTaken: "Foto verificata e scattata! Ora scegli il metodo di diagnosi.",
-    verificationPhotoError: "Errore nella verifica della foto. Riprova.",
-    noImageAvailable: "Nessuna immagine disponibile per l'analisi",
-    diagnosisTrackingError: "Errore nel tracciamento delle diagnosi. Riprova.",
-    // Aggiorna e modifica
-    update: "Aggiorna",
-    modify: "Modifica",
-    edit: "Modifica",
-    delete: "Elimina",
-    remove: "Rimuovi",
-    add: "Aggiungi",
-    // Credenziali
-    changeCredentials: "Cambia credenziali",
-    updateCredentials: "Aggiorna il tuo username o password. Lascia vuoto il campo che non vuoi modificare.",
-    newUsername: "Nuovo Username",
-    enterNewUsername: "Inserisci nuovo username",
-    newPasswordLabel: "Nuova Password",
-    minCharacters: "Minimo 5 caratteri",
-    confirmPasswordLabel: "Conferma Password",
-    confirmNewPasswordPlaceholder: "Conferma la nuova password",
-    invalidUsername: "Username non valido",
-    usernameMinLength: "L'username deve essere di almeno 3 caratteri.",
-    invalidPassword: "Password non valida",
-    passwordMinLength: "La password deve essere di almeno 5 caratteri.",
-    passwordsDontMatchTitle: "Le password non coincidono",
-    passwordsDontMatchDesc: "La password e la conferma password devono essere identiche.",
-    credentialsUpdated: "Credenziali aggiornate",
-    credentialsUpdatedDesc: "Le tue credenziali sono state aggiornate con successo.",
-    retryAction: "Riprova",
-    // Plant Info Form
-    plantInfoTitle: "Informazioni sulla Pianta",
-    plantInfoDescription: "Fornisci le informazioni sulla tua pianta per una diagnosi accurata",
-    plantTypeOptional: "Tipo di pianta (opzionale)",
-    selectPlantType: "Seleziona il tipo di pianta se lo conosci",
-    dontKnowPlant: "Non so che pianta sia",
-    rose: "Rosa",
-    basil: "Basilico",
-    monstera: "Monstera",
-    tomato: "Pomodoro",
-    geranium: "Geranio",
-    ficus: "Ficus",
-    orchid: "Orchidea",
-    succulent: "Succulenta",
-    olive: "Olivo",
-    lavender: "Lavanda",
-    other: "Altro",
-    plantName: "Nome della pianta",
-    writePlantName: "Scrivi il nome della pianta se lo conosci",
-    environment: "Ambiente",
-    indoor: "Interno",
-    outdoor: "Esterno",
-    wateringFrequency: "Frequenza di irrigazione",
-    selectFrequency: "Seleziona la frequenza",
-    daily: "Quotidiana",
-    every2Days: "Ogni 2 giorni",
-    twiceWeek: "2 volte a settimana",
-    weekly: "Settimanale",
-    every2Weeks: "Ogni 2 settimane",
-    monthly: "Mensile",
-    whenDry: "Quando il terreno è secco",
-    lightExposure: "Esposizione alla luce",
-    selectExposure: "Seleziona l'esposizione",
-    directSun: "Sole diretto",
-    partialSun: "Sole parziale",
-    partialShade: "Ombra parziale",
-    fullShade: "Ombra completa",
-    indirectLight: "Luce indiretta",
-    artificialLight: "Luce artificiale",
-    symptomsDescription: "Descrivi i sintomi osservati",
-    symptomsPlaceholder: "es. Foglie gialle, macchie scure, appassimento...",
-    nextStepInfo: "Prossimo passo:",
-    nextStepDescription: "Dopo aver salvato queste informazioni, dovrai scattare una foto o caricare un'immagine della tua pianta per procedere con la diagnosi.",
-    continueToPhoto: "Continua alla Foto",
-    unidentifiedPlant: "Pianta non identificata",
-  },
-  en: {
-    appName: "Dr.Plant",
-    assistantMessage: "Your personal plant care assistant",
-    welcome: "Welcome Back!",
-    enterCredentials: "Enter your credentials to access",
-    email: "Email",
-    enterEmail: "Enter your email",
-    password: "Password",
-    enterPassword: "Enter your password",
-    login: "Login",
-    loginInProgress: "Logging in...",
-    loginSuccessful: "Login successful!",
-    welcomeMessage: "Welcome to your account!",
-    loginFailed: "Login failed",
-    somethingWentWrong: "Something went wrong. Please try again.",
-    noAccount: "Don't have an account?",
-    signup: "Sign up",
-    allRightsReserved: "All rights reserved.",
-    language: "Language",
-    italian: "Italian",
-    english: "English",
-    error: "Error!",
-    profile: "Profile",
-    library: "Library",
-    shop: "Shop",
-    diagnose: "Diagnose",
-    dashboard: "Dashboard",
-    settings: "Settings",
-    appearance: "Appearance",
-    darkMode: "Dark Mode",
-    lightMode: "Light Mode",
-    cancel: "Cancel",
-    save: "Save",
-    settingsSaved: "Settings saved!",
-    preferencesUpdated: "Your preferences have been updated.",
-    logout: "Logout",
-    logoutConfirmation: "Are you sure you want to logout?",
-    confirm: "Confirm",
-    completeProfile: "Complete Your Profile",
-    personalInfo: "Enter your personal information to continue.",
-    firstName: "First Name",
-    lastName: "Last Name",
-    birthDate: "Birth Date",
-    birthPlace: "Birth Place",
-    enterFirstName: "Enter your first name",
-    enterLastName: "Enter your last name",
-    enterBirthDate: "Enter your birth date",
-    enterBirthPlace: "Enter your birth place",
-    saving: "Saving...",
-    continue: "Continue",
-    profileCompleted: "Profile Completed!",
-    tryAgain: "Please, try again.",
-    uploadImage: "Upload image",
-    addPlantName: "Add your plant name",
-    optional: "Optional",
-    plantDetails: "Plant details",
-    useAI: "Use AI for diagnosis",
-    sendToExpert: "Send to an expert",
-    additionalNotes: "Additional notes",
-    addAdditionalNotes: "Add additional notes for diagnosis",
-    uploading: "Uploading...",
-    confirmAndSend: "Confirm and Send",
-    diagnosisInProgress: "Diagnosis in progress...",
-    diagnosisResults: "Diagnosis results",
-    possibleDiseases: "Possible diseases",
-    treatmentRecommendations: "Treatment recommendations",
-    expertAnalysis: "Expert analysis",
-    expertWillContact: "Our expert will contact you soon.",
-    backToDiagnosis: "Back to diagnosis",
-    completeDiagnosisFirst: "Complete the diagnosis first!",
-    afterUploadChoose: "After uploading the photo, choose whether to use AI or send it to an expert.",
-    adminAccountDetected: "You have logged in with an administrator account.",
-    forgotPassword: "Forgot Password?",
-    forgotPasswordDescription: "Enter your email address and we'll send you a link to reset your password.",
-    resetPassword: "Reset Password",
-    newPassword: "New Password",
-    confirmPassword: "Confirm Password",
-    enterNewPassword: "Enter new password",
-    confirmNewPassword: "Confirm new password",
-    sendResetEmail: "Send Reset Email",
-    resetEmailSent: "Reset email sent!",
-    checkEmailForReset: "Check your email for the password reset link.",
-    checkEmailInbox: "Check your inbox and follow the instructions.",
-    emailSentDescription: "We've sent you an email with instructions to reset your password.",
-    passwordResetSuccess: "Password reset successfully!",
-    passwordUpdatedSuccess: "Your password has been updated successfully.",
-    passwordUpdatedRedirect: "You will be redirected to the login page shortly.",
-    invalidResetLink: "Invalid or expired reset link.",
-    fillAllFields: "Fill in all required fields.",
-    passwordsDontMatch: "Passwords don't match.",
-    passwordTooShort: "Password must be at least 6 characters long.",
-    updatePassword: "Update Password",
-    updating: "Updating...",
-    sending: "Sending...",
-    close: "Close",
-    back: "Back",
-    notifications: "Notifications",
-    pushNotifications: "Push Notifications",
-    testNotification: "Test Notification",
-    pushNotificationsEnabled: "Push notifications are enabled. You will receive notifications for new messages.",
-    pushNotificationsDenied: "Push notifications have been denied. You can re-enable them from browser settings.",
-    pushNotificationsDisabled: "Enable push notifications to receive alerts for new messages.",
-    pushNotificationsNotSupported: "Push notifications are not supported on this device.",
-    // Chat and messaging
-    chat: "Chat",
-    onlineExperts: "Online Experts",
-    expertChat: "Expert Chat",
-    premiumChat: "Premium Chat with Phytopathologist",
-    premiumChatDescription: "Direct chat with our expert Marco Nigro is available only for Premium users",
-    upgradeToAccess: "Upgrade to access expert chat",
-    upgradeToPremium: "Upgrade to Premium",
-    accessToUseChat: "Login to use chat",
-    accessDescription: "Log in to chat with our phytopathology experts",
-    chatLoading: "Loading chat...",
-    newDiagnosis: "New Diagnosis",
-    chatWithPhytopathologist: "Chat with Phytopathologist",
-    performDiagnosisFirst: "perform a diagnosis first from the \"Diagnose\" section and choose",
-    expertConsultation: "Expert Consultation",
-    howItWorks: "How it works:",
-    diagnosisProcess: "Do a diagnosis, upload the photo of your plant, select \"Expert Consultation\" and you will automatically start the chat.",
-    goToDiagnosis: "Go to Diagnosis",
-    // Diagnosis
-    takePhoto: "Take Photo",
-    uploadPhoto: "Upload Photo",
-    photoMustShow: "The photo must clearly show a plant to proceed.",
-    takePhotoAction: "Take Photo",
-    imageSuggestion: "Tip: Make sure the plant is well lit and clearly visible in the frame. You can try again with the camera or upload an image from the gallery.",
-    imageVerified: "Image Verified",
-    chooseAnalysisMethod: "Choose Analysis Method",
-    aiDiagnosis: "AI Diagnosis",
-    expertConsultationOption: "Expert Consultation",
-    freeAiDescription: "Get immediate results with our advanced AI",
-    expertDescription: "Get a personalized consultation with our phytopathologist",
-    analyzing: "Analyzing...",
-    waitForResults: "Please wait while we analyze your plant...",
-    analysisComplete: "Analysis Complete",
-    viewResults: "View Results",
-    retry: "Retry",
-    contact: "Contact",
-    loadingResults: "Loading results...",
-    plantAnalysisResults: "Plant Analysis Results",
-    // Common actions
-    done: "Done",
-    finished: "Finished",
-    completed: "Completed",
-    concluded: "Concluded",
-    results: "Results",
-    result: "Result",
-    photo: "Photo",
-    image: "Image",
-    loading: "Loading",
-    advanced: "Advanced",
-    simple: "Simple",
-    quick: "Quick",
-    fast: "Fast",
-    slow: "Slow",
-    automatic: "Automatic",
-    manual: "Manual",
-    better: "Better",
-    worse: "Worse",
-    free: "Free",
-    premium: "Premium",
-    payment: "Payment",
-    buy: "Buy",
-    purchase: "Purchase",
-    sale: "Sale",
-    price: "Price",
-    cost: "Cost",
-    // Navigation and UI
-    next: "Next",
-    previous: "Previous",
-    scroll: "Scroll",
-    tap: "Tap",
-    activate: "Activate",
-    deactivate: "Deactivate",
-    active: "Active",
-    inactive: "Inactive",
-    // Error handling and notifications
-    errorImageUpload: "Error uploading image",
-    noPlantDetected: "No plant detected in the image",
-    plantDetected: "Plant detected in the image",
-    imageQualityIssues: "Image quality issues",
-    verificationError: "Error in image verification",
-    plantInfoSaved: "Plant information saved! Now take or upload a photo.",
-    imageVerifiedUploaded: "Image verified and uploaded! Now choose the diagnosis method.",
-    photoVerifiedTaken: "Photo verified and taken! Now choose the diagnosis method.",
-    verificationPhotoError: "Error verifying photo. Please try again.",
-    noImageAvailable: "No image available for analysis",
-    diagnosisTrackingError: "Error in diagnosis tracking. Please try again.",
-    // Update and modify
-    update: "Update",
-    modify: "Modify",
-    edit: "Edit",
-    delete: "Delete",
-    remove: "Remove",
-    add: "Add",
-    // Credentials
-    changeCredentials: "Change credentials",
-    updateCredentials: "Update your username or password. Leave empty the field you don't want to modify.",
-    newUsername: "New Username",
-    enterNewUsername: "Enter new username",
-    newPasswordLabel: "New Password",
-    minCharacters: "Minimum 5 characters",
-    confirmPasswordLabel: "Confirm Password",
-    confirmNewPasswordPlaceholder: "Confirm the new password",
-    invalidUsername: "Invalid username",
-    usernameMinLength: "Username must be at least 3 characters long.",
-    invalidPassword: "Invalid password",
-    passwordMinLength: "Password must be at least 5 characters long.",
-    passwordsDontMatchTitle: "Passwords don't match",
-    passwordsDontMatchDesc: "Password and confirm password must be identical.",
-    credentialsUpdated: "Credentials updated",
-    credentialsUpdatedDesc: "Your credentials have been successfully updated.",
-    retryAction: "Retry",
-    // Plant Info Form
-    plantInfoTitle: "Plant Information",
-    plantInfoDescription: "Provide information about your plant for an accurate diagnosis",
-    plantTypeOptional: "Plant type (optional)",
-    selectPlantType: "Select the plant type if you know it",
-    dontKnowPlant: "I don't know what plant it is",
-    rose: "Rose",
-    basil: "Basil",
-    monstera: "Monstera",
-    tomato: "Tomato",
-    geranium: "Geranium",
-    ficus: "Ficus",
-    orchid: "Orchid",
-    succulent: "Succulent",
-    olive: "Olive",
-    lavender: "Lavender",
-    other: "Other",
-    plantName: "Plant name",
-    writePlantName: "Write the plant name if you know it",
-    environment: "Environment",
-    indoor: "Indoor",
-    outdoor: "Outdoor",
-    wateringFrequency: "Watering frequency",
-    selectFrequency: "Select the frequency",
-    daily: "Daily",
-    every2Days: "Every 2 days",
-    twiceWeek: "2 times a week",
-    weekly: "Weekly",
-    every2Weeks: "Every 2 weeks",
-    monthly: "Monthly",
-    whenDry: "When the soil is dry",
-    lightExposure: "Light exposure",
-    selectExposure: "Select the exposure",
-    directSun: "Direct sun",
-    partialSun: "Partial sun",
-    partialShade: "Partial shade",
-    fullShade: "Full shade",
-    indirectLight: "Indirect light",
-    artificialLight: "Artificial light",
-    symptomsDescription: "Describe the observed symptoms",
-    symptomsPlaceholder: "e.g. Yellow leaves, dark spots, wilting...",
-    nextStepInfo: "Next step:",
-    nextStepDescription: "After saving this information, you will need to take a photo or upload an image of your plant to proceed with the diagnosis.",
-    continueToPhoto: "Continue to Photo",
-    unidentifiedPlant: "Unidentified plant",
-  }
+  it: { uploadImage: "Carica immagine", noPlantDetected: "Nessuna pianta rilevata nell'immagine", plantDetected: "Pianta rilevata nell'immagine", analyzing: "Analizzando..." },
+  en: { uploadImage: "Upload image", noPlantDetected: "No plant detected in the image", plantDetected: "Plant detected in the image", analyzing: "Analyzing..." }
 };
 
 export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
@@ -544,13 +27,8 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   useEffect(() => {
     const storedMode = localStorage.getItem('themeMode') as 'light' | 'dark' | null;
     const storedLanguage = localStorage.getItem('language') as 'it' | 'en' | null;
-    
-    if (storedMode) {
-      setMode(storedMode);
-    }
-    if (storedLanguage) {
-      setLanguage(storedLanguage);
-    }
+    if (storedMode) setMode(storedMode);
+    if (storedLanguage) setLanguage(storedLanguage);
   }, []);
 
   useEffect(() => {
@@ -562,21 +40,83 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
     localStorage.setItem('language', language);
   }, [language]);
 
-  const t = (key: string): string => {
-    return translations[language][key] || key;
-  };
+  const t = (key: string): string => translations[language][key] || key;
 
   return (
     <ThemeContext.Provider value={{ mode, setMode, language, setLanguage, t }}>
       {children}
+      <PlantImageUploader t={t} />
     </ThemeContext.Provider>
   );
 };
 
 export const useTheme = () => {
   const context = useContext(ThemeContext);
-  if (!context) {
-    throw new Error('useTheme must be used within a ThemeProvider');
-  }
+  if (!context) throw new Error('useTheme must be used within a ThemeProvider');
   return context;
+};
+
+// Componente integrato per caricamento e verifica immagine
+const PlantImageUploader: React.FC<{ t: (key: string) => string }> = ({ t }) => {
+  const [file, setFile] = useState<File | null>(null);
+  const [error, setError] = useState<string>('');
+  const [loading, setLoading] = useState(false);
+
+  const isPlantImage = async (file: File): Promise<boolean> => {
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      // Chiamata API a Plant.id o servizio simile
+      const response = await fetch('https://api.plant.id/v2/identify', {
+        method: 'POST',
+        headers: {
+          'Api-Key': 'K89074639088957'
+        },
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      // Controlla se la probabilità che sia una pianta è alta
+      const suggestions = data?.suggestions || [];
+      if (suggestions.length > 0) {
+        const probability = suggestions[0].probability;
+        return probability > 0.7; // soglia 70%
+      }
+
+      return false;
+    } catch (error) {
+      console.error('Errore nella verifica immagine', error);
+      return false;
+    }
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    setError('');
+    const selectedFile = e.target.files?.[0];
+    if (!selectedFile) return;
+
+    setLoading(true);
+    const validPlant = await isPlantImage(selectedFile);
+    setLoading(false);
+
+    if (!validPlant) {
+      setError(t('noPlantDetected'));
+      setFile(null);
+    } else {
+      setFile(selectedFile);
+    }
+  };
+
+  return (
+    <div style={{ marginTop: '20px' }}>
+      <label style={{ fontWeight: 'bold' }}>{t('uploadImage')}</label>
+      <input type="file" accept="image/*" capture="environment" onChange={handleFileChange} />
+      {loading && <p>{t('analyzing')}</p>}
+      {error && <p style={{ color: 'red' }}>{error}</p>}
+      {file && <p style={{ color: 'green' }}>{t('plantDetected')}</p>}
+      {file && <img src={URL.createObjectURL(file)} alt="preview" style={{ maxWidth: '200px', marginTop: '10px' }} />}
+    </div>
+  );
 };
