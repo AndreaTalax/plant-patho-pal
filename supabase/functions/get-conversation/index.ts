@@ -27,7 +27,7 @@ serve(async (req) => {
   }
 
   try {
-    console.log("🔍 Creating Supabase client...");
+    console.log("🔍 Preparing Supabase client and auth context...");
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
 
@@ -39,9 +39,7 @@ serve(async (req) => {
       });
     }
 
-    const supabaseClient = createClient(supabaseUrl, supabaseAnonKey);
-
-    // Get authentication token
+    // Get authentication token BEFORE creating client and propagate it to the client for RLS
     const authHeader = req.headers.get("Authorization");
     
     if (!authHeader) {
@@ -53,7 +51,14 @@ serve(async (req) => {
     }
 
     const token = authHeader.replace("Bearer ", "");
-    
+
+    console.log("🔍 Creating Supabase client with user context (RLS)...");
+    const supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
+      global: {
+        headers: { Authorization: `Bearer ${token}` },
+      },
+    });
+
     console.log("🔍 Verifying user authentication...");
     const { data: { user }, error: authError } = await supabaseClient.auth.getUser(token);
     

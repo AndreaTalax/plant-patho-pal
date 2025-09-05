@@ -9,45 +9,40 @@ export class MessageService {
    */
   static async loadMessages(conversationId: string) {
     try {
-      console.log('📚 MessageService: Carico messaggi dal database', conversationId);
+      console.log('📚 MessageService: Carico messaggi via edge function', conversationId);
 
       if (!conversationId) {
         console.log('📭 MessageService: ID conversazione mancante');
         return [];
       }
 
-      // Verifica prima se la conversazione esiste
-      const { data: conversation, error: convError } = await supabase
-        .from('conversations')
-        .select('id, status')
-        .eq('id', conversationId)
-        .maybeSingle();
-
-      if (convError) {
-        console.error('❌ MessageService: Conversazione non trovata', convError);
-        return [];
-      }
-
-      if (!conversation) {
-        console.log('📭 MessageService: Conversazione non esiste');
-        return [];
-      }
-
-      // Caricamento diretto dei messaggi dal database con timeout più breve
-      const { data: messages, error } = await supabase
-        .from('messages')
-        .select('id, conversation_id, sender_id, recipient_id, content, text, image_url, sent_at, read')
-        .eq('conversation_id', conversationId)
-        .order('sent_at', { ascending: true })
-        .limit(50);
+      // Prova prima con l'edge function (gestisce auth/RLS in modo affidabile)
+      const { data, error } = await supabase.functions.invoke('get-conversation', {
+        body: { conversationId }
+      });
 
       if (error) {
-        console.error('❌ MessageService: Errore caricamento messaggi', error);
+        console.warn('⚠️ MessageService: Edge function fallita, fallback a query diretta', error);
+      } else if (data?.messages) {
+        console.log('✅ MessageService: Messaggi caricati via edge function', data.messages.length);
+        return data.messages;
+      }
+
+      // Fallback: query diretta al DB
+      const { data: messages, error: dbError } = await supabase
+        .from('messages')
+        .select('id, conversation_id, sender_id, recipient_id, content, text, image_url, sent_at, read, metadata, products')
+        .eq('conversation_id', conversationId)
+        .order('sent_at', { ascending: true })
+        .limit(100);
+
+      if (dbError) {
+        console.error('❌ MessageService: Errore caricamento messaggi (fallback)', dbError);
         // Fallback: ritorna array vuoto invece di lanciare errore
         return [];
       }
 
-      console.log('✅ MessageService: Messaggi caricati', messages?.length || 0);
+      console.log('✅ MessageService: Messaggi caricati (fallback)', messages?.length || 0);
       return messages || [];
 
     } catch (error: any) {
