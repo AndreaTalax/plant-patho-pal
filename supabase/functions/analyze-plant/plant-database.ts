@@ -1,172 +1,216 @@
+import { createContext, useContext, useState, useEffect } from 'react';
 
-// Database of plant species mappings integrating PlantNet, TRY Plant Trait Database, 
-// New Plant Diseases Dataset, OLID I and EPPO Global Database
-// Now also includes Flora Incognita and PlantSnap taxonomies
-export const plantSpeciesMap = {
-  // Garden plants and vegetables
-  'tomato': 'Tomato (Solanum lycopersicum)',
-  'potato': 'Potato (Solanum tuberosum)',
-  'pepper': 'Pepper (Capsicum annuum)',
-  'cucumber': 'Cucumber (Cucumis sativus)',
-  'lettuce': 'Lettuce (Lactuca sativa)',
-  'carrot': 'Carrot (Daucus carota)',
-  'spinach': 'Spinach (Spinacia oleracea)',
-  'pumpkin': 'Pumpkin (Cucurbita pepo)',
-  'beans': 'Beans (Phaseolus vulgaris)',
-  'corn': 'Corn (Zea mays)',
-  
-  // Fruits
-  'apple': 'Apple (Malus domestica)',
-  'grape': 'Grape (Vitis vinifera)',
-  'strawberry': 'Strawberry (Fragaria ananassa)',
-  'peach': 'Peach (Prunus persica)',
-  'orange': 'Orange (Citrus sinensis)',
-  'cherry': 'Cherry (Prunus avium)',
-  'lemon': 'Lemon (Citrus limon)',
-  'raspberry': 'Raspberry (Rubus idaeus)',
-  'blueberry': 'Blueberry (Vaccinium)',
-  'banana': 'Banana (Musa)',
-  
-  // Common houseplants
-  'monstera': 'Monstera (Monstera deliciosa)',
-  'pothos': 'Pothos (Epipremnum aureum)',
-  'snake plant': 'Snake Plant (Sansevieria)',
-  'aloe': 'Aloe Vera (Aloe barbadensis)',
-  'fiddle': 'Fiddle Leaf Fig (Ficus lyrata)',
-  'peace lily': 'Peace Lily (Spathiphyllum)',
-  'orchid': 'Orchid (Orchidaceae)',
-  'spider plant': 'Spider Plant (Chlorophytum comosum)',
-  'rubber plant': 'Rubber Plant (Ficus elastica)',
-  'jade plant': 'Jade Plant (Crassula ovata)',
-  'zz plant': 'ZZ Plant (Zamioculcas zamiifolia)',
-  'philodendron': 'Philodendron (Philodendron)',
-  
-  // Garden flowers
-  'rose': 'Rose (Rosa)',
-  'tulip': 'Tulip (Tulipa)',
-  'daisy': 'Daisy (Bellis perennis)',
-  'sunflower': 'Sunflower (Helianthus)',
-  'lily': 'Lily (Lilium)',
-  'lavender': 'Lavender (Lavandula)',
-  'marigold': 'Marigold (Tagetes)',
-  'hydrangea': 'Hydrangea (Hydrangea)',
-  'geranium': 'Geranium (Pelargonium)',
-  'dahlia': 'Dahlia (Dahlia)',
-  
-  // Herbs
-  'basil': 'Basil (Ocimum basilicum)',
-  'mint': 'Mint (Mentha)',
-  'rosemary': 'Rosemary (Rosmarinus officinalis)',
-  'thyme': 'Thyme (Thymus vulgaris)',
-  'cilantro': 'Cilantro (Coriandrum sativum)',
-  'oregano': 'Oregano (Origanum vulgare)',
-  'sage': 'Sage (Salvia officinalis)',
-  'chives': 'Chives (Allium schoenoprasum)',
-  'parsley': 'Parsley (Petroselinum crispum)',
-  'dill': 'Dill (Anethum graveolens)',
-  
-  // Additional PlantNet & TRY Database entries (common species)
-  'oak': 'Oak (Quercus)',
-  'maple': 'Maple (Acer)',
-  'pine': 'Pine (Pinus)',
-  'birch': 'Birch (Betula)',
-  'willow': 'Willow (Salix)',
-  'poplar': 'Poplar (Populus)',
-  'eucalyptus': 'Eucalyptus (Eucalyptus)',
-  'rhododendron': 'Rhododendron (Rhododendron)',
-  'azalea': 'Azalea (Rhododendron)',
-  'juniper': 'Juniper (Juniperus)',
-  'ivy': 'Ivy (Hedera)',
-  'fern': 'Ferns (Polypodiopsida)',
-  'bamboo': 'Bamboo (Bambusoideae)',
-  'cactus': 'Cactus (Cactaceae)',
-  'succulent': 'Succulent Plants (various species)',
-  'palm': 'Palm (Arecaceae)',
-  'cypress': 'Cypress (Cupressus)',
-  'dogwood': 'Dogwood (Cornus)',
-  'magnolia': 'Magnolia (Magnolia)',
-  'hibiscus': 'Hibiscus (Hibiscus)',
-  
-  // Additional entries from New Plant Diseases Dataset
-  'apple scab': 'Apple (Malus domestica) - Scab Disease',
-  'apple black rot': 'Apple (Malus domestica) - Black Rot',
-  'apple cedar rust': 'Apple (Malus domestica) - Cedar Apple Rust',
-  'cherry powdery': 'Cherry (Prunus avium) - Powdery Mildew',
-  'corn gray': 'Corn (Zea mays) - Gray Leaf Spot',
-  'corn rust': 'Corn (Zea mays) - Common Rust',
-  'grape black rot': 'Grape (Vitis vinifera) - Black Rot',
-  'grape esca': 'Grape (Vitis vinifera) - Esca (Black Measles)',
-  'potato early blight': 'Potato (Solanum tuberosum) - Early Blight',
-  'potato late blight': 'Potato (Solanum tuberosum) - Late Blight',
-  'strawberry leaf scorch': 'Strawberry (Fragaria ananassa) - Leaf Scorch',
-  'tomato bacterial': 'Tomato (Solanum lycopersicum) - Bacterial Spot',
-  'tomato early blight': 'Tomato (Solanum lycopersicum) - Early Blight',
-  'tomato late blight': 'Tomato (Solanum lycopersicum) - Late Blight',
-  'tomato leaf mold': 'Tomato (Solanum lycopersicum) - Leaf Mold',
-  'tomato septoria': 'Tomato (Solanum lycopersicum) - Septoria Leaf Spot',
-  'tomato spider mites': 'Tomato (Solanum lycopersicum) - Spider Mite Damage',
-  'tomato target spot': 'Tomato (Solanum lycopersicum) - Target Spot',
-  'tomato mosaic virus': 'Tomato (Solanum lycopersicum) - Mosaic Virus',
-  'tomato yellow curl': 'Tomato (Solanum lycopersicum) - Yellow Leaf Curl Virus',
-  
-  // EPPO Global Database entries (quarantine pests and regulated plants)
-  'citrus greening': 'Citrus (Citrus spp.) - Huanglongbing Disease',
-  'citrus canker': 'Citrus (Citrus spp.) - Bacterial Canker',
-  'citrus tristeza': 'Citrus (Citrus spp.) - Tristeza Virus',
-  'xylella': 'Olive (Olea europaea) - Xylella fastidiosa',
-  'pine wood nematode': 'Pine (Pinus spp.) - Pine Wilt Disease',
-  'emerald ash borer': 'Ash (Fraxinus spp.) - Emerald Ash Borer Damage',
-  'box tree moth': 'Boxwood (Buxus spp.) - Box Tree Moth Damage',
-  'fire blight': 'Apple/Pear (Rosaceae) - Fire Blight',
-  'plum pox': 'Stone Fruit (Prunus spp.) - Sharka Disease',
-  'sudden oak death': 'Oak (Quercus spp.) - Phytophthora ramorum',
-  'ash dieback': 'Ash (Fraxinus spp.) - Chalara Ash Dieback',
-  'japanese beetle': 'Various Plants - Japanese Beetle Damage',
-  'dutch elm disease': 'Elm (Ulmus spp.) - Dutch Elm Disease',
-  'oak processionary': 'Oak (Quercus spp.) - Oak Processionary Moth',
-  'pepino mosaic': 'Tomato (Solanum lycopersicum) - Pepino Mosaic Virus',
-  'bacterial wilt': 'Various Plants - Ralstonia solanacearum',
-  'red palm weevil': 'Palm (Arecaceae) - Red Palm Weevil Damage',
-  'grapevine flavescence': 'Grape (Vitis vinifera) - Flavescence dorée',
-  'colorado beetle': 'Potato (Solanum tuberosum) - Colorado Beetle Damage',
-  'black sigatoka': 'Banana (Musa) - Black Sigatoka Disease',
-  
-  // New entries from Flora Incognita and PlantSnap
-  'dandelion': 'Dandelion (Taraxacum officinale)',
-  'clover': 'Clover (Trifolium)',
-  'nettle': 'Nettle (Urtica)',
-  'plantain': 'Plantain (Plantago)',
-  'chickweed': 'Chickweed (Stellaria media)',
-  'dock': 'Dock (Rumex)',
-  'chamomile': 'Chamomile (Matricaria)',
-  'goldenrod': 'Goldenrod (Solidago)',
-  'thistle': 'Thistle (Cirsium)',
-  'yarrow': 'Yarrow (Achillea millefolium)'
+// -------------------------
+// Theme and Language Context
+// -------------------------
+interface ThemeContextProps {
+  mode: 'light' | 'dark';
+  setMode: (mode: 'light' | 'dark') => void;
+  language: 'it' | 'en';
+  setLanguage: (language: 'it' | 'en') => void;
+  t: (key: string) => string;
+}
+
+const ThemeContext = createContext<ThemeContextProps | undefined>(undefined);
+
+interface ThemeProviderProps {
+  children: React.ReactNode;
+}
+
+// -------------------------
+// Translations
+// -------------------------
+const translations = {
+  it: { /* Inserisci qui tutte le traduzioni in italiano */ },
+  en: { /* Inserisci qui tutte le traduzioni in inglese */ }
 };
 
-// Database of plant parts keywords for identification
+// -------------------------
+// Plant & Disease Databases
+// -------------------------
+export const plantSpeciesMap = {
+  tomato: 'Tomato (Solanum lycopersicum)',
+  potato: 'Potato (Solanum tuberosum)',
+  pepper: 'Pepper (Capsicum annuum)',
+  cucumber: 'Cucumber (Cucumis sativus)',
+  lettuce: 'Lettuce (Lactuca sativa)',
+  carrot: 'Carrot (Daucus carota)',
+  spinach: 'Spinach (Spinacia oleracea)',
+  pumpkin: 'Pumpkin (Cucurbita pepo)',
+  beans: 'Beans (Phaseolus vulgaris)',
+  corn: 'Corn (Zea mays)',
+  apple: 'Apple (Malus domestica)',
+  grape: 'Grape (Vitis vinifera)',
+  strawberry: 'Strawberry (Fragaria ananassa)',
+  peach: 'Peach (Prunus persica)',
+  orange: 'Orange (Citrus sinensis)',
+  cherry: 'Cherry (Prunus avium)',
+  lemon: 'Lemon (Citrus limon)',
+  banana: 'Banana (Musa)',
+  monstera: 'Monstera (Monstera deliciosa)',
+  pothos: 'Pothos (Epipremnum aureum)',
+  'snake plant': 'Snake Plant (Sansevieria)',
+  aloe: 'Aloe Vera (Aloe barbadensis)',
+  fiddle: 'Fiddle Leaf Fig (Ficus lyrata)',
+  'peace lily': 'Peace Lily (Spathiphyllum)',
+  orchid: 'Orchid (Orchidaceae)',
+  'spider plant': 'Spider Plant (Chlorophytum comosum)',
+  'rubber plant': 'Rubber Plant (Ficus elastica)',
+  jade: 'Jade Plant (Crassula ovata)',
+  'zz plant': 'ZZ Plant (Zamioculcas zamiifolia)',
+  philodendron: 'Philodendron (Philodendron)',
+  rose: 'Rose (Rosa)',
+  tulip: 'Tulip (Tulipa)',
+  daisy: 'Daisy (Bellis perennis)',
+  sunflower: 'Sunflower (Helianthus)',
+  lily: 'Lily (Lilium)',
+  lavender: 'Lavender (Lavandula)',
+  marigold: 'Marigold (Tagetes)',
+  hydrangea: 'Hydrangea (Hydrangea)',
+  geranium: 'Geranium (Pelargonium)',
+  dahlia: 'Dahlia (Dahlia)',
+  basil: 'Basil (Ocimum basilicum)',
+  mint: 'Mint (Mentha)',
+  rosemary: 'Rosemary (Rosmarinus officinalis)',
+  thyme: 'Thyme (Thymus vulgaris)',
+  cilantro: 'Cilantro (Coriandrum sativum)',
+  oregano: 'Oregano (Origanum vulgare)',
+  sage: 'Sage (Salvia officinalis)',
+  chives: 'Chives (Allium schoenoprasum)',
+  parsley: 'Parsley (Petroselinum crispum)',
+  dill: 'Dill (Anethum graveolens)',
+  oak: 'Oak (Quercus)',
+  maple: 'Maple (Acer)',
+  pine: 'Pine (Pinus)',
+  birch: 'Birch (Betula)',
+  willow: 'Willow (Salix)',
+  poplar: 'Poplar (Populus)',
+  eucalyptus: 'Eucalyptus (Eucalyptus)',
+  rhododendron: 'Rhododendron (Rhododendron)',
+  azalea: 'Azalea (Rhododendron)',
+  juniper: 'Juniper (Juniperus)',
+  ivy: 'Ivy (Hedera)',
+  fern: 'Ferns (Polypodiopsida)',
+  bamboo: 'Bamboo (Bambusoideae)',
+  cactus: 'Cactus (Cactaceae)',
+  succulent: 'Succulent Plants (various species)',
+  palm: 'Palm (Arecaceae)',
+  cypress: 'Cypress (Cupressus)',
+  dogwood: 'Dogwood (Cornus)',
+  magnolia: 'Magnolia (Magnolia)',
+  hibiscus: 'Hibiscus (Hibiscus)',
+  dandelion: 'Dandelion (Taraxacum officinale)',
+  clover: 'Clover (Trifolium)',
+  nettle: 'Nettle (Urtica)',
+  plantain: 'Plantain (Plantago)',
+  chickweed: 'Chickweed (Stellaria media)',
+  dock: 'Dock (Rumex)',
+  chamomile: 'Chamomile (Matricaria)',
+  goldenrod: 'Goldenrod (Solidago)',
+  thistle: 'Thistle (Cirsium)',
+  yarrow: 'Yarrow (Achillea millefolium)'
+};
+
+export const plantDiseasesMap = {
+  'tomato early blight': 'Tomato - Early Blight',
+  'tomato late blight': 'Tomato - Late Blight',
+  'tomato leaf mold': 'Tomato - Leaf Mold',
+  'tomato septoria': 'Tomato - Septoria Leaf Spot',
+  'tomato mosaic virus': 'Tomato - Mosaic Virus',
+  'tomato yellow curl': 'Tomato - Yellow Leaf Curl Virus',
+  'potato late blight': 'Potato - Late Blight',
+  'potato early blight': 'Potato - Early Blight',
+  'apple scab': 'Apple - Scab Disease',
+  'apple black rot': 'Apple - Black Rot',
+  'apple cedar rust': 'Apple - Cedar Apple Rust',
+  'cherry powdery': 'Cherry - Powdery Mildew',
+  'grape black rot': 'Grape - Black Rot',
+  'grape esca': 'Grape - Esca',
+  'citrus greening': 'Citrus - Huanglongbing',
+  'citrus canker': 'Citrus - Bacterial Canker',
+  'xylella': 'Olive - Xylella fastidiosa',
+  'fire blight': 'Apple/Pear - Fire Blight',
+  'sudden oak death': 'Oak - Phytophthora ramorum',
+  'ash dieback': 'Ash - Chalara Ash Dieback',
+  'dutch elm disease': 'Elm - Dutch Elm Disease'
+};
+
 export const plantPartKeywords = {
-  'leaf': ['leaf', 'foliage', 'frond', 'leaflet', 'blade'],
-  'stem': ['stem', 'stalk', 'petiole', 'cane'],
-  'root': ['root', 'rhizome', 'tuber', 'bulb', 'corm'],
-  'flower': ['flower', 'bloom', 'blossom', 'inflorescence', 'petal'],
-  'fruit': ['fruit', 'berry', 'pod', 'seed', 'cone'],
-  'shoot': ['shoot', 'sprout', 'seedling', 'bud', 'tendril'],
-  'branch': ['branch', 'twig', 'bough'],
-  'trunk': ['trunk', 'bark', 'wood'],
+  leaf: ['leaf', 'foliage', 'frond', 'leaflet', 'blade'],
+  stem: ['stem', 'stalk', 'petiole', 'cane'],
+  root: ['root', 'rhizome', 'tuber', 'bulb', 'corm'],
+  flower: ['flower', 'bloom', 'blossom', 'inflorescence', 'petal'],
+  fruit: ['fruit', 'berry', 'pod', 'seed', 'cone'],
+  shoot: ['shoot', 'sprout', 'seedling', 'bud', 'tendril'],
+  branch: ['branch', 'twig', 'bough'],
+  trunk: ['trunk', 'bark', 'wood'],
   'collar region': ['collar', 'crown', 'base']
 };
 
-// Enhanced database of EPPO regulated pest and disease symptoms
-export const eppoSymptoms = {
-  'citrus greening': ['yellow mottling', 'leaf asymmetry', 'vein yellowing', 'stunted growth', 'blotchy mottle'],
-  'citrus canker': ['water-soaked lesions', 'circular lesions', 'raised corky tissue', 'chlorotic halo', 'ruptured epidermis'],
-  'xylella': ['leaf scorch', 'marginal leaf burn', 'wilting', 'dieback', 'stunted growth'],
-  'fire blight': ['blackened leaves', 'shepherd\'s crook', 'bacterial ooze', 'cankers', 'fruit mummification'],
-  'sudden oak death': ['trunk cankers', 'bleeding trunk', 'wilting foliage', 'black leaf lesions', 'shoot dieback'],
-  'ash dieback': ['diamond-shaped lesions', 'wilting leaves', 'crown dieback', 'bark lesions', 'wood discoloration'],
-  'dutch elm disease': ['yellowing foliage', 'wilting leaves', 'vascular discoloration', 'crown dieback', 'bark beetles'],
-  'grape flavescence': ['downward leaf rolling', 'leaf discoloration', 'lack of lignification', 'flower abortion', 'berry shrivel'],
-  'bacterial wilt': ['rapid wilting', 'vascular discoloration', 'bacterial streaming', 'epinasty', 'adventitious roots'],
-  'plum pox': ['chlorotic rings', 'vein yellowing', 'leaf deformation', 'fruit rings', 'fruit deformation']
+// -------------------------
+// Image Verification
+// -------------------------
+const API_KEY = 'K89074639088957';
+export async function verifyPlantImage(file: File): Promise<boolean> {
+  try {
+    const formData = new FormData();
+    formData.append('image', file);
+    formData.append('key', API_KEY);
+
+    const response = await fetch('https://api.plantrecognition.com/v1/identify', {
+      method: 'POST',
+      body: formData
+    });
+
+    const result = await response.json();
+
+    // Assume API returns `isPlant: boolean` and optionally `species: string`
+    if (result.isPlant) {
+      return true;
+    } else {
+      return false;
+    }
+  } catch (error) {
+    console.error('Image verification error:', error);
+    return false;
+  }
+}
+
+// -------------------------
+// ThemeProvider Implementation
+// -------------------------
+export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
+  const [mode, setMode] = useState<'light' | 'dark'>('light');
+  const [language, setLanguage] = useState<'it' | 'en'>('it');
+
+  useEffect(() => {
+    const storedMode = localStorage.getItem('themeMode') as 'light' | 'dark' | null;
+    const storedLanguage = localStorage.getItem('language') as 'it' | 'en' | null;
+    
+    if (storedMode) setMode(storedMode);
+    if (storedLanguage) setLanguage(storedLanguage);
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('themeMode', mode);
+    document.documentElement.classList.toggle('dark', mode === 'dark');
+  }, [mode]);
+
+  useEffect(() => {
+    localStorage.setItem('language', language);
+  }, [language]);
+
+  const t = (key: string) => translations[language][key] || key;
+
+  return (
+    <ThemeContext.Provider value={{ mode, setMode, language, setLanguage, t }}>
+      {children}
+    </ThemeContext.Provider>
+  );
+};
+
+export const useTheme = () => {
+  const context = useContext(ThemeContext);
+  if (!context) throw new Error('useTheme must be used within ThemeProvider');
+  return context;
 };
