@@ -6,10 +6,13 @@ import {
   DiseaseDetectionResult, 
 } from '@/services/aiProviders';
 import { GlobalPlantIdentificationService, type GlobalIdentificationResult } from '@/services/globalPlantIdentificationService';
+import { StructuredPlantDiagnosisService, type StructuredDiagnosisResult } from '@/services/structuredPlantDiagnosisService';
+import { PlantInfo } from '@/context/PlantInfoContext';
 import type { CombinedAnalysisResult } from '@/types/analysis';
 
 interface AnalysisState {
   results: CombinedAnalysisResult | null;
+  structuredResults: StructuredDiagnosisResult | null;
   isAnalyzing: boolean;
   progress: {
     step: string;
@@ -21,6 +24,7 @@ interface AnalysisState {
 
 const initialState: AnalysisState = {
   results: null,
+  structuredResults: null,
   isAnalyzing: false,
   progress: { step: 'Inattivo', progress: 0, message: 'Pronto per l\'analisi' },
   error: null
@@ -28,8 +32,13 @@ const initialState: AnalysisState = {
 
 export const usePlantAnalysis = () => {
   const [results, setResults] = useState<CombinedAnalysisResult | null>(initialState.results);
+  const [structuredResults, setStructuredResults] = useState<StructuredDiagnosisResult | null>(initialState.structuredResults);
   const [isAnalyzing, setIsAnalyzing] = useState<boolean>(initialState.isAnalyzing);
   const [progress, setProgress] = useState<AnalysisState['progress']>(initialState.progress);
+
+  /**
+   * Analisi immagine tradizionale (per compatibilità)
+   */
 
   const analyzeImage = async (imageFile: File): Promise<void> => {
     if (!imageFile) return;
@@ -157,13 +166,60 @@ export const usePlantAnalysis = () => {
     }
   };
 
+  /**
+   * Analisi strutturata che combina dati utente e analisi AI
+   */
+  const analyzeWithUserData = async (imageFile: File, plantInfo: PlantInfo): Promise<void> => {
+    if (!imageFile) return;
+    
+    setIsAnalyzing(true);
+    setProgress({ step: 'Preparazione', progress: 0, message: 'Preparazione analisi strutturata...' });
+    
+    try {
+      // Converti immagine in base64
+      const imageBase64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(imageFile);
+      });
+
+      // Esegui diagnosi strutturata
+      const structuredResult = await StructuredPlantDiagnosisService.performStructuredDiagnosis(
+        plantInfo,
+        imageBase64,
+        (step: string, progress: number, message: string) => {
+          setProgress({ step, progress, message });
+        }
+      );
+
+      setStructuredResults(structuredResult);
+
+      toast.success(`Diagnosi strutturata completata!`, {
+        description: `${structuredResult.plantIdentification.name} - Confidenza: ${structuredResult.analysisMetadata.confidenceScore}%`
+      });
+
+    } catch (error) {
+      console.error('❌ Errore analisi strutturata:', error);
+      toast.error('Errore durante l\'analisi strutturata', {
+        description: error instanceof Error ? error.message : 'Errore sconosciuto'
+      });
+      throw error;
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
   const clearResults = () => {
     setResults(null);
+    setStructuredResults(null);
   };
 
   return {
     results,
+    structuredResults,
     analyzeImage,
+    analyzeWithUserData,
     clearResults,
     isAnalyzing,
     progress,
