@@ -1,11 +1,23 @@
 
 import { Product } from '../types';
+import { useNavigate } from 'react-router-dom';
 
 interface ProductRecommendationsProps {
   products: Product[];
 }
 
 export const ProductRecommendations = ({ products }: ProductRecommendationsProps) => {
+  const navigate = useNavigate();
+  
+  const handleProductClick = (product: Product) => {
+    // Naviga al tab shop invece di aprire pagine esterne
+    navigate('/');
+    setTimeout(() => {
+      const event = new CustomEvent('switchTab', { detail: 'shop' });
+      window.dispatchEvent(event);
+    }, 100);
+  };
+
   return (
     <div className="mt-3 space-y-2">
       <p className="text-sm font-medium opacity-80">Prodotti consigliati:</p>
@@ -13,7 +25,8 @@ export const ProductRecommendations = ({ products }: ProductRecommendationsProps
         {products.map((product: Product, index: number) => (
           <div 
             key={index}
-            className="bg-white/20 backdrop-blur-sm rounded-lg p-3 border border-white/30"
+            className="bg-white/20 backdrop-blur-sm rounded-lg p-3 border border-white/30 cursor-pointer hover:bg-white/30 transition-colors"
+            onClick={() => handleProductClick(product)}
           >
             <div className="flex items-start gap-3">
               {product.image && (

@@ -156,18 +156,39 @@ export const usePlantDiagnosis = () => {
 
       console.log('📝 Salvando diagnosi:', diagnosisData);
 
-      const { data, error } = await supabase
-        .from('diagnoses')
-        .insert(diagnosisData)
-        .select()
-        .single();
+      // Prova a salvare tramite edge function se disponibile
+      let success = false;
+      try {
+        const { data: functionData, error: functionError } = await supabase.functions.invoke('save-diagnosis', {
+          body: diagnosisData
+        });
+        
+        if (functionError) {
+          console.warn('Edge function failed, trying direct insert:', functionError);
+        } else {
+          console.log('✅ Diagnosis saved via edge function:', functionData);
+          success = true;
+        }
+      } catch (funcError) {
+        console.warn('Edge function not available, using direct insert:', funcError);
+      }
+      
+      // Fallback to direct database insert if edge function fails
+      if (!success) {
+        const { data, error } = await supabase
+          .from('diagnoses')
+          .insert(diagnosisData)
+          .select()
+          .single();
 
-      if (error) {
-        console.error('❌ Errore nel salvataggio:', error);
-        throw error;
+        if (error) {
+          console.error('❌ Errore nel salvataggio:', error);
+          throw error;
+        }
+        
+        console.log('✅ Diagnosi salvata direttamente con ID:', data.id);
       }
 
-      console.log('✅ Diagnosi salvata con ID:', data.id);
       toast.success('✅ Diagnosi salvata!', {
         description: `${plant?.plantName || 'Pianta'} salvata nella tua cronologia`,
         duration: 3000

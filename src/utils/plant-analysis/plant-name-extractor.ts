@@ -28,6 +28,70 @@ interface VisualFeatures {
 }
 
 /**
+ * Estrae il nome della pianta da un'etichetta di classificazione
+ */
+export const extractPlantName = (label: string, plantDatabase?: any): string => {
+  if (!label || typeof label !== 'string') return 'Pianta';
+  
+  const cleanLabel = label.toLowerCase().trim();
+  
+  // Mapping diretto per etichette comuni
+  const labelMap: Record<string, string> = {
+    'houseplant': 'Pianta da interno',
+    'succulent': 'Pianta grassa',
+    'flowering plant': 'Pianta fiorita',
+    'herb': 'Erba aromatica',
+    'vegetable': 'Ortaggio',
+    'tree': 'Albero',
+    'shrub': 'Arbusto',
+    'fern': 'Felce',
+    'cactus': 'Cactus',
+    'bamboo': 'Bambù'
+  };
+  
+  if (labelMap[cleanLabel]) {
+    return labelMap[cleanLabel];
+  }
+  
+  // Cerca corrispondenze parziali
+  for (const [key, value] of Object.entries(labelMap)) {
+    if (cleanLabel.includes(key)) {
+      return value;
+    }
+  }
+  
+  // Capitalizza la prima lettera
+  return label.charAt(0).toUpperCase() + label.slice(1);
+};
+
+/**
+ * Determina il tipo di pianta dal nome
+ */
+export const detectPlantType = (plantName: string | null): string | null => {
+  if (!plantName) return null;
+  
+  const name = plantName.toLowerCase();
+  
+  if (['monstera', 'pothos', 'philodendron', 'sansevieria', 'spathiphyllum'].some(p => name.includes(p))) {
+    return 'houseplant';
+  }
+  if (['basilico', 'rosmarino', 'prezzemolo', 'menta'].some(p => name.includes(p))) {
+    return 'herb';
+  }
+  if (['pomodoro', 'lattuga', 'spinaci', 'carota'].some(p => name.includes(p))) {
+    return 'vegetable';
+  }
+  if (['rosa', 'tulipano', 'girasole', 'orchidea'].some(p => name.includes(p))) {
+    return 'flower';
+  }
+  if (['aloe', 'echeveria', 'cactus', 'jade'].some(p => name.includes(p))) {
+    return 'succulent';
+  }
+  
+  return 'unknown';
+};
+
+/**
  * Fallback intelligente avanzato
  * Genera suggerimenti di piante e malattie basati sulle caratteristiche visive
  */

@@ -5,6 +5,7 @@ import { Check, AlertTriangle, Book, ShoppingBag } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { diseaseDetails, diseaseSymptoms } from '@/utils/aiDiagnosisUtils';
 import { DiagnosedDisease, AnalysisDetails } from './types';
+import { useNavigate } from 'react-router-dom';
 
 interface DiagnosisTabsProps {
   disease: DiagnosedDisease;
@@ -44,8 +45,19 @@ const DiagnosisTabs = ({
   onNavigateToLibrary,
   onNavigateToShop
 }: DiagnosisTabsProps) => {
+  const navigate = useNavigate();
+  
   // Safely get products array with multiple fallbacks
   const products = disease?.products || [];
+  
+  // Handler to redirect to Shop tab instead of external pages
+  const handleShopRedirect = (productId?: string) => {
+    navigate('/');
+    setTimeout(() => {
+      const event = new CustomEvent('switchTab', { detail: 'shop' });
+      window.dispatchEvent(event);
+    }, 100);
+  };
   
   // Safe helper function to check if a product is included
   const hasProduct = (productId: string): boolean => {
@@ -221,7 +233,7 @@ const DiagnosisTabs = ({
           <Button 
             size="sm"
             className="bg-drplant-blue hover:bg-drplant-blue-dark"
-            onClick={() => onNavigateToShop()}
+            onClick={() => handleShopRedirect()}
           >
             <ShoppingBag className="mr-2 h-4 w-4" /> Recommended Products
           </Button>
@@ -247,7 +259,7 @@ const DiagnosisTabs = ({
                 <Button 
                   size="sm" 
                   className="bg-drplant-green hover:bg-drplant-green-dark"
-                  onClick={() => onNavigateToShop('1')}
+                  onClick={() => handleShopRedirect('1')}
                 >
                   <ShoppingBag className="mr-1 h-3 w-3" /> View in Shop
                 </Button>
@@ -270,7 +282,7 @@ const DiagnosisTabs = ({
                 <Button 
                   size="sm" 
                   className="bg-drplant-green hover:bg-drplant-green-dark"
-                  onClick={() => onNavigateToShop('2')}
+                  onClick={() => handleShopRedirect('2')}
                 >
                   <ShoppingBag className="mr-1 h-3 w-3" /> View in Shop
                 </Button>
@@ -293,7 +305,7 @@ const DiagnosisTabs = ({
                 <Button 
                   size="sm" 
                   className="bg-drplant-green hover:bg-drplant-green-dark"
-                  onClick={() => onNavigateToShop('3')}
+                  onClick={() => handleShopRedirect('3')}
                 >
                   <ShoppingBag className="mr-1 h-3 w-3" /> View in Shop
                 </Button>
@@ -316,7 +328,7 @@ const DiagnosisTabs = ({
                 <Button 
                   size="sm" 
                   className="bg-drplant-green hover:bg-drplant-green-dark"
-                  onClick={() => onNavigateToShop('4')}
+                  onClick={() => handleShopRedirect('4')}
                 >
                   <ShoppingBag className="mr-1 h-3 w-3" /> View in Shop
                 </Button>
@@ -339,7 +351,7 @@ const DiagnosisTabs = ({
                 <Button 
                   size="sm" 
                   className="bg-drplant-green hover:bg-drplant-green-dark"
-                  onClick={() => onNavigateToShop('5')}
+                  onClick={() => handleShopRedirect('5')}
                 >
                   <ShoppingBag className="mr-1 h-3 w-3" /> View in Shop
                 </Button>
@@ -359,7 +371,7 @@ const DiagnosisTabs = ({
           <Button 
             size="sm"
             className="bg-drplant-blue hover:bg-drplant-blue-dark"
-            onClick={() => onNavigateToShop()}
+            onClick={() => handleShopRedirect()}
           >
             Browse All Products
           </Button>
