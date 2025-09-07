@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { RealPlantAnalysisService, PlantAnalysisResult } from '@/services/realPlantAnalysisService';
 import { useAuth } from '@/context/AuthContext';
+import { getSymptomsAsString } from '@/utils/plantInfoUtils';
 import { usePlantInfo } from '@/context/PlantInfoContext';
 import { PaymentRequiredModal } from '../subscription/PaymentRequiredModal';
 import { PlantDataSyncService } from '@/services/chat/plantDataSyncService';
@@ -83,7 +84,7 @@ const PlantAnalysisResultComponent: React.FC<PlantAnalysisResultComponentProps> 
         const diagnosisData = {
           plantType: analysisResult.plantName || 'Pianta non identificata',
           plantVariety: analysisResult.scientificName,
-          symptoms: plantInfo.symptoms || 'Analisi AI completata',
+          symptoms: getSymptomsAsString(plantInfo.symptoms) || 'Analisi AI completata',
           imageUrl: imageUrl,
           analysisResult: analysisResult,
           confidence: analysisResult.confidence,
@@ -92,7 +93,7 @@ const PlantAnalysisResultComponent: React.FC<PlantAnalysisResultComponentProps> 
             environment: plantInfo.isIndoor ? 'Interno' : 'Esterno',
             watering: plantInfo.wateringFrequency,
             lightExposure: plantInfo.lightExposure,
-            symptoms: plantInfo.symptoms
+            symptoms: Array.isArray(plantInfo.symptoms) ? plantInfo.symptoms.join(', ') : plantInfo.symptoms
           }
         };
 

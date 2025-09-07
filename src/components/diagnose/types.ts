@@ -2,7 +2,7 @@ export interface PlantInfo {
   isIndoor: boolean;
   wateringFrequency: string;
   lightExposure: string;
-  symptoms: string;
+  symptoms: string[];
   useAI: boolean;
   sendToExpert: boolean;
   name: string;

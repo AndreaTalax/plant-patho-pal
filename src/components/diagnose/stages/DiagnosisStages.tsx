@@ -1,4 +1,5 @@
 import React from 'react';
+import { getSymptomsAsString, convertPlantInfoToString } from '@/utils/plantInfoUtils';
 import { usePlantInfo } from '@/context/PlantInfoContext';
 import { usePremiumStatus } from '@/services/premiumService';
 import PlantInfoForm from '../PlantInfoForm';
@@ -91,7 +92,7 @@ const DiagnosisStages: React.FC<DiagnosisStagesProps> = ({
           const diagnosisData = {
             plantType: plantInfo.name || 'Pianta non identificata',
             plantVariety: plantInfo.name,
-            symptoms: plantInfo.symptoms || 'Nessun sintomo specificato',
+            symptoms: getSymptomsAsString(plantInfo.symptoms) || 'Nessun sintomo specificato',
             imageUrl: uploadedImage || '',
             analysisResult: diagnosedDisease,
             confidence: analysisDetails?.confidence || 0,
@@ -100,7 +101,7 @@ const DiagnosisStages: React.FC<DiagnosisStagesProps> = ({
               environment: plantInfo.isIndoor ? 'Interno' : 'Esterno',
               watering: plantInfo.wateringFrequency,
               lightExposure: plantInfo.lightExposure,
-              symptoms: plantInfo.symptoms
+              symptoms: Array.isArray(plantInfo.symptoms) ? plantInfo.symptoms.join(', ') : plantInfo.symptoms
             }
           };
 
@@ -164,13 +165,13 @@ const DiagnosisStages: React.FC<DiagnosisStagesProps> = ({
     return (
       <>
         <PlantInfoSummary 
-          plantInfo={plantInfo}
+          plantInfo={convertPlantInfoToString(plantInfo)}
           onEdit={onPlantInfoEdit}
         />
 
         <ScanLayout
           isAnalyzing={false}
-          plantInfo={plantInfo}
+          plantInfo={convertPlantInfoToString(plantInfo)}
           uploadedImage={null}
         />
       </>
@@ -181,7 +182,7 @@ const DiagnosisStages: React.FC<DiagnosisStagesProps> = ({
     return (
       <>
         <PlantInfoSummary 
-          plantInfo={plantInfo}
+          plantInfo={convertPlantInfoToString(plantInfo)}
           onEdit={onPlantInfoEdit}
         />
 
@@ -212,7 +213,7 @@ const DiagnosisStages: React.FC<DiagnosisStagesProps> = ({
       return (
         <div className="space-y-4">
           <PlantInfoSummary 
-            plantInfo={plantInfo}
+            plantInfo={convertPlantInfoToString(plantInfo)}
             onEdit={onPlantInfoEdit}
           />
           
@@ -292,13 +293,13 @@ const DiagnosisStages: React.FC<DiagnosisStagesProps> = ({
     return (
       <>
         <PlantInfoSummary 
-          plantInfo={plantInfo}
+          plantInfo={convertPlantInfoToString(plantInfo)}
           onEdit={onPlantInfoEdit}
         />
         
         <DiagnosisResult
           imageSrc={uploadedImage || ''}
-          plantInfo={plantInfo}
+          plantInfo={convertPlantInfoToString(plantInfo)}
           analysisData={diagnosedDisease}
           isAnalyzing={isAnalyzing}
           onStartNewAnalysis={onStartNewAnalysis}

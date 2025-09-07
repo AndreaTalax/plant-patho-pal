@@ -91,7 +91,7 @@ const EnhancedDiagnoseTab = () => {
       isIndoor: true,
       wateringFrequency: '',
       lightExposure: '',
-      symptoms: '',
+      symptoms: [],
       useAI: false,
       sendToExpert: false,
       name: '',

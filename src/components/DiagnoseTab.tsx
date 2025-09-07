@@ -27,6 +27,7 @@ import { useDiagnosisLimits } from '@/hooks/useDiagnosisLimits';
 import { AIApiSetup } from './diagnose/AIApiSetup';
 import { ApiKeyManager } from './diagnose/ApiKeyManager';
 import { supabase } from '@/integrations/supabase/client';
+import { convertPlantInfoToString } from '@/utils/plantInfoUtils';
 
 
 const DiagnoseTab = () => {
@@ -360,7 +361,7 @@ const DiagnoseTab = () => {
       isIndoor: true,
       wateringFrequency: '',
       lightExposure: '',
-      symptoms: '',
+      symptoms: [],
       useAI: false,
       sendToExpert: false,
       name: '',
@@ -428,7 +429,7 @@ const DiagnoseTab = () => {
         return (
           <div className="space-y-6 animate-slide-in-right">
             <PlantInfoSummary 
-              plantInfo={plantInfo} 
+              plantInfo={convertPlantInfoToString(plantInfo)} 
               onEdit={() => setCurrentStage('info')} 
             />
             
@@ -493,7 +494,7 @@ const DiagnoseTab = () => {
         return (
           <div className="space-y-6 animate-fade-in">
             <PlantInfoSummary 
-              plantInfo={plantInfo} 
+              plantInfo={convertPlantInfoToString(plantInfo)}
               onEdit={() => setCurrentStage('info')} 
             />
             
@@ -539,7 +540,7 @@ const DiagnoseTab = () => {
           <div className="animate-fade-in">
             <ScanLayout
               isAnalyzing={isAnalyzing}
-              plantInfo={plantInfo}
+              plantInfo={convertPlantInfoToString(plantInfo)}
               uploadedImage={uploadedImage}
             />
           </div>
@@ -551,7 +552,7 @@ const DiagnoseTab = () => {
             <div className="animate-slide-in-right">
               <DiagnosisResult
                 imageSrc={uploadedImage}
-                plantInfo={plantInfo}
+                plantInfo={convertPlantInfoToString(plantInfo)}
                 analysisData={diagnosedDisease || undefined}
                 isAnalyzing={false}
                 onStartNewAnalysis={handleNewAnalysis}

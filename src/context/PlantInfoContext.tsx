@@ -5,7 +5,7 @@ export interface PlantInfo {
   isIndoor: boolean;
   wateringFrequency: string;
   lightExposure: string;
-  symptoms: string;
+  symptoms: string[];
   useAI: boolean;
   sendToExpert: boolean;
   name: string; // Made required
@@ -24,7 +24,7 @@ const defaultPlantInfo: PlantInfo = {
   isIndoor: true,
   wateringFrequency: '',
   lightExposure: '',
-  symptoms: '',
+  symptoms: [],
   useAI: false,
   sendToExpert: false,
   name: '', // Default to empty string

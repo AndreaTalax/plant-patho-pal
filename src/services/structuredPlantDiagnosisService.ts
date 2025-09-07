@@ -150,7 +150,7 @@ export class StructuredPlantDiagnosisService {
       isIndoor: plantInfo.isIndoor,
       wateringFrequency: plantInfo.wateringFrequency,
       lightExposure: plantInfo.lightExposure,
-      symptoms: plantInfo.symptoms,
+      symptoms: plantInfo.symptoms.join(', '), // Convert array to string
     };
   }
 

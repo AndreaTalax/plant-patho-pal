@@ -31,7 +31,7 @@ export const notifyExpert = async (file?: File, imageUrl?: string, plantInfo?: P
     const consultationData = {
       user_id: user.id,
       plant_info: plantInfo ? JSON.parse(JSON.stringify(plantInfo)) : null,
-      symptoms: plantInfo?.symptoms || null,
+      symptoms: Array.isArray(plantInfo?.symptoms) ? plantInfo.symptoms.join(', ') : (plantInfo?.symptoms || null),
       image_url: finalImageUrl,
       status: 'pending'
     };
