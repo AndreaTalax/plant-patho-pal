@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Upload, Camera, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/context/AuthContext';
-import { PlantInfoForm } from '@/components/diagnose/PlantInfoForm';
+import { usePlantInfo } from '@/context/PlantInfoContext';
 import PlantInfoForm from './diagnose/PlantInfoForm';
 import PlantInfoSummary from './diagnose/PlantInfoSummary';
 import DiagnosisOptions from './diagnose/DiagnosisOptions';
@@ -32,7 +32,6 @@ import { supabase } from '@/integrations/supabase/client';
 const DiagnoseTab = () => {
   const { userProfile, hasActiveSubscription } = useAuth();
   const { plantInfo, setPlantInfo } = usePlantInfo();
-  const { results, structuredResults, analyzeImage, analyzeWithUserData, clearResults, isAnalyzing, progress } = usePlantAnalysis();
   const { hasAIAccess } = usePremiumStatus();
   
   // Hook per gestione limiti diagnosi gratuite

@@ -335,11 +335,11 @@ const EnhancedDiagnoseTab = () => {
             />
           ) : results ? (
             <DiagnosisResult 
-              diagnosisData={{
-                plantType: results.consensus.mostLikelyPlant?.plantName || 'Sconosciuta',
-                diagnosisResult: results
-              }}
+              diagnosedDisease={results.consensus.mostLikelyPlant}
+              plantInfo={plantInfo}
+              imageSrc={uploadedImage || ''}
               onStartNewAnalysis={handleStartNew}
+              isAnalyzing={false}
             />
           ) : (
             <Card>
