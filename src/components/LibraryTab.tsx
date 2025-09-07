@@ -60,13 +60,107 @@ const getArticleFallbackImage = (article: Article) => {
  *   - Filters articles by category and search term.
  *   - Displays a loading state while articles are being fetched.
  */
+// Symptom explanations database
+const symptomExplanations = {
+  'foglie-gialle': {
+    title: 'Foglie Gialle - Ingiallimento Fogliare',
+    content: 'L\'ingiallimento delle foglie può indicare: sovra-irrigazione, carenza di azoto, stress idrico, invecchiamento naturale, problemi alle radici o eccesso di luce. Controlla il terreno e regola l\'irrigazione.',
+    category: 'Sintomi Foglie',
+    image: 'https://images.unsplash.com/photo-1583478615043-16ec8e3734b2?q=80&w=400&h=400&auto=format&fit=crop'
+  },
+  'foglie-marroni': {
+    title: 'Foglie Marroni - Imbrunimento',
+    content: 'Le foglie marroni possono essere causate da: scottature solari, carenza d\'acqua, aria troppo secca, danni da freddo, accumulo di sali nel terreno. Sposta la pianta in zona meno esposta.',
+    category: 'Sintomi Foglie',
+    image: 'https://images.unsplash.com/photo-1578662767947-948d39efdf98?q=80&w=400&h=400&auto=format&fit=crop'
+  },
+  'foglie-secche': {
+    title: 'Foglie Secche e Croccanti',
+    content: 'Foglie secche indicano stress idrico grave, aria troppo secca, esposizione eccessiva al sole o vento, danni alle radici. Aumenta umidità e controlla irrigazione.',
+    category: 'Sintomi Foglie',
+    image: 'https://images.unsplash.com/photo-1582719188393-bb71ca45dbb9?q=80&w=400&h=400&auto=format&fit=crop'
+  },
+  'macchie-marroni': {
+    title: 'Macchie Marroni sulle Foglie',
+    content: 'Macchie marroni possono indicare malattie fungine come antracnosi, batteriosi o alternaria. Rimuovi foglie colpite, migliora aerazione e tratta con fungicida se necessario.',
+    category: 'Malattie Fungine',
+    image: 'https://images.unsplash.com/photo-1587829369692-5add15cf7d1e?q=80&w=400&h=400&auto=format&fit=crop'
+  },
+  'muffa-bianca': {
+    title: 'Muffa Bianca - Oidio',
+    content: 'L\'oidio appare come polvere bianca sulle foglie. Causato da alta umidità e scarsa ventilazione. Tratta con fungicidi specifici, migliora aerazione e riduci umidità.',
+    category: 'Malattie Fungine',
+    image: 'https://images.unsplash.com/photo-1504630083234-14187a9df0f5?q=80&w=400&h=400&auto=format&fit=crop'
+  },
+  'insetti-visibili': {
+    title: 'Insetti e Parassiti Visibili',
+    content: 'Presenza di insetti come afidi, cocciniglie, tripidi. Identifica il parassita specifico e tratta con insetticidi appropriati. I rimedi naturali includono sapone molle e olio di neem.',
+    category: 'Parassiti',
+    image: 'https://images.unsplash.com/photo-1588196749597-9ff075ee6b5b?q=80&w=400&h=400&auto=format&fit=crop'
+  },
+  'ragnatele': {
+    title: 'Ragnatele - Ragnetto Rosso',
+    content: 'Sottili ragnatele indicano ragnetto rosso, acaro che prospera in ambiente secco. Aumenta umidità, spruzza acqua sulle foglie e usa acaricidi specifici se necessario.',
+    category: 'Parassiti',
+    image: 'https://images.unsplash.com/photo-1516734212186-a967f81ad0d7?q=80&w=400&h=400&auto=format&fit=crop'
+  },
+  'stelo-molle': {
+    title: 'Stelo Molle e Marcio',
+    content: 'Stelo molle indica marciume del colletto causato da eccesso d\'acqua, funghi patogeni o terreno mal drenato. Riduci irrigazione, migliora drenaggio e rimuovi parti marce.',
+    category: 'Problemi Strutturali',
+    image: 'https://images.unsplash.com/photo-1578320339911-74f22e3e6e98?q=80&w=400&h=400&auto=format&fit=crop'
+  },
+  'crescita-lenta': {
+    title: 'Crescita Lenta e Stentata',
+    content: 'Crescita lenta può essere dovuta a carenze nutrizionali, terreno povero, poca luce, radici legate o temperatura inadeguata. Valuta concimazione e condizioni ambientali.',
+    category: 'Problemi di Crescita',
+    image: 'https://images.unsplash.com/photo-1625246333195-78d73c0c15b1?q=80&w=400&h=400&auto=format&fit=crop'
+  },
+  'marciume-radici': {
+    title: 'Marciume delle Radici',
+    content: 'Radici nere, molli e maleodoranti indicano marciume radicale da eccesso d\'acqua. Rinvasa immediatamente, rimuovi radici marce e migliora drenaggio del terreno.',
+    category: 'Problemi Radicali',
+    image: 'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?q=80&w=400&h=400&auto=format&fit=crop'
+  }
+};
+
 const LibraryTab = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeArticle, setActiveArticle] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('all');
   const [articles, setArticles] = useState<Article[]>([]);
   const [selectedArticle, setSelectedArticle] = useState<Article | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [filteredArticles, setFilteredArticles] = useState<Article[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [isLoading, setIsLoading] = useState(true);
+  const [symptomHelpMode, setSymptomHelpMode] = useState<string | null>(null);
+
+  // Check if user came from symptom help request
+  useEffect(() => {
+    const symptomRequest = localStorage.getItem('symptomHelpRequest');
+    if (symptomRequest) {
+      setSymptomHelpMode(symptomRequest);
+      localStorage.removeItem('symptomHelpRequest');
+      
+      // Show the symptom explanation if available
+      const explanation = symptomExplanations[symptomRequest as keyof typeof symptomExplanations];
+      if (explanation) {
+        setSelectedArticle({
+          id: `symptom-${symptomRequest}`,
+          title: explanation.title,
+          content: explanation.content,
+          text: explanation.content,
+          excerpt: explanation.content.substring(0, 150) + '...',
+          category: explanation.category,
+          tags: ['sintomi', 'diagnosi'],
+          image_url: explanation.image,
+          created_at: new Date().toISOString()
+        });
+      }
+    }
+  }, []);
+
+  
   
   // Fetch articles
   useEffect(() => {
@@ -88,7 +182,7 @@ const LibraryTab = () => {
    */
   const fetchArticles = async () => {
     try {
-      setLoading(true);
+      setIsLoading(true);
       
       // Use URL parameters for better compatibility with the backend
       const supabaseUrl = 'https://otdmqmpxukifoxjlgzmq.supabase.co';
@@ -115,7 +209,7 @@ const LibraryTab = () => {
       console.error('Error fetching articles:', error);
       toast.error('Failed to load articles');
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
@@ -204,7 +298,7 @@ const LibraryTab = () => {
           </Tabs>
           
           {/* Articles list */}
-          {loading ? (
+          {isLoading ? (
             <div className="text-center py-8">Loading articles...</div>
           ) : (
             <>
@@ -313,6 +407,30 @@ const LibraryTab = () => {
                   </div>
                 </div>
               </div>
+              
+              {/* Symptom help notification */}
+              {symptomHelpMode && (
+                <div className="mx-4 mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-blue-800 font-medium">🔍 Informazioni Sintomo</p>
+                      <p className="text-blue-600 text-sm">Stai visualizzando la spiegazione di un sintomo dalla diagnosi</p>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setSymptomHelpMode(null);
+                        setSelectedArticle(null);
+                        window.dispatchEvent(new CustomEvent('switchTab', { detail: 'diagnose' }));
+                      }}
+                      className="text-blue-600 hover:text-blue-800"
+                    >
+                      ← Torna alla Diagnosi
+                    </Button>
+                  </div>
+                </div>
+              )}
               
               <div className="p-4 space-y-4">
                 <div>

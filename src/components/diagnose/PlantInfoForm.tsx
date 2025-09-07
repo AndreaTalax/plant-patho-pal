@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
+import { HelpCircle } from 'lucide-react';
 import { PlantInfo } from './types';
 import { useTheme } from '@/context/ThemeContext';
 
@@ -127,6 +128,13 @@ const PlantInfoForm = ({ onComplete, initialData }: PlantInfoFormProps) => {
     }
   };
 
+  const handleSwitchToLibrary = (symptomKey: string) => {
+    // Salva il sintomo per cui l'utente vuole aiuto
+    localStorage.setItem('symptomHelpRequest', symptomKey);
+    // Naviga al tab libreria
+    window.dispatchEvent(new CustomEvent('switchTab', { detail: 'library' }));
+  };
+
   const isFormValid = () => {
     // Il nome della pianta non è più obbligatorio
     return formData.wateringFrequency && formData.lightExposure;
@@ -238,23 +246,34 @@ const PlantInfoForm = ({ onComplete, initialData }: PlantInfoFormProps) => {
           <div className="space-y-3">
             <Label>{t('symptomsSelection')}</Label>
             <div className="bg-gray-50 rounded-lg p-4 max-h-64 overflow-y-auto">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3">
                 {plantSymptoms.map((symptom) => (
-                  <div key={symptom.value} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={symptom.value}
-                      checked={formData.symptoms.includes(symptom.value)}
-                      onCheckedChange={(checked) => {
-                        if (checked) {
-                          handleChange('symptoms', [...formData.symptoms, symptom.value]);
-                        } else {
-                          handleChange('symptoms', formData.symptoms.filter(s => s !== symptom.value));
-                        }
-                      }}
-                    />
-                    <Label htmlFor={symptom.value} className="text-sm font-normal cursor-pointer">
-                      {symptom.emoji} {symptom.label}
-                    </Label>
+                  <div key={symptom.value} className="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-200 hover:border-gray-300 transition-colors">
+                    <div className="flex items-center space-x-3 flex-1">
+                      <Checkbox
+                        id={symptom.value}
+                        checked={formData.symptoms.includes(symptom.value)}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            handleChange('symptoms', [...formData.symptoms, symptom.value]);
+                          } else {
+                            handleChange('symptoms', formData.symptoms.filter(s => s !== symptom.value));
+                          }
+                        }}
+                      />
+                      <Label htmlFor={symptom.value} className="text-sm font-normal cursor-pointer flex-1">
+                        {symptom.emoji} {symptom.label}
+                      </Label>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleSwitchToLibrary(symptom.value)}
+                      className="flex items-center gap-1 px-2 py-1 text-xs text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded transition-colors"
+                      title={`Scopri di più su: ${symptom.label}`}
+                    >
+                      <HelpCircle className="h-3 w-3" />
+                      <span>Info</span>
+                    </button>
                   </div>
                 ))}
               </div>
