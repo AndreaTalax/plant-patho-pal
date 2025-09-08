@@ -260,7 +260,7 @@ const ChatTab = () => {
             <div className="text-center">
               <Button
                 onClick={() => {
-                  const event = new CustomEvent('switchTab', { detail: { tab: 'diagnose' } });
+            const event = new CustomEvent('switchTab', { detail: 'diagnose' });
                   window.dispatchEvent(event);
                 }}
                 variant="outline"
@@ -298,7 +298,7 @@ const ChatTab = () => {
         
         <Button
           onClick={() => {
-            const event = new CustomEvent('switchTab', { detail: { tab: 'diagnose' } });
+            const event = new CustomEvent('switchTab', { detail: 'diagnose' });
             window.dispatchEvent(event);
           }}
           className="bg-drplant-green hover:bg-drplant-green-dark"

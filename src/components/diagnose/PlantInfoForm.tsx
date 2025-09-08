@@ -244,7 +244,7 @@ const PlantInfoForm = ({ onComplete, initialData }: PlantInfoFormProps) => {
 
           {/* Sintomi */}
           <div className="space-y-3">
-            <Label>{t('symptomsSelection')}</Label>
+            <Label>Selezione Sintomi</Label>
             <div className="bg-gray-50 rounded-lg p-4 max-h-64 overflow-y-auto">
               <div className="grid grid-cols-1 gap-3">
                 {plantSymptoms.map((symptom) => (
