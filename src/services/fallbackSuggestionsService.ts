@@ -1,12 +1,8 @@
-
 /**
  * Servizio per fornire suggerimenti quando l'identificazione automatica fallisce
  */
 export class FallbackSuggestionsService {
   
-  /**
-   * Piante comuni organizzate per categorie
-   */
   private static commonHouseplants = [
     { name: 'Basilico', scientific: 'Ocimum basilicum', confidence: 50, category: 'herb' },
     { name: 'Menta', scientific: 'Mentha spicata', confidence: 48, category: 'herb' },
@@ -20,9 +16,6 @@ export class FallbackSuggestionsService {
     { name: 'Echeveria', scientific: 'Echeveria elegans', confidence: 42, category: 'succulent' }
   ];
 
-  /**
-   * Problemi comuni delle piante d'appartamento
-   */
   private static commonPlantIssues = [
     {
       name: 'Ingiallimento foglie',
@@ -50,9 +43,6 @@ export class FallbackSuggestionsService {
     }
   ];
 
-  /**
-   * Prodotti generici consigliati per la cura delle piante
-   */
   private static recommendedProducts = [
     'Fertilizzante liquido universale',
     'Spray fogliare nutriente',
@@ -62,18 +52,77 @@ export class FallbackSuggestionsService {
   ];
 
   /**
-   * Genera suggerimenti di fallback quando l'identificazione automatica fallisce
+   * 🔹 Cerca su iNaturalist
    */
-  static generateFallbackSuggestions() {
+  private static async getFromINaturalist(query: string) {
+    const response = await fetch(
+      `https://api.inaturalist.org/v1/taxa?q=${encodeURIComponent(query)}&rank=species&per_page=5`
+    );
+    const data = await response.json();
+
+    if (!data.results?.length) return [];
+
+    return data.results.map((taxon: any) => ({
+      plantName: taxon.preferred_common_name || taxon.name,
+      scientificName: taxon.name,
+      confidence: taxon.observations_count || 50,
+      habitat: taxon.iconic_taxon_name || 'sconosciuto',
+      careInstructions: [`Verifica se si tratta di ${taxon.preferred_common_name || taxon.name}`],
+      provider: 'iNaturalist'
+    }));
+  }
+
+  /**
+   * 🔹 Cerca su GBIF
+   */
+  private static async getFromGbif(query: string) {
+    const response = await fetch(
+      `https://api.gbif.org/v1/species/search?q=${encodeURIComponent(query)}&limit=5`
+    );
+    const data = await response.json();
+
+    if (!data.results?.length) return [];
+
+    return data.results.map((species: any) => ({
+      plantName: species.vernacularName || species.scientificName,
+      scientificName: species.scientificName,
+      confidence: species.confidence || 40,
+      habitat: species.rank,
+      careInstructions: [`Specie trovata tramite GBIF: ${species.scientificName}`],
+      provider: 'GBIF'
+    }));
+  }
+
+  /**
+   * 🔹 Fallback statico se tutto il resto fallisce
+   */
+  private static getStaticFallback() {
+    return this.commonHouseplants.map(plant => ({
+      plantName: plant.name,
+      scientificName: plant.scientific,
+      confidence: plant.confidence,
+      habitat: 'Pianta da interno comune - identificazione suggerita',
+      careInstructions: [`Possibile ${plant.name} - verifica con esperto per conferma`],
+      provider: 'fallback'
+    }));
+  }
+
+  /**
+   * 🔹 Entry point: cerca prima iNaturalist, poi GBIF, infine statico
+   */
+  static async generateFallbackSuggestions(query: string) {
+    let plantSuggestions = await this.getFromINaturalist(query);
+
+    if (plantSuggestions.length === 0) {
+      plantSuggestions = await this.getFromGbif(query);
+    }
+
+    if (plantSuggestions.length === 0) {
+      plantSuggestions = this.getStaticFallback();
+    }
+
     return {
-      plantIdentification: this.commonHouseplants.map(plant => ({
-        plantName: plant.name,
-        scientificName: plant.scientific,
-        confidence: plant.confidence,
-        habitat: 'Pianta da interno comune - identificazione suggerita',
-        careInstructions: [`Possibile ${plant.name} - verifica con esperto per conferma`],
-        provider: 'fallback'
-      })),
+      plantIdentification: plantSuggestions,
       diseaseDetection: this.commonPlantIssues.map(issue => ({
         disease: issue.name,
         confidence: issue.confidence,
@@ -81,53 +130,11 @@ export class FallbackSuggestionsService {
         treatments: issue.treatments,
         severity: 'medium',
         provider: 'fallback',
-        additionalInfo: {
-          cause: issue.cause
-        }
+        additionalInfo: { cause: issue.cause }
       })),
       products: this.recommendedProducts,
       isFallback: true,
-      fallbackMessage: 'Non siamo riusciti a identificare con certezza la tua pianta. Ecco alcuni suggerimenti basati sulle piante più comuni:'
+      fallbackMessage: 'Non siamo riusciti a identificare con certezza la tua pianta. Ecco alcune opzioni possibili:'
     };
-  }
-
-  /**
-   * Genera suggerimenti specifici basati su caratteristiche visibili
-   */
-  static generateContextualSuggestions(hasFlowers: boolean, hasLargeLeaves: boolean, seemsSucculent: boolean) {
-    let suggestions = { ...this.generateFallbackSuggestions() };
-
-    if (hasLargeLeaves) {
-      suggestions.plantIdentification = [
-        { plantName: 'Monstera Deliciosa', scientificName: 'Monstera deliciosa', confidence: 55, habitat: 'Pianta con foglie grandi - possibile Monstera', careInstructions: ['Luce indiretta brillante', 'Terreno umido ma ben drenato'], provider: 'contextual' },
-        { plantName: 'Filodendro', scientificName: 'Philodendron spp.', confidence: 50, habitat: 'Pianta tropicale con foglie grandi', careInstructions: ['Umidità elevata', 'Luce filtrata'], provider: 'contextual' },
-        ...suggestions.plantIdentification.slice(2)
-      ];
-    }
-
-    if (seemsSucculent) {
-      suggestions.plantIdentification = [
-        { plantName: 'Aloe Vera', scientificName: 'Aloe barbadensis', confidence: 60, habitat: 'Pianta succulenta - possibile Aloe', careInstructions: ['Poca acqua', 'Luce diretta'], provider: 'contextual' },
-        { plantName: 'Echeveria', scientificName: 'Echeveria spp.', confidence: 55, habitat: 'Succulenta ornamentale', careInstructions: ['Terreno ben drenato', 'Luce brillante'], provider: 'contextual' },
-        ...suggestions.plantIdentification.slice(2)
-      ];
-    }
-
-    if (hasFlowers) {
-      suggestions.diseaseDetection = [
-        {
-          disease: 'Caduta boccioli',
-          confidence: 55,
-          symptoms: ['Boccioli che cadono', 'Fiori che appassiscono presto'],
-          treatments: ['Mantenere umidità costante', 'Evitare spostamenti', 'Fertilizzante per fioritura'],
-          severity: 'medium',
-          provider: 'contextual',
-          additionalInfo: { cause: 'Stress ambientale durante la fioritura' }
-        },
-        ...suggestions.diseaseDetection.slice(1)
-      ];
-    }
-
-    return suggestions;
   }
 }
