@@ -136,8 +136,8 @@ const PlantInfoForm = ({ onComplete, initialData }: PlantInfoFormProps) => {
   };
 
   const isFormValid = () => {
-    // Il nome della pianta non è più obbligatorio
-    return formData.wateringFrequency && formData.lightExposure;
+    // Deve esserci almeno un sintomo selezionato oltre ai campi obbligatori
+    return formData.wateringFrequency && formData.lightExposure && formData.symptoms.length > 0;
   };
 
   return (
@@ -299,6 +299,11 @@ const PlantInfoForm = ({ onComplete, initialData }: PlantInfoFormProps) => {
             <p className="text-sm text-blue-800">
               📸 <strong>{t('nextStepInfo')}</strong> {t('nextStepDescription')}
             </p>
+            {formData.symptoms.length === 0 && (
+              <p className="text-sm text-red-600 mt-2">
+                ⚠️ <strong>Seleziona almeno un sintomo</strong> per continuare con la diagnosi
+              </p>
+            )}
           </div>
 
           <Button 

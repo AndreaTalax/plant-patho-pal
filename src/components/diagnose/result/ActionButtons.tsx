@@ -175,7 +175,7 @@ Ciao Marco, ho bisogno del tuo aiuto per questa pianta. Puoi darmi una diagnosi 
           ) : (
             <>
               <Save className="h-4 w-4" />
-              <span>Salva questa diagnosi</span>
+              <span>Salva diagnosi nel profilo</span>
             </>
           )}
         </Button>

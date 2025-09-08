@@ -3,7 +3,27 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
+    <meta name="screen-orientation" content="portrait" />
+    <style>
+      @media screen and (orientation: landscape) and (max-height: 640px) {
+        html {
+          transform: rotate(90deg);
+          transform-origin: center center;
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100vh;
+          height: 100vw;
+          overflow: hidden;
+        }
+        body {
+          width: 100vh;
+          height: 100vw;
+          transform: translate(calc((100vw - 100vh) / 2), calc((100vh - 100vw) / 2));
+        }
+      }
+    </style>
     <title>plant-patho-pal</title>
     <meta name="description" content="Lovable Generated Project" />
     <meta name="author" content="Lovable" />

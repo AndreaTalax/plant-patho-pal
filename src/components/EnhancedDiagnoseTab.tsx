@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { useAuth } from '@/context/AuthContext';
 import { usePlantInfo } from '@/context/PlantInfoContext';
 import { usePlantAnalysis } from '@/hooks/usePlantAnalysis';
+import { useSaveDiagnosis } from '@/hooks/useSaveDiagnosis';
 import { StructuredDiagnosisDisplay } from '@/components/diagnose/StructuredDiagnosisDisplay';
 import PlantInfoForm from '@/components/diagnose/PlantInfoForm';
 import DiagnosisResult from '@/components/diagnose/result/DiagnosisResult';
@@ -16,6 +17,7 @@ const EnhancedDiagnoseTab = () => {
   const { user } = useAuth();
   const { plantInfo, setPlantInfo } = usePlantInfo();
   const { results, structuredResults, analyzeImage, analyzeWithUserData, clearResults, isAnalyzing, progress } = usePlantAnalysis();
+  const { saveDiagnosis, isSaving } = useSaveDiagnosis();
   
   const [currentStep, setCurrentStep] = useState<AnalysisStep>('info');
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
@@ -79,167 +81,134 @@ const EnhancedDiagnoseTab = () => {
     }
   };
 
-  // Reset dell'analisi
+  // Salva diagnosi nel profilo
+  const handleSaveDiagnosis = async () => {
+    if (!results && !structuredResults) {
+      toast.error('Nessuna diagnosi da salvare');
+      return;
+    }
+
+    try {
+      await saveDiagnosis({
+        plant_type: plantInfo?.name || 'Non specificato',
+        plant_variety: '', // Non presente nell'interfaccia PlantInfo
+        symptoms: plantInfo?.symptoms || [],
+        image_url: uploadedImage || '',
+        diagnosis_result: structuredResults || results,
+        status: 'completed'
+      });
+    } catch (error) {
+      console.error('Error saving diagnosis:', error);
+    }
+  };
+
+  // Gestione reset completo
   const handleStartNew = () => {
     clearResults();
     setUploadedImage(null);
     setImageFile(null);
     setCurrentStep('info');
-    
-    // Reset plant info
     setPlantInfo({
-      isIndoor: true,
+      name: '',
       wateringFrequency: '',
       lightExposure: '',
       symptoms: [],
-      useAI: false,
-      sendToExpert: false,
-      name: '',
+      isIndoor: true,
       infoComplete: false,
-      uploadedFile: null,
-      uploadedImageUrl: null
+      useAI: false,
+      sendToExpert: false
     });
   };
 
-  // Funzione per passare al passo successivo
-  const handleNextStep = () => {
-    if (currentStep === 'info') {
-      setCurrentStep('image');
-    } else if (currentStep === 'image' && imageFile) {
-      setCurrentStep('analysis');
-    }
-  };
-
   return (
-    <div className="container mx-auto p-4 space-y-6">
-      {/* Progress Indicator */}
-      <div className="flex items-center justify-center space-x-4 mb-6">
-        <div className={`flex items-center gap-2 px-3 py-2 rounded-lg ${
-          currentStep === 'info' ? 'bg-blue-100 text-blue-800' : 
-          ['image', 'analysis', 'results'].includes(currentStep) ? 'bg-green-100 text-green-800' : 
-          'bg-gray-100 text-gray-600'
-        }`}>
-          <User className="h-4 w-4" />
-          <span className="text-sm font-medium">1. Informazioni Pianta</span>
-        </div>
-        
-        <div className={`flex items-center gap-2 px-3 py-2 rounded-lg ${
-          currentStep === 'image' ? 'bg-blue-100 text-blue-800' : 
-          ['analysis', 'results'].includes(currentStep) ? 'bg-green-100 text-green-800' : 
-          'bg-gray-100 text-gray-600'
-        }`}>
-          <Camera className="h-4 w-4" />
-          <span className="text-sm font-medium">2. Carica Immagine</span>
-        </div>
-        
-        <div className={`flex items-center gap-2 px-3 py-2 rounded-lg ${
-          currentStep === 'analysis' ? 'bg-blue-100 text-blue-800' : 
-          currentStep === 'results' ? 'bg-green-100 text-green-800' : 
-          'bg-gray-100 text-gray-600'
-        }`}>
-          <Brain className="h-4 w-4" />
-          <span className="text-sm font-medium">3. Analisi AI</span>
-        </div>
-        
-        <div className={`flex items-center gap-2 px-3 py-2 rounded-lg ${
-          currentStep === 'results' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
-        }`}>
-          <Leaf className="h-4 w-4" />
-          <span className="text-sm font-medium">4. Risultati</span>
-        </div>
-      </div>
-
-      {/* Step 1: Plant Information */}
+    <div className="max-w-4xl mx-auto p-4 space-y-6">
+      {/* Step 1: Plant Info */}
       {currentStep === 'info' && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <User className="h-6 w-6 text-blue-600" />
-              Informazioni sulla tua pianta
-            </CardTitle>
-            <p className="text-gray-600">
-              Fornisci informazioni dettagliate sulla tua pianta per una diagnosi più accurata.
-              L'AI utilizzerà questi dati insieme all'analisi dell'immagine.
-            </p>
-          </CardHeader>
-          <CardContent>
-            <PlantInfoForm onComplete={() => {}} />
-            <div className="mt-6 flex justify-end">
-              <Button 
-                onClick={handleNextStep}
-                disabled={!plantInfo.name || plantInfo.name.trim().length < 2}
-                className="bg-blue-600 hover:bg-blue-700"
-              >
-                Continua al Caricamento Immagine
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+        <PlantInfoForm
+          onComplete={() => setCurrentStep('image')}
+        />
       )}
 
       {/* Step 2: Image Upload */}
       {currentStep === 'image' && (
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Camera className="h-6 w-6 text-blue-600" />
-              Carica un'immagine della pianta
+          <CardHeader className="text-center">
+            <CardTitle className="flex items-center justify-center gap-2">
+              <Camera className="h-6 w-6" />
+              Carica foto della pianta
             </CardTitle>
-            <p className="text-gray-600">
-              Carica una foto chiara della pianta, concentrandoti sulle foglie e sui sintomi visibili.
-            </p>
           </CardHeader>
-          <CardContent className="space-y-4">
-            {/* Image Preview */}
+          <CardContent className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Upload da file */}
+              <Card className="border-2 border-dashed border-gray-300 hover:border-blue-400 transition-colors">
+                <CardContent className="flex flex-col items-center justify-center py-8">
+                  <Upload className="h-12 w-12 text-gray-400 mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">Carica da dispositivo</h3>
+                  <p className="text-gray-500 text-center mb-4">
+                    Seleziona una foto dalla tua galleria
+                  </p>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    className="hidden"
+                    id="file-upload"
+                  />
+                  <Button asChild>
+                    <label htmlFor="file-upload" className="cursor-pointer">
+                      Scegli File
+                    </label>
+                  </Button>
+                </CardContent>
+              </Card>
+
+              {/* Camera */}
+              <Card className="border-2 border-dashed border-gray-300 hover:border-blue-400 transition-colors">
+                <CardContent className="flex flex-col items-center justify-center py-8">
+                  <Camera className="h-12 w-12 text-gray-400 mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">Usa la fotocamera</h3>
+                  <p className="text-gray-500 text-center mb-4">
+                    Scatta una foto direttamente
+                  </p>
+                  <Button onClick={() => setUseCamera(true)}>
+                    Apri Fotocamera
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
+
             {uploadedImage && (
               <div className="text-center">
                 <img 
                   src={uploadedImage} 
-                  alt="Pianta caricata" 
-                  className="max-w-full h-64 object-contain mx-auto rounded-lg shadow-md"
+                  alt="Uploaded plant"
+                  className="max-w-md mx-auto rounded-lg border-2 border-gray-200"
                 />
-                <p className="text-sm text-green-600 mt-2">✅ Immagine caricata con successo</p>
+                <div className="mt-4 space-x-3">
+                  <Button onClick={() => setCurrentStep('analysis')}>
+                    Continua con questa immagine
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => {
+                      setUploadedImage(null);
+                      setImageFile(null);
+                    }}
+                  >
+                    Cambia immagine
+                  </Button>
+                </div>
               </div>
             )}
 
-            {/* Upload Button */}
-            <div className="text-center">
-              <label className="cursor-pointer">
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageUpload}
-                  className="hidden"
-                />
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 hover:border-blue-500 transition-colors">
-                  <Upload className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-600">
-                    Clicca per caricare un'immagine o trascina qui
-                  </p>
-                  <p className="text-sm text-gray-500 mt-2">
-                    PNG, JPG fino a 10MB
-                  </p>
-                </div>
-              </label>
-            </div>
-
-            {/* Navigation Buttons */}
-            <div className="flex justify-between mt-6">
+            <div className="flex gap-3">
               <Button 
                 variant="outline" 
                 onClick={() => setCurrentStep('info')}
               >
-                ← Torna alle Informazioni
+                ← Modifica informazioni pianta
               </Button>
-              
-              {uploadedImage && (
-                <Button 
-                  onClick={handleNextStep}
-                  className="bg-blue-600 hover:bg-blue-700"
-                >
-                  Procedi all'Analisi →
-                </Button>
-              )}
             </div>
           </CardContent>
         </Card>
@@ -248,71 +217,62 @@ const EnhancedDiagnoseTab = () => {
       {/* Step 3: Analysis */}
       {currentStep === 'analysis' && (
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Brain className="h-6 w-6 text-blue-600" />
-              Analisi AI Strutturata
+          <CardHeader className="text-center">
+            <CardTitle className="flex items-center justify-center gap-2">
+              <Brain className="h-6 w-6" />
+              Analisi AI
             </CardTitle>
-            <p className="text-gray-600">
-              L'AI analizzerà l'immagine considerando le informazioni che hai fornito sulla pianta.
-            </p>
           </CardHeader>
           <CardContent className="space-y-6">
-            {/* Riepilogo dati utente */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <h4 className="font-medium text-blue-800 mb-2">📋 Dati utilizzati per l'analisi:</h4>
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <span className="font-medium">Nome pianta:</span> {plantInfo.name}
-                </div>
-                <div>
-                  <span className="font-medium">Ambiente:</span> {plantInfo.isIndoor ? 'Interno' : 'Esterno'}
-                </div>
-                <div>
-                  <span className="font-medium">Irrigazione:</span> {plantInfo.wateringFrequency || 'Non specificata'}
-                </div>
-                <div>
-                  <span className="font-medium">Luce:</span> {plantInfo.lightExposure || 'Non specificata'}
-                </div>
+            {uploadedImage && (
+              <div className="text-center">
+                <img 
+                  src={uploadedImage} 
+                  alt="Plant to analyze"
+                  className="max-w-sm mx-auto rounded-lg border-2 border-gray-200 mb-4"
+                />
               </div>
-              {plantInfo.symptoms && (
-                <div className="mt-3">
-                  <span className="font-medium">Sintomi:</span>
-                  <p className="text-gray-700">{plantInfo.symptoms}</p>
+            )}
+
+            <div className="text-center space-y-4">
+              <div className="bg-blue-50 rounded-lg p-4">
+                <h3 className="font-semibold text-blue-900 mb-2">Modalità di Analisi Avanzata</h3>
+                <p className="text-blue-800 text-sm">
+                  L'AI utilizzerà le informazioni fornite per una diagnosi più precisa
+                </p>
+              </div>
+
+              {isAnalyzing ? (
+                <div className="space-y-4">
+                  <div className="animate-pulse">
+                    <Leaf className="h-16 w-16 mx-auto text-green-500" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold">Analisi in corso...</h3>
+                    <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+                      <div 
+                        className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                        style={{ width: `${progress}%` }}
+                      ></div>
+                    </div>
+                    <p className="text-sm text-gray-600 mt-2">{progress}% completato</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <Button 
+                    onClick={startAnalysis}
+                    size="lg"
+                    className="bg-green-600 hover:bg-green-700 text-white"
+                  >
+                    <Brain className="mr-2 h-5 w-5" />
+                    Avvia Analisi AI
+                  </Button>
                 </div>
               )}
             </div>
 
-            {/* Progress durante l'analisi */}
-            {isAnalyzing && (
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-yellow-600"></div>
-                  <span className="font-medium text-yellow-800">{progress.step}</span>
-                </div>
-                <div className="w-full bg-yellow-200 rounded-full h-2 mb-2">
-                  <div 
-                    className="bg-yellow-600 h-2 rounded-full transition-all duration-300"
-                    style={{ width: `${progress.progress}%` }}
-                  ></div>
-                </div>
-                <p className="text-sm text-yellow-700">{progress.message}</p>
-              </div>
-            )}
-
-            {/* Pulsante analisi */}
-            <div className="text-center">
-              <Button 
-                onClick={startAnalysis}
-                disabled={isAnalyzing || !imageFile}
-                className="bg-green-600 hover:bg-green-700 px-8 py-3 text-lg"
-              >
-                {isAnalyzing ? 'Analisi in corso...' : '🔬 Avvia Analisi Strutturata'}
-              </Button>
-            </div>
-
-            {/* Navigation */}
-            <div className="flex justify-between">
+            <div className="flex gap-3">
               <Button 
                 variant="outline" 
                 onClick={() => setCurrentStep('image')}
@@ -332,6 +292,8 @@ const EnhancedDiagnoseTab = () => {
             <StructuredDiagnosisDisplay 
               diagnosis={structuredResults}
               onStartNew={handleStartNew}
+              onSaveDiagnosis={handleSaveDiagnosis}
+              saveLoading={isSaving}
             />
           ) : results ? (
             <DiagnosisResult 

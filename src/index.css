@@ -2,6 +2,25 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Force portrait orientation for mobile */
+@media screen and (orientation: landscape) and (max-width: 768px) {
+  html {
+    transform: rotate(90deg);
+    transform-origin: center center;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 100vh;
+    height: 100vw;
+    overflow: hidden;
+  }
+  body {
+    width: 100vh;
+    height: 100vw;
+    transform: translate(-100%, 0);
+  }
+}
+
 @layer base {
   :root {
     --background: 202 100% 98%;

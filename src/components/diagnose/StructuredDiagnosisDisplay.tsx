@@ -13,7 +13,9 @@ import {
   Calendar,
   RefreshCw,
   BookOpen,
-  MessageCircle 
+  MessageCircle,
+  Save,
+  Loader2
 } from 'lucide-react';
 import { StructuredDiagnosisResult } from '@/services/structuredPlantDiagnosisService';
 import { useNavigate } from 'react-router-dom';
@@ -21,11 +23,15 @@ import { useNavigate } from 'react-router-dom';
 interface StructuredDiagnosisDisplayProps {
   diagnosis: StructuredDiagnosisResult;
   onStartNew: () => void;
+  onSaveDiagnosis?: () => void;
+  saveLoading?: boolean;
 }
 
 export const StructuredDiagnosisDisplay: React.FC<StructuredDiagnosisDisplayProps> = ({
   diagnosis,
-  onStartNew
+  onStartNew,
+  onSaveDiagnosis,
+  saveLoading = false
 }) => {
   const navigate = useNavigate();
 
@@ -289,6 +295,26 @@ export const StructuredDiagnosisDisplay: React.FC<StructuredDiagnosisDisplayProp
           <Separator className="my-4" />
           
           <div className="flex flex-col sm:flex-row gap-3">
+            {onSaveDiagnosis && (
+              <Button 
+                onClick={onSaveDiagnosis} 
+                className="flex items-center gap-2 bg-drplant-blue hover:bg-drplant-blue-dark"
+                disabled={saveLoading}
+              >
+                {saveLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Salvando...
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4" />
+                    Salva nel Profilo
+                  </>
+                )}
+              </Button>
+            )}
+            
             <Button onClick={onStartNew} variant="outline" className="flex items-center gap-2">
               <RefreshCw className="h-4 w-4" />
               Nuova Diagnosi
