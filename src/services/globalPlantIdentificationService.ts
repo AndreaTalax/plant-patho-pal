@@ -83,20 +83,20 @@ export class GlobalPlantIdentificationService {
 
       // Se tutto fallisce, usa il fallback migliorato
       console.log('⚠️ Tutti i sistemi di identificazione falliti, usando fallback migliorato...');
-      return this.generateEnhancedFallback();
+      return await this.generateEnhancedFallback();
 
     } catch (error) {
       console.error('❌ Errore servizio identificazione:', error);
       console.log('🔄 Utilizzando sistema di fallback...');
-      return this.generateEnhancedFallback();
+      return await this.generateEnhancedFallback();
     }
   }
 
   /**
    * Genera un risultato di fallback migliorato con suggerimenti utili
    */
-  private static generateEnhancedFallback(): GlobalIdentificationResult {
-    const fallbackData = FallbackSuggestionsService.generateFallbackSuggestions();
+  private static async generateEnhancedFallback(): Promise<GlobalIdentificationResult> {
+    const fallbackData = await FallbackSuggestionsService.generateFallbackSuggestions('pianta');
     
     return {
       plantIdentification: fallbackData.plantIdentification.map(plant => ({

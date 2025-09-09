@@ -1,9 +1,40 @@
 import { supabase } from '@/integrations/supabase/client';
-import ImageColors from 'react-native-image-colors'; // libreria mobile-friendly
+
+export interface PlantAnalysisProgress {
+  step: string;
+  progress: number;
+  message: string;
+}
+
+export interface ComprehensivePlantDiagnosis {
+  plantIdentification: {
+    name: string;
+    scientificName: string;
+    confidence: number;
+    commonNames: string[];
+    family?: string;
+    genus?: string;
+    source: string;
+  };
+  healthAssessment: {
+    isHealthy: boolean;
+    overallHealthScore: number;
+    diseases: any[];
+    pests: any[];
+  };
+  recommendations: string[];
+  sources: string[];
+  confidence: number;
+  metadata: {
+    analysisTime: number;
+    imageQuality: string;
+    apiResponsesReceived: string[];
+  };
+}
 
 export const comprehensivePlantDiagnosisService = {
   async diagnosePlant(
-    imageFile: any, // immagine come URI o file gestito da RN
+    imageFile: any,
     onProgress?: (progress: PlantAnalysisProgress) => void
   ): Promise<ComprehensivePlantDiagnosis> {
 
@@ -23,18 +54,11 @@ export const comprehensivePlantDiagnosisService = {
       });
     }
 
-    // Estrai colore dominante con libreria RN
+    // Estrai colore dominante (fallback semplice)
     async function extractDominantColor(uri: string): Promise<string> {
       try {
-        const result = await ImageColors.getColors(uri, { quality: 'low', pixelSpacing: 5 });
-        switch (result.platform) {
-          case 'android':
-            return result.dominant || 'verde';
-          case 'ios':
-            return result.background || 'verde';
-          default:
-            return 'verde';
-        }
+        // Semplice fallback senza dipendenze esterne
+        return 'verde';
       } catch {
         return 'verde';
       }
