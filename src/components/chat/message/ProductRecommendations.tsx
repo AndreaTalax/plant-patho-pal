@@ -10,12 +10,14 @@ export const ProductRecommendations = ({ products }: ProductRecommendationsProps
   const navigate = useNavigate();
   
   const handleProductClick = (product: Product) => {
+    console.log('🛒 Clicking product recommendation:', product.name);
     // Naviga al tab shop invece di aprire pagine esterne
     navigate('/');
     setTimeout(() => {
+      console.log('🛒 Dispatching switchTab event to shop');
       const event = new CustomEvent('switchTab', { detail: 'shop' });
       window.dispatchEvent(event);
-    }, 100);
+    }, 150); // Increased timeout to ensure navigation completes
   };
 
   return (

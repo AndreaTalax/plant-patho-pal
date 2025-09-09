@@ -1,6 +1,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
+import { useNavigate } from 'react-router-dom';
 
 interface ProductSuggestionsProps {
   diseaseName: string;
@@ -98,8 +99,20 @@ function dedupeProducts(items: ProductItem[]): ProductItem[] {
 const ProductSuggestions: React.FC<ProductSuggestionsProps> = ({ diseaseName, maxItems = 3 }) => {
   const [products, setProducts] = useState<ProductItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
   const searchTerms = useMemo(() => buildSearchTerms(diseaseName), [diseaseName]);
+
+  const handleProductClick = (product: ProductItem) => {
+    console.log('🛒 Clicking product suggestion:', product.name);
+    // Navigate to shop tab instead of opening external links
+    navigate('/');
+    setTimeout(() => {
+      console.log('🛒 Dispatching switchTab event to shop');
+      const event = new CustomEvent('switchTab', { detail: 'shop' });
+      window.dispatchEvent(event);
+    }, 150);
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -152,19 +165,17 @@ const ProductSuggestions: React.FC<ProductSuggestionsProps> = ({ diseaseName, ma
   return (
     <div className="flex flex-wrap gap-2">
       {products.map((p) => (
-        <a
+        <button
           key={p.id}
-          href={p.url || '#'}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-2 px-3 py-1 rounded-md border bg-background hover:bg-accent hover:text-accent-foreground transition"
+          onClick={() => handleProductClick(p)}
+          className="inline-flex items-center gap-2 px-3 py-1 rounded-md border bg-background hover:bg-accent hover:text-accent-foreground transition cursor-pointer"
         >
           <Badge variant="outline" className="text-xs">Shop</Badge>
           <span className="text-sm font-medium">{p.name}</span>
           {typeof p.price === 'number' && (
             <span className="text-xs text-muted-foreground">€{p.price.toFixed(2)}</span>
           )}
-        </a>
+        </button>
       ))}
     </div>
   );
