@@ -122,42 +122,6 @@ export type Database = {
         }
         Relationships: []
       }
-      conversations_backup: {
-        Row: {
-          created_at: string | null
-          expert_id: string | null
-          id: string | null
-          last_message_at: string | null
-          last_message_text: string | null
-          status: string | null
-          title: string | null
-          updated_at: string | null
-          user_id: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          expert_id?: string | null
-          id?: string | null
-          last_message_at?: string | null
-          last_message_text?: string | null
-          status?: string | null
-          title?: string | null
-          updated_at?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          expert_id?: string | null
-          id?: string | null
-          last_message_at?: string | null
-          last_message_text?: string | null
-          status?: string | null
-          title?: string | null
-          updated_at?: string | null
-          user_id?: string | null
-        }
-        Relationships: []
-      }
       diagnoses: {
         Row: {
           created_at: string | null
@@ -302,10 +266,43 @@ export type Database = {
         }
         Relationships: []
       }
+      message_reactions: {
+        Row: {
+          created_at: string
+          emoji: string
+          id: string
+          message_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          emoji: string
+          id?: string
+          message_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          emoji?: string
+          id?: string
+          message_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_reactions_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       messages: {
         Row: {
           content: string
           conversation_id: string
+          created_at: string | null
           id: string
           image_url: string | null
           metadata: Json | null
@@ -315,10 +312,12 @@ export type Database = {
           sender_id: string
           sent_at: string
           text: string
+          updated_at: string | null
         }
         Insert: {
           content: string
           conversation_id: string
+          created_at?: string | null
           id?: string
           image_url?: string | null
           metadata?: Json | null
@@ -328,10 +327,12 @@ export type Database = {
           sender_id: string
           sent_at?: string
           text?: string
+          updated_at?: string | null
         }
         Update: {
           content?: string
           conversation_id?: string
+          created_at?: string | null
           id?: string
           image_url?: string | null
           metadata?: Json | null
@@ -341,6 +342,7 @@ export type Database = {
           sender_id?: string
           sent_at?: string
           text?: string
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -664,6 +666,10 @@ export type Database = {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
+        Returns: boolean
+      }
+      profile_change_permitted: {
+        Args: { _id: string; _plan: string; _role: string }
         Returns: boolean
       }
       send_message: {
