@@ -11,6 +11,8 @@ import { LockKeyhole, Mail, Globe } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/context/ThemeContext";
 import ForgotPasswordModal from "@/components/auth/ForgotPasswordModal";
+import PrivacyPolicyTrigger from "@/components/PrivacyPolicyTrigger";
+import TermsOfServiceTrigger from "@/components/TermsOfServiceTrigger";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -200,7 +202,12 @@ const Login = () => {
           </CardFooter>
         </Card>
 
-        <div className="mt-8 text-center text-gray-600 text-sm">
+        <div className="mt-8 text-center text-gray-600 text-sm space-y-2">
+          <div className="flex justify-center space-x-4 mb-2">
+            <PrivacyPolicyTrigger />
+            <span className="text-gray-400">|</span>
+            <TermsOfServiceTrigger />
+          </div>
           <p>© 2025 Dr.Plant. {t("allRightsReserved")}</p>
         </div>
       </div>

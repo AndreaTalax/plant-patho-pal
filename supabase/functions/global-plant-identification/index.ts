@@ -109,7 +109,22 @@ serve(async (req) => {
       }
     }
 
-    // 4. DIAGNOSI MALATTIE CON PLANT.ID HEALTH
+    // 4. IDENTIFICAZIONE CON INATURALIST
+    console.log('🔬 Identificazione con iNaturalist...');
+    const iNaturalistResult = await identifyWithINaturalist(plantIdResult?.plantName || 'plant');
+    if (iNaturalistResult && iNaturalistResult.length > 0) {
+      iNaturalistResult.forEach((plant, index) => {
+        result.plantIdentification.push({
+          name: plant.plantName,
+          scientificName: plant.scientificName,
+          confidence: Math.min(plant.confidence - 5, 70), // Riduci leggermente la confidence
+          source: 'iNaturalist',
+          family: plant.family
+        });
+      });
+    }
+
+    // 5. DIAGNOSI MALATTIE CON PLANT.ID HEALTH
     console.log('🏥 Diagnosi malattie con Plant.ID Health...');
     const healthResult = await diagnoseWithPlantIdHealth(imageBase64);
     if (healthResult && healthResult.length > 0) {
@@ -125,7 +140,7 @@ serve(async (req) => {
       });
     }
 
-    // 5. RICERCA NEL DATABASE EPPO
+    // 6. RICERCA NEL DATABASE EPPO
     console.log('📚 Ricerca nel database EPPO...');
     const bestPlant = result.plantIdentification.sort((a, b) => b.confidence - a.confidence)[0];
     if (bestPlant) {
@@ -162,7 +177,7 @@ serve(async (req) => {
       }
     }
 
-    // 6. ANALISI CON HUGGING FACE (se disponibile)
+    // 7. ANALISI CON HUGGING FACE (se disponibile)
     console.log('🤗 Analisi con Hugging Face...');
     const hfResult = await analyzeWithHuggingFace(imageBase64);
     if (hfResult) {
@@ -471,6 +486,48 @@ async function analyzeWithHuggingFace(imageBase64: string) {
     };
   } catch (error) {
     console.error('Hugging Face error:', error);
+    return null;
+  }
+}
+
+async function identifyWithINaturalist(plantQuery: string) {
+  try {
+    console.log('🔬 Chiamata a iNaturalist per:', plantQuery);
+    
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    
+    if (!supabaseUrl || !supabaseKey) {
+      console.warn('Configurazione Supabase mancante per iNaturalist');
+      return null;
+    }
+
+    const response = await fetch(`${supabaseUrl}/functions/v1/inaturalist-identification`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${supabaseKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        query: plantQuery
+      })
+    });
+
+    if (!response.ok) {
+      console.warn('iNaturalist function call failed:', response.status);
+      return null;
+    }
+
+    const data = await response.json();
+    
+    if (data.success && data.results) {
+      console.log(`✅ iNaturalist ha restituito ${data.results.length} risultati`);
+      return data.results.slice(0, 3); // Prendi solo i primi 3 risultati
+    }
+
+    return null;
+  } catch (error) {
+    console.error('Errore chiamata iNaturalist:', error);
     return null;
   }
 }
