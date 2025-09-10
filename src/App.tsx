@@ -18,6 +18,8 @@ import Contact from "./pages/Contact";
 import CompleteProfile from "./pages/CompleteProfile";
 import ResetPassword from "./pages/ResetPassword";
 import SavedArticles from "./pages/SavedArticles";
+import PlanSelection from "./pages/PlanSelection";
+import LoginWithPlan from "./pages/LoginWithPlan";
 import { CDCDashboard } from "./components/cdc/CDCDashboard";
 import { UserManagement } from "./components/admin/UserManagement";
 import { NotificationSettings } from "./components/notifications/NotificationSettings";
@@ -46,7 +48,8 @@ function App() {
                 <Router>
                   <Routes>
                     <Route path="/" element={<Index />} />
-                    <Route path="/login" element={<Login />} />
+                    <Route path="/plan-selection" element={<PlanSelection />} />
+                    <Route path="/login" element={<LoginWithPlan />} />
                     <Route path="/signup" element={<SignUp />} />
                     <Route path="/complete-profile" element={<CompleteProfile />} />
                     <Route path="/reset-password" element={<ResetPassword />} />

@@ -27,8 +27,13 @@ const Index = () => {
 
   useEffect(() => {
     if (!loading && !isAuthenticated) {
-      console.log('🔒 Utente non autenticato, reindirizzamento al login...');
-      navigate('/login');
+      console.log('🔒 Utente non autenticato, controllo selezione piano...');
+      const selectedPlan = localStorage.getItem('selectedPlanType');
+      if (!selectedPlan) {
+        navigate('/plan-selection');
+      } else {
+        navigate('/login');
+      }
     }
   }, [isAuthenticated, loading, navigate]);
 
@@ -182,6 +187,8 @@ const Index = () => {
   }
 
   const renderTabContent = () => {
+    const selectedPlan = localStorage.getItem('selectedPlanType') as 'privati' | 'business' | 'professionisti' | null;
+    
     if (isMasterAccount) {
       switch (activeTab) {
         case "expert":
@@ -194,7 +201,20 @@ const Index = () => {
           return <ExpertTab />;
       }
     }
+
+    // Per professionisti, solo chat diretta con fitopatologo
+    if (selectedPlan === 'professionisti') {
+      switch (activeTab) {
+        case "chat":
+          return <ChatTab />;
+        case "profile":
+          return <ProfileTab />;
+        default:
+          return <ChatTab />;
+      }
+    }
     
+    // Per privati e business: diagnosi AI + chat esperto
     switch (activeTab) {
       case "diagnose":
         return <DiagnoseTab />;
@@ -223,6 +243,7 @@ const Index = () => {
         showExpertTab={isMasterAccount}
         plantInfoComplete={plantInfo.infoComplete}
         canAccessTabs={canAccessTabs}
+        selectedPlan={localStorage.getItem('selectedPlanType') as 'privati' | 'business' | 'professionisti' | null}
       />
     </div>
   );

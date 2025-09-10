@@ -10,14 +10,16 @@ interface BottomNavigationProps {
   showExpertTab?: boolean;
   plantInfoComplete?: boolean;
   canAccessTabs?: boolean;
+  selectedPlan?: 'privati' | 'business' | 'professionisti' | null;
 }
 
-const BottomNavigation = ({ 
-  activeTab, 
-  setActiveTab, 
+const BottomNavigation = ({
+  activeTab,
+  setActiveTab,
   showExpertTab = false,
   plantInfoComplete = false,
-  canAccessTabs = false
+  canAccessTabs = false,
+  selectedPlan = null
 }: BottomNavigationProps) => {
   const { isMasterAccount } = useAuth();
   const { t } = useTheme();
@@ -33,14 +35,42 @@ const BottomNavigation = ({
     return "";
   };
 
-  const tabs = [
-    ...(!isMasterAccount ? [{ id: 'diagnose', icon: Leaf, label: t("diagnose") }] : []),
-    ...(showExpertTab ? [{ id: 'expert', icon: Stethoscope, label: t("dashboard") }] : []),
-    ...(!isMasterAccount ? [{ id: 'chat', icon: MessageCircle, label: t("chat") }] : []),
-    ...(!isMasterAccount ? [{ id: 'library', icon: BookOpen, label: t("library") }] : []),
-    { id: 'shop', icon: ShoppingBag, label: t("shop") },
-    { id: 'profile', icon: User, label: t("profile") }
-  ];
+  // Filtra le tab in base al piano selezionato e ai permessi
+  const getFilteredTabs = () => {
+    let baseTabs = [];
+    
+    // Per professionisti: solo chat e profilo
+    if (selectedPlan === 'professionisti') {
+      baseTabs = [
+        { id: 'chat', icon: MessageCircle, label: t("chat") },
+        { id: 'profile', icon: User, label: t("profile") }
+      ];
+      return baseTabs;
+    }
+
+    // Per account master (esperti)
+    if (isMasterAccount) {
+      baseTabs = [
+        ...(showExpertTab ? [{ id: 'expert', icon: Stethoscope, label: t("dashboard") }] : []),
+        { id: 'shop', icon: ShoppingBag, label: t("shop") },
+        { id: 'profile', icon: User, label: t("profile") }
+      ];
+      return baseTabs;
+    }
+
+    // Per privati e business: tutte le funzionalità
+    baseTabs = [
+      { id: 'diagnose', icon: Leaf, label: t("diagnose") },
+      { id: 'chat', icon: MessageCircle, label: t("chat") },
+      { id: 'library', icon: BookOpen, label: t("library") },
+      { id: 'shop', icon: ShoppingBag, label: t("shop") },
+      { id: 'profile', icon: User, label: t("profile") }
+    ];
+    
+    return baseTabs;
+  };
+
+  const tabs = getFilteredTabs();
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-background border-t border-border z-50">
