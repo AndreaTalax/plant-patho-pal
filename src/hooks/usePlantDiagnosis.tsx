@@ -19,9 +19,9 @@ export const usePlantDiagnosis = () => {
     clearResults,
   } = usePlantAnalysis();
 
-  // Wrapper per compatibilità con usePlantImageUpload
+  // Wrapper per compatibilità con usePlantImageUpload - ottimizzato
   const analyzeUploadedImage = async (file: File) => {
-    console.log('▶️ analyzeUploadedImage wrapper called');
+    console.log('🚀 Fast analysis started');
     return analyzeImage(file);
   };
 

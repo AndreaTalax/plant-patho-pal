@@ -34,55 +34,45 @@ export interface GlobalIdentificationResult {
 
 export class GlobalPlantIdentificationService {
   /**
-   * Identifica pianta usando il nuovo sistema intelligente
+   * Identifica pianta usando il sistema ultra-veloce
    */
   static async identifyPlantGlobally(imageBase64: string): Promise<GlobalIdentificationResult> {
     try {
-      console.log('🧠 Avvio identificazione intelligente...');
+      console.log('⚡ Avvio identificazione ultra-veloce...');
       
-      // Prima prova con il nuovo sistema intelligente
-      const { data: intelligentData, error: intelligentError } = await supabase.functions.invoke('intelligent-plant-diagnosis', {
+      // Prima prova con il sistema ultra-veloce
+      const { data: fastData, error: fastError } = await supabase.functions.invoke('unified-plant-diagnosis', {
         body: { imageBase64 }
       });
 
-      if (!intelligentError && intelligentData?.success) {
-        console.log('✅ Identificazione intelligente completata:', {
-          plants: intelligentData.plantIdentification?.length || 0,
-          diseases: intelligentData.diseases?.length || 0,
-          isFallback: intelligentData.isFallback
-        });
-
+      if (!fastError && fastData?.success) {
+        console.log('✅ Identificazione veloce completata in', fastData.processingTime);
+        
+        // Converte il risultato del sistema veloce nel formato atteso
+        const diagnosis = fastData.diagnosis;
         return {
-          plantIdentification: intelligentData.plantIdentification || [],
-          diseases: intelligentData.diseases || [],
-          success: intelligentData.success,
-          isFallback: intelligentData.isFallback,
-          fallbackMessage: intelligentData.fallbackMessage
+          plantIdentification: [{
+            name: diagnosis.plantIdentification.name,
+            scientificName: diagnosis.plantIdentification.scientificName,
+            confidence: diagnosis.plantIdentification.confidence,
+            source: 'Ultra-Fast AI',
+            family: diagnosis.plantIdentification.family
+          }],
+          diseases: diagnosis.healthAnalysis.issues.map((issue: any) => ({
+            name: issue.name,
+            confidence: issue.confidence,
+            symptoms: issue.symptoms || [],
+            treatments: issue.treatment || [],
+            cause: issue.description,
+            source: 'Fast Analysis'
+          })),
+          success: true,
+          isFallback: false
         };
       }
 
-      // Se fallisce, prova con il sistema globale tradizionale
-      console.log('🔄 Tentativo con sistema globale tradizionale...');
-      const { data, error } = await supabase.functions.invoke('global-plant-identification', {
-        body: { imageBase64 }
-      });
-
-      if (!error && data?.success && (data.plantIdentification.length > 0 || data.diseases.length > 0)) {
-        console.log('✅ Identificazione globale completata:', {
-          plants: data.plantIdentification?.length || 0,
-          diseases: data.diseases?.length || 0
-        });
-
-        return {
-          plantIdentification: data.plantIdentification || [],
-          diseases: data.diseases || [],
-          eppoInfo: data.eppoInfo,
-          success: data.success
-        };
-      }
-
-      // Se tutto fallisce, usa il fallback migliorato
-      console.log('⚠️ Tutti i sistemi di identificazione falliti, usando fallback migliorato...');
+      // Fallback rapido se il sistema veloce fallisce
+      console.log('🔄 Fallback veloce...');
       return await this.generateEnhancedFallback();
 
     } catch (error) {
