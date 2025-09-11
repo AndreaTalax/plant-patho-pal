@@ -27,13 +27,7 @@ const Index = () => {
 
   useEffect(() => {
     if (!loading && !isAuthenticated) {
-      console.log('🔒 Utente non autenticato, controllo selezione piano...');
-      const selectedPlan = localStorage.getItem('selectedPlanType');
-      if (!selectedPlan) {
-        navigate('/plan-selection');
-      } else {
-        navigate('/login');
-      }
+      navigate('/login');
     }
   }, [isAuthenticated, loading, navigate]);
 

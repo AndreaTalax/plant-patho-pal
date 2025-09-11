@@ -165,42 +165,22 @@ const ProfessionalQuoteForm = ({ onBack, onSubmit }: ProfessionalQuoteFormProps)
           </div>
 
           {/* Dettagli Aziendali */}
-          <div className="grid md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="companySize">
-                {language === 'it' ? 'Dimensioni Azienda' : 'Company Size'}
-              </Label>
-              <Select onValueChange={(value) => handleInputChange('companySize', value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder={language === 'it' ? 'Seleziona...' : 'Select...'} />
-                </SelectTrigger>
-                <SelectContent>
-                  {companySizes.map((size) => (
-                    <SelectItem key={size.value} value={size.value}>
-                      {size.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="sector">
-                {language === 'it' ? 'Settore' : 'Sector'}
-              </Label>
-              <Select onValueChange={(value) => handleInputChange('sector', value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder={language === 'it' ? 'Seleziona...' : 'Select...'} />
-                </SelectTrigger>
-                <SelectContent>
-                  {sectors.map((sector) => (
-                    <SelectItem key={sector.value} value={sector.value}>
-                      {sector.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="sector">
+              {language === 'it' ? 'Settore' : 'Sector'}
+            </Label>
+            <Select onValueChange={(value) => handleInputChange('sector', value)}>
+              <SelectTrigger>
+                <SelectValue placeholder={language === 'it' ? 'Seleziona...' : 'Select...'} />
+              </SelectTrigger>
+              <SelectContent>
+                {sectors.map((sector) => (
+                  <SelectItem key={sector.value} value={sector.value}>
+                    {sector.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Esigenze Specifiche */}

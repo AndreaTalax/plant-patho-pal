@@ -21,59 +21,69 @@ const PlanSubscriptionOptions = ({ planType, onSubscriptionSelect, onBack }: Pla
 
   const privatiOptions = [
     {
-      id: 'single-token',
-      title: language === 'it' ? 'Gettone Singolo' : 'Single Token',
-      price: '€9.99',
-      description: language === 'it' ? '1 consulenza completa' : '1 complete consultation',
+      id: 'token-5',
+      title: language === 'it' ? 'Carnèt 5 Analisi' : '5 Analysis Pack',
+      price: '€49.99',
+      description: language === 'it' ? '5 analisi complete' : '5 complete analysis',
       icon: CreditCard
     },
     {
-      id: 'token-pack',
-      title: language === 'it' ? 'Carnè 5 Gettoni' : '5 Token Pack',
-      price: '€39.99',
-      originalPrice: '€49.95',
-      description: language === 'it' ? '5 consulenze complete' : '5 complete consultations',
+      id: 'token-10',
+      title: language === 'it' ? 'Carnèt 10 Analisi' : '10 Analysis Pack',
+      price: '€89.99',
+      originalPrice: '€99.90',
+      description: language === 'it' ? '10 analisi complete' : '10 complete analysis',
       icon: CreditCard,
       popular: true,
-      savings: language === 'it' ? 'Risparmi €9.96!' : 'Save €9.96!'
+      savings: language === 'it' ? 'Risparmi €9.91!' : 'Save €9.91!'
+    },
+    {
+      id: 'weekly',
+      title: language === 'it' ? 'Settimanale' : 'Weekly',
+      price: '€19.99',
+      period: language === 'it' ? '/settimana' : '/week',
+      description: language === 'it' ? 'Analisi illimitate per 7 giorni' : 'Unlimited analysis for 7 days',
+      icon: Calendar
+    },
+    {
+      id: 'monthly-private',
+      title: language === 'it' ? 'Mensile' : 'Monthly',
+      price: '€59.99',
+      period: language === 'it' ? '/mese' : '/month',
+      description: language === 'it' ? 'Analisi illimitate + priorità' : 'Unlimited analysis + priority',
+      icon: Calendar
+    },
+    {
+      id: 'yearly-private',
+      title: language === 'it' ? 'Annuale' : 'Yearly',
+      price: '€599.99',
+      period: language === 'it' ? '/anno' : '/year',
+      originalPrice: '€719.88',
+      description: language === 'it' ? 'Tutto incluso + supporto dedicato' : 'Everything included + dedicated support',
+      icon: Calendar,
+      savings: language === 'it' ? 'Risparmi €119.89!' : 'Save €119.89!'
     }
   ];
 
   const businessOptions = [
     {
-      id: 'daily',
-      title: language === 'it' ? 'Giornaliero' : 'Daily',
-      price: '€29.99',
-      period: language === 'it' ? '/giorno' : '/day',
-      description: language === 'it' ? 'Consulenze illimitate per 24h' : 'Unlimited consultations for 24h',
-      icon: Clock
-    },
-    {
-      id: 'weekly',
-      title: language === 'it' ? 'Settimanale' : 'Weekly',
-      price: '€149.99',
-      period: language === 'it' ? '/settimana' : '/week',
-      description: language === 'it' ? 'Consulenze illimitate per 7 giorni' : 'Unlimited consultations for 7 days',
+      id: 'monthly-business',
+      title: language === 'it' ? 'Mensile Business' : 'Monthly Business',
+      price: '€299.99',
+      period: language === 'it' ? '/mese' : '/month',
+      description: language === 'it' ? 'Analisi illimitate + priorità' : 'Unlimited analysis + priority',
       icon: Calendar,
       popular: true
     },
     {
-      id: 'monthly',
-      title: language === 'it' ? 'Mensile' : 'Monthly',
-      price: '€399.99',
-      period: language === 'it' ? '/mese' : '/month',
-      description: language === 'it' ? 'Consulenze illimitate + priorità' : 'Unlimited consultations + priority',
-      icon: Calendar
-    },
-    {
-      id: 'yearly',
-      title: language === 'it' ? 'Annuale' : 'Yearly',
-      price: '€3999.99',
+      id: 'yearly-business',
+      title: language === 'it' ? 'Annuale Business' : 'Yearly Business',
+      price: '€2999.99',
       period: language === 'it' ? '/anno' : '/year',
-      originalPrice: '€4799.88',
+      originalPrice: '€3599.88',
       description: language === 'it' ? 'Tutto incluso + supporto dedicato' : 'Everything included + dedicated support',
       icon: Calendar,
-      savings: language === 'it' ? 'Risparmi €799.89!' : 'Save €799.89!'
+      savings: language === 'it' ? 'Risparmi €599.89!' : 'Save €599.89!'
     }
   ];
 
