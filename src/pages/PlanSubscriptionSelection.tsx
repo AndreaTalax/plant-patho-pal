@@ -5,12 +5,14 @@ import PlanSubscriptionOptions from "@/components/subscription/PlanSubscriptionO
 import ProfessionalQuoteForm from "@/components/subscription/ProfessionalQuoteForm";
 import { useTheme } from "@/context/ThemeContext";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { LogOut } from "lucide-react";
 
 export type PlanType = 'privati' | 'business' | 'professionisti';
 
 const PlanSubscriptionSelection = () => {
   const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, logout } = useAuth();
   const { language } = useTheme();
   const [selectedPlan, setSelectedPlan] = useState<PlanType>('privati');
   const [currentStep, setCurrentStep] = useState<'selection' | 'subscription' | 'professional'>('selection');
@@ -46,6 +48,15 @@ const PlanSubscriptionSelection = () => {
 
   const handleBackToSelection = () => {
     setCurrentStep('selection');
+  };
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      toast.success(language === 'it' ? 'Logout effettuato con successo' : 'Logged out successfully');
+    } catch (error) {
+      toast.error(language === 'it' ? 'Errore durante il logout' : 'Error during logout');
+    }
   };
 
   if (currentStep === 'subscription' && selectedPlan !== 'professionisti') {
@@ -105,6 +116,19 @@ const PlanSubscriptionSelection = () => {
       <div className="absolute bottom-0 right-0 w-full h-64 bg-drplant-green/20 -z-10 rounded-t-[30%]" />
 
       <div className="w-full max-w-6xl">
+        {/* Logout Button */}
+        <div className="absolute top-4 right-4">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleLogout}
+            className="flex items-center gap-2 bg-white/80 backdrop-blur-sm border-gray-300 hover:bg-white hover:border-drplant-green text-gray-700 hover:text-drplant-blue-dark"
+          >
+            <LogOut className="h-4 w-4" />
+            {language === 'it' ? 'Esci' : 'Logout'}
+          </Button>
+        </div>
+
         <div className="text-center mb-12">
           <div className="inline-flex items-center justify-center p-4 bg-white/80 backdrop-blur-sm rounded-full shadow-lg mb-6">
             <img 

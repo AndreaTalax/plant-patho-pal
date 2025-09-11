@@ -29,6 +29,10 @@ const Login = () => {
     'premium@gmail.com': 'premium123'
   };
 
+  const isAdminEmail = (email: string) => {
+    return Object.keys(adminCredentials).includes(email.toLowerCase());
+  };
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     toast.dismiss();
@@ -67,7 +71,9 @@ const Login = () => {
         });
         
         setTimeout(() => {
-          navigate("/plan-selection", { replace: true });
+          // Gli admin vanno direttamente alla home, gli altri alla selezione piano
+          const redirectPath = isAdminEmail ? "/" : "/plan-selection";
+          navigate(redirectPath, { replace: true });
         }, 500);
       } else {
         toast.error(t("loginFailed"), {
