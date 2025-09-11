@@ -67,7 +67,7 @@ const Login = () => {
         });
         
         setTimeout(() => {
-          navigate("/", { replace: true });
+          navigate("/plan-selection", { replace: true });
         }, 500);
       } else {
         toast.error(t("loginFailed"), {
