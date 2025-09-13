@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.4';
 import { Resend } from "npm:resend@2.0.0";
+import puppeteer from "https://deno.land/x/puppeteer@16.2.0/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -215,8 +216,45 @@ const handler = async (req: Request): Promise<Response> => {
     // Genera contenuto HTML per il PDF
     const htmlContent = generatePDFContent(formData);
     
-    // Simula la generazione del PDF (in una implementazione reale useresti una libreria come Puppeteer)
-    const pdfContent = htmlContent;
+    // Genera PDF effettivo usando Puppeteer
+    const browser = await puppeteer.launch({ 
+      headless: true,
+      args: ['--no-sandbox', '--disable-setuid-sandbox'] 
+    });
+    const page = await browser.newPage();
+    await page.setContent(htmlContent);
+    const pdfBuffer = await page.pdf({
+      format: 'A4',
+      printBackground: true,
+      margin: {
+        top: '1cm',
+        right: '1cm',
+        bottom: '1cm',
+        left: '1cm'
+      }
+    });
+    await browser.close();
+
+    // Salva il PDF in Supabase Storage
+    const fileName = `preventivo-${formData.companyName.replace(/\s+/g, '-').toLowerCase()}-${Date.now()}.pdf`;
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from('pdfs')
+      .upload(fileName, pdfBuffer, {
+        contentType: 'application/pdf',
+        upsert: false
+      });
+
+    if (uploadError) {
+      console.error('Error uploading PDF:', uploadError);
+      throw new Error('Failed to upload PDF');
+    }
+
+    // Ottieni URL pubblico del PDF
+    const { data: publicUrlData } = supabase.storage
+      .from('pdfs')
+      .getPublicUrl(fileName);
+    
+    const pdfUrl = publicUrlData.publicUrl;
     
     // Invia email con il PDF
     const emailResponse = await resend.emails.send({
@@ -330,40 +368,32 @@ const handler = async (req: Request): Promise<Response> => {
         }
 
         if (conversationId) {
-          // Invia messaggio in chat con il PDF
+          // Invia messaggio in chat con il PDF allegato
           const { error: messageError } = await serviceSupabase
             .from('messages')
             .insert({
               conversation_id: conversationId,
               sender_id: userId,
               recipient_id: expertProfile.id,
-              content: `📋 **Nuova Richiesta Preventivo Professionale**
+              content: `📋 **Richiesta Preventivo Professionale - ${formData.companyName}**
 
-**Azienda:** ${formData.companyName}
-**Contatto:** ${formData.contactPerson}
-**Email:** ${formData.email}
-**Telefono:** ${formData.phone}
-**Tipo Business:** ${formData.businessType}
-**Budget:** ${formData.budget || 'Non specificato'}
-**Timeline:** ${formData.timeline || 'Non specificato'}
+Ho generato il preventivo dettagliato con tutte le informazioni fornite. Il documento PDF contiene:
 
-**Sfide Attuali:**
-${formData.currentChallenges}
+• Dettagli aziendali e contatti
+• Requisiti tecnici e tipi di piante
+• Sfide attuali e volume previsto  
+• Budget e timeline
+• Funzionalità richieste
 
-**Tipi di Piante:**
-${formData.plantTypes.map(type => `• ${type}`).join('\n')}
+Ti ricontatterò presto per discutere la soluzione più adatta alle tue esigenze.
 
-**Funzionalità Richieste:**
-${formData.preferredFeatures.map(feature => `• ${feature}`).join('\n')}
-
-${formData.additionalInfo ? `**Informazioni Aggiuntive:**\n${formData.additionalInfo}` : ''}
-
----
-*Richiesta generata automaticamente il ${new Date().toLocaleString('it-IT')}*`,
-              text: `Nuova richiesta preventivo professionale da ${formData.companyName}`,
+*Generato il ${new Date().toLocaleString('it-IT')}*`,
+              text: `📋 Preventivo Professionale - ${formData.companyName}`,
+              image_url: pdfUrl,
               metadata: {
                 type: 'professional_quote',
                 company: formData.companyName,
+                pdf_url: pdfUrl,
                 generated_at: new Date().toISOString()
               }
             });
@@ -378,7 +408,7 @@ ${formData.additionalInfo ? `**Informazioni Aggiuntive:**\n${formData.additional
               .from('conversations')
               .update({
                 last_message_at: new Date().toISOString(),
-                last_message_text: `Nuova richiesta preventivo professionale da ${formData.companyName}`
+                last_message_text: `📋 Preventivo Professionale - ${formData.companyName}`
               })
               .eq('id', conversationId);
           }
