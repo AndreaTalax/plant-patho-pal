@@ -44,8 +44,8 @@ const generatePDF = async (data: ProfessionalFormData): Promise<Uint8Array> => {
   let yPosition = height - 50;
   
   // Header
-  page.drawText('🌱 Dr.Plant', {
-    x: width / 2 - 60,
+  page.drawText('Dr.Plant', {
+    x: width / 2 - 40,
     y: yPosition,
     size: 24,
     font: timesRomanBoldFont,
@@ -187,7 +187,7 @@ const generatePDF = async (data: ProfessionalFormData): Promise<Uint8Array> => {
   };
   
   // Informazioni Aziendali
-  addSection('📋 Informazioni Aziendali', [
+  addSection('Informazioni Aziendali', [
     { label: 'Nome Azienda', value: data.companyName },
     { label: 'Persona di Contatto', value: data.contactPerson },
     { label: 'Email', value: data.email },
@@ -196,28 +196,28 @@ const generatePDF = async (data: ProfessionalFormData): Promise<Uint8Array> => {
   ]);
   
   // Requisiti Tecnici
-  addSection('🌿 Requisiti Tecnici', [
+  addSection('Requisiti Tecnici', [
     { label: 'Tipi di Piante', value: data.plantTypes },
     { label: 'Volume Previsto', value: data.expectedVolume || 'Non specificato' },
-    { label: 'Funzionalità Richieste', value: data.preferredFeatures.length > 0 ? data.preferredFeatures : ['Nessuna funzionalità specifica richiesta'] }
+    { label: 'Funzionalita Richieste', value: data.preferredFeatures.length > 0 ? data.preferredFeatures : ['Nessuna funzionalita specifica richiesta'] }
   ]);
   
   // Sfide Attuali
   if (data.currentChallenges) {
-    addSection('⚠️ Sfide Attuali', [
+    addSection('Sfide Attuali', [
       { label: 'Descrizione', value: data.currentChallenges }
     ]);
   }
   
   // Budget e Timeline
-  addSection('💰 Budget e Timeline', [
+  addSection('Budget e Timeline', [
     { label: 'Budget', value: data.budget || 'Non specificato' },
     { label: 'Timeline', value: data.timeline || 'Non specificata' }
   ]);
   
   // Informazioni Aggiuntive
   if (data.additionalInfo) {
-    addSection('📝 Informazioni Aggiuntive', [
+    addSection('Informazioni Aggiuntive', [
       { label: 'Note', value: data.additionalInfo }
     ]);
   }
