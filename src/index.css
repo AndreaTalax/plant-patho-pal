@@ -2,8 +2,8 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Force portrait orientation for mobile */
-@media screen and (orientation: landscape) and (max-width: 768px) {
+/* Force portrait orientation for mobile phones only */
+@media screen and (orientation: landscape) and (max-width: 768px) and (max-height: 500px) {
   html {
     transform: rotate(90deg);
     transform-origin: center center;
