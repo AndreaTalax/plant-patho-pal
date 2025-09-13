@@ -259,17 +259,28 @@ const ChatTab = () => {
 
           <div className="mt-8 space-y-4">
             <ChatTestButton />
-            <div className="text-center">
+            <div className="text-center space-x-4">
               <Button
                 onClick={() => {
-            const event = new CustomEvent('switchTab', { detail: 'diagnose' });
+                  const event = new CustomEvent('switchTab', { detail: 'diagnose' });
                   window.dispatchEvent(event);
                 }}
                 variant="outline"
-                className="mr-4"
               >
                 <FileText className="h-4 w-4 mr-2" />
                 Nuova Diagnosi
+              </Button>
+              
+              <Button
+                onClick={() => {
+                  const event = new CustomEvent('switchTab', { detail: 'professional-quote' });
+                  window.dispatchEvent(event);
+                }}
+                variant="outline"
+                className="bg-blue-50 hover:bg-blue-100 border-blue-200"
+              >
+                <FileText className="h-4 w-4 mr-2" />
+                Nuovo Preventivo Professionale
               </Button>
             </div>
           </div>

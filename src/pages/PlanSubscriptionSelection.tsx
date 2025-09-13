@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import PlanSubscriptionOptions from "@/components/subscription/PlanSubscriptionOptions";
@@ -33,6 +33,15 @@ const PlanSubscriptionSelection = () => {
       setCurrentStep('subscription');
     }
   };
+
+  // Auto-select professional plan if navigating directly from chat
+  useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    if (searchParams.get('direct') === 'professional') {
+      setSelectedPlan('professionisti');
+      setCurrentStep('professional');
+    }
+  }, []);
 
   const handleSubscriptionSelect = (option: string) => {
     localStorage.setItem('selectedSubscriptionOption', option);

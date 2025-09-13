@@ -111,6 +111,13 @@ const Index = () => {
       const newTab = event.detail;
       console.log("🎧 New tab requested:", newTab);
 
+      // Handle professional quote request
+      if (newTab === "professional-quote") {
+        console.log("🎧 Professional quote requested - navigating to plan selection");
+        navigate("/plan-selection?direct=professional");
+        return;
+      }
+
       if (isMasterAccount && newTab === "diagnose") {
         console.log("🎧 Master account + diagnose -> Setting to expert");
         setActiveTab("expert");
