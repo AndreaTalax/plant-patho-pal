@@ -100,23 +100,44 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
     try {
       console.log('💾 Salvando diagnosi...');
       
-      // Prepara i dati per il salvataggio
+      // Prepara i dati per il salvataggio diretto in tabella diagnoses
       const diagnosisToSave = {
+        user_id: user.id,
         plant_type: plantInfo?.name || effectiveDiagnosis?.name || 'Pianta non identificata',
         plant_variety: analysisDetails?.multiServiceInsights?.plantSpecies || '',
-        symptoms: Array.isArray(plantInfo?.symptoms) 
-          ? plantInfo.symptoms 
-          : plantInfo?.symptoms 
-            ? [plantInfo.symptoms] 
-            : ['Nessun sintomo specificato'],
+        symptoms: JSON.stringify(
+          Array.isArray(plantInfo?.symptoms) 
+            ? plantInfo.symptoms 
+            : plantInfo?.symptoms 
+              ? [plantInfo.symptoms] 
+              : ['Nessun sintomo specificato']
+        ),
         image_url: imageSrc,
         diagnosis_result: effectiveDiagnosis || analysisDetails || {},
         status: 'completed'
       };
 
-      await saveDiagnosis(diagnosisToSave);
+      console.log('📝 Salvando diagnosi direttamente nel database...', diagnosisToSave);
+
+      // Salva direttamente nella tabella diagnoses 
+      const { data, error } = await supabase
+        .from('diagnoses')
+        .insert(diagnosisToSave)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('❌ Errore database:', error);
+        throw error;
+      }
+
+      console.log('✅ Diagnosi salvata con successo:', data);
+      toast.success('Diagnosi salvata con successo!');
+      
+      return data;
     } catch (error) {
       console.error('❌ Errore salvando diagnosi:', error);
+      toast.error('Errore nel salvare la diagnosi: ' + (error.message || 'Errore sconosciuto'));
     }
   };
 
