@@ -390,7 +390,16 @@ const handler = async (req: Request): Promise<Response> => {
 
 Ho generato il preventivo dettagliato con tutte le informazioni fornite.  
 
-👉 [Scarica il PDF qui](${pdfUrl})
+👉 [📥 Scarica il PDF qui](${pdfUrl})
+
+Il documento PDF contiene:
+• Dettagli aziendali e contatti
+• Requisiti tecnici e tipi di piante
+• Sfide attuali e volume previsto  
+• Budget e timeline
+• Funzionalità richieste
+
+Ti ricontatterò presto per discutere la soluzione più adatta alle tue esigenze.
 
 *Generato il ${new Date().toLocaleString("it-IT")}*`,
             text: `📋 Preventivo Professionale - ${formData.companyName}`,
