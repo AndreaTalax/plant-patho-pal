@@ -196,6 +196,22 @@ const handler = async (req: Request): Promise<Response> => {
     
     console.log('Generating PDF for professional quote:', formData);
 
+    // Get user ID from request headers (JWT token)
+    const authHeader = req.headers.get('Authorization');
+    let userId = null;
+    
+    if (authHeader) {
+      try {
+        const token = authHeader.replace('Bearer ', '');
+        const { data: { user } } = await supabase.auth.getUser(token);
+        userId = user?.id;
+      } catch (error) {
+        console.error('Error getting user from token:', error);
+      }
+    }
+
+    console.log('User ID for conversation:', userId);
+
     // Genera contenuto HTML per il PDF
     const htmlContent = generatePDFContent(formData);
     
@@ -259,37 +275,67 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log('Email sent successfully:', emailResponse);
 
-    // Crea una conversazione con l'esperto
-    const { data: authData } = await supabase.auth.getUser();
+    // Crea una conversazione con l'esperto usando service role
+    const serviceSupabase = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
     
-    if (authData.user) {
-      // Trova l'ID dell'esperto (Marco Nigro)
-      const { data: expertProfile } = await supabase
+    if (userId) {
+      console.log('Creating conversation for user:', userId);
+      
+      // Trova l'ID dell'esperto (Marco Nigro) 
+      const { data: expertProfile } = await serviceSupabase
         .from('profiles')
         .select('id')
         .eq('email', 'agrotecnicomarconigro@gmail.com')
         .single();
 
+      console.log('Expert profile found:', expertProfile);
+
       if (expertProfile) {
-        // Crea conversazione
-        const { data: conversation, error: convError } = await supabase
+        // Verifica se esiste già una conversazione attiva
+        const { data: existingConv } = await serviceSupabase
           .from('conversations')
-          .insert({
-            user_id: authData.user.id,
-            expert_id: expertProfile.id,
-            title: `Preventivo Professionale - ${formData.companyName}`,
-            status: 'active'
-          })
-          .select()
+          .select('id')
+          .eq('user_id', userId)
+          .eq('expert_id', expertProfile.id)
+          .eq('status', 'active')
           .single();
 
-        if (conversation && !convError) {
+        let conversationId = existingConv?.id;
+
+        if (!conversationId) {
+          // Crea nuova conversazione
+          const { data: conversation, error: convError } = await serviceSupabase
+            .from('conversations')
+            .insert({
+              user_id: userId,
+              expert_id: expertProfile.id,
+              title: `Preventivo Professionale - ${formData.companyName}`,
+              status: 'active',
+              last_message_at: new Date().toISOString()
+            })
+            .select()
+            .single();
+
+          if (convError) {
+            console.error('Error creating conversation:', convError);
+          } else {
+            conversationId = conversation.id;
+            console.log('New conversation created:', conversationId);
+          }
+        } else {
+          console.log('Using existing conversation:', conversationId);
+        }
+
+        if (conversationId) {
           // Invia messaggio in chat con il PDF
-          const { error: messageError } = await supabase
+          const { error: messageError } = await serviceSupabase
             .from('messages')
             .insert({
-              conversation_id: conversation.id,
-              sender_id: authData.user.id,
+              conversation_id: conversationId,
+              sender_id: userId,
               recipient_id: expertProfile.id,
               content: `📋 **Nuova Richiesta Preventivo Professionale**
 
@@ -298,8 +344,8 @@ const handler = async (req: Request): Promise<Response> => {
 **Email:** ${formData.email}
 **Telefono:** ${formData.phone}
 **Tipo Business:** ${formData.businessType}
-**Budget:** ${formData.budget}
-**Timeline:** ${formData.timeline}
+**Budget:** ${formData.budget || 'Non specificato'}
+**Timeline:** ${formData.timeline || 'Non specificato'}
 
 **Sfide Attuali:**
 ${formData.currentChallenges}
@@ -326,9 +372,20 @@ ${formData.additionalInfo ? `**Informazioni Aggiuntive:**\n${formData.additional
             console.error('Error sending chat message:', messageError);
           } else {
             console.log('Chat message sent successfully');
+            
+            // Aggiorna la conversazione con l'ultimo messaggio
+            await serviceSupabase
+              .from('conversations')
+              .update({
+                last_message_at: new Date().toISOString(),
+                last_message_text: `Nuova richiesta preventivo professionale da ${formData.companyName}`
+              })
+              .eq('id', conversationId);
           }
         }
       }
+    } else {
+      console.log('No user ID found, skipping conversation creation');
     }
 
     return new Response(
@@ -336,7 +393,8 @@ ${formData.additionalInfo ? `**Informazioni Aggiuntive:**\n${formData.additional
         success: true,
         emailSent: !!emailResponse,
         pdfGenerated: true,
-        message: 'PDF generato e email inviata con successo'
+        conversationCreated: !!userId,
+        message: 'PDF generato, email inviata e conversazione creata con successo'
       }),
       {
         status: 200,

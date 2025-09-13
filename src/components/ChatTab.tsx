@@ -143,7 +143,8 @@ const ChatTab = () => {
     );
   }
 
-  // Se l'utente non ha accesso premium alla chat E non ha conversazioni attive
+  // Se l'utente non ha accesso premium E non ha conversazioni attive, mostra paywall
+  // Le conversazioni esistenti (professionali o consulenze completate) bypassano il paywall
   if (!hasExpertChatAccess && activeConversations.length === 0) {
     return (
       <div className="container mx-auto px-4 py-8">
@@ -179,7 +180,8 @@ const ChatTab = () => {
     );
   }
 
-  // Se l'utente ha accesso premium e conversazioni attive
+  // Se l'utente ha conversazioni attive, può accedere sempre (anche senza premium)
+  // Questo include richieste professionali e consulenze esperto completate
   if (activeConversations.length > 0) {
     // Se è stata selezionata una conversazione specifica, mostra la chat
     if (selectedConversationId) {
@@ -276,7 +278,7 @@ const ChatTab = () => {
     );
   }
 
-  // Se l'utente ha accesso premium ma non ha conversazioni attive
+  // Se l'utente ha accesso premium ma non ha conversazioni attive, suggerisci diagnosi
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="max-w-2xl mx-auto text-center">

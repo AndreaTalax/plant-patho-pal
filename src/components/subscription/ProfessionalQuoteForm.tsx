@@ -70,9 +70,15 @@ const ProfessionalQuoteForm = ({ onBack, onSubmit }: ProfessionalQuoteFormProps)
 
       toast.success(
         language === 'it' 
-          ? '✅ Richiesta inviata! PDF generato e inviato via email e chat al fitopatologo.' 
-          : '✅ Request sent! PDF generated and sent via email and chat to the phytopathologist.'
+          ? '✅ Richiesta inviata! PDF generato e inviato al fitopatologo. Ti reindirizziamo alla chat...' 
+          : '✅ Request sent! PDF generated and sent to the phytopathologist. Redirecting you to chat...'
       );
+
+      // Reindirizza alla chat dopo 2 secondi
+      setTimeout(() => {
+        const event = new CustomEvent('switchTab', { detail: 'chat' });
+        window.dispatchEvent(event);
+      }, 2000);
 
       onSubmit(formData);
     } catch (error) {
