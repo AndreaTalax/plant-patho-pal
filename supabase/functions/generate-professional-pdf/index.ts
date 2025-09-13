@@ -215,35 +215,11 @@ const handler = async (req: Request): Promise<Response> => {
     // Genera contenuto HTML per il PDF
     const htmlContent = generatePDFContent(formData);
     
-    // Crea un file HTML strutturato come PDF
-    const fileName = `preventivo-${formData.companyName.replace(/\s+/g, '-').toLowerCase()}-${Date.now()}.html`;
-    const htmlBuffer = new TextEncoder().encode(htmlContent);
-
-    // Usa service role per l'upload al bucket storage
-    const serviceSupabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
-
-    // Salva il file HTML in Supabase Storage (verrà visualizzato come PDF nel browser)
-    const { data: uploadData, error: uploadError } = await serviceSupabase.storage
-      .from('pdfs')
-      .upload(fileName, htmlBuffer, {
-        contentType: 'text/html',
-        upsert: false
-      });
-
-    if (uploadError) {
-      console.error('Error uploading HTML file:', uploadError);
-      throw new Error('Failed to upload PDF file');
-    }
-
-    // Ottieni URL pubblico del file
-    const { data: publicUrlData } = serviceSupabase.storage
-      .from('pdfs')
-      .getPublicUrl(fileName);
+    // Invece di caricare file, invia il contenuto direttamente in chat
+    // Crea URL data per simulare un allegato PDF
+    const pdfUrl = `data:text/html;charset=utf-8,${encodeURIComponent(htmlContent)}`;
     
-    const pdfUrl = publicUrlData.publicUrl;
+    console.log('Generated PDF content as data URL');
     
     // Invia email con il PDF
     const emailResponse = await resend.emails.send({
@@ -302,7 +278,11 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log('Email sent successfully:', emailResponse);
 
-    // serviceSupabase già inizializzato sopra per l'upload
+    // Crea una conversazione con l'esperto usando service role
+    const serviceSupabase = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
     
     if (userId) {
       console.log('Creating conversation for user:', userId);
