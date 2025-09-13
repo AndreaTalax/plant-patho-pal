@@ -80,10 +80,25 @@ const PlanSubscriptionSelection = () => {
         <div className="absolute top-0 left-0 w-full h-64 bg-drplant-blue-light/30 -z-10 rounded-b-[50%]" />
         <div className="absolute bottom-0 right-0 w-full h-64 bg-drplant-green/20 -z-10 rounded-t-[30%]" />
         
-        <ProfessionalQuoteForm 
-          onSubmit={handleProfessionalQuote}
-          onBack={handleBackToSelection}
-        />
+        <div className="w-full max-w-4xl">
+          {/* Logout Button */}
+          <div className="absolute top-4 right-4">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleLogout}
+              className="flex items-center gap-2 bg-white/80 backdrop-blur-sm border-gray-300 hover:bg-white hover:border-drplant-green text-gray-700 hover:text-drplant-blue-dark"
+            >
+              <LogOut className="h-4 w-4" />
+              {language === 'it' ? 'Esci' : 'Logout'}
+            </Button>
+          </div>
+          
+          <ProfessionalQuoteForm 
+            onSubmit={handleProfessionalQuote}
+            onBack={handleBackToSelection}
+          />
+        </div>
       </div>
     );
   }
