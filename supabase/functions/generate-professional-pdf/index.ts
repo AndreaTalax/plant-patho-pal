@@ -219,8 +219,14 @@ const handler = async (req: Request): Promise<Response> => {
     const fileName = `preventivo-${formData.companyName.replace(/\s+/g, '-').toLowerCase()}-${Date.now()}.html`;
     const htmlBuffer = new TextEncoder().encode(htmlContent);
 
+    // Usa service role per l'upload al bucket storage
+    const serviceSupabase = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
+
     // Salva il file HTML in Supabase Storage (verrà visualizzato come PDF nel browser)
-    const { data: uploadData, error: uploadError } = await supabase.storage
+    const { data: uploadData, error: uploadError } = await serviceSupabase.storage
       .from('pdfs')
       .upload(fileName, htmlBuffer, {
         contentType: 'text/html',
@@ -233,7 +239,7 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Ottieni URL pubblico del file
-    const { data: publicUrlData } = supabase.storage
+    const { data: publicUrlData } = serviceSupabase.storage
       .from('pdfs')
       .getPublicUrl(fileName);
     
@@ -296,11 +302,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log('Email sent successfully:', emailResponse);
 
-    // Crea una conversazione con l'esperto usando service role
-    const serviceSupabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
+    // serviceSupabase già inizializzato sopra per l'upload
     
     if (userId) {
       console.log('Creating conversation for user:', userId);
