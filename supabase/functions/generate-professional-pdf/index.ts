@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts"; 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.4';
 import { Resend } from "npm:resend@2.0.0";
-import jsPDF from "npm:jspdf@2.5.1";
+import { PDFDocument, rgb, StandardFonts } from 'https://cdn.skypack.dev/pdf-lib@1.17.1';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -23,97 +23,167 @@ interface ProfessionalFormData {
   additionalInfo: string;
 }
 
-const generatePDF = (data: ProfessionalFormData): Uint8Array => {
-  const pdf = new jsPDF('p', 'mm', 'a4');
+const generatePDF = async (data: ProfessionalFormData): Promise<Uint8Array> => {
+  // Crea un nuovo documento PDF
+  const pdfDoc = await PDFDocument.create();
   
-  // Configurazione font e colori
-  const primaryColor = [46, 125, 50]; // Verde Dr.Plant
-  const secondaryColor = [21, 101, 192]; // Blu
-  const textColor = [51, 51, 51]; // Grigio scuro
-  const lightGrayColor = [171, 171, 171]; // Grigio chiaro
+  // Incorpora i font standard
+  const timesRomanFont = await pdfDoc.embedFont(StandardFonts.TimesRoman);
+  const timesRomanBoldFont = await pdfDoc.embedFont(StandardFonts.TimesRomanBold);
+  const helveticaFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
   
-  let yPosition = 20;
+  // Colori
+  const primaryColor = rgb(0.18, 0.49, 0.196); // Verde Dr.Plant
+  const secondaryColor = rgb(0.082, 0.396, 0.753); // Blu
+  const textColor = rgb(0.2, 0.2, 0.2); // Grigio scuro
+  const lightGrayColor = rgb(0.67, 0.67, 0.67); // Grigio chiaro
+  
+  // Aggiungi una pagina
+  let page = pdfDoc.addPage([595.28, 841.89]); // A4 size
+  const { width, height } = page.getSize();
+  let yPosition = height - 50;
   
   // Header
-  pdf.setFontSize(24);
-  pdf.setTextColor(...primaryColor);
-  pdf.text('🌱 Dr.Plant', 105, yPosition, { align: 'center' });
+  page.drawText('🌱 Dr.Plant', {
+    x: width / 2 - 60,
+    y: yPosition,
+    size: 24,
+    font: timesRomanBoldFont,
+    color: primaryColor,
+  });
   
-  yPosition += 10;
-  pdf.setFontSize(18);
-  pdf.setTextColor(...secondaryColor);
-  pdf.text('Richiesta Preventivo Professionale', 105, yPosition, { align: 'center' });
+  yPosition -= 30;
+  page.drawText('Richiesta Preventivo Professionale', {
+    x: width / 2 - 140,
+    y: yPosition,
+    size: 18,
+    font: timesRomanBoldFont,
+    color: secondaryColor,
+  });
   
-  yPosition += 8;
-  pdf.setFontSize(10);
-  pdf.setTextColor(...lightGrayColor);
-  pdf.text(`Data: ${new Date().toLocaleDateString('it-IT')}`, 105, yPosition, { align: 'center' });
+  yPosition -= 20;
+  page.drawText(`Data: ${new Date().toLocaleDateString('it-IT')}`, {
+    x: width / 2 - 50,
+    y: yPosition,
+    size: 10,
+    font: helveticaFont,
+    color: lightGrayColor,
+  });
   
   // Linea separatrice
-  yPosition += 8;
-  pdf.setDrawColor(...primaryColor);
-  pdf.setLineWidth(0.5);
-  pdf.line(20, yPosition, 190, yPosition);
+  yPosition -= 15;
+  page.drawLine({
+    start: { x: 50, y: yPosition },
+    end: { x: width - 50, y: yPosition },
+    thickness: 1,
+    color: primaryColor,
+  });
   
-  yPosition += 15;
+  yPosition -= 30;
   
   // Funzione helper per aggiungere sezioni
   const addSection = (title: string, fields: Array<{label: string, value: string | string[]}>) => {
-    if (yPosition > 250) {
-      pdf.addPage();
-      yPosition = 20;
+    // Controlla se abbiamo bisogno di una nuova pagina
+    if (yPosition < 150) {
+      page = pdfDoc.addPage([595.28, 841.89]);
+      yPosition = height - 50;
     }
     
     // Titolo sezione
-    pdf.setFontSize(14);
-    pdf.setTextColor(...primaryColor);
-    pdf.text(title, 20, yPosition);
-    yPosition += 8;
+    page.drawText(title, {
+      x: 50,
+      y: yPosition,
+      size: 14,
+      font: timesRomanBoldFont,
+      color: primaryColor,
+    });
+    yPosition -= 8;
     
     // Linea sotto il titolo
-    pdf.setDrawColor(221, 221, 221);
-    pdf.setLineWidth(0.3);
-    pdf.line(20, yPosition, 190, yPosition);
-    yPosition += 8;
+    page.drawLine({
+      start: { x: 50, y: yPosition },
+      end: { x: width - 50, y: yPosition },
+      thickness: 0.5,
+      color: lightGrayColor,
+    });
+    yPosition -= 20;
     
     // Campi
-    pdf.setFontSize(10);
     fields.forEach(field => {
-      if (yPosition > 270) {
-        pdf.addPage();
-        yPosition = 20;
+      if (yPosition < 50) {
+        page = pdfDoc.addPage([595.28, 841.89]);
+        yPosition = height - 50;
       }
       
       // Label
-      pdf.setTextColor(85, 85, 85);
-      pdf.setFont(pdf.getFont().fontName, 'bold');
-      pdf.text(`${field.label}:`, 25, yPosition);
+      page.drawText(`${field.label}:`, {
+        x: 60,
+        y: yPosition,
+        size: 10,
+        font: timesRomanBoldFont,
+        color: textColor,
+      });
       
       // Value
-      pdf.setTextColor(...textColor);
-      pdf.setFont(pdf.getFont().fontName, 'normal');
-      
       if (Array.isArray(field.value)) {
-        yPosition += 5;
+        yPosition -= 15;
         field.value.forEach(item => {
-          if (yPosition > 270) {
-            pdf.addPage();
-            yPosition = 20;
+          if (yPosition < 50) {
+            page = pdfDoc.addPage([595.28, 841.89]);
+            yPosition = height - 50;
           }
-          pdf.text(`• ${item}`, 30, yPosition);
-          yPosition += 5;
+          page.drawText(`• ${item}`, {
+            x: 70,
+            y: yPosition,
+            size: 9,
+            font: helveticaFont,
+            color: textColor,
+          });
+          yPosition -= 12;
         });
       } else {
-        // Gestione testo lungo con a capo automatico
-        const lines = pdf.splitTextToSize(field.value, 120);
-        pdf.text(lines, 80, yPosition);
-        yPosition += lines.length * 5;
+        // Gestione testo lungo con a capo automatico (semplificato)
+        const maxLineLength = 65;
+        const words = field.value.split(' ');
+        let line = '';
+        
+        for (const word of words) {
+          if ((line + word).length > maxLineLength) {
+            page.drawText(line, {
+              x: 160,
+              y: yPosition,
+              size: 9,
+              font: helveticaFont,
+              color: textColor,
+            });
+            yPosition -= 12;
+            line = word + ' ';
+            
+            if (yPosition < 50) {
+              page = pdfDoc.addPage([595.28, 841.89]);
+              yPosition = height - 50;
+            }
+          } else {
+            line += word + ' ';
+          }
+        }
+        
+        if (line.trim()) {
+          page.drawText(line, {
+            x: 160,
+            y: yPosition,
+            size: 9,
+            font: helveticaFont,
+            color: textColor,
+          });
+          yPosition -= 12;
+        }
       }
       
-      yPosition += 3;
+      yPosition -= 8;
     });
     
-    yPosition += 8;
+    yPosition -= 15;
   };
   
   // Informazioni Aziendali
@@ -153,23 +223,39 @@ const generatePDF = (data: ProfessionalFormData): Uint8Array => {
   }
   
   // Footer
-  if (yPosition > 250) {
-    pdf.addPage();
-    yPosition = 20;
+  if (yPosition < 100) {
+    page = pdfDoc.addPage([595.28, 841.89]);
+    yPosition = height - 50;
   }
   
-  yPosition = 280; // Posizione fissa per il footer
-  pdf.setDrawColor(...lightGrayColor);
-  pdf.setLineWidth(0.3);
-  pdf.line(20, yPosition - 5, 190, yPosition - 5);
+  // Posiziona footer in basso
+  const footerY = 50;
+  page.drawLine({
+    start: { x: 50, y: footerY + 20 },
+    end: { x: width - 50, y: footerY + 20 },
+    thickness: 0.5,
+    color: lightGrayColor,
+  });
   
-  pdf.setFontSize(8);
-  pdf.setTextColor(...lightGrayColor);
-  pdf.text('Dr.Plant - Diagnosi Professionale delle Piante', 105, yPosition, { align: 'center' });
-  pdf.text(`Documento generato automaticamente il ${new Date().toLocaleString('it-IT')}`, 105, yPosition + 5, { align: 'center' });
+  page.drawText('Dr.Plant - Diagnosi Professionale delle Piante', {
+    x: width / 2 - 120,
+    y: footerY + 10,
+    size: 8,
+    font: helveticaFont,
+    color: lightGrayColor,
+  });
   
-  // Restituisci il PDF come array di byte
-  return new Uint8Array(pdf.output('arraybuffer'));
+  page.drawText(`Documento generato automaticamente il ${new Date().toLocaleString('it-IT')}`, {
+    x: width / 2 - 130,
+    y: footerY,
+    size: 8,
+    font: helveticaFont,
+    color: lightGrayColor,
+  });
+  
+  // Serializza il PDF
+  const pdfBytes = await pdfDoc.save();
+  return pdfBytes;
 };
 
 const handler = async (req: Request): Promise<Response> => {
@@ -204,7 +290,7 @@ const handler = async (req: Request): Promise<Response> => {
     console.log("User ID for conversation:", userId);
 
     // Genera PDF reale
-    const pdfBytes = generatePDF(formData);
+    const pdfBytes = await generatePDF(formData);
     const pdfFileName = `professional_quote_${Date.now()}.pdf`;
 
     // Carica in Supabase Storage
