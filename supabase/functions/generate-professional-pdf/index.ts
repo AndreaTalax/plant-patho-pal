@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts"; 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.4';
 import { Resend } from "npm:resend@2.0.0";
+import jsPDF from "npm:jspdf@2.5.1";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -22,81 +23,153 @@ interface ProfessionalFormData {
   additionalInfo: string;
 }
 
-const generatePDFContent = (data: ProfessionalFormData): string => {
-  return `
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="utf-8">
-    <title>Richiesta Preventivo Professionale - Dr.Plant</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 40px; line-height: 1.6; color: #333; }
-        .header { text-align: center; margin-bottom: 40px; border-bottom: 2px solid #2E7D32; padding-bottom: 20px; }
-        .logo { font-size: 24px; font-weight: bold; color: #2E7D32; margin-bottom: 10px; }
-        .title { font-size: 20px; color: #1565C0; margin: 20px 0; }
-        .section { margin-bottom: 25px; background: #f9f9f9; padding: 15px; border-radius: 8px; }
-        .section h3 { color: #2E7D32; margin-top: 0; border-bottom: 1px solid #ddd; padding-bottom: 5px; }
-        .field { margin-bottom: 12px; }
-        .label { font-weight: bold; color: #555; display: inline-block; width: 150px; }
-        .value { color: #333; }
-        .list-item { margin-left: 20px; margin-bottom: 5px; }
-        .footer { margin-top: 40px; text-align: center; color: #666; font-size: 12px; border-top: 1px solid #ddd; padding-top: 20px; }
-    </style>
-</head>
-<body>
-    <div class="header">
-        <div class="logo">🌱 Dr.Plant</div>
-        <div class="title">Richiesta Preventivo Professionale</div>
-        <div style="color: #666; font-size: 14px;">Data: ${new Date().toLocaleDateString('it-IT')}</div>
-    </div>
-
-    <div class="section">
-        <h3>📋 Informazioni Aziendali</h3>
-        <div class="field"><span class="label">Nome Azienda:</span><span class="value">${data.companyName}</span></div>
-        <div class="field"><span class="label">Persona di Contatto:</span><span class="value">${data.contactPerson}</span></div>
-        <div class="field"><span class="label">Email:</span><span class="value">${data.email}</span></div>
-        <div class="field"><span class="label">Telefono:</span><span class="value">${data.phone}</span></div>
-        <div class="field"><span class="label">Tipo di Business:</span><span class="value">${data.businessType}</span></div>
-    </div>
-
-    <div class="section">
-        <h3>🌿 Requisiti Tecnici</h3>
-        <div class="field">
-            <span class="label">Tipi di Piante:</span>
-            <div class="value">${data.plantTypes.map(type => `<div class="list-item">• ${type}</div>`).join('')}</div>
-        </div>
-        <div class="field"><span class="label">Volume Previsto:</span><span class="value">${data.expectedVolume}</span></div>
-        <div class="field">
-            <span class="label">Funzionalità Richieste:</span>
-            <div class="value">${data.preferredFeatures.map(feature => `<div class="list-item">• ${feature}</div>`).join('')}</div>
-        </div>
-    </div>
-
-    <div class="section">
-        <h3>⚠️ Sfide Attuali</h3>
-        <div class="value" style="background: white; padding: 10px; border-radius: 4px; border-left: 4px solid #FF9800;">
-            ${data.currentChallenges}
-        </div>
-    </div>
-
-    <div class="section">
-        <h3>💰 Budget e Timeline</h3>
-        <div class="field"><span class="label">Budget:</span><span class="value">${data.budget}</span></div>
-        <div class="field"><span class="label">Timeline:</span><span class="value">${data.timeline}</span></div>
-    </div>
-
-    ${data.additionalInfo ? `
-    <div class="section">
-        <h3>📝 Informazioni Aggiuntive</h3>
-        <div class="value" style="background: white; padding: 10px; border-radius: 4px;">${data.additionalInfo}</div>
-    </div>` : ''}
-
-    <div class="footer">
-        <p><strong>Dr.Plant - Diagnosi Professionale delle Piante</strong></p>
-        <p>Documento generato automaticamente il ${new Date().toLocaleString('it-IT')}</p>
-    </div>
-</body>
-</html>`.trim();
+const generatePDF = (data: ProfessionalFormData): Uint8Array => {
+  const pdf = new jsPDF('p', 'mm', 'a4');
+  
+  // Configurazione font e colori
+  const primaryColor = [46, 125, 50]; // Verde Dr.Plant
+  const secondaryColor = [21, 101, 192]; // Blu
+  const textColor = [51, 51, 51]; // Grigio scuro
+  const lightGrayColor = [171, 171, 171]; // Grigio chiaro
+  
+  let yPosition = 20;
+  
+  // Header
+  pdf.setFontSize(24);
+  pdf.setTextColor(...primaryColor);
+  pdf.text('🌱 Dr.Plant', 105, yPosition, { align: 'center' });
+  
+  yPosition += 10;
+  pdf.setFontSize(18);
+  pdf.setTextColor(...secondaryColor);
+  pdf.text('Richiesta Preventivo Professionale', 105, yPosition, { align: 'center' });
+  
+  yPosition += 8;
+  pdf.setFontSize(10);
+  pdf.setTextColor(...lightGrayColor);
+  pdf.text(`Data: ${new Date().toLocaleDateString('it-IT')}`, 105, yPosition, { align: 'center' });
+  
+  // Linea separatrice
+  yPosition += 8;
+  pdf.setDrawColor(...primaryColor);
+  pdf.setLineWidth(0.5);
+  pdf.line(20, yPosition, 190, yPosition);
+  
+  yPosition += 15;
+  
+  // Funzione helper per aggiungere sezioni
+  const addSection = (title: string, fields: Array<{label: string, value: string | string[]}>) => {
+    if (yPosition > 250) {
+      pdf.addPage();
+      yPosition = 20;
+    }
+    
+    // Titolo sezione
+    pdf.setFontSize(14);
+    pdf.setTextColor(...primaryColor);
+    pdf.text(title, 20, yPosition);
+    yPosition += 8;
+    
+    // Linea sotto il titolo
+    pdf.setDrawColor(221, 221, 221);
+    pdf.setLineWidth(0.3);
+    pdf.line(20, yPosition, 190, yPosition);
+    yPosition += 8;
+    
+    // Campi
+    pdf.setFontSize(10);
+    fields.forEach(field => {
+      if (yPosition > 270) {
+        pdf.addPage();
+        yPosition = 20;
+      }
+      
+      // Label
+      pdf.setTextColor(85, 85, 85);
+      pdf.setFont(pdf.getFont().fontName, 'bold');
+      pdf.text(`${field.label}:`, 25, yPosition);
+      
+      // Value
+      pdf.setTextColor(...textColor);
+      pdf.setFont(pdf.getFont().fontName, 'normal');
+      
+      if (Array.isArray(field.value)) {
+        yPosition += 5;
+        field.value.forEach(item => {
+          if (yPosition > 270) {
+            pdf.addPage();
+            yPosition = 20;
+          }
+          pdf.text(`• ${item}`, 30, yPosition);
+          yPosition += 5;
+        });
+      } else {
+        // Gestione testo lungo con a capo automatico
+        const lines = pdf.splitTextToSize(field.value, 120);
+        pdf.text(lines, 80, yPosition);
+        yPosition += lines.length * 5;
+      }
+      
+      yPosition += 3;
+    });
+    
+    yPosition += 8;
+  };
+  
+  // Informazioni Aziendali
+  addSection('📋 Informazioni Aziendali', [
+    { label: 'Nome Azienda', value: data.companyName },
+    { label: 'Persona di Contatto', value: data.contactPerson },
+    { label: 'Email', value: data.email },
+    { label: 'Telefono', value: data.phone },
+    { label: 'Tipo di Business', value: data.businessType }
+  ]);
+  
+  // Requisiti Tecnici
+  addSection('🌿 Requisiti Tecnici', [
+    { label: 'Tipi di Piante', value: data.plantTypes },
+    { label: 'Volume Previsto', value: data.expectedVolume || 'Non specificato' },
+    { label: 'Funzionalità Richieste', value: data.preferredFeatures.length > 0 ? data.preferredFeatures : ['Nessuna funzionalità specifica richiesta'] }
+  ]);
+  
+  // Sfide Attuali
+  if (data.currentChallenges) {
+    addSection('⚠️ Sfide Attuali', [
+      { label: 'Descrizione', value: data.currentChallenges }
+    ]);
+  }
+  
+  // Budget e Timeline
+  addSection('💰 Budget e Timeline', [
+    { label: 'Budget', value: data.budget || 'Non specificato' },
+    { label: 'Timeline', value: data.timeline || 'Non specificata' }
+  ]);
+  
+  // Informazioni Aggiuntive
+  if (data.additionalInfo) {
+    addSection('📝 Informazioni Aggiuntive', [
+      { label: 'Note', value: data.additionalInfo }
+    ]);
+  }
+  
+  // Footer
+  if (yPosition > 250) {
+    pdf.addPage();
+    yPosition = 20;
+  }
+  
+  yPosition = 280; // Posizione fissa per il footer
+  pdf.setDrawColor(...lightGrayColor);
+  pdf.setLineWidth(0.3);
+  pdf.line(20, yPosition - 5, 190, yPosition - 5);
+  
+  pdf.setFontSize(8);
+  pdf.setTextColor(...lightGrayColor);
+  pdf.text('Dr.Plant - Diagnosi Professionale delle Piante', 105, yPosition, { align: 'center' });
+  pdf.text(`Documento generato automaticamente il ${new Date().toLocaleString('it-IT')}`, 105, yPosition + 5, { align: 'center' });
+  
+  // Restituisci il PDF come array di byte
+  return new Uint8Array(pdf.output('arraybuffer'));
 };
 
 const handler = async (req: Request): Promise<Response> => {
@@ -130,9 +203,9 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log("User ID for conversation:", userId);
 
-    // Genera HTML PDF
-    const htmlContent = generatePDFContent(formData);
-    const pdfFileName = `professional_quote_${Date.now()}.html`;
+    // Genera PDF reale
+    const pdfBytes = generatePDF(formData);
+    const pdfFileName = `professional_quote_${Date.now()}.pdf`;
 
     // Carica in Supabase Storage
     const serviceSupabase = createClient(
@@ -142,12 +215,15 @@ const handler = async (req: Request): Promise<Response> => {
 
     const { error: uploadError } = await serviceSupabase.storage
       .from("professional-quotes")
-      .upload(pdfFileName, new Blob([htmlContent], { type: "text/html" }), {
-        contentType: "text/html",
+      .upload(pdfFileName, pdfBytes, {
+        contentType: "application/pdf",
         upsert: true,
       });
 
-    if (uploadError) throw uploadError;
+    if (uploadError) {
+      console.error("Upload error:", uploadError);
+      throw uploadError;
+    }
 
     // Ottieni signed URL
     const { data: signedUrlData } = await serviceSupabase.storage
@@ -155,7 +231,7 @@ const handler = async (req: Request): Promise<Response> => {
       .createSignedUrl(pdfFileName, 60 * 60 * 24 * 7); // valido 7 giorni
 
     const pdfUrl = signedUrlData?.signedUrl;
-    console.log("Generated signed PDF URL:", pdfUrl);
+    console.log("Generated PDF URL:", pdfUrl);
 
     // Invia email con link
     const emailResponse = await resend.emails.send({
