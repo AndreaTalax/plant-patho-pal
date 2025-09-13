@@ -2,6 +2,7 @@
 import React, { useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { usePremiumStatus } from '@/services/premiumService';
+import { useSaveDiagnosis } from '@/hooks/useSaveDiagnosis';
 import ImageDisplay from './ImageDisplay';
 import PlantInfoCard from './PlantInfoCard';
 import ActionButtons from './ActionButtons';
@@ -79,19 +80,48 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
 }) => {
   const { user } = useAuth();
   const { hasExpertChatAccess: premiumAccess } = usePremiumStatus();
+  const { saveDiagnosis, isSaving: savingDiagnosis } = useSaveDiagnosis();
 
   // Default sicuri per props opzionali
   const resolvedConfidence = confidence ?? 0;
   const resolvedIsHealthy = !!isHealthy;
-  const resolvedSaveLoading = !!saveLoading;
+  const resolvedSaveLoading = !!saveLoading || savingDiagnosis;
   
   // Usa sempre il valore dal premiumService per evitare problemi con test@gmail.com
   const resolvedHasExpertChatAccess = premiumAccess;
   
-  const handleSaveDiagnosis: () => void = onSaveDiagnosis ?? (() => {
-    console.log('[DiagnosisResult] onSaveDiagnosis non fornito');
-    toast.info('Funzione salvataggio non implementata');
-  });
+  // Implementazione effettiva del salvataggio
+  const handleSaveDiagnosis = async () => {
+    if (!user) {
+      toast.error('Devi essere autenticato per salvare la diagnosi');
+      return;
+    }
+
+    try {
+      console.log('💾 Salvando diagnosi...');
+      
+      // Prepara i dati per il salvataggio
+      const diagnosisToSave = {
+        plant_type: plantInfo?.name || effectiveDiagnosis?.name || 'Pianta non identificata',
+        plant_variety: analysisDetails?.multiServiceInsights?.plantSpecies || '',
+        symptoms: Array.isArray(plantInfo?.symptoms) 
+          ? plantInfo.symptoms 
+          : plantInfo?.symptoms 
+            ? [plantInfo.symptoms] 
+            : ['Nessun sintomo specificato'],
+        image_url: imageSrc,
+        diagnosis_result: effectiveDiagnosis || analysisDetails || {},
+        status: 'completed'
+      };
+
+      await saveDiagnosis(diagnosisToSave);
+    } catch (error) {
+      console.error('❌ Errore salvando diagnosi:', error);
+    }
+  };
+
+  // Usa la funzione fornita se presente, altrimenti usa quella implementata
+  const finalSaveDiagnosis = onSaveDiagnosis || handleSaveDiagnosis;
 
   // Usa diagnosedDisease se presente, altrimenti fallback su analysisData
   const effectiveDiagnosis = diagnosedDisease ?? analysisData;
@@ -543,7 +573,7 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
       <div className="mt-4">
         <ActionButtons
           onStartNewAnalysis={onStartNewAnalysis}
-          onSaveDiagnosis={handleSaveDiagnosis}
+          onSaveDiagnosis={finalSaveDiagnosis}
           onChatWithExpert={handleChatWithExpert}
           onPayAndSendDiagnosis={handlePayAndSendDiagnosis}
           saveLoading={resolvedSaveLoading}
