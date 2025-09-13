@@ -8,6 +8,20 @@ export const convertToUIMessage = (dbMessage: DatabaseMessage): Message => {
   // Use content field as primary, fallback to text for backward compatibility
   const messageText = dbMessage.content || dbMessage.text || '';
   
+  // Debug logging per messaggi PDF
+  if (dbMessage.content?.includes('Preventivo Professionale') || dbMessage.text?.includes('Preventivo Professionale')) {
+    console.log('🔍 PDF Message Conversion:', {
+      id: dbMessage.id,
+      content: dbMessage.content,
+      text: dbMessage.text,
+      finalText: messageText,
+      contentLength: dbMessage.content?.length,
+      textLength: dbMessage.text?.length,
+      hasMarkdownInContent: dbMessage.content?.includes('[') && dbMessage.content?.includes(']'),
+      hasMarkdownInText: dbMessage.text?.includes('[') && dbMessage.text?.includes(']')
+    });
+  }
+  
   if (!messageText && !dbMessage.image_url) {
     console.warn('⚠️ Messaggio senza testo né immagine:', dbMessage);
   }

@@ -64,6 +64,17 @@ export const MessageContent = ({ message }: MessageContentProps) => {
                            message.image_url.includes('audio-messages')
                          ));
 
+  // Debug logging per PDF download link
+  if (message.text?.includes('Preventivo Professionale')) {
+    console.log('🔍 PDF Message Content:', {
+      id: message.id,
+      text: message.text,
+      textLength: message.text?.length,
+      hasMarkdownLink: message.text?.includes('[') && message.text?.includes(']'),
+      fullText: message.text
+    });
+  }
+
   if (isAudioMessage && message.image_url) {
     return <AudioMessage audioUrl={message.image_url} />;
   }
