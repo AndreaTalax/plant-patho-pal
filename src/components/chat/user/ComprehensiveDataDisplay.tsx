@@ -23,11 +23,13 @@ import { useState } from 'react';
 interface ComprehensiveDataDisplayProps {
   isVisible: boolean;
   onToggle: () => void;
+  isProfessionalChat?: boolean;
 }
 
 export const ComprehensiveDataDisplay: React.FC<ComprehensiveDataDisplayProps> = ({
   isVisible,
-  onToggle
+  onToggle,
+  isProfessionalChat = false
 }) => {
   const { userProfile } = useAuth();
   const { plantInfo } = usePlantInfo();
@@ -38,7 +40,9 @@ export const ComprehensiveDataDisplay: React.FC<ComprehensiveDataDisplayProps> =
     return (
       <div className="border-b border-gray-200 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80 z-10 sticky top-0">
         <div className="p-3 flex items-center justify-between">
-          <h3 className="font-semibold text-gray-900">📋 Dati Inviati all'Esperto</h3>
+          <h3 className="font-semibold text-gray-900">
+            📋 {isProfessionalChat ? 'Dati Personali Inviati' : 'Dati Inviati all\'Esperto'}
+          </h3>
           <Button variant="ghost" size="sm" onClick={onToggle}>
             <ChevronDown className="h-4 w-4" />
           </Button>
@@ -51,7 +55,9 @@ export const ComprehensiveDataDisplay: React.FC<ComprehensiveDataDisplayProps> =
     <div className="border-b border-gray-200 bg-gray-50">
       <div className="p-4 space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="font-semibold text-gray-900">📋 Dati Inviati all'Esperto</h3>
+          <h3 className="font-semibold text-gray-900">
+            📋 {isProfessionalChat ? 'Dati Personali Inviati' : 'Dati Inviati all\'Esperto'}
+          </h3>
           <Button variant="ghost" size="sm" onClick={onToggle}>
             <ChevronUp className="h-4 w-4" />
           </Button>
@@ -104,74 +110,76 @@ export const ComprehensiveDataDisplay: React.FC<ComprehensiveDataDisplayProps> =
           </div>
         </Card>
 
-        {/* Dati Pianta */}
-        <Card className="border-green-200 bg-green-50/50">
-          <div className="p-3">
-            <div 
-              className="flex items-center justify-between cursor-pointer"
-              onClick={() => setExpandedSection(expandedSection === 'plant' ? null : 'plant')}
-            >
-              <div className="flex items-center space-x-2">
-                <Leaf className="h-4 w-4 text-green-600" />
-                <span className="font-medium text-green-800">Informazioni Pianta</span>
-                <Badge variant="secondary" className="text-xs">
-                  {plantInfo?.infoComplete ? 'Completo' : 'Parziale'}
-                </Badge>
-              </div>
-              {expandedSection === 'plant' ? 
-                <ChevronUp className="h-4 w-4 text-green-600" /> : 
-                <ChevronDown className="h-4 w-4 text-green-600" />
-              }
-            </div>
-            
-            {expandedSection === 'plant' && plantInfo && (
-              <div className="mt-3 space-y-3 text-sm">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <div className="flex items-center space-x-2">
-                    <Leaf className="h-3 w-3 text-gray-500" />
-                    <span className="text-gray-600">Nome/Tipo:</span>
-                    <span className="font-medium">
-                      {plantInfo.name || 'Specie da identificare'}
-                    </span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Home className="h-3 w-3 text-gray-500" />
-                    <span className="text-gray-600">Ambiente:</span>
-                    <span className="font-medium">
-                      {plantInfo.isIndoor ? 'Interno' : 'Esterno'}
-                    </span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Droplets className="h-3 w-3 text-gray-500" />
-                    <span className="text-gray-600">Irrigazione:</span>
-                    <span className="font-medium">
-                      {plantInfo.wateringFrequency || 'Da specificare'}
-                    </span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Sun className="h-3 w-3 text-gray-500" />
-                    <span className="text-gray-600">Esposizione:</span>
-                    <span className="font-medium">
-                      {plantInfo.lightExposure || 'Da specificare'}
-                    </span>
-                  </div>
+        {/* Dati Pianta - Solo se non è una chat professionale */}
+        {!isProfessionalChat && (
+          <Card className="border-green-200 bg-green-50/50">
+            <div className="p-3">
+              <div 
+                className="flex items-center justify-between cursor-pointer"
+                onClick={() => setExpandedSection(expandedSection === 'plant' ? null : 'plant')}
+              >
+                <div className="flex items-center space-x-2">
+                  <Leaf className="h-4 w-4 text-green-600" />
+                  <span className="font-medium text-green-800">Informazioni Pianta</span>
+                  <Badge variant="secondary" className="text-xs">
+                    {plantInfo?.infoComplete ? 'Completo' : 'Parziale'}
+                  </Badge>
                 </div>
-                
-                {plantInfo.symptoms && (
-                  <div className="bg-yellow-50 border border-yellow-200 rounded p-2">
-                    <span className="text-gray-600 text-xs">Sintomi osservati:</span>
-                    <p className="font-medium text-yellow-800 mt-1">
-                      {plantInfo.symptoms}
-                    </p>
-                  </div>
-                )}
+                {expandedSection === 'plant' ? 
+                  <ChevronUp className="h-4 w-4 text-green-600" /> : 
+                  <ChevronDown className="h-4 w-4 text-green-600" />
+                }
               </div>
-            )}
-          </div>
-        </Card>
+              
+              {expandedSection === 'plant' && plantInfo && (
+                <div className="mt-3 space-y-3 text-sm">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="flex items-center space-x-2">
+                      <Leaf className="h-3 w-3 text-gray-500" />
+                      <span className="text-gray-600">Nome/Tipo:</span>
+                      <span className="font-medium">
+                        {plantInfo.name || 'Specie da identificare'}
+                      </span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Home className="h-3 w-3 text-gray-500" />
+                      <span className="text-gray-600">Ambiente:</span>
+                      <span className="font-medium">
+                        {plantInfo.isIndoor ? 'Interno' : 'Esterno'}
+                      </span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Droplets className="h-3 w-3 text-gray-500" />
+                      <span className="text-gray-600">Irrigazione:</span>
+                      <span className="font-medium">
+                        {plantInfo.wateringFrequency || 'Da specificare'}
+                      </span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Sun className="h-3 w-3 text-gray-500" />
+                      <span className="text-gray-600">Esposizione:</span>
+                      <span className="font-medium">
+                        {plantInfo.lightExposure || 'Da specificare'}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  {plantInfo.symptoms && (
+                    <div className="bg-yellow-50 border border-yellow-200 rounded p-2">
+                      <span className="text-gray-600 text-xs">Sintomi osservati:</span>
+                      <p className="font-medium text-yellow-800 mt-1">
+                        {plantInfo.symptoms}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </Card>
+        )}
 
-        {/* Immagine */}
-        {plantInfo?.uploadedImageUrl && (
+        {/* Immagine - Solo se non è una chat professionale */}
+        {!isProfessionalChat && plantInfo?.uploadedImageUrl && (
           <Card className="border-purple-200 bg-purple-50/50">
             <div className="p-3">
               <div 
@@ -212,11 +220,11 @@ export const ComprehensiveDataDisplay: React.FC<ComprehensiveDataDisplayProps> =
           <div className="flex items-center space-x-2">
             <div className="w-2 h-2 bg-green-500 rounded-full"></div>
             <span className="text-green-800 font-medium text-sm">
-              ✅ Tutti i dati sono stati inviati a Marco Nigro
+              ✅ {isProfessionalChat ? 'I dati personali sono stati inviati' : 'Tutti i dati sono stati inviati a Marco Nigro'}
             </span>
           </div>
           <p className="text-green-700 text-xs mt-1">
-            L'esperto ha ricevuto tutte le informazioni necessarie per la diagnosi
+            {isProfessionalChat ? 'I tuoi dati sono stati trasmessi per la consulenza professionale' : 'L\'esperto ha ricevuto tutte le informazioni necessarie per la diagnosi'}
           </p>
         </div>
       </div>

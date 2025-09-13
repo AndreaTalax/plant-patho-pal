@@ -22,12 +22,16 @@ interface ActiveConversation {
 }
 
 const ChatTab = () => {
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user, userProfile } = useAuth();
   const { hasExpertChatAccess } = usePremiumStatus();
   const [showPaywall, setShowPaywall] = useState(false);
   const [activeConversations, setActiveConversations] = useState<ActiveConversation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
+
+  // Determina se si tratta di una chat professionale
+  const selectedPlan = localStorage.getItem('selectedPlanType') as 'privati' | 'business' | 'professionisti' | null;
+  const isProfessionalChat = selectedPlan === 'professionisti';
 
   // Controlla le conversazioni attive dell'utente
   useEffect(() => {
@@ -192,6 +196,7 @@ const ChatTab = () => {
             userId={user.id} 
             conversationId={selectedConversationId}
             onBackToList={() => setSelectedConversationId(null)}
+            isProfessionalChat={isProfessionalChat}
           />
         </div>
       );

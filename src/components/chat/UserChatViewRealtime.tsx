@@ -16,9 +16,15 @@ interface UserChatViewRealtimeProps {
   userId: string;
   conversationId?: string;
   onBackToList?: () => void;
+  isProfessionalChat?: boolean;
 }
 
-export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ userId, conversationId, onBackToList }) => {
+export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ 
+  userId, 
+  conversationId, 
+  onBackToList,
+  isProfessionalChat = false 
+}) => {
   const [autoDataSent, setAutoDataSent] = useState(false);
   const [showComprehensiveData, setShowComprehensiveData] = useState(false);
   
@@ -214,6 +220,7 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({ user
         <ComprehensiveDataDisplay
           isVisible={showComprehensiveData}
           onToggle={() => setShowComprehensiveData(!showComprehensiveData)}
+          isProfessionalChat={isProfessionalChat}
         />
       </div>
 
