@@ -1,7 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.4';
 import { Resend } from "npm:resend@2.0.0";
-import puppeteer from "https://deno.land/x/puppeteer@16.2.0/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -216,40 +215,24 @@ const handler = async (req: Request): Promise<Response> => {
     // Genera contenuto HTML per il PDF
     const htmlContent = generatePDFContent(formData);
     
-    // Genera PDF effettivo usando Puppeteer
-    const browser = await puppeteer.launch({ 
-      headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox'] 
-    });
-    const page = await browser.newPage();
-    await page.setContent(htmlContent);
-    const pdfBuffer = await page.pdf({
-      format: 'A4',
-      printBackground: true,
-      margin: {
-        top: '1cm',
-        right: '1cm',
-        bottom: '1cm',
-        left: '1cm'
-      }
-    });
-    await browser.close();
+    // Crea un file HTML strutturato come PDF
+    const fileName = `preventivo-${formData.companyName.replace(/\s+/g, '-').toLowerCase()}-${Date.now()}.html`;
+    const htmlBuffer = new TextEncoder().encode(htmlContent);
 
-    // Salva il PDF in Supabase Storage
-    const fileName = `preventivo-${formData.companyName.replace(/\s+/g, '-').toLowerCase()}-${Date.now()}.pdf`;
+    // Salva il file HTML in Supabase Storage (verrà visualizzato come PDF nel browser)
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from('pdfs')
-      .upload(fileName, pdfBuffer, {
-        contentType: 'application/pdf',
+      .upload(fileName, htmlBuffer, {
+        contentType: 'text/html',
         upsert: false
       });
 
     if (uploadError) {
-      console.error('Error uploading PDF:', uploadError);
-      throw new Error('Failed to upload PDF');
+      console.error('Error uploading HTML file:', uploadError);
+      throw new Error('Failed to upload PDF file');
     }
 
-    // Ottieni URL pubblico del PDF
+    // Ottieni URL pubblico del file
     const { data: publicUrlData } = supabase.storage
       .from('pdfs')
       .getPublicUrl(fileName);
