@@ -102,7 +102,7 @@ const handler = async (req: Request): Promise<Response> => {
     const pdfBuffer = await page.pdf({ format: "A4" });
     await browser.close();
 
-    // 🔹 Carica PDF su Supabase Storage
+     // 🔹 Carica PDF su Supabase Storage
     const fileName = `professional_quotes/${formData.companyName.replace(/\s+/g, "_")}_${Date.now()}.pdf`;
 
     const { error: uploadError } = await supabase.storage
@@ -130,24 +130,126 @@ const handler = async (req: Request): Promise<Response> => {
       from: "Dr.Plant <noreply@drplant.app>",
       to: ["agrotecnicomarconigro@gmail.com"],
       subject: `🌱 Nuova Richiesta Preventivo Professionale - ${formData.companyName}`,
-      html: `<p>Nuova richiesta da <b>${formData.companyName}</b>.</p><p>Scarica il PDF: <a href="${pdfUrl}">clicca qui</a></p>`,
+      html: `<p>Nuova richiesta da <b>${formData.companyName}</b>.</p>
+             <p>Scarica il PDF: <a href="${pdfUrl}">clicca qui</a></p>`,
     });
+
+    // ==============================
+    // 🔹 CREAZIONE CONVERSAZIONE CHAT
+    // ==============================
+    const serviceSupabase = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
+
+    const authHeader = req.headers.get('Authorization');
+    let userId = null;
+
+    if (authHeader) {
+      try {
+        const token = authHeader.replace('Bearer ', '');
+        const { data: { user } } = await serviceSupabase.auth.getUser(token);
+        userId = user?.id;
+      } catch (error) {
+        console.error('Error getting user from token:', error);
+      }
+    }
+
+    if (userId) {
+      console.log('Creating conversation for user:', userId);
+
+      // Trova l'esperto (Marco Nigro)
+      const { data: expertProfile } = await serviceSupabase
+        .from('profiles')
+        .select('id')
+        .eq('email', 'agrotecnicomarconigro@gmail.com')
+        .single();
+
+      if (expertProfile) {
+        // Verifica se esiste già una conversazione attiva
+        const { data: existingConv } = await serviceSupabase
+          .from('conversations')
+          .select('id')
+          .eq('user_id', userId)
+          .eq('expert_id', expertProfile.id)
+          .eq('status', 'active')
+          .single();
+
+        let conversationId = existingConv?.id;
+
+        if (!conversationId) {
+          const { data: conversation, error: convError } = await serviceSupabase
+            .from('conversations')
+            .insert({
+              user_id: userId,
+              expert_id: expertProfile.id,
+              title: `Preventivo Professionale - ${formData.companyName}`,
+              status: 'active',
+              last_message_at: new Date().toISOString()
+            })
+            .select()
+            .single();
+
+          if (convError) {
+            console.error('Error creating conversation:', convError);
+          } else {
+            conversationId = conversation.id;
+          }
+        }
+
+        if (conversationId) {
+          const { error: messageError } = await serviceSupabase
+            .from('messages')
+            .insert({
+              conversation_id: conversationId,
+              sender_id: userId,
+              recipient_id: expertProfile.id,
+              content: `📋 **Richiesta Preventivo Professionale - ${formData.companyName}**
+
+Ho generato il preventivo dettagliato con tutte le informazioni fornite.
+Il documento PDF contiene:
+
+• Dettagli aziendali e contatti  
+• Requisiti tecnici e tipi di piante  
+• Sfide attuali e volume previsto  
+• Budget e timeline  
+• Funzionalità richieste  
+
+👉 Scarica il PDF qui: ${pdfUrl}
+
+*Generato il ${new Date().toLocaleString('it-IT')}*`,
+              text: `📋 Preventivo Professionale - ${formData.companyName}`,
+              image_url: pdfUrl, // 🔹 ora è un PDF vero
+              metadata: {
+                type: 'professional_quote',
+                company: formData.companyName,
+                pdf_url: pdfUrl,
+                generated_at: new Date().toISOString()
+              }
+            });
+
+          if (messageError) {
+            console.error('Error sending chat message:', messageError);
+          } else {
+            console.log('Chat message sent successfully');
+
+            await serviceSupabase
+              .from('conversations')
+              .update({
+                last_message_at: new Date().toISOString(),
+                last_message_text: `📋 Preventivo Professionale - ${formData.companyName}`
+              })
+              .eq('id', conversationId);
+          }
+        }
+      }
+    }
 
     return new Response(
       JSON.stringify({
         success: true,
         pdfUrl,
-        message: "PDF generato, caricato e inviato con successo",
+        message: 'PDF generato, caricato, email inviata e conversazione aggiornata'
       }),
       { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
-  } catch (error: any) {
-    console.error("Error in generate-professional-pdf function:", error);
-    return new Response(JSON.stringify({ success: false, error: error.message }), {
-      status: 500,
-      headers: { "Content-Type": "application/json", ...corsHeaders },
-    });
-  }
-};
-
-serve(handler);
