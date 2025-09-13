@@ -87,7 +87,6 @@ const handler = async (req: Request): Promise<Response> => {
     );
 
     const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
-
     const { formData } = await req.json();
 
     console.log("Generating PDF for professional quote:", formData);
@@ -95,16 +94,15 @@ const handler = async (req: Request): Promise<Response> => {
     // 🔹 Genera HTML
     const htmlContent = generatePDFContent(formData);
 
-    // 🔹 Avvia browser headless con Puppeteer e genera PDF
+    // 🔹 Genera PDF con Puppeteer
     const browser = await puppeteer.launch({ args: ["--no-sandbox"] });
     const page = await browser.newPage();
     await page.setContent(htmlContent, { waitUntil: "networkidle0" });
     const pdfBuffer = await page.pdf({ format: "A4" });
     await browser.close();
 
-     // 🔹 Carica PDF su Supabase Storage
+    // 🔹 Carica PDF su Supabase Storage
     const fileName = `professional_quotes/${formData.companyName.replace(/\s+/g, "_")}_${Date.now()}.pdf`;
-
     const { error: uploadError } = await supabase.storage
       .from("pdfs")
       .upload(fileName, pdfBuffer, {
@@ -117,10 +115,10 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error("Failed to upload PDF file");
     }
 
-    // 🔹 Crea URL firmato per il PDF
+    // 🔹 URL firmato
     const { data: signedUrlData } = await supabase.storage
       .from("pdfs")
-      .createSignedUrl(fileName, 60 * 60 * 24 * 7); // valido 7 giorni
+      .createSignedUrl(fileName, 60 * 60 * 24 * 7);
 
     const pdfUrl = signedUrlData?.signedUrl;
     console.log("PDF uploaded and accessible at:", pdfUrl);
@@ -135,104 +133,87 @@ const handler = async (req: Request): Promise<Response> => {
     });
 
     // ==============================
-    // 🔹 CREAZIONE CONVERSAZIONE CHAT
+    // 🔹 CHAT: CONVERSAZIONE + MESSAGGIO
     // ==============================
     const serviceSupabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    const authHeader = req.headers.get('Authorization');
+    const authHeader = req.headers.get("Authorization");
     let userId = null;
 
     if (authHeader) {
       try {
-        const token = authHeader.replace('Bearer ', '');
+        const token = authHeader.replace("Bearer ", "");
         const { data: { user } } = await serviceSupabase.auth.getUser(token);
         userId = user?.id;
       } catch (error) {
-        console.error('Error getting user from token:', error);
+        console.error("Error getting user from token:", error);
       }
     }
 
     if (userId) {
-      console.log('Creating conversation for user:', userId);
-
-      // Trova l'esperto (Marco Nigro)
       const { data: expertProfile } = await serviceSupabase
-        .from('profiles')
-        .select('id')
-        .eq('email', 'agrotecnicomarconigro@gmail.com')
+        .from("profiles")
+        .select("id")
+        .eq("email", "agrotecnicomarconigro@gmail.com")
         .single();
 
       if (expertProfile) {
-        // Verifica se esiste già una conversazione attiva
         const { data: existingConv } = await serviceSupabase
-          .from('conversations')
-          .select('id')
-          .eq('user_id', userId)
-          .eq('expert_id', expertProfile.id)
-          .eq('status', 'active')
+          .from("conversations")
+          .select("id")
+          .eq("user_id", userId)
+          .eq("expert_id", expertProfile.id)
+          .eq("status", "active")
           .single();
 
         let conversationId = existingConv?.id;
 
         if (!conversationId) {
-          const { data: conversation, error: convError } = await serviceSupabase
-            .from('conversations')
+          const { data: conversation } = await serviceSupabase
+            .from("conversations")
             .insert({
               user_id: userId,
               expert_id: expertProfile.id,
               title: `Preventivo Professionale - ${formData.companyName}`,
-              status: 'active',
-              last_message_at: new Date().toISOString()
+              status: "active",
+              last_message_at: new Date().toISOString(),
             })
             .select()
             .single();
-
-          if (convError) {
-            console.error('Error creating conversation:', convError);
-          } else {
-            conversationId = conversation.id;
-          }
+          conversationId = conversation?.id;
         }
 
-        await serviceSupabase
-  .from('messages')
-  .insert({
-    conversation_id: conversationId,
-    sender_id: userId,
-    recipient_id: expertProfile.id,
-    content: `📋 **Richiesta Preventivo Professionale - ${formData.companyName}**
+        if (conversationId) {
+          await serviceSupabase.from("messages").insert({
+            conversation_id: conversationId,
+            sender_id: userId,
+            recipient_id: expertProfile.id,
+            content: `📋 **Richiesta Preventivo Professionale - ${formData.companyName}**
 
 Ho generato il preventivo dettagliato con tutte le informazioni fornite.  
 
 👉 [Scarica il PDF qui](${pdfUrl})
 
-*Generato il ${new Date().toLocaleString('it-IT')}*`,
-    text: `📋 Preventivo Professionale - ${formData.companyName}`,
-    // 🔹 NON usare più image_url per i PDF
-    metadata: {
-      type: 'professional_quote',
-      company: formData.companyName,
-      pdf_url: pdfUrl,
-      generated_at: new Date().toISOString()
-    }
-  });
+*Generato il ${new Date().toLocaleString("it-IT")}*`,
+            text: `📋 Preventivo Professionale - ${formData.companyName}`,
+            metadata: {
+              type: "professional_quote",
+              company: formData.companyName,
+              pdf_url: pdfUrl,
+              generated_at: new Date().toISOString(),
+            },
+          });
 
-          if (messageError) {
-            console.error('Error sending chat message:', messageError);
-          } else {
-            console.log('Chat message sent successfully');
-
-            await serviceSupabase
-              .from('conversations')
-              .update({
-                last_message_at: new Date().toISOString(),
-                last_message_text: `📋 Preventivo Professionale - ${formData.companyName}`
-              })
-              .eq('id', conversationId);
-          }
+          await serviceSupabase
+            .from("conversations")
+            .update({
+              last_message_at: new Date().toISOString(),
+              last_message_text: `📋 Preventivo Professionale - ${formData.companyName}`,
+            })
+            .eq("id", conversationId);
         }
       }
     }
@@ -241,7 +222,17 @@ Ho generato il preventivo dettagliato con tutte le informazioni fornite.
       JSON.stringify({
         success: true,
         pdfUrl,
-        message: 'PDF generato, caricato, email inviata e conversazione aggiornata'
+        message: "PDF generato, caricato, email inviata e conversazione aggiornata",
       }),
       { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
+  } catch (error: any) {
+    console.error("Error in generate-professional-pdf function:", error);
+    return new Response(JSON.stringify({ success: false, error: error.message }), {
+      status: 500,
+      headers: { "Content-Type": "application/json", ...corsHeaders },
+    });
+  }
+};
+
+serve(handler);
