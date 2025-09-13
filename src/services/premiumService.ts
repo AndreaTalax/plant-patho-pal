@@ -13,13 +13,26 @@ export class PremiumService {
    * Verifica se l'utente ha accesso alle funzionalità premium
    */
   static hasExpertChatAccess(userEmail: string | undefined): boolean {
-    if (!userEmail) return false;
+    console.log('🔍 [PREMIUM] hasExpertChatAccess called with:', userEmail);
+    
+    if (!userEmail) {
+      console.log('❌ [PREMIUM] No email provided');
+      return false;
+    }
+    
+    const lowerEmail = userEmail.toLowerCase();
     
     // test@gmail.com ha accesso completo senza limiti
-    if (userEmail.toLowerCase() === 'test@gmail.com') return true;
+    if (lowerEmail === 'test@gmail.com') {
+      console.log('✅ [PREMIUM] test@gmail.com detected - granting full access');
+      return true;
+    }
     
     // Altri email di test con accesso premium
-    return PREMIUM_TEST_EMAILS.includes(userEmail.toLowerCase());
+    const hasAccess = PREMIUM_TEST_EMAILS.includes(lowerEmail);
+    console.log(`📧 [PREMIUM] ${lowerEmail} access result:`, hasAccess);
+    
+    return hasAccess;
   }
 
   /**
@@ -63,10 +76,27 @@ export class PremiumService {
  * Hook per verificare lo status premium dell'utente corrente
  */
 export const usePremiumStatus = () => {
-  const { userProfile } = useAuth();
+  const { userProfile, user } = useAuth();
   
-  const hasExpertChatAccess = PremiumService.canUseExpertChat(userProfile?.email);
-  const hasAIAccess = PremiumService.canUseAIDiagnosis(userProfile?.email);
+  // Prova prima userProfile.email, poi user.email come fallback
+  const userEmail = userProfile?.email || user?.email;
+  
+  console.log('🔍 [PREMIUM] Checking access for:', {
+    userProfileEmail: userProfile?.email,
+    userEmail: user?.email,
+    finalEmail: userEmail,
+    isTestUser: userEmail?.toLowerCase() === 'test@gmail.com'
+  });
+  
+  const hasExpertChatAccess = PremiumService.canUseExpertChat(userEmail);
+  const hasAIAccess = PremiumService.canUseAIDiagnosis(userEmail);
+  
+  console.log('✅ [PREMIUM] Access results:', {
+    email: userEmail,
+    hasExpertChatAccess,
+    hasAIAccess,
+    isPremium: hasExpertChatAccess
+  });
   
   return {
     hasAIAccess,
