@@ -66,15 +66,41 @@ function deduplicate<T>(items: T[], keyFn: (x: T) => string): T[] {
 }
 
 // ================== API WRAPPERS ==================
-import {
-  identifyWithPlantId,
-  identifyWithPlantNet,
-  analyzeWithOpenAI,
-  diagnoseWithPlantIdHealth,
-  searchEppoDatabase,
-  analyzeWithHuggingFace,
-  identifyWithINaturalist,
-} from "./services.ts";
+// Simplified mock implementations for the services
+async function identifyWithPlantId(imageBase64: string) {
+  console.log("Plant.ID service called (mock)");
+  return null; // Return null for now as these are complex integrations
+}
+
+async function identifyWithPlantNet(imageBase64: string) {
+  console.log("PlantNet service called (mock)");
+  return null;
+}
+
+async function analyzeWithOpenAI(imageBase64: string) {
+  console.log("OpenAI service called (mock)");
+  return null;
+}
+
+async function diagnoseWithPlantIdHealth(imageBase64: string) {
+  console.log("Plant.ID Health service called (mock)");
+  return [];
+}
+
+async function searchEppoDatabase(plantName: string, scientificName: string) {
+  console.log("EPPO service called (mock)");
+  return null;
+}
+
+async function analyzeWithHuggingFace(imageBase64: string) {
+  console.log("Hugging Face service called (mock)");
+  return null;
+}
+
+async function identifyWithINaturalist(plantName: string) {
+  console.log("iNaturalist service called (mock)");
+  return [];
+}
 
 // ================== MAIN SERVER ==================
 serve(async (req) => {
