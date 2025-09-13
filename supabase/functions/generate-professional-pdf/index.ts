@@ -197,36 +197,28 @@ const handler = async (req: Request): Promise<Response> => {
           }
         }
 
-        if (conversationId) {
-          const { error: messageError } = await serviceSupabase
-            .from('messages')
-            .insert({
-              conversation_id: conversationId,
-              sender_id: userId,
-              recipient_id: expertProfile.id,
-              content: `📋 **Richiesta Preventivo Professionale - ${formData.companyName}**
+        await serviceSupabase
+  .from('messages')
+  .insert({
+    conversation_id: conversationId,
+    sender_id: userId,
+    recipient_id: expertProfile.id,
+    content: `📋 **Richiesta Preventivo Professionale - ${formData.companyName}**
 
-Ho generato il preventivo dettagliato con tutte le informazioni fornite.
-Il documento PDF contiene:
+Ho generato il preventivo dettagliato con tutte le informazioni fornite.  
 
-• Dettagli aziendali e contatti  
-• Requisiti tecnici e tipi di piante  
-• Sfide attuali e volume previsto  
-• Budget e timeline  
-• Funzionalità richieste  
-
-👉 Scarica il PDF qui: ${pdfUrl}
+👉 [Scarica il PDF qui](${pdfUrl})
 
 *Generato il ${new Date().toLocaleString('it-IT')}*`,
-              text: `📋 Preventivo Professionale - ${formData.companyName}`,
-              image_url: pdfUrl, // 🔹 ora è un PDF vero
-              metadata: {
-                type: 'professional_quote',
-                company: formData.companyName,
-                pdf_url: pdfUrl,
-                generated_at: new Date().toISOString()
-              }
-            });
+    text: `📋 Preventivo Professionale - ${formData.companyName}`,
+    // 🔹 NON usare più image_url per i PDF
+    metadata: {
+      type: 'professional_quote',
+      company: formData.companyName,
+      pdf_url: pdfUrl,
+      generated_at: new Date().toISOString()
+    }
+  });
 
           if (messageError) {
             console.error('Error sending chat message:', messageError);
