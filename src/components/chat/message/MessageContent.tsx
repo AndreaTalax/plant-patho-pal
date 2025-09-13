@@ -8,6 +8,49 @@ interface MessageContentProps {
   message: Message;
 }
 
+// Function to render markdown links as clickable HTML links
+const renderMarkdownLinks = (text: string) => {
+  // Regex per trovare link markdown: [testo](url)
+  const markdownLinkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
+  
+  const parts = [];
+  let lastIndex = 0;
+  let match;
+  
+  while ((match = markdownLinkRegex.exec(text)) !== null) {
+    // Aggiungi il testo prima del link
+    if (match.index > lastIndex) {
+      parts.push(text.slice(lastIndex, match.index));
+    }
+    
+    // Aggiungi il link come elemento cliccabile
+    const linkText = match[1];
+    const linkUrl = match[2];
+    
+    parts.push(
+      <a 
+        key={match.index}
+        href={linkUrl} 
+        target="_blank" 
+        rel="noopener noreferrer"
+        download
+        className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 underline font-medium"
+      >
+        {linkText}
+      </a>
+    );
+    
+    lastIndex = match.index + match[0].length;
+  }
+  
+  // Aggiungi il testo rimanente
+  if (lastIndex < text.length) {
+    parts.push(text.slice(lastIndex));
+  }
+  
+  return parts.length > 1 ? parts : text;
+};
+
 export const MessageContent = ({ message }: MessageContentProps) => {
   // Verifica se il messaggio è audio
   const isAudioMessage = message.text?.includes('🎵 Messaggio vocale') || 
@@ -29,7 +72,7 @@ export const MessageContent = ({ message }: MessageContentProps) => {
     <div className="space-y-3">
       {message.text && (
         <div className="whitespace-pre-wrap leading-relaxed">
-          {message.text}
+          {renderMarkdownLinks(message.text)}
         </div>
       )}
       
