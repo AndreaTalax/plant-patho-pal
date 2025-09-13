@@ -13,26 +13,17 @@ export class PremiumService {
    * Verifica se l'utente ha accesso alle funzionalità premium
    */
   static hasExpertChatAccess(userEmail: string | undefined): boolean {
-    console.log('🔍 [PREMIUM] hasExpertChatAccess called with:', userEmail);
-    
-    if (!userEmail) {
-      console.log('❌ [PREMIUM] No email provided');
-      return false;
-    }
+    if (!userEmail) return false;
     
     const lowerEmail = userEmail.toLowerCase();
     
     // test@gmail.com ha accesso completo senza limiti
     if (lowerEmail === 'test@gmail.com') {
-      console.log('✅ [PREMIUM] test@gmail.com detected - granting full access');
       return true;
     }
     
     // Altri email di test con accesso premium
-    const hasAccess = PREMIUM_TEST_EMAILS.includes(lowerEmail);
-    console.log(`📧 [PREMIUM] ${lowerEmail} access result:`, hasAccess);
-    
-    return hasAccess;
+    return PREMIUM_TEST_EMAILS.includes(lowerEmail);
   }
 
   /**
@@ -81,22 +72,8 @@ export const usePremiumStatus = () => {
   // Prova prima userProfile.email, poi user.email come fallback
   const userEmail = userProfile?.email || user?.email;
   
-  console.log('🔍 [PREMIUM] Checking access for:', {
-    userProfileEmail: userProfile?.email,
-    userEmail: user?.email,
-    finalEmail: userEmail,
-    isTestUser: userEmail?.toLowerCase() === 'test@gmail.com'
-  });
-  
   const hasExpertChatAccess = PremiumService.canUseExpertChat(userEmail);
   const hasAIAccess = PremiumService.canUseAIDiagnosis(userEmail);
-  
-  console.log('✅ [PREMIUM] Access results:', {
-    email: userEmail,
-    hasExpertChatAccess,
-    hasAIAccess,
-    isPremium: hasExpertChatAccess
-  });
   
   return {
     hasAIAccess,

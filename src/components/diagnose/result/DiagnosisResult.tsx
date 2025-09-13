@@ -1,6 +1,7 @@
 
 import React, { useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
+import { usePremiumStatus } from '@/services/premiumService';
 import ImageDisplay from './ImageDisplay';
 import PlantInfoCard from './PlantInfoCard';
 import ActionButtons from './ActionButtons';
@@ -77,13 +78,20 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
   analysisData, // nuova prop opzionale per compatibilità
 }) => {
   const { user } = useAuth();
+  const { hasExpertChatAccess: premiumAccess } = usePremiumStatus();
 
   // Default sicuri per props opzionali
   const resolvedConfidence = confidence ?? 0;
   const resolvedIsHealthy = !!isHealthy;
-  const resolvedHasExpertChatAccess = !!hasExpertChatAccess;
   const resolvedSaveLoading = !!saveLoading;
-  const handleSaveDiagnosis: () => void = onSaveDiagnosis ?? (() => console.log('[DiagnosisResult] onSaveDiagnosis non fornito'));
+  
+  // Usa sempre il valore dal premiumService per evitare problemi con test@gmail.com
+  const resolvedHasExpertChatAccess = premiumAccess;
+  
+  const handleSaveDiagnosis: () => void = onSaveDiagnosis ?? (() => {
+    console.log('[DiagnosisResult] onSaveDiagnosis non fornito');
+    toast.info('Funzione salvataggio non implementata');
+  });
 
   // Usa diagnosedDisease se presente, altrimenti fallback su analysisData
   const effectiveDiagnosis = diagnosedDisease ?? analysisData;
