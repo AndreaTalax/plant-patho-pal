@@ -46,7 +46,7 @@ export const useImageValidation = () => {
       const plantCheck = await verifyImageContainsPlant(imageFile);
       
       const result = {
-        isValid: plantCheck.isPlant && plantCheck.confidence > 30,
+        isValid: plantCheck.isPlant && plantCheck.confidence > 50, // Soglia più alta
         isPlant: plantCheck.isPlant,
         confidence: plantCheck.confidence,
         qualityIssues: [],
@@ -68,9 +68,9 @@ export const useImageValidation = () => {
               }
             }
           });
-        } else if (plantCheck.confidence <= 30) {
+        } else if (plantCheck.confidence <= 50) {
           toast.warning('Pianta poco chiara', {
-            description: `La pianta è rilevata ma con bassa confidenza (${plantCheck.confidence.toFixed(1)}%). Prova con un'immagine più chiara.`,
+            description: `La pianta è rilevata ma con bassa confidenza (${plantCheck.confidence.toFixed(1)}%). Serve un'immagine più chiara con parti verdi ben visibili.`,
             duration: 5000
           });
         }

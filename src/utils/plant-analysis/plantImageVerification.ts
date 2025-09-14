@@ -119,12 +119,13 @@ export const verifyImageContainsPlant = async (imageFile: File): Promise<{
       const artificialPercentage = (artificialPixels / totalPixels) * 100;
       const skinPercentage = (skinPixels / totalPixels) * 100;
       
-      // Criteri FLESSIBILI per identificare una pianta reale
-      const hasMinimumGreen = greenPercentage > 1; // Almeno 1% di verde naturale
-      const hasNaturalColors = naturalPercentage > 8; // Almeno 8% di colori naturali
-      const hasPlantIndicators = (greenPercentage + brownPercentage) > 3; // Verde + marrone > 3%
-      const tooMuchArtificial = artificialPercentage > 80; // Troppo artificiale se > 80%
-      const tooMuchSkin = skinPercentage > 35 || (skinPercentage > 20 && greenPercentage < 5);
+      // Criteri RIGOROSI per identificare una pianta reale
+      const hasMinimumGreen = greenPercentage > 5; // Almeno 5% di verde naturale
+      const hasNaturalColors = naturalPercentage > 15; // Almeno 15% di colori naturali
+      const hasPlantIndicators = (greenPercentage + brownPercentage) > 8; // Verde + marrone > 8%
+      const tooMuchArtificial = artificialPercentage > 60; // Troppo artificiale se > 60%
+      const tooMuchSkin = skinPercentage > 25 || (skinPercentage > 15 && greenPercentage < 8);
+      const hasSignificantGreen = greenPercentage > 10; // Verde significativo
       
       let isPlant = false;
       let confidence = 0;
@@ -146,22 +147,30 @@ export const verifyImageContainsPlant = async (imageFile: File): Promise<{
           description: reason,
           duration: 4000
         });
-      } else if (hasMinimumGreen && hasNaturalColors && hasPlantIndicators) {
+      } else if (hasMinimumGreen && hasNaturalColors && hasPlantIndicators && hasSignificantGreen) {
         isPlant = true;
-        confidence = Math.min(95, (greenPercentage * 6) + (naturalPercentage * 2) + (brownPercentage * 3));
+        confidence = Math.min(95, (greenPercentage * 4) + (naturalPercentage * 1.5) + (brownPercentage * 2));
         reason = `Pianta rilevata: ${greenPercentage.toFixed(1)}% verde naturale, ${naturalPercentage.toFixed(1)}% colori naturali totali`;
       } else if (!hasMinimumGreen) {
         isPlant = false;
-        confidence = Math.max(0, greenPercentage * 10);
-        reason = `Verde insufficiente (${greenPercentage.toFixed(1)}%). Serve almeno 1% di verde naturale per identificare una pianta.`;
+        confidence = Math.max(0, greenPercentage * 8);
+        reason = `Verde insufficiente (${greenPercentage.toFixed(1)}%). Serve almeno 5% di verde naturale per identificare una pianta.`;
         toast.error('Pianta non rilevata', {
-          description: 'L\'immagine non contiene abbastanza verde naturale. Assicurati che la pianta sia ben visibile.',
+          description: 'L\'immagine non contiene abbastanza verde naturale. Assicurati che la pianta sia ben visibile e abbia foglie verdi.',
+          duration: 5000
+        });
+      } else if (!hasSignificantGreen) {
+        isPlant = false;
+        confidence = Math.max(0, greenPercentage * 6);
+        reason = `Verde insufficiente (${greenPercentage.toFixed(1)}%). Serve almeno 10% di verde significativo per una diagnosi accurata.`;
+        toast.error('Verde insufficiente', {
+          description: 'L\'immagine deve mostrare chiaramente le parti verdi della pianta (foglie, steli).',
           duration: 5000
         });
       } else if (!hasNaturalColors) {
         isPlant = false;
-        confidence = Math.max(0, naturalPercentage * 4);
-        reason = `Colori naturali insufficienti (${naturalPercentage.toFixed(1)}%). Serve almeno 8% di colori naturali.`;
+        confidence = Math.max(0, naturalPercentage * 3);
+        reason = `Colori naturali insufficienti (${naturalPercentage.toFixed(1)}%). Serve almeno 15% di colori naturali.`;
         toast.error('Immagine non naturale', {
           description: 'L\'immagine non contiene abbastanza colori naturali tipici delle piante.',
           duration: 5000
