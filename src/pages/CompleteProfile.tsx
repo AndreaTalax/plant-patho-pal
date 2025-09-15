@@ -87,7 +87,7 @@ const CompleteProfile = () => {
           className="flex items-center gap-2 text-drplant-blue hover:text-drplant-blue-dark"
         >
           <ArrowLeft className="h-4 w-4" />
-          Esci
+          {t("exit")}
         </Button>
       </div>
       
@@ -112,7 +112,7 @@ const CompleteProfile = () => {
                   name="firstName"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>{t("firstName")} *</FormLabel>
+                      <FormLabel>{t("firstName")} {t("required")}</FormLabel>
                       <FormControl>
                         <Input {...field} placeholder={t("enterFirstName")} />
                       </FormControl>
@@ -125,7 +125,7 @@ const CompleteProfile = () => {
                   name="lastName"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>{t("lastName")} *</FormLabel>
+                      <FormLabel>{t("lastName")} {t("required")}</FormLabel>
                       <FormControl>
                         <Input {...field} placeholder={t("enterLastName")} />
                       </FormControl>
@@ -138,7 +138,7 @@ const CompleteProfile = () => {
                   name="birthDate"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>{t("birthDate")} *</FormLabel>
+                      <FormLabel>{t("birthDate")} {t("required")}</FormLabel>
                       <FormControl>
                         <Input {...field} type="date" placeholder={t("enterBirthDate")} />
                       </FormControl>
@@ -151,7 +151,7 @@ const CompleteProfile = () => {
                   name="birthPlace"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>{t("birthPlace")} *</FormLabel>
+                      <FormLabel>{t("birthPlace")} {t("required")}</FormLabel>
                       <FormControl>
                         <Input {...field} placeholder={t("enterBirthPlace")} />
                       </FormControl>

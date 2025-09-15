@@ -10,7 +10,7 @@ export type PlanType = 'privati' | 'business' | 'professionisti';
 
 const PlanSelection = () => {
   const navigate = useNavigate();
-  const { t, language } = useTheme();
+  const { t } = useTheme();
   const [selectedPlan, setSelectedPlan] = useState<PlanType | null>(null);
 
   const handlePlanSelection = (planType: PlanType) => {
@@ -24,45 +24,45 @@ const PlanSelection = () => {
   const plans = [
     {
       id: 'privati' as PlanType,
-      title: language === 'it' ? 'Privati' : 'Private',
-      subtitle: language === 'it' ? 'Per uso personale' : 'For personal use',
+      title: t('privateUsers'),
+      subtitle: t('personalUse'),
       icon: Users,
       color: 'from-blue-500 to-blue-600',
       features: [
-        language === 'it' ? 'Diagnosi AI avanzata' : 'Advanced AI Diagnosis',
-        language === 'it' ? 'Chat diretta con fitopatologo' : 'Direct chat with plant pathologist',
-        language === 'it' ? 'Abbonamento a gettone' : 'Token-based subscription',
-        language === 'it' ? 'Supporto personalizzato' : 'Personal support'
+        t('advancedAIDiagnosis'),
+        t('directChatWithPathologist'),
+        t('tokenBasedSubscription'),
+        t('personalSupport')
       ],
-      description: language === 'it' ? 'Perfetto per appassionati e coltivatori amatoriali' : 'Perfect for enthusiasts and amateur growers'
+      description: t('perfectForEnthusiasts')
     },
     {
       id: 'business' as PlanType,
-      title: 'Business',
-      subtitle: language === 'it' ? 'Per aziende e professionisti' : 'For companies and professionals',
+      title: t('business'),
+      subtitle: t('forCompaniesAndProfessionals'),
       icon: Building,
       color: 'from-green-500 to-green-600',
       features: [
-        language === 'it' ? 'Tutte le funzionalità Privati' : 'All Private features',
-        language === 'it' ? 'Piani flessibili (giornaliero, settimanale, mensile, annuale)' : 'Flexible plans (daily, weekly, monthly, yearly)',
-        language === 'it' ? 'Priorità nelle consultazioni' : 'Priority in consultations',
-        language === 'it' ? 'Reportistica avanzata' : 'Advanced reporting'
+        t('allPrivateFeatures'),
+        t('flexiblePlans'),
+        t('priorityConsultations'),
+        t('advancedReporting')
       ],
-      description: language === 'it' ? 'Ideale per vivai, aziende agricole e consulenti' : 'Ideal for nurseries, farms and consultants'
+      description: t('idealForNurseriesFarms')
     },
     {
       id: 'professionisti' as PlanType,
-      title: language === 'it' ? 'Professionisti' : 'Professionals',
-      subtitle: language === 'it' ? 'Soluzione su misura' : 'Tailored solution',
+      title: t('professionals'),
+      subtitle: t('tailoredSolution'),
       icon: Crown,
       color: 'from-purple-500 to-purple-600',
       features: [
-        language === 'it' ? 'Offerta personalizzata' : 'Customized offer',
-        language === 'it' ? 'Chat diretta con fitopatologo dedicato' : 'Direct chat with dedicated plant pathologist',
-        language === 'it' ? 'Assistenza prioritaria 24/7' : '24/7 priority support',
-        language === 'it' ? 'Integrazioni custom' : 'Custom integrations'
+        t('customizedOffer'),
+        t('dedicatedPathologist'),
+        t('prioritySupport247'),
+        t('customIntegrations')
       ],
-      description: language === 'it' ? 'Per grandi aziende e istituzioni specializzate' : 'For large companies and specialized institutions'
+      description: t('forLargeCompanies')
     }
   ];
 
@@ -82,13 +82,10 @@ const PlanSelection = () => {
             />
           </div>
           <h1 className="text-4xl font-bold text-drplant-blue-dark mb-4">
-            {language === 'it' ? 'Scegli il tuo piano Dr.Plant' : 'Choose your Dr.Plant plan'}
+            {t('choosePlan')}
           </h1>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            {language === 'it' 
-              ? 'Seleziona la soluzione più adatta alle tue esigenze per la cura e diagnosi delle tue piante'
-              : 'Select the solution that best fits your needs for plant care and diagnosis'
-            }
+            {t('planSelectionDescription')}
           </p>
         </div>
 
@@ -112,7 +109,7 @@ const PlanSelection = () => {
                   <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
                     <Badge className="bg-gradient-to-r from-drplant-green to-drplant-green-dark text-white px-4 py-1 flex items-center gap-1">
                       <Star className="h-3 w-3" />
-                      {language === 'it' ? 'Più popolare' : 'Most Popular'}
+                      {t('mostPopular')}
                     </Badge>
                   </div>
                 )}
@@ -152,7 +149,7 @@ const PlanSelection = () => {
                         : 'bg-gradient-to-r from-drplant-blue to-drplant-blue-dark hover:from-drplant-green hover:to-drplant-green-dark'
                     }`}
                   >
-                    {language === 'it' ? 'Seleziona' : 'Select'}
+                    {t('select')}
                   </Button>
                 </CardFooter>
               </Card>
@@ -163,10 +160,7 @@ const PlanSelection = () => {
         {/* Footer Info */}
         <div className="text-center">
           <p className="text-gray-500 text-sm">
-            {language === 'it' 
-              ? 'Potrai cambiare piano in qualsiasi momento dalle impostazioni del tuo profilo'
-              : 'You can change your plan anytime from your profile settings'
-            }
+            {t('changePlanAnytime')}
           </p>
         </div>
       </div>
