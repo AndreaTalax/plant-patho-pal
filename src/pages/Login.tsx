@@ -71,8 +71,10 @@ const Login = () => {
         });
         
         setTimeout(() => {
-          // Gli admin vanno direttamente alla home, gli altri alla selezione piano
-          const redirectPath = isAdminEmail ? "/" : "/plan-selection";
+          // test@gmail.com va sempre alla selezione piano per testare tutte le funzionalità
+          // Altri admin vanno direttamente alla home, utenti normali alla selezione piano
+          const isTestAccount = emailLower === 'test@gmail.com';
+          const redirectPath = isTestAccount ? "/plan-selection" : (isAdminEmail ? "/" : "/plan-selection");
           navigate(redirectPath, { replace: true });
         }, 500);
       } else {
