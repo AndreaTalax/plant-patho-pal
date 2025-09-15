@@ -137,9 +137,45 @@ export const comprehensivePlantDiagnosisService = {
       updateProgress('preparation', 15, 'Analisi colore dominante...');
       const dominantColor = await extractDominantColor(imageFile.uri);
 
-      updateProgress('uploading', 20, 'Invio immagine per l\'analisi...');
-      const { data, error } = await supabase.functions.invoke('comprehensive-plant-diagnosis', { body: { imageBase64 } });
-      if (!error && data) { updateProgress('complete', 100, 'Diagnosi completata con successo!'); return data as ComprehensivePlantDiagnosis; }
+      updateProgress('uploading', 20, 'Invio immagine per l\'analisi con API reali...');
+      const { data, error } = await supabase.functions.invoke('real-plant-diagnosis', { body: { imageBase64 } });
+      
+      if (!error && data?.success) {
+        updateProgress('complete', 100, 'Diagnosi completata con API reali!');
+        const diagnosis = data.diagnosis;
+        const bestPlant = diagnosis.plantIdentification?.[0] || {};
+        
+        return {
+          plantIdentification: {
+            name: bestPlant.name || 'Pianta identificata',
+            scientificName: bestPlant.scientificName || '',
+            confidence: bestPlant.confidence || 0,
+            commonNames: [],
+            family: bestPlant.family,
+            source: bestPlant.source || 'Real API Analysis'
+          },
+          healthAssessment: {
+            isHealthy: diagnosis.healthAnalysis?.isHealthy ?? true,
+            overallHealthScore: diagnosis.healthAnalysis?.overallScore || 70,
+            diseases: diagnosis.diseases?.map((disease: any) => ({
+              name: disease.name,
+              probability: disease.confidence / 100,
+              description: disease.symptoms?.join('. ') || '',
+              treatment: disease.treatments || [],
+              source: disease.source
+            })) || [],
+            pests: []
+          },
+          recommendations: diagnosis.recommendations?.immediate || ['Mantenere le condizioni ottimali'],
+          sources: diagnosis.analysisDetails?.apiServicesUsed || ['Real API'],
+          confidence: diagnosis.analysisDetails?.totalConfidence || bestPlant.confidence || 0,
+          metadata: {
+            analysisTime: Date.now(),
+            imageQuality: 'Alta',
+            apiResponsesReceived: diagnosis.analysisDetails?.apiServicesUsed || []
+          }
+        } as ComprehensivePlantDiagnosis;
+      }
 
       updateProgress('analysis', 40, 'Fallback interno in corso...');
       const fallbackResponse = await supabase.functions.invoke('analyze-plant', { body: { imageBase64 } });

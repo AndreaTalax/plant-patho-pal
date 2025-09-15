@@ -50,8 +50,8 @@ export const useFastPlantAnalysis = () => {
       console.log('🚀 Avvio analisi veloce...');
       const startTime = Date.now();
 
-      // Chiamata al sistema ultra-veloce
-      const { data, error } = await supabase.functions.invoke('unified-plant-diagnosis', {
+      // Chiamata al sistema di diagnosi con API reali
+      const { data, error } = await supabase.functions.invoke('real-plant-diagnosis', {
         body: { imageBase64: base64 }
       });
 
@@ -68,10 +68,17 @@ export const useFastPlantAnalysis = () => {
 
       const diagnosis = data.diagnosis;
       
+      // Prendi la migliore identificazione di pianta
+      const bestPlant = diagnosis.plantIdentification?.[0] || {
+        name: 'Pianta non identificata',
+        scientificName: '',
+        confidence: 0
+      };
+      
       const result: FastAnalysisResult = {
-        plantName: diagnosis.plantIdentification.name,
-        scientificName: diagnosis.plantIdentification.scientificName,
-        confidence: diagnosis.plantIdentification.confidence,
+        plantName: bestPlant.name,
+        scientificName: bestPlant.scientificName,
+        confidence: bestPlant.confidence,
         isHealthy: diagnosis.healthAnalysis.isHealthy,
         issues: diagnosis.healthAnalysis.issues,
         recommendations: diagnosis.recommendations

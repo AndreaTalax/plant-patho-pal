@@ -88,6 +88,9 @@ verify_jwt = false
 [functions.unified-plant-diagnosis]
 verify_jwt = false
 
+[functions.real-plant-diagnosis]
+verify_jwt = false
+
 [functions.save-diagnosis]
 verify_jwt = true
 

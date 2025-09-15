@@ -38,43 +38,34 @@ export class GlobalPlantIdentificationService {
    */
   static async identifyPlantGlobally(imageBase64: string): Promise<GlobalIdentificationResult> {
     try {
-      console.log('🌿 Avvio identificazione con AI reali...');
+      console.log('🌿 Avvio identificazione con API reali unificate...');
       
-      // Prima prova con Plant.ID per identificazione accurata
-      const { data: plantIdData, error: plantIdError } = await supabase.functions.invoke('plant-id-diagnosis', {
+      // Usa la nuova funzione con tutte le API reali
+      const { data: realApiData, error: realApiError } = await supabase.functions.invoke('real-plant-diagnosis', {
         body: { imageBase64 }
       });
 
-      if (!plantIdError && plantIdData?.success) {
-        console.log('✅ Plant.ID completato con successo');
+      if (!realApiError && realApiData?.success) {
+        console.log('✅ Analisi con API reali completata con successo');
+        const diagnosis = realApiData.diagnosis;
         
-        // Prova anche diagnosi malattie con AI specializzati
-        const { data: diseaseData, error: diseaseError } = await supabase.functions.invoke('plant-diagnosis', {
-          body: { imageBase64 }
-        });
-
-        let diseases = [];
-        if (!diseaseError && diseaseData?.diseases) {
-          diseases = diseaseData.diseases.map((disease: any) => ({
-            name: disease.name || disease.disease,
-            confidence: disease.confidence || disease.probability * 100,
-            symptoms: disease.symptoms || [],
-            treatments: disease.treatments || disease.treatment || [],
-            cause: disease.description || disease.cause || 'Causa da determinare',
-            source: 'Plant.ID Disease Detection'
-          }));
-        }
-
         return {
-          plantIdentification: [{
-            name: plantIdData.plantName,
-            scientificName: plantIdData.scientificName,
-            confidence: plantIdData.confidence,
-            source: 'Plant.ID',
-            family: plantIdData.plantDetails?.family,
-            genus: plantIdData.plantDetails?.genus
-          }],
-          diseases: diseases,
+          plantIdentification: diagnosis.plantIdentification.map((plant: any) => ({
+            name: plant.name,
+            scientificName: plant.scientificName,
+            confidence: plant.confidence,
+            source: plant.source,
+            family: plant.family,
+            genus: undefined
+          })),
+          diseases: diagnosis.diseases.map((disease: any) => ({
+            name: disease.name,
+            confidence: disease.confidence,
+            symptoms: disease.symptoms || [],
+            treatments: disease.treatments || [],
+            cause: disease.cause || 'Analisi API reale',
+            source: disease.source
+          })),
           success: true,
           isFallback: false
         };
