@@ -41,7 +41,7 @@ export class ChatMessageService {
     products?: any
   ): Promise<boolean> {
     try {
-      console.log('📤 Sending message:', {
+      console.log('📤 Sending message via edge function:', {
         conversationId,
         senderId,
         recipientId,
@@ -50,32 +50,23 @@ export class ChatMessageService {
         hasProducts: !!products
       });
 
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      
-      if (sessionError || !session) {
-        console.error('❌ No valid session found:', sessionError);
-        throw new Error('User not authenticated');
+      // Use edge function for message sending with notifications
+      const { data, error } = await supabase.functions.invoke('send-message', {
+        body: {
+          conversationId,
+          recipientId,
+          text,
+          imageUrl,
+          products
+        }
+      });
+
+      if (error) {
+        console.error('❌ Error calling send-message function:', error);
+        throw error;
       }
 
-      // Inserimento diretto - metodo semplice che funziona sempre
-      const { error: insertError } = await supabase
-        .from('messages')
-        .insert({
-          conversation_id: conversationId,
-          sender_id: senderId,
-          recipient_id: recipientId,
-          content: text,
-          text: text,
-          image_url: imageUrl,
-          sent_at: new Date().toISOString()
-        });
-
-      if (insertError) {
-        console.error('❌ Error in message insert:', insertError);
-        throw insertError;
-      }
-
-      console.log('✅ Message sent successfully');
+      console.log('✅ Message sent successfully via edge function');
       return true;
     } catch (error) {
       console.error('❌ Error in sendMessage:', error);

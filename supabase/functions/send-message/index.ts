@@ -220,6 +220,31 @@ serve(async (req) => {
       }
     }
 
+    // Send push notification for all message recipients
+    try {
+      console.log("🔔 Sending push notification for message");
+      const { error: pushNotifyError } = await supabaseClient.functions.invoke('notify-chat-message', {
+        body: {
+          messageData: {
+            id: message.id,
+            conversation_id: conversationId,
+            sender_id: user.id,
+            recipient_id: recipientId,
+            content: text,
+            image_url: imageUrl
+          }
+        }
+      });
+
+      if (pushNotifyError) {
+        console.error("⚠️ Error sending push notification:", pushNotifyError);
+      } else {
+        console.log("✅ Push notification sent successfully");
+      }
+    } catch (pushError) {
+      console.error("⚠️ Error in push notification service:", pushError);
+    }
+
     console.log("✅ Send message operation completed successfully");
 
     return new Response(JSON.stringify({ 

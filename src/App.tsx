@@ -23,6 +23,7 @@ import { CDCDashboard } from "./components/cdc/CDCDashboard";
 import { UserManagement } from "./components/admin/UserManagement";
 import { NotificationSettings } from "./components/notifications/NotificationSettings";
 import { NotificationProvider } from "./components/notifications/NotificationProvider";
+import { PushNotificationManager } from "./components/notifications/PushNotificationManager";
 import TestDiagnosi from "./pages/TestDiagnosi";
 
 const queryClient = new QueryClient();
@@ -40,6 +41,7 @@ function App() {
       <ThemeProvider>
         <AuthProvider>
           <NotificationProvider>
+            <PushNotificationManager />
             <AppWithPresence>
               <PlantInfoProvider>
                 <TooltipProvider>
