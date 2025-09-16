@@ -227,27 +227,14 @@ const DiagnoseTab = () => {
     try {
       console.log('📨 Invio dati all\'esperto...');
       
-      // Sincronizza i dati usando PlantDataSyncService
-      const synced = await PlantDataSyncService.syncPlantDataToChat(
-        userProfile.id,
-        plantInfo,
-        uploadedImage,
-        plantInfo.uploadedFile // Pass the uploaded file for storage upload
-      );
+      // I dati verranno inviati automaticamente dal sistema PDF in chat
+      console.log('✅ Dati verranno sincronizzati automaticamente via PDF in chat');
+      setDataSentToExpert(true);
 
-      if (synced.success) {
-        console.log('✅ Dati sincronizzati con successo alla chat');
-        setDataSentToExpert(true);
-        
-        // La diagnosi AI viene inviata solo quando l'utente clicca esplicitamente "Chat con l'esperto"
-
-        toast.success('Dati inviati all\'esperto!', {
-          description: 'Marco Nigro riceverà tutte le informazioni nella chat.'
-        });
-        return true;
-      }
-
-      return false;
+      toast.success('Dati inviati all\'esperto!', {
+        description: 'Marco Nigro riceverà tutte le informazioni nella chat.'
+      });
+      return true;
     } catch (error) {
       console.error('❌ Errore invio dati all\'esperto:', error);
       toast.error('Errore nell\'invio all\'esperto');

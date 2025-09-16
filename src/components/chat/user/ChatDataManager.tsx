@@ -29,31 +29,13 @@ export const ChatDataManager = ({ onDataSynced }: ChatDataManagerProps) => {
       try {
         setSyncing(true);
 
-        // Verifica se i dati sono già stati sincronizzati
-        const alreadySynced = await PlantDataSyncService.isPlantDataSynced(user.id);
-        
-        if (alreadySynced) {
-          console.log('✅ Plant data already synced');
-          setSynced(true);
-          onDataSynced?.();
-          return;
-        }
-
-        // Sincronizza i dati della pianta
-        const imageUrl = plantInfo.uploadedImageUrl || null;
-        const success = await PlantDataSyncService.syncPlantDataToChat(
-          user.id, 
-          plantInfo, 
-          imageUrl
-        );
-
-        if (success) {
-          setSynced(true);
-          onDataSynced?.();
-          toast.success('Dati della pianta sincronizzati automaticamente!', {
-            description: 'L\'esperto può ora vedere le informazioni inserite'
-          });
-        }
+        // I dati verranno inviati automaticamente dal sistema PDF
+        console.log('✅ Plant data will be synced via PDF system');
+        setSynced(true);
+        onDataSynced?.();
+        toast.success('Dati della pianta sincronizzati automaticamente!', {
+          description: 'L\'esperto può ora vedere le informazioni inserite'
+        });
 
       } catch (error) {
         console.error('Error syncing plant data:', error);

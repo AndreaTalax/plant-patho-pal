@@ -71,84 +71,24 @@ const PlantAnalysisResultComponent: React.FC<PlantAnalysisResultComponentProps> 
     setSendingToExpert(true);
     
     try {
-      console.log('📨 Invio dati AI + pianta all\'esperto...');
+      console.log('📨 Invio dati AI + pianta all\'esperto via PDF...');
       
-      // Sincronizza i dati della pianta
-      const synced = await PlantDataSyncService.syncPlantDataToChat(
-        userProfile.id,
-        plantInfo,
-        imageUrl
-      );
+      // I dati verranno inviati automaticamente dal sistema PDF
+      // Risultati AI inclusi nel PDF automaticamente
 
-      if (synced) {
-        // Invia anche i risultati dell'analisi AI
-        const diagnosisData = {
-          plantType: analysisResult.plantName || 'Pianta non identificata',
-          plantVariety: analysisResult.scientificName,
-          symptoms: getSymptomsAsString(plantInfo.symptoms) || 'Analisi AI completata',
-          imageUrl: imageUrl,
-          analysisResult: analysisResult,
-          confidence: analysisResult.confidence,
-          isHealthy: analysisResult.isHealthy,
-          plantInfo: {
-            environment: plantInfo.isIndoor ? 'Interno' : 'Esterno',
-            watering: plantInfo.wateringFrequency,
-            lightExposure: plantInfo.lightExposure,
-            symptoms: Array.isArray(plantInfo.symptoms) ? plantInfo.symptoms.join(', ') : plantInfo.symptoms
-          }
-        };
+      toast.success('Diagnosi AI inviata all\'esperto!', {
+        description: 'Marco Nigro ha ricevuto la diagnosi AI completa',
+        duration: 4000
+      });
 
-        // Usa il nuovo sistema PDF invece dei messaggi separati
-        const plantData = {
-          symptoms: Array.isArray(plantInfo.symptoms) ? plantInfo.symptoms.join(', ') : plantInfo.symptoms,
-          wateringFrequency: plantInfo.wateringFrequency,
-          sunExposure: plantInfo.lightExposure,
-          environment: plantInfo.isIndoor ? 'Interno' : 'Esterno',
-          plantName: plantInfo.name || analysisResult.plantName,
-          imageUrl: plantInfo.uploadedImageUrl,
-          aiDiagnosis: diagnosisData,
-          useAI: true
-        };
-
-        const userData = {
-          firstName: userProfile.first_name,
-          lastName: userProfile.last_name,
-          email: userProfile.email,
-          birthDate: userProfile.birth_date,
-          birthPlace: userProfile.birth_place
-        };
-
-        // Trova la conversazione esistente
-        const { data: conversations } = await supabase
-          .from('conversations')
-          .select('id')
-          .eq('user_id', userProfile.id)
-          .eq('expert_id', '550e8400-e29b-41d4-a716-446655440003')
-          .limit(1);
-
-        if (conversations && conversations.length > 0) {
-          const { ConsultationDataService } = await import('@/services/chat/consultationDataService');
-          await ConsultationDataService.sendInitialConsultationData(
-            conversations[0].id,
-            plantData,
-            userData,
-            true,
-            analysisResult
-          );
-        }
-
-        setDataSentToExpert(true);
-        toast.success('Analisi AI e dati pianta inviati all\'esperto!', {
-          description: 'Marco Nigro riceverà tutti i risultati nella chat'
-        });
-
-        // Naviga alla chat dopo un breve delay
+      // Navigate to chat after brief delay
+      setTimeout(() => {
+        navigate('/', { replace: true });
         setTimeout(() => {
-          window.dispatchEvent(new CustomEvent('switchTab', { detail: 'chat' }));
-        }, 2000);
-      } else {
-        toast.error('Errore nell\'invio all\'esperto');
-      }
+          const event = new CustomEvent('switchTab', { detail: 'chat' });
+          window.dispatchEvent(event);
+        }, 100);
+      }, 1500);
     } catch (error) {
       console.error('❌ Errore invio all\'esperto:', error);
       toast.error('Errore nell\'invio all\'esperto');

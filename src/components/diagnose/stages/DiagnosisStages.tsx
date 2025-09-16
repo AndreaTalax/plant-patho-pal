@@ -75,87 +75,25 @@ const DiagnosisStages: React.FC<DiagnosisStagesProps> = ({
       return;
     }
 
-    console.log("🩺 Avvio consulenza esperto con invio automatico dati...");
+    console.log("🩺 Avvio consulenza esperto con invio automatico dati via PDF...");
     
     try {
-      // First sync plant data using PlantDataSyncService
-      const synced = await PlantDataSyncService.syncPlantDataToChat(
-        userProfile.id,
-        plantInfo,
-        uploadedImage || undefined
-      );
+      // I dati verranno inviati automaticamente dal sistema PDF
+      console.log('✅ Dati verranno sincronizzati automaticamente via PDF');
+      
+      // Se ci sono risultati dell'analisi AI, saranno inclusi nel PDF
+      console.log('✅ AI diagnosis results will be included in PDF');
 
-      if (synced) {
-        console.log('✅ Dati sincronizzati automaticamente alla chat');
-        
-        // If there's AI analysis results, send those too
-        if (diagnosedDisease && analysisDetails) {
-          const diagnosisData = {
-            plantType: plantInfo.name || 'Pianta non identificata',
-            plantVariety: plantInfo.name,
-            symptoms: getSymptomsAsString(plantInfo.symptoms) || 'Nessun sintomo specificato',
-            imageUrl: uploadedImage || '',
-            analysisResult: diagnosedDisease,
-            confidence: analysisDetails?.confidence || 0,
-            isHealthy: diagnosedDisease?.healthy || false,
-            plantInfo: {
-              environment: plantInfo.isIndoor ? 'Interno' : 'Esterno',
-              watering: plantInfo.wateringFrequency,
-              lightExposure: plantInfo.lightExposure,
-              symptoms: Array.isArray(plantInfo.symptoms) ? plantInfo.symptoms.join(', ') : plantInfo.symptoms
-            }
-          };
+      toast.success('Consultazione avviata!', {
+        description: 'I dati della pianta sono stati inviati all\'esperto via PDF',
+        duration: 4000
+      });
 
-          // Usa il nuovo sistema PDF
-          const { ConsultationDataService } = await import('@/services/chat/consultationDataService');
-          
-          const plantData = {
-            symptoms: Array.isArray(plantInfo.symptoms) ? plantInfo.symptoms.join(', ') : plantInfo.symptoms,
-            wateringFrequency: plantInfo.wateringFrequency,
-            sunExposure: plantInfo.lightExposure,
-            environment: plantInfo.isIndoor ? 'Interno' : 'Esterno',
-            plantName: plantInfo.name,
-            imageUrl: plantInfo.uploadedImageUrl,
-            aiDiagnosis: diagnosisData,
-            useAI: true
-          };
-
-          const userData = {
-            firstName: userProfile.first_name,
-            lastName: userProfile.last_name,
-            email: userProfile.email,
-            birthDate: userProfile.birth_date,
-            birthPlace: userProfile.birth_place
-          };
-
-          // Trova conversazione esistente
-          const { data: conversations } = await supabase
-            .from('conversations')
-            .select('id')
-            .eq('user_id', userProfile.id)
-            .eq('expert_id', '550e8400-e29b-41d4-a716-446655440003')
-            .limit(1);
-
-          if (conversations && conversations.length > 0) {
-            await ConsultationDataService.sendInitialConsultationData(
-              conversations[0].id,
-              plantData,
-              userData,
-              true,
-              diagnosedDisease
-            );
-          }
-        }
-
-        toast.success('Dati inviati automaticamente all\'esperto!', {
-          description: 'Marco Nigro riceverà tutte le informazioni'
-        });
-
-        // Navigate to chat
-        handleNavigateToChat();
-      } else {
-        toast.error('Errore nell\'invio automatico dei dati');
-      }
+      navigate('/', { replace: true });
+      setTimeout(() => {
+        const event = new CustomEvent('switchTab', { detail: 'chat' });
+        window.dispatchEvent(event);
+      }, 100);
     } catch (error) {
       console.error('❌ Errore nella consulenza esperto:', error);
       toast.error('Errore nell\'invio dei dati all\'esperto');

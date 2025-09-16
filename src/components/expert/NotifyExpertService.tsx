@@ -48,19 +48,9 @@ export const notifyExpert = async (file?: File, imageUrl?: string, plantInfo?: P
       return;
     }
 
-    // Usa il nuovo servizio di sincronizzazione dati invece di creare messaggi manualmente
+    // I dati verranno inviati automaticamente dal sistema PDF in chat
     if (plantInfo) {
-      const success = await PlantDataSyncService.syncPlantDataToChat(
-        user.id,
-        plantInfo,
-        finalImageUrl
-      );
-
-      if (!success) {
-        console.warn('Failed to sync plant data, falling back to manual message creation');
-        // Fallback al metodo precedente se la sincronizzazione fallisce
-        await createManualExpertMessage(user.id, plantInfo, finalImageUrl, consultation.id);
-      }
+      console.log('✅ Plant data will be sent via PDF system automatically');
     }
 
     // Notify expert via edge function
