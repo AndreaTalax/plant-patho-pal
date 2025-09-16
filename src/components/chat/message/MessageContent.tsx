@@ -64,13 +64,16 @@ export const MessageContent = ({ message }: MessageContentProps) => {
                            message.image_url.includes('audio-messages')
                          ));
 
-  // Debug logging per PDF download link
-  if (message.text?.includes('Preventivo Professionale')) {
+  // Debug logging per messaggi PDF e di consultazione
+  if (message.text?.includes('CONSULENZA PROFESSIONALE') || 
+      message.text?.includes('Preventivo Professionale') ||
+      message.text?.includes('Scarica PDF')) {
     console.log('🔍 PDF Message Content:', {
       id: message.id,
       text: message.text,
       textLength: message.text?.length,
       hasMarkdownLink: message.text?.includes('[') && message.text?.includes(']'),
+      sender: message.sender,
       fullText: message.text
     });
   }
