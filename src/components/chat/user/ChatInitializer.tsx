@@ -92,7 +92,8 @@ export const ChatInitializer: React.FC<ChatInitializerProps> = ({
               currentConversationId,
               plantData,
               userData,
-              plantInfo?.useAI || false
+              plantInfo?.useAI || false,
+              (plantData as any)?.diagnosisResult || null
             );
 
             if (success) {
@@ -188,7 +189,8 @@ export const ChatInitializer: React.FC<ChatInitializerProps> = ({
             pendingData.conversationId,
             pendingData.plantData,
             pendingData.userData,
-            pendingData.plantData.useAI || false
+            pendingData.plantData.useAI || false,
+            pendingData.plantData.diagnosisResult || null
           );
 
           if (success) {

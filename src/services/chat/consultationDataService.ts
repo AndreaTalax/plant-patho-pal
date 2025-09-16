@@ -41,21 +41,23 @@ function formatConsultationMessage(plantData: any, userProfile: any) {
 
 export class ConsultationDataService {
   /**
-   * Invia automaticamente i dati completi di consultazione nella chat - VERSIONE OTTIMIZZATA
+   * Invia automaticamente i dati completi di consultazione come PDF professionale
    */
   static async sendInitialConsultationData(
     conversationId: string,
     plantData: any,
     userProfile: any,
-    fromAIDiagnosis: boolean = false
+    fromAIDiagnosis: boolean = false,
+    diagnosisResult?: any
   ): Promise<boolean> {
     try {
-      console.log('📤 INVIO DATI CONSULTAZIONE - INIZIO OTTIMIZZATO:', {
+      console.log('📄 GENERAZIONE PDF CONSULTAZIONE - INIZIO:', {
         conversationId,
         userProfile: userProfile?.email,
         plantData: plantData?.plantName,
         hasImage: !!plantData?.imageUrl,
-        fromAIDiagnosis
+        fromAIDiagnosis,
+        hasDiagnosis: !!diagnosisResult
       });
 
       const { data: { user } } = await supabase.auth.getUser();
@@ -71,67 +73,90 @@ export class ConsultationDataService {
         return false;
       }
 
-      // Prepara tutti i messaggi da inviare
-      const messages = [];
-      
-      // 1. Messaggio principale con dati
-      const mainMessage = formatConsultationMessage(plantData, userProfile);
-      messages.push({
-        conversationId,
-        recipientId: MARCO_NIGRO_ID,
-        text: mainMessage,
-        imageUrl: null,
-        products: null
+      // Genera il PDF professionale
+      console.log('📄 Generazione PDF in corso...');
+      const { data: pdfResult, error: pdfError } = await supabase.functions.invoke('generate-professional-pdf', {
+        body: {
+          plantData,
+          userProfile,
+          diagnosisResult,
+          conversationId
+        },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
       });
 
-      // 2. Se c'è un'immagine, aggiungi i messaggi dell'immagine
-      if (plantData?.imageUrl) {
-        messages.push({
-          conversationId,
-          recipientId: MARCO_NIGRO_ID,
-          text: '📸 **FOTO DELLA PIANTA IN CONSULENZA:**',
-          imageUrl: null,
-          products: null
-        });
-        
-        messages.push({
-          conversationId,
-          recipientId: MARCO_NIGRO_ID,
-          text: '📸 Immagine della pianta',
-          imageUrl: plantData.imageUrl,
-          products: null
-        });
-      }
-
-      // Invia tutti i messaggi in parallelo per velocizzare
-      console.log('📝 Invio messaggi in parallelo...');
-      
-      const sendPromises = messages.map(message => 
-        supabase.functions.invoke('send-message', {
-          body: message,
-          headers: {
-            Authorization: `Bearer ${session.access_token}`,
-          },
-        })
-      );
-
-      const results = await Promise.allSettled(sendPromises);
-      
-      // Controlla se tutti i messaggi sono stati inviati con successo
-      const allSuccessful = results.every(result => 
-        result.status === 'fulfilled' && result.value?.data?.success
-      );
-
-      if (allSuccessful) {
-        console.log('✅ INVIO DATI CONSULTAZIONE - COMPLETATO CON SUCCESSO');
-        return true;
-      } else {
-        console.error('❌ Alcuni messaggi non sono stati inviati correttamente');
+      if (pdfError || !pdfResult?.success) {
+        console.error('❌ Errore generazione PDF:', pdfError);
         return false;
       }
 
+      console.log('✅ PDF generato con successo:', pdfResult.fileName);
+
+      // Invia il messaggio con il PDF
+      const pdfMessage = [
+        "📋 **CONSULENZA PROFESSIONALE - DATI COMPLETI**",
+        "",
+        "Ho preparato un documento PDF completo con tutti i dati della consulenza:",
+        "",
+        "• Dati personali del paziente",
+        "• Informazioni dettagliate della pianta",
+        "• Risultati della diagnosi AI (se disponibili)",
+        "• Photo della pianta allegata alla conversazione",
+        "",
+        "Il documento è pronto per la revisione professionale.",
+        "",
+        `📎 [Scarica PDF Consulenza](${pdfResult.pdfUrl})`
+      ].join('\n');
+
+      // Invia il messaggio principale con PDF
+      const { data: messageResult, error: messageError } = await supabase.functions.invoke('send-message', {
+        body: {
+          conversationId,
+          recipientId: MARCO_NIGRO_ID,
+          text: pdfMessage,
+          imageUrl: null,
+          products: null
+        },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+
+      if (messageError || !messageResult?.success) {
+        console.error('❌ Errore invio messaggio PDF:', messageError);
+        return false;
+      }
+
+      // Se c'è un'immagine, inviala come messaggio separato
+      if (plantData?.imageUrl) {
+        console.log('📸 Invio immagine pianta...');
+        const { data: imageResult, error: imageError } = await supabase.functions.invoke('send-message', {
+          body: {
+            conversationId,
+            recipientId: MARCO_NIGRO_ID,
+            text: '📸 Foto della pianta in consulenza',
+            imageUrl: plantData.imageUrl,
+            products: null
+          },
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+        });
+
+        if (imageError) {
+          console.error('⚠️ Warning: Errore invio immagine:', imageError);
+        } else {
+          console.log('✅ Immagine inviata con successo');
+        }
+      }
+
+      console.log('✅ INVIO PDF CONSULTAZIONE - COMPLETATO CON SUCCESSO');
+      return true;
+
     } catch (error) {
-      console.error('❌ ERRORE CRITICO INVIO DATI CONSULTAZIONE:', error);
+      console.error('❌ ERRORE CRITICO INVIO PDF CONSULTAZIONE:', error);
       return false;
     }
   }
@@ -144,7 +169,7 @@ export class ConsultationDataService {
         .from('messages')
         .select('id')
         .eq('conversation_id', conversationId)
-        .ilike('content', '%DATI PERSONALI DEL PAZIENTE%')
+        .ilike('content', '%CONSULENZA PROFESSIONALE - DATI COMPLETI%')
         .limit(1);
 
       if (error) {
@@ -153,7 +178,7 @@ export class ConsultationDataService {
       }
 
       const hasConsultationData = messages && messages.length > 0;
-      console.log('🔍 Dati consultazione già inviati:', hasConsultationData);
+      console.log('🔍 PDF consultazione già inviato:', hasConsultationData);
       return hasConsultationData;
     } catch (error) {
       console.error('❌ Errore verifica stato dati consultazione:', error);

@@ -139,7 +139,8 @@ export const useUserChat = (userId: string) => {
         currentDbConversation.id,
         plantData,
         userData,
-        plantInfo.useAI || false
+        plantInfo.useAI || false,
+        (plantData as any)?.diagnosisResult || null
       );
 
       if (!success) {
