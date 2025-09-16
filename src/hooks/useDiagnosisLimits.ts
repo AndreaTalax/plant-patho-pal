@@ -3,7 +3,7 @@ import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
-const FREE_DIAGNOSES_LIMIT = 3;
+const FREE_DIAGNOSES_LIMIT = 2;
 
 export const useDiagnosisLimits = () => {
   const { user } = useAuth();

@@ -167,14 +167,22 @@ const PlanSubscriptionOptions = ({ planType, onSubscriptionSelect, onBack }: Pla
                       {option.description}
                     </CardDescription>
 
-                    <div className="mt-4 flex items-center gap-2 text-sm text-drplant-green">
-                      <Check className="h-4 w-4" />
-                      <span>
-                        {planType === 'privati' 
-                          ? (language === 'it' ? 'Diagnosi AI + Chat Esperto' : 'AI Diagnosis + Expert Chat')
-                          : (language === 'it' ? 'Tutte le funzionalità incluse' : 'All features included')
-                        }
-                      </span>
+                    <div className="mt-4 space-y-2">
+                      <div className="flex items-center gap-2 text-sm text-drplant-green">
+                        <Check className="h-4 w-4" />
+                        <span>
+                          {language === 'it' ? '2 prove gratuite di diagnosi AI' : '2 free AI diagnosis trials'}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm text-drplant-green">
+                        <Check className="h-4 w-4" />
+                        <span>
+                          {planType === 'privati' 
+                            ? (language === 'it' ? 'Diagnosi AI + Chat Esperto' : 'AI Diagnosis + Expert Chat')
+                            : (language === 'it' ? 'Tutte le funzionalità incluse' : 'All features included')
+                          }
+                        </span>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
