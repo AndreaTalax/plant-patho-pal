@@ -80,11 +80,25 @@ export const useUserChat = (userId: string) => {
 
   // Send initial consultation data automatically when all conditions are met
   useEffect(() => {
+    console.log('🔍 Checking conditions for sending consultation data:', {
+      conversationId: !!currentDbConversation?.id,
+      plantInfoComplete: plantInfo?.infoComplete,
+      userProfile: !!userProfile,
+      dataSyncChecked,
+      initialDataSent,
+      plantInfo: plantInfo ? {
+        name: plantInfo.name,
+        symptoms: plantInfo.symptoms,
+        uploadedImageUrl: !!plantInfo.uploadedImageUrl
+      } : null
+    });
+
     if (!currentDbConversation?.id || 
         !plantInfo?.infoComplete || 
         !userProfile || 
         !dataSyncChecked ||
         initialDataSent) {
+      console.log('❌ Not all conditions met, skipping consultation data send');
       return;
     }
 
