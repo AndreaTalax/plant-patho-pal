@@ -104,6 +104,18 @@ export const useUserChat = (userId: string) => {
       return;
     }
 
+    // Check if consultation data has already been sent
+    try {
+      const dataAlreadySent = await ConsultationDataService.isConsultationDataSent(currentDbConversation.id);
+      if (dataAlreadySent) {
+        console.log('✅ Consultation data already sent, skipping automatic send');
+        setInitialDataSent(true);
+        return;
+      }
+    } catch (error) {
+      console.error('❌ Error checking consultation data status:', error);
+    }
+
     try {
       console.log('📤 Sending initial consultation data automatically...');
       
