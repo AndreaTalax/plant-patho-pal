@@ -44,11 +44,53 @@ export const usePostPaymentDiagnosis = () => {
         if (subscriptionData?.subscribed) {
           console.log('✅ Abbonamento verificato, invio diagnosi all\'esperto...');
           
-          // Invia la diagnosi all'esperto
-          const success = await AutoExpertNotificationService.sendDiagnosisToExpert(
-            user.id,
-            diagnosisData.diagnosisData
-          );
+          // Usa il nuovo sistema PDF
+          const { ConsultationDataService } = await import('@/services/chat/consultationDataService');
+          
+          // Prepara i dati per il PDF
+          const plantData = {
+            symptoms: diagnosisData.diagnosisData.symptoms || 'Da specificare',
+            wateringFrequency: 'Non specificata',
+            sunExposure: 'Non specificata',
+            environment: 'Da specificare',
+            plantName: diagnosisData.diagnosisData.plantType || 'Pianta non identificata',
+            imageUrl: diagnosisData.diagnosisData.imageUrl,
+            aiDiagnosis: diagnosisData.diagnosisData,
+            useAI: true
+          };
+
+          const { data: userProfile } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', user.id)
+            .single();
+
+          const userData = {
+            firstName: userProfile?.first_name,
+            lastName: userProfile?.last_name,
+            email: userProfile?.email,
+            birthDate: userProfile?.birth_date,
+            birthPlace: userProfile?.birth_place
+          };
+
+          // Trova conversazione esistente
+          const { data: conversations } = await supabase
+            .from('conversations')
+            .select('id')
+            .eq('user_id', user.id)
+            .eq('expert_id', '550e8400-e29b-41d4-a716-446655440003')
+            .limit(1);
+
+          let success = false;
+          if (conversations && conversations.length > 0) {
+            success = await ConsultationDataService.sendInitialConsultationData(
+              conversations[0].id,
+              plantData,
+              userData,
+              true,
+              diagnosisData.diagnosisData.analysisResult
+            );
+          }
 
           if (success) {
             console.log('🎉 Diagnosi inviata con successo all\'esperto!');

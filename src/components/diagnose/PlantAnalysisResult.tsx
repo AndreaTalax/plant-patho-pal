@@ -23,6 +23,7 @@ import { PaymentRequiredModal } from '../subscription/PaymentRequiredModal';
 import { PlantDataSyncService } from '@/services/chat/plantDataSyncService';
 import { AutoExpertNotificationService } from '@/components/chat/AutoExpertNotificationService';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 interface PlantAnalysisResultComponentProps {
   analysisResult: PlantAnalysisResult;
@@ -97,10 +98,44 @@ const PlantAnalysisResultComponent: React.FC<PlantAnalysisResultComponentProps> 
           }
         };
 
-        await AutoExpertNotificationService.sendDiagnosisToExpert(
-          userProfile.id,
-          diagnosisData
-        );
+        // Usa il nuovo sistema PDF invece dei messaggi separati
+        const plantData = {
+          symptoms: Array.isArray(plantInfo.symptoms) ? plantInfo.symptoms.join(', ') : plantInfo.symptoms,
+          wateringFrequency: plantInfo.wateringFrequency,
+          sunExposure: plantInfo.lightExposure,
+          environment: plantInfo.isIndoor ? 'Interno' : 'Esterno',
+          plantName: plantInfo.name || analysisResult.plantName,
+          imageUrl: plantInfo.uploadedImageUrl,
+          aiDiagnosis: diagnosisData,
+          useAI: true
+        };
+
+        const userData = {
+          firstName: userProfile.first_name,
+          lastName: userProfile.last_name,
+          email: userProfile.email,
+          birthDate: userProfile.birth_date,
+          birthPlace: userProfile.birth_place
+        };
+
+        // Trova la conversazione esistente
+        const { data: conversations } = await supabase
+          .from('conversations')
+          .select('id')
+          .eq('user_id', userProfile.id)
+          .eq('expert_id', '550e8400-e29b-41d4-a716-446655440003')
+          .limit(1);
+
+        if (conversations && conversations.length > 0) {
+          const { ConsultationDataService } = await import('@/services/chat/consultationDataService');
+          await ConsultationDataService.sendInitialConsultationData(
+            conversations[0].id,
+            plantData,
+            userData,
+            true,
+            analysisResult
+          );
+        }
 
         setDataSentToExpert(true);
         toast.success('Analisi AI e dati pianta inviati all\'esperto!', {

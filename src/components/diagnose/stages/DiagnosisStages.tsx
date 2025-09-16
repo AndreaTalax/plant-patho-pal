@@ -14,6 +14,7 @@ import { useAuth } from '@/context/AuthContext';
 import { PlantDataSyncService } from '@/services/chat/plantDataSyncService';
 import { AutoExpertNotificationService } from '@/components/chat/AutoExpertNotificationService';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 interface DiagnosisStagesProps {
   stage: 'info' | 'capture' | 'options' | 'result';
@@ -105,10 +106,45 @@ const DiagnosisStages: React.FC<DiagnosisStagesProps> = ({
             }
           };
 
-          await AutoExpertNotificationService.sendDiagnosisToExpert(
-            userProfile.id,
-            diagnosisData
-          );
+          // Usa il nuovo sistema PDF
+          const { ConsultationDataService } = await import('@/services/chat/consultationDataService');
+          
+          const plantData = {
+            symptoms: Array.isArray(plantInfo.symptoms) ? plantInfo.symptoms.join(', ') : plantInfo.symptoms,
+            wateringFrequency: plantInfo.wateringFrequency,
+            sunExposure: plantInfo.lightExposure,
+            environment: plantInfo.isIndoor ? 'Interno' : 'Esterno',
+            plantName: plantInfo.name,
+            imageUrl: plantInfo.uploadedImageUrl,
+            aiDiagnosis: diagnosisData,
+            useAI: true
+          };
+
+          const userData = {
+            firstName: userProfile.first_name,
+            lastName: userProfile.last_name,
+            email: userProfile.email,
+            birthDate: userProfile.birth_date,
+            birthPlace: userProfile.birth_place
+          };
+
+          // Trova conversazione esistente
+          const { data: conversations } = await supabase
+            .from('conversations')
+            .select('id')
+            .eq('user_id', userProfile.id)
+            .eq('expert_id', '550e8400-e29b-41d4-a716-446655440003')
+            .limit(1);
+
+          if (conversations && conversations.length > 0) {
+            await ConsultationDataService.sendInitialConsultationData(
+              conversations[0].id,
+              plantData,
+              userData,
+              true,
+              diagnosedDisease
+            );
+          }
         }
 
         toast.success('Dati inviati automaticamente all\'esperto!', {

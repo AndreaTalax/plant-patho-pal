@@ -235,10 +235,53 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
       // Se ha accesso premium, invia la diagnosi e apri la chat
       console.log('📤 Invio dati diagnosi all\'esperto (utente premium)...');
       
-      await AutoExpertNotificationService.sendDiagnosisToExpert(
-        user.id,
-        diagnosisData
-      );
+      // Usa il nuovo sistema PDF
+      const { ConsultationDataService } = await import('@/services/chat/consultationDataService');
+      
+      // Prepara i dati per il PDF usando le props disponibili
+      const plantData = {
+        symptoms: typeof plantInfo.symptoms === 'string' ? plantInfo.symptoms : 
+                 Array.isArray(plantInfo.symptoms) ? plantInfo.symptoms.join(', ') : 'Da specificare',
+        wateringFrequency: plantInfo.wateringFrequency || 'Non specificata',
+        sunExposure: plantInfo.lightExposure || 'Non specificata', 
+        environment: plantInfo.isIndoor ? 'Interno' : 'Esterno',
+        plantName: plantInfo.name || diagnosedDisease?.name || 'Pianta non identificata',
+        imageUrl: imageSrc,
+        aiDiagnosis: diagnosisData,
+        useAI: true
+      };
+
+      const { data: userProfile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+
+      const userData = {
+        firstName: userProfile?.first_name,
+        lastName: userProfile?.last_name,
+        email: userProfile?.email,
+        birthDate: userProfile?.birth_date,
+        birthPlace: userProfile?.birth_place
+      };
+
+      // Trova conversazione esistente
+      const { data: conversations } = await supabase
+        .from('conversations')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('expert_id', '550e8400-e29b-41d4-a716-446655440003')
+        .limit(1);
+
+      if (conversations && conversations.length > 0) {
+        await ConsultationDataService.sendInitialConsultationData(
+          conversations[0].id,
+          plantData,
+          userData,
+          true,
+          diagnosedDisease || analysisDetails || analysisData
+        );
+      }
       
       console.log('✅ Dati diagnosi inviati all\'esperto con successo');
       toast.success('Diagnosi inviata all\'esperto!');
