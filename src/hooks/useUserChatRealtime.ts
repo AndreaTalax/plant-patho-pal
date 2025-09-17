@@ -141,10 +141,12 @@ export const useUserChatRealtime = (userId: string) => {
     checkConsultationDataSent();
   }, [currentConversationId, dataSyncChecked]);
 
-  // Send initial consultation data automatically when all conditions are met
+  // Send initial consultation data automatically when all conditions are met  
   useEffect(() => {
+    console.log('🔍 DEBUG: useEffect for consultation data triggered');
     console.log('🔍 Checking conditions for sending consultation data:', {
       conversationId: !!currentConversationId,
+      plantInfoExists: !!plantInfo,
       plantInfoComplete: plantInfo?.infoComplete,
       userProfile: !!userProfile,
       dataSyncChecked,
@@ -156,18 +158,32 @@ export const useUserChatRealtime = (userId: string) => {
       } : null
     });
 
-    if (!currentConversationId || 
-        !plantInfo?.infoComplete || 
-        !userProfile || 
-        !dataSyncChecked ||
-        initialDataSent) {
-      console.log('❌ Not all conditions met, skipping consultation data send');
+    // Simplified conditions for testing
+    if (!currentConversationId) {
+      console.log('❌ Missing conversationId');
       return;
     }
 
+    if (!userProfile) {
+      console.log('❌ Missing userProfile');
+      return;
+    }
+
+    if (!dataSyncChecked) {
+      console.log('❌ Data sync not checked yet');
+      return;
+    }
+
+    if (initialDataSent) {
+      console.log('❌ Initial data already sent');
+      return;
+    }
+
+    // For now, skip plantInfo check to test if that's the issue
+    console.log('✅ All basic conditions met, attempting to send consultation data...');
     console.log('📋 All data ready, sending initial consultation data automatically...');
     sendInitialConsultationData();
-  }, [currentConversationId, plantInfo?.infoComplete, userProfile, dataSyncChecked, initialDataSent]);
+  }, [currentConversationId, plantInfo, userProfile, dataSyncChecked, initialDataSent]);
 
   // Enhanced function to send initial consultation data automatically
   const sendInitialConsultationData = async () => {
