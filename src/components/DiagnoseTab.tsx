@@ -100,12 +100,21 @@ const DiagnoseTab = () => {
 
   // Monitor analysis state
   useEffect(() => {
+    console.log('🔍 Monitor analysis state:', {
+      isAnalyzing,
+      diagnosisResult: !!diagnosisResult,
+      diagnosedDisease: !!diagnosedDisease,
+      analysisDetails: !!analysisDetails,
+      currentStage,
+      uploadedImage: !!uploadedImage
+    });
+    
     if (isAnalyzing) {
       setCurrentStage('analyzing');
     } else if (diagnosisResult && currentStage === 'analyzing') {
       setCurrentStage('result');
     }
-  }, [isAnalyzing, diagnosisResult, currentStage]);
+  }, [isAnalyzing, diagnosisResult, diagnosedDisease, analysisDetails, currentStage, uploadedImage]);
 
   // Plant info completion handler
   const handlePlantInfoComplete = useCallback((data: PlantInfo) => {
@@ -534,7 +543,16 @@ const DiagnoseTab = () => {
         );
 
       case 'result':
-        if (uploadedImage && (diagnosedDisease || analysisDetails)) {
+        console.log('🔍 Rendering result stage:', {
+          uploadedImage: !!uploadedImage,
+          diagnosedDisease: !!diagnosedDisease,  
+          analysisDetails: !!analysisDetails,
+          diagnosisResult: !!diagnosisResult,
+          plantInfo: plantInfo?.name || 'no name'
+        });
+        
+        // Usa diagnosisResult se non ci sono diagnosedDisease o analysisDetails
+        if (uploadedImage && (diagnosedDisease || analysisDetails || diagnosisResult)) {
           return (
             <div className="animate-slide-in-right">
               <DiagnosisResult
