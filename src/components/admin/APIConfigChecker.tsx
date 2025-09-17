@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle, XCircle, Loader2, Key, AlertTriangle } from 'lucide-react';
+import { CheckCircle, XCircle, Loader2, Key, AlertTriangle, RefreshCw } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -19,10 +19,23 @@ interface APIStatus {
   };
 }
 
+interface APITestResult {
+  status: 'unknown' | 'working' | 'error' | 'missing_key' | 'expired';
+  error?: string | null;
+}
+
+interface TestResults {
+  plantId: APITestResult;
+  plantNet: APITestResult;
+  eppo: APITestResult;
+}
+
 const APIConfigChecker: React.FC = () => {
   const [status, setStatus] = useState<APIStatus | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [lastChecked, setLastChecked] = useState<Date | null>(null);
+  const [testResults, setTestResults] = useState<TestResults | null>(null);
+  const [isTestingKeys, setIsTestingKeys] = useState(false);
 
   const checkAPIStatus = async () => {
     setIsLoading(true);
@@ -72,6 +85,38 @@ const APIConfigChecker: React.FC = () => {
     }
   };
 
+  const testAPIKeys = async () => {
+    setIsTestingKeys(true);
+    try {
+      console.log('🔍 Testing API keys functionality...');
+      
+      const { data, error } = await supabase.functions.invoke('test-api-keys');
+      
+      if (error) {
+        console.error('Error testing API keys:', error);
+        toast.error('Errore nel test delle API keys');
+        return;
+      }
+      
+      console.log('📊 API test results:', data);
+      setTestResults(data);
+      
+      // Check for expired keys
+      const hasExpired = Object.values(data).some((result: any) => result.status === 'expired');
+      if (hasExpired) {
+        toast.error('⚠️ Alcune API keys sono scadute!');
+      } else {
+        toast.success('Test delle API keys completato');
+      }
+      
+    } catch (error) {
+      console.error('Failed to test API keys:', error);
+      toast.error('Errore nel test delle API keys');  
+    } finally {
+      setIsTestingKeys(false);
+    }
+  };
+
   useEffect(() => {
     checkAPIStatus();
   }, []);
@@ -88,6 +133,35 @@ const APIConfigChecker: React.FC = () => {
       return <Badge variant="default" className="bg-green-100 text-green-700">Configurato</Badge>;
     }
     return <Badge variant="destructive">Mancante</Badge>;
+  };
+
+  const getTestStatusIcon = (status: string) => {
+    switch (status) {
+      case 'working':
+        return <CheckCircle className="h-4 w-4 text-green-500" />;
+      case 'error':
+      case 'expired':
+        return <XCircle className="h-4 w-4 text-red-500" />;
+      case 'missing_key':
+        return <AlertTriangle className="h-4 w-4 text-yellow-500" />;
+      default:
+        return <AlertTriangle className="h-4 w-4 text-gray-500" />;
+    }
+  };
+
+  const getTestStatusBadge = (status: string) => {
+    switch (status) {
+      case 'working':
+        return <Badge variant="default" className="bg-green-500">✅ Funzionante</Badge>;
+      case 'error':
+        return <Badge variant="destructive">❌ Errore</Badge>;
+      case 'expired':
+        return <Badge variant="destructive">⏰ Scaduta</Badge>;
+      case 'missing_key':
+        return <Badge variant="secondary">🔑 Key mancante</Badge>;
+      default:
+        return <Badge variant="outline">❓ Sconosciuto</Badge>;
+    }
   };
 
   return (
@@ -125,6 +199,19 @@ const APIConfigChecker: React.FC = () => {
                 <Key className="h-4 w-4 mr-2" />
               )}
               Test Secrets
+            </Button>
+            
+            <Button 
+              onClick={testAPIKeys} 
+              disabled={isTestingKeys}
+              variant="default"
+            >
+              {isTestingKeys ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : (
+                <RefreshCw className="h-4 w-4 mr-2" />
+              )}
+              Test Funzionalità API
             </Button>
           </div>
 
@@ -214,6 +301,59 @@ const APIConfigChecker: React.FC = () => {
                 </CardContent>
               </Card>
             </div>
+          )}
+
+          {testResults && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <RefreshCw className="h-5 w-5" />
+                  Test Funzionalità API
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between p-3 border rounded-lg">
+                    <div className="flex items-center gap-2">
+                      {getTestStatusIcon(testResults.plantId.status)}
+                      <span className="font-medium">Plant.ID</span>
+                    </div>
+                    <div className="flex flex-col items-end gap-1">
+                      {getTestStatusBadge(testResults.plantId.status)}
+                      {testResults.plantId.error && (
+                        <span className="text-xs text-red-600">{testResults.plantId.error}</span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between p-3 border rounded-lg">
+                    <div className="flex items-center gap-2">
+                      {getTestStatusIcon(testResults.plantNet.status)}
+                      <span className="font-medium">PlantNet</span>
+                    </div>
+                    <div className="flex flex-col items-end gap-1">
+                      {getTestStatusBadge(testResults.plantNet.status)}
+                      {testResults.plantNet.error && (
+                        <span className="text-xs text-red-600">{testResults.plantNet.error}</span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between p-3 border rounded-lg">
+                    <div className="flex items-center gap-2">
+                      {getTestStatusIcon(testResults.eppo.status)}
+                      <span className="font-medium">EPPO</span>
+                    </div>
+                    <div className="flex flex-col items-end gap-1">
+                      {getTestStatusBadge(testResults.eppo.status)}
+                      {testResults.eppo.error && (
+                        <span className="text-xs text-red-600">{testResults.eppo.error}</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           )}
         </CardContent>
       </Card>
