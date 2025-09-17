@@ -29,6 +29,18 @@ import { ApiKeyManager } from './diagnose/ApiKeyManager';
 import { supabase } from '@/integrations/supabase/client';
 import { convertPlantInfoToString } from '@/utils/plantInfoUtils';
 
+// Test API function
+const testAPIs = async () => {
+  try {
+    const response = await supabase.functions.invoke('test-api-keys');
+    console.log('🔍 API Test Results:', response);
+    toast.success('Test API completato - controlla i log della console');
+  } catch (error) {
+    console.error('❌ Errore test API:', error);
+    toast.error('Errore durante il test delle API');
+  }
+};
+
 
 const DiagnoseTab = () => {
   const { userProfile, hasActiveSubscription } = useAuth();
@@ -616,6 +628,20 @@ const DiagnoseTab = () => {
                 }
               }}
             />
+            
+            {/* Test API Button */}
+            <div className="text-center mt-6 p-4 bg-blue-50 rounded-lg">
+              <Button 
+                onClick={testAPIs} 
+                variant="outline" 
+                className="bg-blue-100 hover:bg-blue-200 text-blue-800 border-blue-300"
+              >
+                🧪 Test Funzionalità API
+              </Button>
+              <p className="text-sm text-blue-600 mt-2">
+                Verifica se le chiavi API sono valide e funzionanti
+              </p>
+            </div>
           </div>
         );
 
