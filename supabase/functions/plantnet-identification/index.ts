@@ -73,9 +73,9 @@ serve(async (req) => {
 
     console.log('📡 Chiamata API PlantNet...');
     
-    // Chiama l'API PlantNet - Correct endpoint
+    // Chiama l'API PlantNet - ENDPOINT CORRETTO 2025
     const response = await fetch(
-      `https://my-api.plantnet.org/v2/identify/weurope?api-key=${plantNetApiKey}`,
+      `https://my-api.plantnet.org/v2/identify/all?api-key=${plantNetApiKey}`,
       {
         method: 'POST',
         body: formData
