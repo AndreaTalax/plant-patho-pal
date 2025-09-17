@@ -65,17 +65,14 @@ serve(async (req) => {
     // Prepara FormData per PlantNet
     const formData = new FormData();
     formData.append('images', blob, 'plant.jpg');
-    formData.append('organs', 'leaf');
-    formData.append('organs', 'flower');
-    formData.append('organs', 'fruit');
-    formData.append('organs', 'bark');
-    formData.append('include-related-images', 'true');
+    formData.append('organs', 'auto');  // Lascia che AI rilevi l'organo
+    formData.append('nb-results', '5');
 
     console.log('📡 Chiamata API PlantNet...');
     
     // Chiama l'API PlantNet - ENDPOINT CORRETTO 2025
     const response = await fetch(
-      `https://my-api.plantnet.org/v2/identify/all?api-key=${plantNetApiKey}`,
+      `https://my-api.plantnet.org/v2/identify/weurope?api-key=${plantNetApiKey}`, // Back to weurope project
       {
         method: 'POST',
         body: formData
