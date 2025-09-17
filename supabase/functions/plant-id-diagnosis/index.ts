@@ -46,8 +46,8 @@ serve(async (req) => {
       )
     }
 
-    // PLANT.ID API CALL
-    const plantIdUrl = "https://api.plant.id/v2/identify"
+    // PLANT.ID API CALL - Updated to v3 endpoint
+    const plantIdUrl = "https://api.plant.id/v3/identification"
     const plantIdRes = await fetch(plantIdUrl, {
       method: "POST",
       headers: {
@@ -56,9 +56,8 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         images: [imageBase64],
-        organs: ["leaf", "flower", "fruit", "bark", "stem"],
-        // Privacy: do not store image, faster inference
-        details: ["common_names", "taxonomy", "url", "name_authority", "gbif"],
+        similar_images: true,
+        plant_details: ["common_names", "taxonomy", "url"]
       })
     })
     const plantIdData = await plantIdRes.json()
