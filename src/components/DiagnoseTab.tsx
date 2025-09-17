@@ -540,6 +540,23 @@ const DiagnoseTab = () => {
               remainingFreeDiagnoses={getRemainingFreeDiagnoses()}
               hasActiveSubscription={hasActiveSubscription()}
             />
+            
+            {/* Test API Button - Always accessible */}
+            <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+              <div className="text-center">
+                <Button 
+                  onClick={testAPIs} 
+                  variant="outline" 
+                  size="sm"
+                  className="bg-blue-100 hover:bg-blue-200 text-blue-800 border-blue-300"
+                >
+                  🧪 Test API Status
+                </Button>
+                <p className="text-xs text-blue-600 mt-1">
+                  Verifica funzionamento API diagnosi
+                </p>
+              </div>
+            </div>
           </div>
         );
 
