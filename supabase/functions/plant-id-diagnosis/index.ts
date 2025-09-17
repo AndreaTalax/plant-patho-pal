@@ -46,8 +46,8 @@ serve(async (req) => {
       )
     }
 
-    // PLANT.ID API CALL - Updated to v3 endpoint
-    const plantIdUrl = "https://api.plant.id/v3/identification"
+    // PLANT.ID API CALL - Back to v2 endpoint (v3 might need different auth)
+    const plantIdUrl = "https://api.plant.id/v2/identify"
     const plantIdRes = await fetch(plantIdUrl, {
       method: "POST",
       headers: {
@@ -56,8 +56,8 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         images: [imageBase64],
-        similar_images: true,
-        plant_details: ["common_names", "taxonomy", "url"]
+        organs: ["leaf", "flower", "fruit", "bark", "stem"],
+        details: ["common_names", "taxonomy", "url", "name_authority", "gbif"]
       })
     })
     const plantIdData = await plantIdRes.json()
