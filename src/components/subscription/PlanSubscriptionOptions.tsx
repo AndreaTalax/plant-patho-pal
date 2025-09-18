@@ -171,12 +171,6 @@ const PlanSubscriptionOptions = ({ planType, onSubscriptionSelect, onBack }: Pla
                       <div className="flex items-center gap-2 text-sm text-drplant-green">
                         <Check className="h-4 w-4" />
                         <span>
-                          {language === 'it' ? '3 identificazioni piante gratuite' : '3 free plant identifications'}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2 text-sm text-drplant-green">
-                        <Check className="h-4 w-4" />
-                        <span>
                           {language === 'it' ? '2 prove gratuite di diagnosi AI' : '2 free AI diagnosis trials'}
                         </span>
                       </div>
@@ -184,7 +178,7 @@ const PlanSubscriptionOptions = ({ planType, onSubscriptionSelect, onBack }: Pla
                         <Check className="h-4 w-4" />
                         <span>
                           {planType === 'privati' 
-                            ? (language === 'it' ? 'Identificazione + Diagnosi AI + Chat Esperto' : 'Identification + AI Diagnosis + Expert Chat')
+                            ? (language === 'it' ? 'Diagnosi AI + Chat Esperto' : 'AI Diagnosis + Expert Chat')
                             : (language === 'it' ? 'Tutte le funzionalità illimitate incluse' : 'All unlimited features included')
                           }
                         </span>

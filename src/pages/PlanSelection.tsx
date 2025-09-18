@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Check, Star, Crown, Building, Users } from "lucide-react";
+import { Check, Star, Crown, Building, Users, Leaf } from "lucide-react";
 import { useTheme } from "@/context/ThemeContext";
 
 export type PlanType = 'privati' | 'business' | 'professionisti';
@@ -21,6 +21,10 @@ const PlanSelection = () => {
     navigate('/login', { state: { planType } });
   };
 
+  const handlePlantIdentificationSelect = () => {
+    navigate('/plant-identification');
+  };
+
   const plans = [
     {
       id: 'privati' as PlanType,
@@ -29,7 +33,6 @@ const PlanSelection = () => {
       icon: Users,
       color: 'from-blue-500 to-blue-600',
       features: [
-        t('plantIdentificationWith3FreeTries'),
         t('advancedAIDiagnosis'),
         t('directChatWithPathologist'),
         t('tokenBasedSubscription'),
@@ -44,7 +47,6 @@ const PlanSelection = () => {
       icon: Building,
       color: 'from-green-500 to-green-600',
       features: [
-        t('unlimitedPlantIdentification'),
         t('allPrivateFeatures'),
         t('flexiblePlans'),
         t('priorityConsultations'),
@@ -89,6 +91,68 @@ const PlanSelection = () => {
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
             {t('planSelectionDescription')}
           </p>
+        </div>
+
+        {/* Plant Identification Card */}
+        <div className="mb-8 max-w-md mx-auto">
+          <Card 
+            className="relative border-2 transition-all duration-300 hover:shadow-xl cursor-pointer bg-white/80 backdrop-blur-sm border-drplant-green/50 hover:border-drplant-green"
+            onClick={handlePlantIdentificationSelect}
+          >
+            <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
+              <Badge className="bg-gradient-to-r from-drplant-green to-drplant-green-dark text-white px-4 py-1">
+                {t('language') === 'it' ? '3 Prove Gratuite' : '3 Free Trials'}
+              </Badge>
+            </div>
+
+            <CardHeader className="text-center pb-4">
+              <div className="inline-flex items-center justify-center p-4 rounded-full bg-gradient-to-r from-drplant-green to-drplant-green-dark text-white mb-4 mx-auto">
+                <Leaf className="h-8 w-8" />
+              </div>
+              <CardTitle className="text-2xl font-bold text-drplant-blue-dark">
+                {t('language') === 'it' ? 'Identificazione Piante' : 'Plant Identification'}
+              </CardTitle>
+              <CardDescription className="text-lg">
+                {t('language') === 'it' ? 'Riconosci le tue piante' : 'Identify your plants'}
+              </CardDescription>
+            </CardHeader>
+
+            <CardContent className="pt-0">
+              <p className="text-center text-gray-600 mb-6">
+                {t('language') === 'it' 
+                  ? 'Identifica qualsiasi pianta tramite foto con tecnologia Plant.ID'
+                  : 'Identify any plant through photos with Plant.ID technology'
+                }
+              </p>
+              
+              <ul className="space-y-3">
+                <li className="flex items-center gap-3">
+                  <Check className="h-5 w-5 text-drplant-green flex-shrink-0" />
+                  <span className="text-gray-700">
+                    {t('language') === 'it' ? '3 identificazioni gratuite' : '3 free identifications'}
+                  </span>
+                </li>
+                <li className="flex items-center gap-3">
+                  <Check className="h-5 w-5 text-drplant-green flex-shrink-0" />
+                  <span className="text-gray-700">
+                    {t('language') === 'it' ? 'Tecnologia Plant.ID avanzata' : 'Advanced Plant.ID technology'}
+                  </span>
+                </li>
+                <li className="flex items-center gap-3">
+                  <Check className="h-5 w-5 text-drplant-green flex-shrink-0" />
+                  <span className="text-gray-700">
+                    {t('language') === 'it' ? 'Identificazione istantanea' : 'Instant identification'}
+                  </span>
+                </li>
+              </ul>
+            </CardContent>
+
+            <CardFooter>
+              <Button className="w-full bg-gradient-to-r from-drplant-green to-drplant-green-dark hover:from-drplant-green-dark hover:to-drplant-green">
+                {t('language') === 'it' ? 'Prova Gratis' : 'Try Free'}
+              </Button>
+            </CardFooter>
+          </Card>
         </div>
 
         {/* Plans Grid */}
