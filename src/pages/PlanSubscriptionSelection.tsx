@@ -17,9 +17,24 @@ const PlanSubscriptionSelection = () => {
   const [selectedPlan, setSelectedPlan] = useState<PlanType>('privati');
   const [currentStep, setCurrentStep] = useState<'selection' | 'subscription' | 'professional'>('selection');
 
-  // Redirect to login if not authenticated
+  // Auto-select professional plan if navigating directly from chat
+  useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    if (searchParams.get('direct') === 'professional') {
+      setSelectedPlan('professionisti');
+      setCurrentStep('professional');
+    }
+  }, []);
+
+  // Redirect to login if not authenticated (after hooks)
+  useEffect(() => {
+    if (!isAuthenticated) {
+      navigate('/login');
+    }
+  }, [isAuthenticated, navigate]);
+
+  // Don't render anything if not authenticated
   if (!isAuthenticated) {
-    navigate('/login');
     return null;
   }
 
