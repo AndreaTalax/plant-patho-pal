@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Check, Star, Crown, Building, Users, Leaf } from "lucide-react";
 import { useTheme } from "@/context/ThemeContext";
 
-export type PlanType = 'privati' | 'business' | 'professionisti';
+export type PlanType = 'privati' | 'business' | 'professionisti' | 'tutti';
 
 const PlanSelection = () => {
   const navigate = useNavigate();
@@ -15,6 +15,13 @@ const PlanSelection = () => {
 
   const handlePlanSelection = (planType: PlanType) => {
     setSelectedPlan(planType);
+    
+    // Se è il piano "tutti", vai direttamente alla pagina di identificazione piante
+    if (planType === 'tutti') {
+      navigate('/plant-identification');
+      return;
+    }
+    
     // Salva la selezione del piano nel localStorage
     localStorage.setItem('selectedPlanType', planType);
     // Naviga alla pagina di login con il piano selezionato
@@ -26,6 +33,21 @@ const PlanSelection = () => {
   };
 
   const plans = [
+    {
+      id: 'tutti' as PlanType,
+      title: t('language') === 'it' ? 'Per tutti' : 'For everyone',
+      subtitle: t('language') === 'it' ? 'Identificazione piante' : 'Plant identification',
+      icon: Leaf,
+      color: 'from-green-500 to-green-600',
+      features: [
+        t('language') === 'it' ? '3 identificazioni gratuite' : '3 free identifications',
+        t('language') === 'it' ? 'Tecnologia Plant.ID avanzata' : 'Advanced Plant.ID technology',
+        t('language') === 'it' ? 'Identificazione istantanea' : 'Instant identification',
+        t('language') === 'it' ? 'Accesso immediato' : 'Immediate access'
+      ],
+      description: t('language') === 'it' ? 'Identifica qualsiasi pianta tramite foto' : 'Identify any plant through photos',
+      isPopular: true
+    },
     {
       id: 'privati' as PlanType,
       title: t('privateUsers'),
@@ -45,7 +67,7 @@ const PlanSelection = () => {
       title: t('business'),
       subtitle: t('forCompaniesAndProfessionals'),
       icon: Building,
-      color: 'from-green-500 to-green-600',
+      color: 'from-orange-500 to-orange-600',
       features: [
         t('allPrivateFeatures'),
         t('flexiblePlans'),
@@ -93,73 +115,11 @@ const PlanSelection = () => {
           </p>
         </div>
 
-        {/* Plant Identification Card */}
-        <div className="mb-8 max-w-md mx-auto">
-          <Card 
-            className="relative border-2 transition-all duration-300 hover:shadow-xl cursor-pointer bg-white/80 backdrop-blur-sm border-drplant-green/50 hover:border-drplant-green"
-            onClick={handlePlantIdentificationSelect}
-          >
-            <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-              <Badge className="bg-gradient-to-r from-drplant-green to-drplant-green-dark text-white px-4 py-1">
-                {t('language') === 'it' ? '3 Prove Gratuite' : '3 Free Trials'}
-              </Badge>
-            </div>
-
-            <CardHeader className="text-center pb-4">
-              <div className="inline-flex items-center justify-center p-4 rounded-full bg-gradient-to-r from-drplant-green to-drplant-green-dark text-white mb-4 mx-auto">
-                <Leaf className="h-8 w-8" />
-              </div>
-              <CardTitle className="text-2xl font-bold text-drplant-blue-dark">
-                {t('language') === 'it' ? 'Identificazione Piante' : 'Plant Identification'}
-              </CardTitle>
-              <CardDescription className="text-lg">
-                {t('language') === 'it' ? 'Riconosci le tue piante' : 'Identify your plants'}
-              </CardDescription>
-            </CardHeader>
-
-            <CardContent className="pt-0">
-              <p className="text-center text-gray-600 mb-6">
-                {t('language') === 'it' 
-                  ? 'Identifica qualsiasi pianta tramite foto con tecnologia Plant.ID'
-                  : 'Identify any plant through photos with Plant.ID technology'
-                }
-              </p>
-              
-              <ul className="space-y-3">
-                <li className="flex items-center gap-3">
-                  <Check className="h-5 w-5 text-drplant-green flex-shrink-0" />
-                  <span className="text-gray-700">
-                    {t('language') === 'it' ? '3 identificazioni gratuite' : '3 free identifications'}
-                  </span>
-                </li>
-                <li className="flex items-center gap-3">
-                  <Check className="h-5 w-5 text-drplant-green flex-shrink-0" />
-                  <span className="text-gray-700">
-                    {t('language') === 'it' ? 'Tecnologia Plant.ID avanzata' : 'Advanced Plant.ID technology'}
-                  </span>
-                </li>
-                <li className="flex items-center gap-3">
-                  <Check className="h-5 w-5 text-drplant-green flex-shrink-0" />
-                  <span className="text-gray-700">
-                    {t('language') === 'it' ? 'Identificazione istantanea' : 'Instant identification'}
-                  </span>
-                </li>
-              </ul>
-            </CardContent>
-
-            <CardFooter>
-              <Button className="w-full bg-gradient-to-r from-drplant-green to-drplant-green-dark hover:from-drplant-green-dark hover:to-drplant-green">
-                {t('language') === 'it' ? 'Prova Gratis' : 'Try Free'}
-              </Button>
-            </CardFooter>
-          </Card>
-        </div>
-
         {/* Plans Grid */}
-        <div className="grid md:grid-cols-3 gap-8 mb-8">
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           {plans.map((plan) => {
             const Icon = plan.icon;
-            const isPopular = plan.id === 'business';
+            const isPopular = plan.isPopular;
             
             return (
               <Card 
@@ -175,7 +135,7 @@ const PlanSelection = () => {
                   <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
                     <Badge className="bg-gradient-to-r from-drplant-green to-drplant-green-dark text-white px-4 py-1 flex items-center gap-1">
                       <Star className="h-3 w-3" />
-                      {t('mostPopular')}
+                      {t('language') === 'it' ? 'Consigliato' : 'Recommended'}
                     </Badge>
                   </div>
                 )}
@@ -184,24 +144,24 @@ const PlanSelection = () => {
                   <div className={`inline-flex items-center justify-center p-4 rounded-full bg-gradient-to-r ${plan.color} text-white mb-4 mx-auto`}>
                     <Icon className="h-8 w-8" />
                   </div>
-                  <CardTitle className="text-2xl font-bold text-drplant-blue-dark">
+                  <CardTitle className="text-xl font-bold text-drplant-blue-dark">
                     {plan.title}
                   </CardTitle>
-                  <CardDescription className="text-lg">
+                  <CardDescription className="text-base">
                     {plan.subtitle}
                   </CardDescription>
                 </CardHeader>
 
                 <CardContent className="pt-0">
-                  <p className="text-center text-gray-600 mb-6">
+                  <p className="text-center text-gray-600 mb-4 text-sm">
                     {plan.description}
                   </p>
                   
-                  <ul className="space-y-3">
+                  <ul className="space-y-2">
                     {plan.features.map((feature, index) => (
-                      <li key={index} className="flex items-center gap-3">
-                        <Check className="h-5 w-5 text-drplant-green flex-shrink-0" />
-                        <span className="text-gray-700">{feature}</span>
+                      <li key={index} className="flex items-center gap-2">
+                        <Check className="h-4 w-4 text-drplant-green flex-shrink-0" />
+                        <span className="text-gray-700 text-sm">{feature}</span>
                       </li>
                     ))}
                   </ul>
@@ -209,13 +169,15 @@ const PlanSelection = () => {
 
                 <CardFooter>
                   <Button 
-                    className={`w-full transition-all duration-300 ${
+                    className={`w-full transition-all duration-300 text-sm ${
                       selectedPlan === plan.id
                         ? 'bg-gradient-to-r from-drplant-green to-drplant-green-dark text-white'
-                        : 'bg-gradient-to-r from-drplant-blue to-drplant-blue-dark hover:from-drplant-green hover:to-drplant-green-dark'
+                        : plan.id === 'tutti'
+                          ? 'bg-gradient-to-r from-drplant-green to-drplant-green-dark hover:from-drplant-green-dark hover:to-drplant-green'
+                          : 'bg-gradient-to-r from-drplant-blue to-drplant-blue-dark hover:from-drplant-green hover:to-drplant-green-dark'
                     }`}
                   >
-                    {t('select')}
+                    {plan.id === 'tutti' ? (t('language') === 'it' ? 'Prova Gratis' : 'Try Free') : t('select')}
                   </Button>
                 </CardFooter>
               </Card>
