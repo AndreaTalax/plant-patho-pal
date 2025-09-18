@@ -37,32 +37,20 @@ export const usePlantIdentification = () => {
     if (!user?.id) return;
 
     try {
-      const { data, error } = await supabase
-        .from('user_plant_identification_usage')
-        .select('identifications_used')
-        .eq('user_id', user.id)
-        .maybeSingle();
+      // Uso supabase.rpc per chiamare una funzione che gestisce la logica
+      const { data, error } = await supabase.rpc('get_user_identification_usage', {
+        p_user_id: user.id
+      });
 
-      if (error && error.code !== 'PGRST116') {
+      if (error) {
         console.error('Errore nel caricamento uso identificazioni:', error);
         return;
       }
 
-      // Verifica se l'utente ha un piano premium
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('subscription_plan')
-        .eq('id', user.id)
-        .single();
-
-      const hasPremium = profile?.subscription_plan === 'premium' || 
-                        profile?.subscription_plan === 'business' ||
-                        profile?.subscription_plan === 'professional';
-
       setUsage({
         identifications_used: data?.identifications_used || 0,
         free_identifications_limit: FREE_IDENTIFICATIONS_LIMIT,
-        has_premium_plan: hasPremium
+        has_premium_plan: data?.has_premium_plan || false
       });
     } catch (error) {
       console.error('Errore nel caricamento uso identificazioni:', error);
@@ -79,13 +67,9 @@ export const usePlantIdentification = () => {
     if (!user?.id) return;
 
     try {
-      const { error } = await supabase
-        .from('user_plant_identification_usage')
-        .upsert({
-          user_id: user.id,
-          identifications_used: usage.identifications_used + 1,
-          updated_at: new Date().toISOString()
-        });
+      const { error } = await supabase.rpc('increment_identification_usage', {
+        p_user_id: user.id
+      });
 
       if (error) {
         console.error('Errore nell\'incremento uso identificazioni:', error);
