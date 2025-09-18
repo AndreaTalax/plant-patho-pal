@@ -9,6 +9,7 @@ import { usePlantIdentification } from '@/hooks/usePlantIdentification';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
 import CameraCapture from '@/components/diagnose/CameraCapture';
+import { PlantImageValidator } from '@/services/plantImageValidation';
 
 interface PlantIdentificationComponentProps {
   onUpgrade?: () => void;
@@ -63,6 +64,14 @@ const PlantIdentificationComponent: React.FC<PlantIdentificationComponentProps> 
     if (file.size > 10 * 1024 * 1024) {
       toast.error('L\'immagine è troppo grande. Massimo 10MB');
       return;
+    }
+
+    // Validazione contenuto pianta
+    const validationResult = await PlantImageValidator.validatePlantImage(file);
+    const isValid = PlantImageValidator.handleValidationResult(validationResult);
+    
+    if (!isValid) {
+      return; // Stop processing if validation fails
     }
 
     await identifyPlant(file);
@@ -205,12 +214,15 @@ const PlantIdentificationComponent: React.FC<PlantIdentificationComponentProps> 
             {canUseIdentification() && (
               <div className="flex gap-3 justify-center">
                 <Button 
-                  onClick={() => setIsCameraOpen(true)}
+                  onClick={() => {
+                    console.log('🎥 Opening camera for plant identification');
+                    setIsCameraOpen(true);
+                  }}
                   className="bg-drplant-green hover:bg-drplant-green-dark"
                   disabled={isIdentifying}
                 >
                   <Camera className="h-4 w-4 mr-2" />
-                  Fotocamera
+                  Scatta Foto
                 </Button>
                 
                 <Button 
@@ -220,7 +232,7 @@ const PlantIdentificationComponent: React.FC<PlantIdentificationComponentProps> 
                   disabled={isIdentifying}
                 >
                   <Upload className="h-4 w-4 mr-2" />
-                  {isIdentifying ? 'Identificazione...' : 'Seleziona File'}
+                  {isIdentifying ? 'Identificazione...' : 'Carica File'}
                 </Button>
               </div>
             )}
