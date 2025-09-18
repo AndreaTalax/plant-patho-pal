@@ -2,6 +2,7 @@
 import { Message } from '../types';
 import { AudioMessage } from './AudioMessage';
 import { ImageDisplay } from './ImageDisplay';
+import { PDFDisplay } from './PDFDisplay';
 import { ProductRecommendations } from './ProductRecommendations';
 
 interface MessageContentProps {
@@ -64,6 +65,14 @@ export const MessageContent = ({ message }: MessageContentProps) => {
                            message.image_url.includes('audio-messages')
                          ));
 
+  // Verifica se il messaggio è un PDF
+  const isPDFMessage = message.text?.includes('📄 PDF allegato') || 
+                       message.text?.includes('PDF allegato') ||
+                       (message.image_url && (
+                         message.image_url.includes('.pdf') || 
+                         message.image_url.includes('application/pdf')
+                       ));
+
   // Debug logging per messaggi PDF e di consultazione
   if (message.text?.includes('CONSULENZA PROFESSIONALE') || 
       message.text?.includes('Preventivo Professionale') ||
@@ -82,6 +91,19 @@ export const MessageContent = ({ message }: MessageContentProps) => {
     return <AudioMessage audioUrl={message.image_url} />;
   }
 
+  if (isPDFMessage && message.image_url) {
+    return (
+      <div className="space-y-3">
+        {message.text && (
+          <div className="whitespace-pre-wrap leading-relaxed">
+            {renderMarkdownLinks(message.text)}
+          </div>
+        )}
+        <PDFDisplay pdfUrl={message.image_url} fileName="Documento.pdf" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-3">
       {message.text && (
@@ -90,7 +112,7 @@ export const MessageContent = ({ message }: MessageContentProps) => {
         </div>
       )}
       
-      {message.image_url && !isAudioMessage && (
+      {message.image_url && !isAudioMessage && !isPDFMessage && (
         <ImageDisplay imageUrl={message.image_url} />
       )}
 
