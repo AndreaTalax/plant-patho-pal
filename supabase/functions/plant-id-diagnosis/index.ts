@@ -56,8 +56,11 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         images: [imageBase64],
-        organs: ["leaf", "flower", "fruit", "bark", "stem"],
-        details: ["common_names", "taxonomy", "url", "name_authority", "gbif"]
+        plant_details: ["common_names", "url"],
+        plant_language: "en",
+        classification_level: "all",
+        similar_images: true,
+        health: "all"
       })
     })
     const plantIdData = await plantIdRes.json()
