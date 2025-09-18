@@ -3,7 +3,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Camera, Upload, Leaf, Info, Star, Crown } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Camera, Upload, Leaf, Info, Star, Crown, X } from 'lucide-react';
 import { usePlantIdentification } from '@/hooks/usePlantIdentification';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
@@ -15,7 +16,11 @@ interface PlantIdentificationComponentProps {
 const PlantIdentificationComponent: React.FC<PlantIdentificationComponentProps> = ({ onUpgrade }) => {
   const { user } = useAuth();
   const [dragOver, setDragOver] = useState(false);
+  const [isCameraOpen, setIsCameraOpen] = useState(false);
+  const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   
   const {
     isIdentifying,
@@ -33,6 +38,70 @@ const PlantIdentificationComponent: React.FC<PlantIdentificationComponentProps> 
       loadIdentificationUsage();
     }
   }, [user]);
+
+  // Cleanup camera stream on unmount
+  useEffect(() => {
+    return () => {
+      if (cameraStream) {
+        cameraStream.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, [cameraStream]);
+
+  const startCamera = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { 
+          facingMode: 'environment', // Use back camera by default
+          width: { ideal: 1920 },
+          height: { ideal: 1080 }
+        } 
+      });
+      setCameraStream(stream);
+      setIsCameraOpen(true);
+      
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+    } catch (error) {
+      console.error('Error accessing camera:', error);
+      toast.error('Impossibile accedere alla fotocamera. Verifica i permessi.');
+    }
+  };
+
+  const stopCamera = () => {
+    if (cameraStream) {
+      cameraStream.getTracks().forEach(track => track.stop());
+      setCameraStream(null);
+    }
+    setIsCameraOpen(false);
+  };
+
+  const capturePhoto = () => {
+    if (!videoRef.current || !canvasRef.current) return;
+
+    const canvas = canvasRef.current;
+    const video = videoRef.current;
+    const context = canvas.getContext('2d');
+
+    if (!context) return;
+
+    // Set canvas dimensions to match video
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+
+    // Draw video frame to canvas
+    context.drawImage(video, 0, 0);
+
+    // Convert canvas to blob and create file
+    canvas.toBlob(async (blob) => {
+      if (blob) {
+        const file = new File([blob], 'camera-photo.jpg', { type: 'image/jpeg' });
+        stopCamera();
+        await handleFileSelect(file);
+      }
+    }, 'image/jpeg', 0.8);
+  };
 
   const handleFileSelect = async (file: File) => {
     if (!file) return;
@@ -177,7 +246,7 @@ const PlantIdentificationComponent: React.FC<PlantIdentificationComponentProps> 
               <p className={`text-sm ${
                 canUseIdentification() ? 'text-gray-600' : 'text-gray-400'
               }`}>
-                Trascina e rilascia un'immagine qui, oppure clicca per selezionare
+                Trascina e rilascia un'immagine qui, oppure usa i pulsanti qui sotto
               </p>
               <p className={`text-xs mt-2 ${
                 canUseIdentification() ? 'text-gray-500' : 'text-gray-400'
@@ -187,13 +256,26 @@ const PlantIdentificationComponent: React.FC<PlantIdentificationComponentProps> 
             </div>
 
             {canUseIdentification() && (
-              <Button 
-                className="bg-drplant-green hover:bg-drplant-green-dark"
-                disabled={isIdentifying}
-              >
-                <Camera className="h-4 w-4 mr-2" />
-                {isIdentifying ? 'Identificazione...' : 'Seleziona Immagine'}
-              </Button>
+              <div className="flex gap-3 justify-center">
+                <Button 
+                  onClick={startCamera}
+                  className="bg-drplant-green hover:bg-drplant-green-dark"
+                  disabled={isIdentifying}
+                >
+                  <Camera className="h-4 w-4 mr-2" />
+                  Fotocamera
+                </Button>
+                
+                <Button 
+                  onClick={triggerFileInput}
+                  variant="outline"
+                  className="border-drplant-green text-drplant-green hover:bg-drplant-green hover:text-white"
+                  disabled={isIdentifying}
+                >
+                  <Upload className="h-4 w-4 mr-2" />
+                  {isIdentifying ? 'Identificazione...' : 'Seleziona File'}
+                </Button>
+              </div>
             )}
           </div>
         </CardContent>
@@ -289,6 +371,59 @@ const PlantIdentificationComponent: React.FC<PlantIdentificationComponentProps> 
           </CardContent>
         </Card>
       )}
+
+      {/* Camera Modal */}
+      <Dialog open={isCameraOpen} onOpenChange={setIsCameraOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <div className="flex items-center justify-between">
+              <DialogTitle className="flex items-center gap-2">
+                <Camera className="h-5 w-5" />
+                Scatta una foto
+              </DialogTitle>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={stopCamera}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="relative bg-black rounded-lg overflow-hidden">
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                className="w-full h-64 object-cover"
+              />
+            </div>
+            
+            <div className="flex justify-center gap-3">
+              <Button
+                onClick={capturePhoto}
+                className="bg-drplant-green hover:bg-drplant-green-dark"
+                disabled={!cameraStream}
+              >
+                <Camera className="h-4 w-4 mr-2" />
+                Scatta Foto
+              </Button>
+              
+              <Button
+                variant="outline"
+                onClick={stopCamera}
+              >
+                Annulla
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Hidden Canvas for Photo Capture */}
+      <canvas ref={canvasRef} className="hidden" />
     </div>
   );
 };

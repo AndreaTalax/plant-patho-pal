@@ -35,17 +35,17 @@ const PlanSelection = () => {
   const plans = [
     {
       id: 'tutti' as PlanType,
-      title: t('language') === 'it' ? 'Per tutti' : 'For everyone',
-      subtitle: t('language') === 'it' ? 'Identificazione piante' : 'Plant identification',
+      title: 'Per tutti',
+      subtitle: 'Identificazione piante',
       icon: Leaf,
       color: 'from-green-500 to-green-600',
       features: [
-        t('language') === 'it' ? '3 identificazioni gratuite' : '3 free identifications',
-        t('language') === 'it' ? 'Tecnologia Plant.ID avanzata' : 'Advanced Plant.ID technology',
-        t('language') === 'it' ? 'Identificazione istantanea' : 'Instant identification',
-        t('language') === 'it' ? 'Accesso immediato' : 'Immediate access'
+        '3 identificazioni gratuite',
+        'Tecnologia Plant.ID avanzata',
+        'Identificazione istantanea',
+        'Accesso immediato'
       ],
-      description: t('language') === 'it' ? 'Identifica qualsiasi pianta tramite foto' : 'Identify any plant through photos',
+      description: 'Identifica qualsiasi pianta tramite foto o fotocamera',
       isPopular: true
     },
     {
@@ -135,7 +135,7 @@ const PlanSelection = () => {
                   <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
                     <Badge className="bg-gradient-to-r from-drplant-green to-drplant-green-dark text-white px-4 py-1 flex items-center gap-1">
                       <Star className="h-3 w-3" />
-                      {t('language') === 'it' ? 'Consigliato' : 'Recommended'}
+                      Consigliato
                     </Badge>
                   </div>
                 )}
@@ -177,7 +177,7 @@ const PlanSelection = () => {
                           : 'bg-gradient-to-r from-drplant-blue to-drplant-blue-dark hover:from-drplant-green hover:to-drplant-green-dark'
                     }`}
                   >
-                    {plan.id === 'tutti' ? (t('language') === 'it' ? 'Prova Gratis' : 'Try Free') : t('select')}
+                    {plan.id === 'tutti' ? 'Prova Gratis' : t('select')}
                   </Button>
                 </CardFooter>
               </Card>
