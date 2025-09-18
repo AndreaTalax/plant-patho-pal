@@ -45,67 +45,6 @@ export const DiagnosisResults: React.FC<DiagnosisResultsProps> = ({ results, isF
         </Alert>
       )}
 
-      {/* Header con pianta identificata */}
-      <div className="text-center">
-        <div className="flex items-center justify-center gap-2 mb-2">
-          {isFallback ? (
-            <Lightbulb className="h-6 w-6 text-amber-600" />
-          ) : (
-            <Leaf className="h-6 w-6 text-green-600" />
-          )}
-          <h2 className="text-2xl font-bold text-gray-900">
-            {isFallback ? 'Suggerimenti Identificazione' : 'Risultati Identificazione'}
-          </h2>
-        </div>
-        
-        {mostLikelyPlant && (
-          <div className={`${isFallback ? 'bg-amber-50 border-amber-200' : 'bg-white border-green-100'} rounded-lg p-4 shadow-sm border`}>
-            <h3 className={`text-xl font-semibold ${isFallback ? 'text-amber-800' : 'text-green-800'} mb-2`}>
-              {isFallback ? 'Possibile: ' : ''}{mostLikelyPlant.plantName}
-            </h3>
-            {mostLikelyPlant.scientificName && (
-              <p className="text-gray-600 italic mb-2">
-                {mostLikelyPlant.scientificName}
-              </p>
-            )}
-            <div className="flex items-center justify-center gap-4">
-              <ConfidenceBadge confidence={mostLikelyPlant.confidence} />
-              <span className="text-sm text-gray-500">
-                {isFallback ? 'Suggerimento basato su' : 'Identificato da'}: {results.consensus.providersUsed.length} fonti
-              </span>
-            </div>
-            {isFallback && (
-              <p className="text-sm text-amber-700 mt-2">
-                Questo è un suggerimento - verifica con un esperto per conferma
-              </p>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Fonti di identificazione */}
-      {results.consensus.providersUsed.length > 1 && (
-        <div className="bg-white rounded-lg p-4 border border-blue-100">
-          <h4 className="font-semibold text-gray-800 mb-2 flex items-center gap-2">
-            <Database className="h-4 w-4" />
-            {isFallback ? 'Fonti dei Suggerimenti' : 'Fonti di Identificazione'}
-          </h4>
-          <div className="flex flex-wrap gap-2">
-            {results.consensus.providersUsed.map((provider, index) => (
-              <span
-                key={index}
-                className={`px-2 py-1 rounded-md text-sm ${
-                  isFallback 
-                    ? 'bg-amber-100 text-amber-800' 
-                    : 'bg-blue-100 text-blue-800'
-                }`}
-              >
-                {provider}
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* Tutte le identificazioni trovate */}
       {results.plantIdentification.length > 1 && (
