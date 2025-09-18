@@ -7,15 +7,24 @@ import {
   Search,
   Info,
   Lightbulb,
+  Globe,
+  MapPin,
+  Activity,
+  Shield,
+  TreePine
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/sonner';
 import { ConfidenceBadge } from '@/components/diagnose/ConfidenceBadge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { type CombinedAnalysisResult } from '@/types/analysis';
+import { GBIFService } from '@/services/gbifService';
 
 interface DiagnosisResultsProps {
-  results: CombinedAnalysisResult;
+  results: CombinedAnalysisResult & {
+    gbifInfo?: any;
+    cropHealthAnalysis?: any;
+  };
   isFallback?: boolean;
 }
 
@@ -199,6 +208,145 @@ export const DiagnosisResults: React.FC<DiagnosisResultsProps> = ({ results, isF
           </div>
         )}
       </div>
+
+      {/* Distribuzione geografica GBIF */}
+      {results.gbifInfo && !isFallback && (
+        <div className="bg-white rounded-lg p-4 border border-blue-100">
+          <h4 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
+            <Globe className="h-4 w-4 text-blue-500" />
+            Distribuzione Geografica
+          </h4>
+          <div className="space-y-3">
+            <div className="flex items-start gap-2">
+              <MapPin className="h-4 w-4 text-green-500 mt-1 flex-shrink-0" />
+              <div>
+                <p className="text-sm text-gray-700 mb-2">
+                  {GBIFService.formatDistributionText(results.gbifInfo)}
+                </p>
+                {results.gbifInfo.nativeCountries?.length > 0 && (
+                  <div className="mb-2">
+                    <span className="text-sm font-medium text-gray-700">Nativa di: </span>
+                    <span className="text-sm text-gray-600">
+                      {results.gbifInfo.nativeCountries.slice(0, 5).join(', ')}
+                      {results.gbifInfo.nativeCountries.length > 5 && ` e altri ${results.gbifInfo.nativeCountries.length - 5} paesi`}
+                    </span>
+                  </div>
+                )}
+                {results.gbifInfo.introducedCountries?.length > 0 && (
+                  <div>
+                    <span className="text-sm font-medium text-gray-700">Introdotta in: </span>
+                    <span className="text-sm text-gray-600">
+                      {results.gbifInfo.introducedCountries.slice(0, 3).join(', ')}
+                      {results.gbifInfo.introducedCountries.length > 3 && ` e altri ${results.gbifInfo.introducedCountries.length - 3} paesi`}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+            {results.gbifInfo.family && (
+              <div className="bg-blue-50 p-3 rounded-lg">
+                <div className="flex items-center gap-2 mb-1">
+                  <TreePine className="h-4 w-4 text-blue-600" />
+                  <span className="text-sm font-medium text-blue-800">Classificazione Tassonomica</span>
+                </div>
+                <div className="text-sm text-blue-700">
+                  <span className="font-medium">Famiglia:</span> {results.gbifInfo.family}
+                  {results.gbifInfo.genus && (
+                    <>, <span className="font-medium">Genere:</span> {results.gbifInfo.genus}</>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Analisi Crop Health */}
+      {results.cropHealthAnalysis && !isFallback && (
+        <div className="bg-white rounded-lg p-4 border border-emerald-100">
+          <h4 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
+            <Activity className="h-4 w-4 text-emerald-500" />
+            Analisi Salute Avanzata
+          </h4>
+          
+          {/* Stato di salute generale */}
+          <div className="mb-4">
+            <div className="flex items-center gap-3 mb-2">
+              <div className={`w-4 h-4 rounded-full ${
+                results.cropHealthAnalysis.isHealthy 
+                  ? 'bg-green-500' 
+                  : results.cropHealthAnalysis.healthScore > 50 
+                  ? 'bg-yellow-500' 
+                  : 'bg-red-500'
+              }`}></div>
+              <span className="font-medium">
+                Stato di salute: {results.cropHealthAnalysis.healthScore}%
+              </span>
+              <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                results.cropHealthAnalysis.isHealthy 
+                  ? 'bg-green-100 text-green-800' 
+                  : results.cropHealthAnalysis.healthScore > 50 
+                  ? 'bg-yellow-100 text-yellow-800' 
+                  : 'bg-red-100 text-red-800'
+              }`}>
+                {results.cropHealthAnalysis.isHealthy ? 'Sana' : 'Problemi rilevati'}
+              </span>
+            </div>
+          </div>
+
+          {/* Malattie specifiche rilevate da crop.health */}
+          {results.cropHealthAnalysis.diseases?.length > 0 && (
+            <div className="mb-4">
+              <h5 className="font-medium text-gray-700 mb-2 flex items-center gap-2">
+                <Shield className="h-4 w-4" />
+                Malattie Rilevate (Crop Health Analysis)
+              </h5>
+              <div className="space-y-3">
+                {results.cropHealthAnalysis.diseases.slice(0, 3).map((disease: any, index: number) => (
+                  <div key={index} className="bg-red-50 border-l-4 border-red-300 p-3 rounded-r">
+                    <div className="flex justify-between items-start mb-1">
+                      <span className="font-medium text-red-800">{disease.name}</span>
+                      <span className={`px-2 py-1 rounded text-xs font-medium ${
+                        disease.severity === 'high' 
+                          ? 'bg-red-200 text-red-800'
+                          : disease.severity === 'medium'
+                          ? 'bg-yellow-200 text-yellow-800'
+                          : 'bg-green-200 text-green-800'
+                      }`}>
+                        {disease.probability}% - {disease.severity}
+                      </span>
+                    </div>
+                    <p className="text-sm text-gray-600 mb-1">{disease.description}</p>
+                    {disease.symptoms.length > 0 && (
+                      <p className="text-sm text-gray-600 mb-1">
+                        <span className="font-medium">Sintomi:</span> {disease.symptoms.join(', ')}
+                      </p>
+                    )}
+                    <p className="text-sm text-green-700">
+                      <span className="font-medium">Trattamento:</span> {disease.treatment}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Suggerimenti */}
+          {results.cropHealthAnalysis.suggestions?.length > 0 && (
+            <div className="bg-emerald-50 p-3 rounded-lg">
+              <h5 className="font-medium text-emerald-800 mb-2">Raccomandazioni</h5>
+              <ul className="text-sm text-emerald-700 space-y-1">
+                {results.cropHealthAnalysis.suggestions.map((suggestion: string, index: number) => (
+                  <li key={index} className="flex items-start gap-2">
+                    <span className="text-emerald-500 mt-1">•</span>
+                    {suggestion}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Pulsante per salvare */}
       <div className="text-center pt-4 border-t border-gray-200">

@@ -91,6 +91,9 @@ verify_jwt = false
 [functions.real-plant-diagnosis]
 verify_jwt = false
 
+[functions.crop-health-analysis]
+verify_jwt = false
+
 [functions.generate-professional-pdf]
 verify_jwt = true
 

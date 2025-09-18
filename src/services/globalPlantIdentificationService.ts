@@ -1,5 +1,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import { FallbackSuggestionsService } from './fallbackSuggestionsService';
+import { GBIFService, type GBIFSpeciesInfo } from './gbifService';
+import { CropHealthService, type CropHealthResult } from './cropHealthService';
 
 export interface GlobalPlantIdentification {
   name: string;
@@ -22,6 +24,8 @@ export interface GlobalDiseaseDetection {
 export interface GlobalIdentificationResult {
   plantIdentification: GlobalPlantIdentification[];
   diseases: GlobalDiseaseDetection[];
+  gbifInfo?: GBIFSpeciesInfo;
+  cropHealthAnalysis?: CropHealthResult;
   eppoInfo?: {
     plants: any[];
     pests: any[];
@@ -49,23 +53,38 @@ export class GlobalPlantIdentificationService {
         console.log('✅ Analisi con API reali completata con successo');
         const diagnosis = realApiData.diagnosis;
         
+        const plantIdentifications = diagnosis.plantIdentification.map((plant: any) => ({
+          name: plant.name,
+          scientificName: plant.scientificName,
+          confidence: plant.confidence,
+          source: plant.source,
+          family: plant.family,
+          genus: undefined
+        }));
+
+        const diseases = diagnosis.diseases.map((disease: any) => ({
+          name: disease.name,
+          confidence: disease.confidence,
+          symptoms: disease.symptoms || [],
+          treatments: disease.treatments || [],
+          cause: disease.cause || 'Analisi API reale',
+          source: disease.source
+        }));
+
+        // Ottieni il miglior risultato per l'analisi aggiuntiva
+        const bestPlant = this.getBestPlantIdentification(plantIdentifications);
+        
+        // Esegui analisi aggiuntive in parallelo
+        const [gbifInfo, cropHealthAnalysis] = await Promise.allSettled([
+          bestPlant?.scientificName ? GBIFService.searchSpecies(bestPlant.scientificName) : Promise.resolve(null),
+          CropHealthService.analyzePlantHealth(imageBase64, bestPlant?.name)
+        ]);
+
         return {
-          plantIdentification: diagnosis.plantIdentification.map((plant: any) => ({
-            name: plant.name,
-            scientificName: plant.scientificName,
-            confidence: plant.confidence,
-            source: plant.source,
-            family: plant.family,
-            genus: undefined
-          })),
-          diseases: diagnosis.diseases.map((disease: any) => ({
-            name: disease.name,
-            confidence: disease.confidence,
-            symptoms: disease.symptoms || [],
-            treatments: disease.treatments || [],
-            cause: disease.cause || 'Analisi API reale',
-            source: disease.source
-          })),
+          plantIdentification: plantIdentifications,
+          diseases: diseases,
+          gbifInfo: gbifInfo.status === 'fulfilled' ? gbifInfo.value : undefined,
+          cropHealthAnalysis: cropHealthAnalysis.status === 'fulfilled' ? cropHealthAnalysis.value : undefined,
           success: true,
           isFallback: false
         };
@@ -81,16 +100,34 @@ export class GlobalPlantIdentificationService {
         console.log('✅ PlantNet completato con successo');
         
         const bestMatch = plantNetData.results[0];
+        const plantIdentification = {
+          name: bestMatch.species?.commonNames?.[0] || bestMatch.species?.scientificNameWithoutAuthor,
+          scientificName: bestMatch.species?.scientificNameWithoutAuthor || '',
+          confidence: (bestMatch.score || 0.5) * 100,
+          source: 'PlantNet',
+          family: bestMatch.species?.family?.scientificNameWithoutAuthor,
+          genus: bestMatch.species?.genus?.scientificNameWithoutAuthor
+        };
+
+        // Analisi aggiuntive anche per PlantNet
+        const [gbifInfo, cropHealthAnalysis] = await Promise.allSettled([
+          plantIdentification.scientificName ? GBIFService.searchSpecies(plantIdentification.scientificName) : Promise.resolve(null),
+          CropHealthService.analyzePlantHealth(imageBase64, plantIdentification.name)
+        ]);
+
         return {
-          plantIdentification: [{
-            name: bestMatch.species?.commonNames?.[0] || bestMatch.species?.scientificNameWithoutAuthor,
-            scientificName: bestMatch.species?.scientificNameWithoutAuthor || '',
-            confidence: (bestMatch.score || 0.5) * 100,
-            source: 'PlantNet',
-            family: bestMatch.species?.family?.scientificNameWithoutAuthor,
-            genus: bestMatch.species?.genus?.scientificNameWithoutAuthor
-          }],
-          diseases: [],
+          plantIdentification: [plantIdentification],
+          diseases: cropHealthAnalysis.status === 'fulfilled' && cropHealthAnalysis.value ? 
+            cropHealthAnalysis.value.diseases.map(d => ({
+              name: d.name,
+              confidence: d.probability,
+              symptoms: d.symptoms,
+              treatments: [d.treatment],
+              cause: d.cause,
+              source: 'Crop Health Analysis'
+            })) : [],
+          gbifInfo: gbifInfo.status === 'fulfilled' ? gbifInfo.value : undefined,
+          cropHealthAnalysis: cropHealthAnalysis.status === 'fulfilled' ? cropHealthAnalysis.value : undefined,
           success: true,
           isFallback: false
         };
@@ -104,14 +141,22 @@ export class GlobalPlantIdentificationService {
 
       if (!fastError && fastData?.success) {
         const diagnosis = fastData.diagnosis;
+        const plantId = {
+          name: diagnosis.plantIdentification.name,
+          scientificName: diagnosis.plantIdentification.scientificName,
+          confidence: diagnosis.plantIdentification.confidence,
+          source: 'AI Backup',
+          family: diagnosis.plantIdentification.family
+        };
+
+        // Anche per il fallback, prova ad ottenere info GBIF e crop health
+        const [gbifInfo, cropHealthAnalysis] = await Promise.allSettled([
+          plantId.scientificName ? GBIFService.searchSpecies(plantId.scientificName) : Promise.resolve(null),
+          CropHealthService.analyzePlantHealth(imageBase64, plantId.name)
+        ]);
+
         return {
-          plantIdentification: [{
-            name: diagnosis.plantIdentification.name,
-            scientificName: diagnosis.plantIdentification.scientificName,
-            confidence: diagnosis.plantIdentification.confidence,
-            source: 'AI Backup',
-            family: diagnosis.plantIdentification.family
-          }],
+          plantIdentification: [plantId],
           diseases: diagnosis.healthAnalysis.issues.map((issue: any) => ({
             name: issue.name,
             confidence: issue.confidence,
@@ -120,6 +165,8 @@ export class GlobalPlantIdentificationService {
             cause: issue.description,
             source: 'AI Health Analysis'
           })),
+          gbifInfo: gbifInfo.status === 'fulfilled' ? gbifInfo.value : undefined,
+          cropHealthAnalysis: cropHealthAnalysis.status === 'fulfilled' ? cropHealthAnalysis.value : undefined,
           success: true,
           isFallback: true,
           fallbackMessage: 'Identificazione tramite AI di backup'
