@@ -679,6 +679,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      get_user_identification_usage: {
+        Args: { p_user_id: string }
+        Returns: Json
+      }
       get_user_roles: {
         Args: { _user_id: string }
         Returns: {
@@ -690,6 +694,10 @@ export type Database = {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
+        Returns: boolean
+      }
+      increment_identification_usage: {
+        Args: { p_user_id: string }
         Returns: boolean
       }
       profile_change_permitted: {

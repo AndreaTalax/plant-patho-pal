@@ -19,6 +19,7 @@ import CompleteProfile from "./pages/CompleteProfile";
 import ResetPassword from "./pages/ResetPassword";
 import SavedArticles from "./pages/SavedArticles";
 import PlanSubscriptionSelection from "./pages/PlanSubscriptionSelection";
+import PlantIdentification from "./pages/PlantIdentification";
 import { CDCDashboard } from "./components/cdc/CDCDashboard";
 import { UserManagement } from "./components/admin/UserManagement";
 import { NotificationSettings } from "./components/notifications/NotificationSettings";
@@ -51,6 +52,7 @@ function App() {
                     <Route path="/" element={<Index />} />
                     <Route path="/login" element={<Login />} />
                     <Route path="/plan-selection" element={<PlanSubscriptionSelection />} />
+                    <Route path="/plant-identification" element={<PlantIdentification />} />
                     <Route path="/signup" element={<SignUp />} />
                     <Route path="/complete-profile" element={<CompleteProfile />} />
                     <Route path="/reset-password" element={<ResetPassword />} />

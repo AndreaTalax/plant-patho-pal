@@ -332,6 +332,8 @@ const translations = {
     personalUse: "Per uso personale",
     perfectForEnthusiasts: "Perfetto per appassionati e coltivatori amatoriali",
     advancedAIDiagnosis: "Diagnosi AI avanzata",
+    plantIdentificationWith3FreeTries: "Identificazione piante (3 prove gratuite)",
+    unlimitedPlantIdentification: "Identificazione piante illimitata",
     directChatWithPathologist: "Chat diretta con fitopatologo",
     tokenBasedSubscription: "Abbonamento a gettone",
     personalSupport: "Supporto personalizzato",

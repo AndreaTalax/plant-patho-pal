@@ -29,6 +29,7 @@ const PlanSelection = () => {
       icon: Users,
       color: 'from-blue-500 to-blue-600',
       features: [
+        t('plantIdentificationWith3FreeTries'),
         t('advancedAIDiagnosis'),
         t('directChatWithPathologist'),
         t('tokenBasedSubscription'),
@@ -43,6 +44,7 @@ const PlanSelection = () => {
       icon: Building,
       color: 'from-green-500 to-green-600',
       features: [
+        t('unlimitedPlantIdentification'),
         t('allPrivateFeatures'),
         t('flexiblePlans'),
         t('priorityConsultations'),

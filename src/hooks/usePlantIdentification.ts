@@ -37,20 +37,22 @@ export const usePlantIdentification = () => {
     if (!user?.id) return;
 
     try {
-      // Uso supabase.rpc per chiamare una funzione che gestisce la logica
-      const { data, error } = await supabase.rpc('get_user_identification_usage', {
-        p_user_id: user.id
-      });
+      // Verifica se l'utente ha un piano premium
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('subscription_plan')
+        .eq('id', user.id)
+        .single();
 
-      if (error) {
-        console.error('Errore nel caricamento uso identificazioni:', error);
-        return;
-      }
+      const hasPremium = profile?.subscription_plan === 'premium' || 
+                        profile?.subscription_plan === 'business' ||
+                        profile?.subscription_plan === 'professional';
 
+      // Per ora impostiamo un valore fisso, poi useremo la tabella reale
       setUsage({
-        identifications_used: data?.identifications_used || 0,
+        identifications_used: 0, // Sarà implementato dopo
         free_identifications_limit: FREE_IDENTIFICATIONS_LIMIT,
-        has_premium_plan: data?.has_premium_plan || false
+        has_premium_plan: hasPremium
       });
     } catch (error) {
       console.error('Errore nel caricamento uso identificazioni:', error);
@@ -67,19 +69,13 @@ export const usePlantIdentification = () => {
     if (!user?.id) return;
 
     try {
-      const { error } = await supabase.rpc('increment_identification_usage', {
-        p_user_id: user.id
-      });
-
-      if (error) {
-        console.error('Errore nell\'incremento uso identificazioni:', error);
-        return;
-      }
-
+      // Per ora incrementiamo solo il valore locale
       setUsage(prev => ({
         ...prev,
         identifications_used: prev.identifications_used + 1
       }));
+      
+      console.log('Identificazione incrementata localmente');
     } catch (error) {
       console.error('Errore nell\'incremento uso identificazioni:', error);
     }
