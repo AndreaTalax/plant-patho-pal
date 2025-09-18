@@ -95,7 +95,7 @@ const PersistentChatInput: React.FC<PersistentChatInputProps> = ({
           <input
             ref={fileInputRef}
             type="file"
-            accept="image/*"
+            accept="image/*,.pdf"
             onChange={handleFileChange}
             className="hidden"
           />

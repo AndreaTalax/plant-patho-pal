@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Send, Image as ImageIcon, Loader2, Smile, Mic } from 'lucide-react';
+import { Send, Image as ImageIcon, Loader2, Smile, Mic, Paperclip } from 'lucide-react';
 import { toast } from 'sonner';
 import { uploadPlantImage } from '@/utils/imageStorage';
 import { useAuth } from '@/context/AuthContext';
@@ -83,33 +83,60 @@ const MessageInput: React.FC<MessageInputProps> = ({
     const file = event.target.files?.[0];
     if (!file || !userProfile?.id) return;
 
-    if (!file.type.startsWith('image/')) {
-      toast.error('Seleziona solo immagini');
-      return;
-    }
-
-    if (file.size > 10 * 1024 * 1024) {
-      toast.error('L\'immagine deve essere inferiore a 10MB');
-      return;
-    }
-
-    setIsUploading(true);
-    try {
-      const imageUrl = await uploadPlantImage(file, userProfile.id);
-      await onSendMessage('📸 Immagine allegata', imageUrl);
-      
-      // Feedback tattile per foto inviata
-      triggerHaptic('photo');
-      
-      toast.success('Immagine inviata con successo!');
-    } catch (error) {
-      console.error('Errore upload immagine:', error);
-      toast.error('Errore nel caricamento dell\'immagine');
-    } finally {
-      setIsUploading(false);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
+    // Check if it's an image
+    if (file.type.startsWith('image/')) {
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error('L\'immagine deve essere inferiore a 10MB');
+        return;
       }
+
+      setIsUploading(true);
+      try {
+        const imageUrl = await uploadPlantImage(file, userProfile.id);
+        await onSendMessage('📸 Immagine allegata', imageUrl);
+        
+        // Feedback tattile per foto inviata
+        triggerHaptic('photo');
+        
+        toast.success('Immagine inviata con successo!');
+      } catch (error) {
+        console.error('Errore upload immagine:', error);
+        toast.error('Errore nel caricamento dell\'immagine');
+      } finally {
+        setIsUploading(false);
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
+      }
+    } 
+    // Check if it's a PDF
+    else if (file.type === 'application/pdf') {
+      if (file.size > 20 * 1024 * 1024) {
+        toast.error('Il PDF deve essere inferiore a 20MB');
+        return;
+      }
+
+      setIsUploading(true);
+      try {
+        const pdfUrl = await uploadPlantImage(file, userProfile.id);
+        await onSendMessage('📄 PDF allegato', pdfUrl);
+        
+        // Feedback tattile per PDF inviato
+        triggerHaptic('message_sent');
+        
+        toast.success('PDF inviato con successo!');
+      } catch (error) {
+        console.error('Errore upload PDF:', error);
+        toast.error('Errore nel caricamento del PDF');
+      } finally {
+        setIsUploading(false);
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
+      }
+    } else {
+      toast.error('Seleziona solo immagini o file PDF');
+      return;
     }
   };
 
@@ -184,7 +211,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
           <input
             ref={fileInputRef}
             type="file"
-            accept="image/*"
+            accept="image/*,.pdf"
             onChange={handleImageUpload}
             className="hidden"
           />
@@ -193,14 +220,14 @@ const MessageInput: React.FC<MessageInputProps> = ({
             size="sm"
             onClick={() => fileInputRef.current?.click()}
             disabled={isSending || isUploading}
-            label="Carica immagine"
+            label="Carica immagine o PDF"
             className="h-10 w-10 p-0"
             onSwipeUp={() => fileInputRef.current?.click()}
           >
             {isUploading ? (
               <Loader2 className="h-5 w-5 animate-spin" />
             ) : (
-              <ImageIcon className="h-5 w-5" />
+              <Paperclip className="h-5 w-5" />
             )}
           </AccessibleButton>
 

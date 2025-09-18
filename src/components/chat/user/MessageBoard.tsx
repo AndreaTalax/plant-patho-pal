@@ -78,33 +78,58 @@ export const MessageBoard: React.FC<MessageBoardProps> = ({
     const file = event.target.files?.[0];
     if (!file || !userProfile?.id) return;
 
-    if (!file.type.startsWith('image/')) {
-      toast.error('Seleziona solo immagini');
-      return;
-    }
-
-    if (file.size > 10 * 1024 * 1024) {
-      toast.error('L\'immagine deve essere inferiore a 10MB');
-      return;
-    }
-
-    setIsUploading(true);
-    try {
-      console.log('📤 Upload immagine in corso...');
-      const imageUrl = await uploadPlantImage(file, userProfile.id);
-      console.log('✅ Immagine caricata:', imageUrl);
-      
-      await onSendMessage('📸 Immagine allegata', imageUrl);
-      toast.success('Immagine inviata con successo!');
-    } catch (error) {
-      console.error('❌ Errore upload immagine:', error);
-      toast.error('Errore nel caricamento dell\'immagine');
-    } finally {
-      setIsUploading(false);
-      // Reset file input
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
+    // Check if it's an image
+    if (file.type.startsWith('image/')) {
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error('L\'immagine deve essere inferiore a 10MB');
+        return;
       }
+
+      setIsUploading(true);
+      try {
+        console.log('📤 Upload immagine in corso...');
+        const imageUrl = await uploadPlantImage(file, userProfile.id);
+        console.log('✅ Immagine caricata:', imageUrl);
+        
+        await onSendMessage('📸 Immagine allegata', imageUrl);
+        toast.success('Immagine inviata con successo!');
+      } catch (error) {
+        console.error('❌ Errore upload immagine:', error);
+        toast.error('Errore nel caricamento dell\'immagine');
+      } finally {
+        setIsUploading(false);
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
+      }
+    } 
+    // Check if it's a PDF
+    else if (file.type === 'application/pdf') {
+      if (file.size > 20 * 1024 * 1024) {
+        toast.error('Il PDF deve essere inferiore a 20MB');
+        return;
+      }
+
+      setIsUploading(true);
+      try {
+        console.log('📤 Upload PDF in corso...');
+        const pdfUrl = await uploadPlantImage(file, userProfile.id);
+        console.log('✅ PDF caricato:', pdfUrl);
+        
+        await onSendMessage('📄 PDF allegato', pdfUrl);
+        toast.success('PDF inviato con successo!');
+      } catch (error) {
+        console.error('❌ Errore upload PDF:', error);
+        toast.error('Errore nel caricamento del PDF');
+      } finally {
+        setIsUploading(false);
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
+      }
+    } else {
+      toast.error('Seleziona solo immagini o file PDF');
+      return;
     }
   };
 
@@ -203,7 +228,7 @@ export const MessageBoard: React.FC<MessageBoardProps> = ({
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/*"
+                accept="image/*,.pdf"
                 onChange={handleFileUpload}
                 className="hidden"
               />
