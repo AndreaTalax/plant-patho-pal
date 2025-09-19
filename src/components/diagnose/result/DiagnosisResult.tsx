@@ -162,8 +162,10 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
     symptoms: plantInfo?.symptoms || 'Nessun sintomo specificato',
     imageUrl: imageSrc || '',
     analysisResult: effectiveDiagnosis || null,
+    diagnosisResult: effectiveDiagnosis || null, // Aggiunto per compatibilità con ActionButtons
     confidence: resolvedConfidence,
     isHealthy: resolvedIsHealthy,
+    plantInfo: plantInfo, // Aggiunto per avere accesso a tutti i dati della pianta
   };
 
   // Rimosso invio automatico - la diagnosi viene inviata solo quando l'utente clicca "Chat con l'esperto"

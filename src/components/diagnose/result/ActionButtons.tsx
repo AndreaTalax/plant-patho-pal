@@ -48,13 +48,22 @@ const ActionButtons = ({
   const isAuthenticated = !!user;
   
   const startChatWithExpert = async () => {
+    console.log("🔍 DEBUG: startChatWithExpert called", {
+      isAuthenticated,
+      hasExpertChatAccess,
+      diagnosisData,
+      userProfile
+    });
+
     if (!isAuthenticated) {
+      console.log("❌ User not authenticated");
       setShowAuthDialog(true);
       return;
     }
 
     // Controlla se l'utente ha accesso premium
     if (!hasExpertChatAccess) {
+      console.log("❌ User does not have expert chat access - showing paywall");
       setShowPaywallModal(true);
       return;
     }
@@ -145,6 +154,7 @@ const ActionButtons = ({
   };
   
   const handleChatWithExpert = () => {
+    console.log("🎯 handleChatWithExpert called", { onChatWithExpert: !!onChatWithExpert });
     if (onChatWithExpert) {
       onChatWithExpert();
     } else {
