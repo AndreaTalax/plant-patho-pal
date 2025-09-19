@@ -60,22 +60,15 @@ const ActionButtons = ({
     }
 
     try {
-      console.log("Starting chat with expert, diagnosisData:", diagnosisData);
-      
-      // Prepare diagnosis data for the expert
-      const plantType = diagnosisData?.plantType || diagnosisData?.plantInfo?.name || 'Non specificato';
-      const symptoms = diagnosisData?.symptoms || diagnosisData?.plantInfo?.symptoms || 'Non specificati';
-      const imageUrl = diagnosisData?.imageUrl || null;
-      
-      console.log("Prepared data - plantType:", plantType, "symptoms:", symptoms, "imageUrl:", imageUrl);
+      console.log("🚀 TRIGGER PDF AUTOMATICO - Starting chat with expert, diagnosisData:", diagnosisData);
       
       // Create the conversation
       const { data: conversation, error: convError } = await supabase
         .from('conversations')
         .insert({
           user_id: user.id,
-          expert_id: EXPERT.id,
-          title: `Consulenza per ${plantType}`,
+          expert_id: MARCO_NIGRO_ID,
+          title: `Consulenza Fitopatologo`,
           status: 'active'
         })
         .select()
@@ -86,54 +79,54 @@ const ActionButtons = ({
         throw convError;
       }
 
-      console.log("Conversation created:", conversation);
+      console.log("✅ Conversazione creata:", conversation.id);
 
-      // Create initial message with diagnosis data
-      const initialMessage = `🌱 **Nuova richiesta di consulenza**
+      // Trigger automatic PDF generation and sending
+      if (diagnosisData && userProfile) {
+        console.log("📄 GENERAZIONE PDF AUTOMATICA in corso...");
+        
+        // Prepare comprehensive plant data
+        const plantData = {
+          plantName: diagnosisData.plantType || diagnosisData.plantInfo?.name || 'Pianta non identificata',
+          symptoms: diagnosisData.symptoms || diagnosisData.plantInfo?.symptoms || 'Sintomi non specificati',
+          environment: diagnosisData.plantInfo?.environment || 'Non specificato',
+          wateringFrequency: diagnosisData.plantInfo?.wateringFrequency || 'Non specificata',
+          sunExposure: diagnosisData.plantInfo?.sunExposure || 'Non specificata',
+          imageUrl: diagnosisData.imageUrl,
+          diagnosisResult: diagnosisData.diagnosisResult,
+          useAI: useAI
+        };
 
-**Tipo di pianta:** ${plantType}
-**Sintomi osservati:** ${symptoms}
+        // Prepare user profile data
+        const userData = {
+          firstName: userProfile.first_name || '',
+          lastName: userProfile.last_name || '',
+          email: userProfile.email || user.email,
+          birthDate: userProfile.birth_date || 'Non specificata',
+          birthPlace: userProfile.birth_place || 'Non specificato'
+        };
 
-${imageUrl ? '📸 **Immagine allegata**' : ''}
+        console.log("📊 Dati per PDF:", { plantData, userData });
 
-Ciao Marco, ho bisogno del tuo aiuto per questa pianta. Puoi darmi una diagnosi professionale?`;
+        // Send PDF automatically using the consultation service
+        const { ConsultationDataService } = await import('@/services/chat/consultationDataService');
+        const success = await ConsultationDataService.sendInitialConsultationData(
+          conversation.id,
+          plantData,
+          userData,
+          useAI,
+          diagnosisData.diagnosisResult
+        );
 
-      console.log("Initial message:", initialMessage);
-
-      // Insert the initial message with both content and text fields
-      const { error: messageError } = await supabase
-        .from('messages')
-        .insert({
-          conversation_id: conversation.id,
-          sender_id: user.id,
-          recipient_id: MARCO_NIGRO_ID,
-          content: initialMessage, // Required field
-          text: initialMessage // Also populate text field
-        });
-
-      if (messageError) {
-        console.error("Error sending message:", messageError);
-        throw messageError;
-      }
-
-      // If there's an image, send it as a separate message
-      if (imageUrl) {
-        console.log("Sending image message:", imageUrl);
-        const imageMessage = imageUrl;
-        const { error: imageMessageError } = await supabase
-          .from('messages')
-          .insert({
-            conversation_id: conversation.id,
-            sender_id: user.id,
-            recipient_id: MARCO_NIGRO_ID,
-            content: imageMessage, // Required field
-            text: imageMessage // Also populate text field
-          });
-
-        if (imageMessageError) {
-          console.error("Error sending image message:", imageMessageError);
-          // Non blocchiamo per l'immagine, continuiamo
+        if (success) {
+          console.log("✅ PDF INVIATO AUTOMATICAMENTE!");
+          toast.success('PDF con tutti i dati inviato automaticamente al fitopatologo!');
+        } else {
+          console.error("❌ Errore invio PDF automatico");
+          toast.error('Errore nell\'invio automatico del PDF');
         }
+      } else {
+        console.error("❌ Dati insufficienti per PDF automatico");
       }
 
       // Navigate to chat
