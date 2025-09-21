@@ -118,86 +118,148 @@ const PlantIdentificationComponent: React.FC<PlantIdentificationComponentProps> 
     fileInputRef.current?.click();
   };
 
-  // Funzione per ottenere informazioni specifiche sulla pianta
+  // Funzione per ottenere informazioni enciclopediche specifiche sulla pianta
   const getSpecificPlantInfo = (scientificName: string, commonName: string) => {
     const lower = scientificName.toLowerCase();
     
     if (lower.includes('dieffenbachia')) {
       return (
-        <div>
-          <p className="mb-2">
-            <strong>Dieffenbachia seguine</strong> è una pianta tropicale perenne della famiglia delle Araceae, 
-            originaria dell'America centrale e meridionale. È caratterizzata da grandi foglie ovali con 
-            variegature bianche o gialle lungo le nervature.
+        <div className="space-y-3">
+          <p>
+            <strong>Dieffenbachia seguine</strong> (Jacq.) Schott è una pianta erbacea perenne appartenente 
+            alla famiglia delle Araceae, originaria delle regioni tropicali dell'America centrale e meridionale, 
+            particolarmente diffusa dal Messico al nord del Sud America.
           </p>
-          <div className="bg-red-50 p-2 rounded text-red-800 text-xs mb-2">
-            ⚠️ <strong>ATTENZIONE:</strong> Tutte le parti della pianta sono tossiche se ingerite. 
-            La linfa può causare irritazioni cutanee e oculari.
+          
+          <div>
+            <h5 className="font-medium text-gray-800 mb-1">Morfologia:</h5>
+            <p className="text-sm">
+              La pianta presenta un fusto carnoso e succoso che può raggiungere 1-2 metri di altezza. 
+              Le foglie sono grandi (15-45 cm), ovali-oblunghe, con picciolo lungo e guaine ampie. 
+              La caratteristica più distintiva è la variegatura delle foglie, con macchie e striature 
+              bianco-crema o giallo-verde lungo le nervature principali e secondarie.
+            </p>
           </div>
-          <p>Può raggiungere 1-2 metri di altezza in appartamento. Le foglie giovani emergono arrotolate 
-          e si sviluppano gradualmente mostrando le caratteristiche variegature.</p>
+
+          <div>
+            <h5 className="font-medium text-gray-800 mb-1">Habitat naturale:</h5>
+            <p className="text-sm">
+              Cresce spontaneamente nel sottobosco delle foreste pluviali tropicali, dove trova 
+              condizioni di luce filtrata, elevata umidità atmosferica (80-90%) e temperature 
+              costanti tra 22-28°C. Il terreno naturale è ricco di humus, ben drenato ma 
+              costantemente umido.
+            </p>
+          </div>
+
+          <div className="bg-red-50 p-2 rounded text-red-800 text-xs">
+            ⚠️ <strong>Tossicità:</strong> Contiene cristalli di ossalato di calcio e enzimi proteolitici. 
+            L'ingestione può causare edema della glottide e difficoltà respiratorie. 
+            Il contatto con la linfa può provocare dermatiti.
+          </div>
         </div>
       );
     }
     
-    if (lower.includes('monstera')) {
+    if (lower.includes('monstera deliciosa')) {
       return (
-        <p>
-          Pianta rampicante epifita originaria delle foreste tropicali del Messico e dell'America Centrale. 
-          Le foglie giovani sono intere, ma sviluppano le caratteristiche fenestrazioni (buchi) 
-          quando la pianta matura. In natura può raggiungere 20 metri di altezza.
-        </p>
+        <div className="space-y-3">
+          <p>
+            <strong>Monstera deliciosa</strong> Liebm. è una pianta rampicante epifita della famiglia 
+            Araceae, endemica delle foreste pluviali del Messico meridionale e dell'America centrale 
+            (Guatemala, Honduras, Costa Rica).
+          </p>
+          
+          <div>
+            <h5 className="font-medium text-gray-800 mb-1">Caratteristiche botaniche:</h5>
+            <p className="text-sm">
+              Presenta foglie giovani intere e cordate che, con la maturazione, sviluppano le 
+              caratteristiche fenestrazioni (perforazioni naturali) e incisioni marginali profonde. 
+              Le foglie mature possono raggiungere 90 cm di larghezza. La pianta produce radici 
+              aeree che in natura si attaccano ai tronchi per sostegno e assorbimento di nutrienti.
+            </p>
+          </div>
+
+          <div>
+            <h5 className="font-medium text-gray-800 mb-1">Fioritura e fruttificazione:</h5>
+            <p className="text-sm">
+              Produce un'infiorescenza a spadice circondata da una spata bianco-crema. 
+              Il frutto è una bacca commestibile (da cui il nome "deliciosa") che matura 
+              in 12-15 mesi, sviluppando un aroma simile all'ananas e alla banana.
+            </p>
+          </div>
+        </div>
       );
     }
     
     if (lower.includes('ficus')) {
       return (
-        <p>
-          Genere che comprende oltre 800 specie, dalle piccole piante d'appartamento agli alberi giganti. 
-          Caratterizzate da foglie coriacee e dalla presenza di lattice bianco. Molte specie sono 
-          strangolatori che iniziano la vita come epifite.
-        </p>
-      );
-    }
-    
-    return (
-      <p>
-        Informazioni specifiche sulla morfologia, dimensioni e caratteristiche distintive 
-        di <em>{scientificName}</em> richiedono consulenza botanica specializzata.
-      </p>
-    );
-  };
+        <div className="space-y-3">
+          <p>
+            Il genere <strong>Ficus</strong> comprende oltre 850 specie di piante della famiglia 
+            Moraceae, distribuite principalmente nelle regioni tropicali e subtropicali. 
+            Molte specie sono caratterizzate da un particolare ciclo di vita che inizia come epifite.
+          </p>
+          
+          <div>
+            <h5 className="font-medium text-gray-800 mb-1">Caratteristiche generali:</h5>
+            <p className="text-sm">
+              Tutte le specie di Ficus producono un lattice bianco contenente enzimi e composti 
+              terpenici. Le foglie sono generalmente coriacee, lucide, con nervatura pennata. 
+              Il sistema radicale è molto sviluppato e aggressivo, caratteristica che ha reso 
+              alcune specie invasive quando introdotte in nuovi habitat.
+            </p>
+          </div>
 
-  const getSpecificCareInstructions = (scientificName: string, commonName: string) => {
-    const lower = scientificName.toLowerCase();
-    
-    if (lower.includes('dieffenbachia')) {
-      return (
-        <div className="space-y-2">
-          <div><strong>Luce:</strong> Luce brillante indiretta. Evitare sole diretto che può scottare le foglie.</div>
-          <div><strong>Annaffiature:</strong> Mantenere il terreno umido ma non inzuppato. Ridurre in inverno.</div>
-          <div><strong>Temperatura:</strong> 18-24°C ideale. Non tollerare temperature sotto i 15°C.</div>
-          <div><strong>Umidità:</strong> 50-60%. Nebulizzare regolarmente o usare sottovaso con argilla espansa.</div>
-          <div><strong>Concimazione:</strong> Ogni 2 settimane in primavera-estate con fertilizzante liquido diluito.</div>
-          <div><strong>Rinvaso:</strong> Ogni 2-3 anni in primavera con terriccio ben drenante.</div>
+          <div>
+            <h5 className="font-medium text-gray-800 mb-1">Relazione simbiotica:</h5>
+            <p className="text-sm">
+              I Ficus hanno una relazione mutualistica obbligata con vespe impollinatrici del 
+              genere Agaonidae. Ogni specie di Ficus è impollinata da una specifica specie di vespa, 
+              rappresentando uno degli esempi più affascinanti di coevoluzione nel regno vegetale.
+            </p>
+          </div>
         </div>
       );
     }
-    
-    if (lower.includes('monstera')) {
+
+    if (lower.includes('sansevieria')) {
       return (
-        <div className="space-y-2">
-          <div><strong>Luce:</strong> Luce brillante indiretta. Le variegature richiedono più luce.</div>
-          <div><strong>Supporto:</strong> Fornire tutore muschiato per sostenere la crescita rampicante.</div>
-          <div><strong>Annaffiature:</strong> Quando i primi 2-3 cm di terreno sono asciutti.</div>
-          <div><strong>Umidità:</strong> Alta (60-80%). Nebulizzare radici aeree regolarmente.</div>
+        <div className="space-y-3">
+          <p>
+            <strong>Sansevieria trifasciata</strong> Prain, comunemente nota come "lingua di suocera", 
+            è una pianta succulenta della famiglia Asparagaceae, originaria dell'Africa tropicale 
+            occidentale, particolarmente diffusa in Nigeria e Repubblica Democratica del Congo.
+          </p>
+          
+          <div>
+            <h5 className="font-medium text-gray-800 mb-1">Adattamenti xerofitici:</h5>
+            <p className="text-sm">
+              Le foglie sono modificate in strutture carnose e succulente per l'accumulo di acqua, 
+              con epidermide spessa e cuticola cerosa per ridurre la traspirazione. Presenta 
+              metabolismo CAM (Crassulacean Acid Metabolism) che permette l'apertura degli stomi 
+              durante la notte per ridurre la perdita d'acqua.
+            </p>
+          </div>
+
+          <div>
+            <h5 className="font-medium text-gray-800 mb-1">Riproduzione vegetativa:</h5>
+            <p className="text-sm">
+              Oltre alla propagazione per divisione dei rizomi, la pianta può essere moltiplicata 
+              attraverso talee fogliari. È interessante notare che le varietà variegate perdono 
+              la variegatura quando propagate per talea, mantenendola solo nella riproduzione per divisione.
+            </p>
+          </div>
         </div>
       );
     }
     
     return (
       <div>
-        Consultare guide specialistiche per le specifiche esigenze colturali di <em>{scientificName}</em>.
+        <p>
+          Informazioni enciclopediche dettagliate per <em>{scientificName}</em> richiedono 
+          consultazione di fonti botaniche specializzate per una descrizione scientifica accurata 
+          delle caratteristiche morfologiche, fisiologiche e ecologiche della specie.
+        </p>
       </div>
     );
   };
@@ -486,13 +548,6 @@ const PlantIdentificationComponent: React.FC<PlantIdentificationComponentProps> 
                   <h4 className="font-medium text-gray-700 mb-2">Caratteristiche specifiche:</h4>
                   <div className="text-sm text-gray-600 space-y-2">
                     {getSpecificPlantInfo(identificationResult.scientificName, identificationResult.plantName)}
-                    
-                    <div className="bg-green-50 p-3 rounded-lg mt-3">
-                      <p className="font-medium text-green-800 mb-1">💡 Consigli di cura specifici:</p>
-                      <div className="text-green-700">
-                        {getSpecificCareInstructions(identificationResult.scientificName, identificationResult.plantName)}
-                      </div>
-                    </div>
 
                     {/* Classificazione tassonomica */}
                     {gbifInfo && (
