@@ -214,7 +214,8 @@ const PlantIdentificationComponent: React.FC<PlantIdentificationComponentProps> 
             {canUseIdentification() && (
               <div className="flex gap-3 justify-center">
                 <Button 
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.stopPropagation();
                     console.log('🎥 Opening camera for plant identification');
                     setIsCameraOpen(true);
                   }}
@@ -226,7 +227,10 @@ const PlantIdentificationComponent: React.FC<PlantIdentificationComponentProps> 
                 </Button>
                 
                 <Button 
-                  onClick={triggerFileInput}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    triggerFileInput();
+                  }}
                   variant="outline"
                   className="border-drplant-green text-drplant-green hover:bg-drplant-green hover:text-white"
                   disabled={isIdentifying}
@@ -316,16 +320,115 @@ const PlantIdentificationComponent: React.FC<PlantIdentificationComponentProps> 
                     </div>
                   </div>
                 )}
-              </div>
 
-              {identificationResult.description && (
-                <div>
-                  <h4 className="font-medium text-gray-700 mb-2">Descrizione:</h4>
-                  <p className="text-sm text-gray-600 line-clamp-4">
-                    {identificationResult.description}
+                {/* Informazioni geografiche e habitat */}
+                <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+                  <h4 className="font-medium text-blue-800 mb-2 flex items-center gap-2">
+                    <Info className="h-4 w-4" />
+                    Distribuzione e Habitat
+                  </h4>
+                  <p className="text-sm text-blue-700">
+                    {identificationResult.plantName.toLowerCase().includes('pothos') && 
+                      "Originaria delle isole Salomone e dell'Asia tropicale. Diffusa nelle foreste pluviali tropicali, ora coltivata in tutto il mondo come pianta d'appartamento."
+                    }
+                    {identificationResult.plantName.toLowerCase().includes('monstera') && 
+                      "Nativa delle foreste pluviali dell'America Centrale e del Sud (Messico, Guatemala, Costa Rica). Cresce naturalmente come epifita sui tronchi degli alberi."
+                    }
+                    {identificationResult.plantName.toLowerCase().includes('ficus') && 
+                      "Ampia distribuzione nelle regioni tropicali e subtropicali di tutto il mondo. Molte specie sono native dell'Asia, Africa e Australia."
+                    }
+                    {identificationResult.plantName.toLowerCase().includes('sansevieria') && 
+                      "Originaria dell'Africa tropicale occidentale (Nigeria, Congo). Cresce naturalmente nelle zone aride e semi-aride dell'Africa subsahariana."
+                    }
+                    {identificationResult.plantName.toLowerCase().includes('dracaena') && 
+                      "Nativa dell'Africa tropicale, Madagascar e alcune isole dell'Oceano Indiano. Habitat naturale nelle foreste tropicali umide."
+                    }
+                    {identificationResult.plantName.toLowerCase().includes('philodendron') && 
+                      "Originaria delle foreste tropicali del Sud America, principalmente Brasile, Colombia ed Ecuador. Cresce come epifita negli ambienti forestali umidi."
+                    }
+                    {identificationResult.plantName.toLowerCase().includes('chlorophytum') && 
+                      "Nativa del Sud Africa. Cresce naturalmente nelle praterie e nelle zone rocciose dell'Africa meridionale e orientale."
+                    }
+                    {!identificationResult.plantName.toLowerCase().match(/(pothos|monstera|ficus|sansevieria|dracaena|philodendron|chlorophytum)/) && 
+                      "Distribuzione geografica variabile a seconda della specie. Consulta guide botaniche specializzate per informazioni specifiche sull'habitat naturale."
+                    }
                   </p>
                 </div>
-              )}
+              </div>
+
+              {/* Descrizione e caratteristiche */}
+              <div>
+                <div className="mb-4">
+                  <h4 className="font-medium text-gray-700 mb-2">Caratteristiche della pianta:</h4>
+                  <div className="text-sm text-gray-600 space-y-2">
+                    <p>
+                      {identificationResult.plantName.toLowerCase().includes('pothos') && 
+                        "Pianta rampicante sempreverde con foglie cuoriformi variegate. Molto resistente e tollerante, ideale per principianti. Cresce rapidamente in condizioni di luce indiretta."
+                      }
+                      {identificationResult.plantName.toLowerCase().includes('monstera') && 
+                        "Caratterizzata dalle iconiche foglie fenestrate (con buchi naturali). Pianta rampicante che può raggiungere grandi dimensioni. Richiede supporti per la crescita verticale."
+                      }
+                      {identificationResult.plantName.toLowerCase().includes('ficus') && 
+                        "Varietà molto diverse: da piccole piante d'appartamento ad alberi ornamentali. Foglie generalmente coriacee e lucide. Molte specie producono frutti commestibili."
+                      }
+                      {identificationResult.plantName.toLowerCase().includes('sansevieria') && 
+                        "Pianta succulenta con foglie erette, carnose e spesso variegate. Estremamente resistente alla siccità e alla scarsa illuminazione. Fiorisce raramente in interno."
+                      }
+                      {identificationResult.plantName.toLowerCase().includes('dracaena') && 
+                        "Pianta arbustiva con foglie lunghe e strette, spesso variegate. Crescita lenta ma costante. Forma naturalmente un tronco legnoso con l'età."
+                      }
+                      {identificationResult.plantName.toLowerCase().includes('philodendron') && 
+                        "Pianta tropicale con foglie larghe e lucide. Molte varietà sono rampicanti. Apprezza ambienti caldi e umidi con luce filtrata."
+                      }
+                      {identificationResult.plantName.toLowerCase().includes('chlorophytum') && 
+                        "Pianta erbacea perenne con foglie lineari spesso variegate. Produce stoloni con plantule che facilitano la propagazione. Molto adattabile."
+                      }
+                      {!identificationResult.plantName.toLowerCase().match(/(pothos|monstera|ficus|sansevieria|dracaena|philodendron|chlorophytum)/) && 
+                        "Pianta con caratteristiche specifiche della sua specie. Per informazioni dettagliate sulla morfologia e le esigenze colturali, consulta guide botaniche specializzate."
+                      }
+                    </p>
+                    
+                    <div className="bg-green-50 p-3 rounded-lg mt-3">
+                      <p className="font-medium text-green-800 mb-1">💡 Consigli di cura:</p>
+                      <p className="text-green-700">
+                        {identificationResult.plantName.toLowerCase().includes('pothos') && 
+                          "Luce indiretta brillante, annaffiature quando il terreno è asciutto in superficie, temperature 18-24°C."
+                        }
+                        {identificationResult.plantName.toLowerCase().includes('monstera') && 
+                          "Luce indiretta brillante, terreno umido ma ben drenato, supporto per rampicamento, umidità alta."
+                        }
+                        {identificationResult.plantName.toLowerCase().includes('ficus') && 
+                          "Luce brillante senza sole diretto, annaffiature regolari ma moderate, evitare spostamenti frequenti."
+                        }
+                        {identificationResult.plantName.toLowerCase().includes('sansevieria') && 
+                          "Luce da bassa a brillante, annaffiature rade (ogni 2-3 settimane), terreno ben drenante."
+                        }
+                        {identificationResult.plantName.toLowerCase().includes('dracaena') && 
+                          "Luce indiretta, terreno leggermente umido, temperature costanti 18-22°C, evitare ristagni."
+                        }
+                        {identificationResult.plantName.toLowerCase().includes('philodendron') && 
+                          "Luce filtrata brillante, terreno umido, alta umidità ambientale, fertilizzazioni regolari in primavera-estate."
+                        }
+                        {identificationResult.plantName.toLowerCase().includes('chlorophytum') && 
+                          "Luce da media a brillante, annaffiature regolari, tollera temperature fresche, fertilizzare in stagione di crescita."
+                        }
+                        {!identificationResult.plantName.toLowerCase().match(/(pothos|monstera|ficus|sansevieria|dracaena|philodendron|chlorophytum)/) && 
+                          "Consulta guide specifiche per le esigenze di luce, acqua, temperatura e umidità di questa specie."
+                        }
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {identificationResult.description && (
+                  <div>
+                    <h4 className="font-medium text-gray-700 mb-2">Descrizione botanica:</h4>
+                    <p className="text-sm text-gray-600 line-clamp-4">
+                      {identificationResult.description}
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
           </CardContent>
         </Card>
