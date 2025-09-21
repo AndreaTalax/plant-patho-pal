@@ -30,7 +30,7 @@ const PlantIdentificationComponent: React.FC<PlantIdentificationComponentProps> 
     usage,
     canUseIdentification,
     identifyPlant,
-    resetIdentification,
+    resetIdentification: originalResetIdentification,
     loadIdentificationUsage,
     getRemainingIdentifications
   } = usePlantIdentification();
@@ -40,6 +40,29 @@ const PlantIdentificationComponent: React.FC<PlantIdentificationComponentProps> 
       loadIdentificationUsage();
     }
   }, [user, loadIdentificationUsage]);
+
+  const fetchGBIFInfo = async (scientificName: string) => {
+    console.log('🔍 Avvio ricerca GBIF per:', scientificName);
+    setIsLoadingGBIF(true);
+    setGbifInfo(null); // Reset stato precedente
+    
+    try {
+      const info = await GBIFService.searchSpecies(scientificName);
+      console.log('📊 Dati GBIF ricevuti:', info);
+      setGbifInfo(info);
+      
+      if (info) {
+        console.log('✅ GBIF info impostata con successo');
+      } else {
+        console.log('⚠️ Nessun dato GBIF trovato per questa specie');
+      }
+    } catch (error) {
+      console.error('❌ Errore nel recupero informazioni GBIF:', error);
+      toast.error('Impossibile recuperare dati geografici');
+    } finally {
+      setIsLoadingGBIF(false);
+    }
+  };
 
   const handleCameraCapture = async (imageDataUrl: string) => {
     // Convert data URL to File
@@ -77,11 +100,17 @@ const PlantIdentificationComponent: React.FC<PlantIdentificationComponentProps> 
       return; // Stop processing if validation fails
     }
 
+    // Reset GBIF info per nuova identificazione
+    setGbifInfo(null);
+    
     const result = await identifyPlant(file);
     
     // Se l'identificazione è riuscita, recupera informazioni GBIF
     if (result?.scientificName) {
+      console.log('🌍 Recupero dati GBIF per:', result.scientificName);
       await fetchGBIFInfo(result.scientificName);
+    } else {
+      console.log('❌ Nessun nome scientifico disponibile per GBIF');
     }
   };
 
@@ -102,20 +131,15 @@ const PlantIdentificationComponent: React.FC<PlantIdentificationComponentProps> 
     }
   };
 
-  const fetchGBIFInfo = async (scientificName: string) => {
-    setIsLoadingGBIF(true);
-    try {
-      const info = await GBIFService.searchSpecies(scientificName);
-      setGbifInfo(info);
-    } catch (error) {
-      console.error('Errore nel recupero informazioni GBIF:', error);
-    } finally {
-      setIsLoadingGBIF(false);
-    }
-  };
-
   const triggerFileInput = () => {
     fileInputRef.current?.click();
+  };
+
+  // Reset identificazione e dati GBIF
+  const resetIdentification = () => {
+    originalResetIdentification();
+    setGbifInfo(null);
+    setIsLoadingGBIF(false);
   };
 
   // Funzione per ottenere informazioni enciclopediche specifiche sulla pianta
@@ -413,7 +437,7 @@ const PlantIdentificationComponent: React.FC<PlantIdentificationComponentProps> 
       {/* Hidden File Input */}
       <input
         ref={fileInputRef}
-        type="file"
+        type="file"  
         accept="image/*"
         onChange={handleFileInputChange}
         className="hidden"
@@ -542,7 +566,7 @@ const PlantIdentificationComponent: React.FC<PlantIdentificationComponentProps> 
                 )}
               </div>
 
-              {/* Descrizione e caratteristiche */}
+              {/* Caratteristiche specifiche */}
               <div>
                 <div className="mb-4">
                   <h4 className="font-medium text-gray-700 mb-2">Caratteristiche specifiche:</h4>
