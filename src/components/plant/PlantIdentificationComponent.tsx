@@ -4,12 +4,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
-import { Camera, Upload, Leaf, Info, Star, Crown } from 'lucide-react';
+import { Camera, Upload, Leaf, Info, Star, Crown, MapPin, Globe } from 'lucide-react';
 import { usePlantIdentification } from '@/hooks/usePlantIdentification';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
 import CameraCapture from '@/components/diagnose/CameraCapture';
 import { PlantImageValidator } from '@/services/plantImageValidation';
+import { GBIFService, type GBIFSpeciesInfo } from '@/services/gbifService';
 
 interface PlantIdentificationComponentProps {
   onUpgrade?: () => void;
@@ -19,6 +20,8 @@ const PlantIdentificationComponent: React.FC<PlantIdentificationComponentProps> 
   const { user } = useAuth();
   const [dragOver, setDragOver] = useState(false);
   const [isCameraOpen, setIsCameraOpen] = useState(false);
+  const [gbifInfo, setGbifInfo] = useState<GBIFSpeciesInfo | null>(null);
+  const [isLoadingGBIF, setIsLoadingGBIF] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const {
@@ -62,7 +65,7 @@ const PlantIdentificationComponent: React.FC<PlantIdentificationComponentProps> 
 
     // Validazione della dimensione del file (max 10MB)
     if (file.size > 10 * 1024 * 1024) {
-      toast.error('L\'immagine è troppo grande. Massimo 10MB');
+      toast.error("L'immagine è troppo grande. Massimo 10MB");
       return;
     }
 
@@ -74,7 +77,12 @@ const PlantIdentificationComponent: React.FC<PlantIdentificationComponentProps> 
       return; // Stop processing if validation fails
     }
 
-    await identifyPlant(file);
+    const result = await identifyPlant(file);
+    
+    // Se l'identificazione è riuscita, recupera informazioni GBIF
+    if (result?.scientificName) {
+      await fetchGBIFInfo(result.scientificName);
+    }
   };
 
   const handleDrop = async (e: React.DragEvent) => {
@@ -94,8 +102,104 @@ const PlantIdentificationComponent: React.FC<PlantIdentificationComponentProps> 
     }
   };
 
+  const fetchGBIFInfo = async (scientificName: string) => {
+    setIsLoadingGBIF(true);
+    try {
+      const info = await GBIFService.searchSpecies(scientificName);
+      setGbifInfo(info);
+    } catch (error) {
+      console.error('Errore nel recupero informazioni GBIF:', error);
+    } finally {
+      setIsLoadingGBIF(false);
+    }
+  };
+
   const triggerFileInput = () => {
     fileInputRef.current?.click();
+  };
+
+  // Funzione per ottenere informazioni specifiche sulla pianta
+  const getSpecificPlantInfo = (scientificName: string, commonName: string) => {
+    const lower = scientificName.toLowerCase();
+    
+    if (lower.includes('dieffenbachia')) {
+      return (
+        <div>
+          <p className="mb-2">
+            <strong>Dieffenbachia seguine</strong> è una pianta tropicale perenne della famiglia delle Araceae, 
+            originaria dell'America centrale e meridionale. È caratterizzata da grandi foglie ovali con 
+            variegature bianche o gialle lungo le nervature.
+          </p>
+          <div className="bg-red-50 p-2 rounded text-red-800 text-xs mb-2">
+            ⚠️ <strong>ATTENZIONE:</strong> Tutte le parti della pianta sono tossiche se ingerite. 
+            La linfa può causare irritazioni cutanee e oculari.
+          </div>
+          <p>Può raggiungere 1-2 metri di altezza in appartamento. Le foglie giovani emergono arrotolate 
+          e si sviluppano gradualmente mostrando le caratteristiche variegature.</p>
+        </div>
+      );
+    }
+    
+    if (lower.includes('monstera')) {
+      return (
+        <p>
+          Pianta rampicante epifita originaria delle foreste tropicali del Messico e dell'America Centrale. 
+          Le foglie giovani sono intere, ma sviluppano le caratteristiche fenestrazioni (buchi) 
+          quando la pianta matura. In natura può raggiungere 20 metri di altezza.
+        </p>
+      );
+    }
+    
+    if (lower.includes('ficus')) {
+      return (
+        <p>
+          Genere che comprende oltre 800 specie, dalle piccole piante d'appartamento agli alberi giganti. 
+          Caratterizzate da foglie coriacee e dalla presenza di lattice bianco. Molte specie sono 
+          strangolatori che iniziano la vita come epifite.
+        </p>
+      );
+    }
+    
+    return (
+      <p>
+        Informazioni specifiche sulla morfologia, dimensioni e caratteristiche distintive 
+        di <em>{scientificName}</em> richiedono consulenza botanica specializzata.
+      </p>
+    );
+  };
+
+  const getSpecificCareInstructions = (scientificName: string, commonName: string) => {
+    const lower = scientificName.toLowerCase();
+    
+    if (lower.includes('dieffenbachia')) {
+      return (
+        <div className="space-y-2">
+          <div><strong>Luce:</strong> Luce brillante indiretta. Evitare sole diretto che può scottare le foglie.</div>
+          <div><strong>Annaffiature:</strong> Mantenere il terreno umido ma non inzuppato. Ridurre in inverno.</div>
+          <div><strong>Temperatura:</strong> 18-24°C ideale. Non tollerare temperature sotto i 15°C.</div>
+          <div><strong>Umidità:</strong> 50-60%. Nebulizzare regolarmente o usare sottovaso con argilla espansa.</div>
+          <div><strong>Concimazione:</strong> Ogni 2 settimane in primavera-estate con fertilizzante liquido diluito.</div>
+          <div><strong>Rinvaso:</strong> Ogni 2-3 anni in primavera con terriccio ben drenante.</div>
+        </div>
+      );
+    }
+    
+    if (lower.includes('monstera')) {
+      return (
+        <div className="space-y-2">
+          <div><strong>Luce:</strong> Luce brillante indiretta. Le variegature richiedono più luce.</div>
+          <div><strong>Supporto:</strong> Fornire tutore muschiato per sostenere la crescita rampicante.</div>
+          <div><strong>Annaffiature:</strong> Quando i primi 2-3 cm di terreno sono asciutti.</div>
+          <div><strong>Umidità:</strong> Alta (60-80%). Nebulizzare radici aeree regolarmente.</div>
+        </div>
+      );
+    }
+    
+    return (
+      <div>
+        Consultare guide specialistiche per le specifiche esigenze colturali di <em>{scientificName}</em>.
+      </div>
+    );
   };
 
   const remainingIdentifications = getRemainingIdentifications();
@@ -321,102 +425,89 @@ const PlantIdentificationComponent: React.FC<PlantIdentificationComponentProps> 
                   </div>
                 )}
 
-                {/* Informazioni geografiche e habitat */}
-                <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-                  <h4 className="font-medium text-blue-800 mb-2 flex items-center gap-2">
-                    <Info className="h-4 w-4" />
-                    Distribuzione e Habitat
-                  </h4>
-                  <p className="text-sm text-blue-700">
-                    {identificationResult.plantName.toLowerCase().includes('pothos') && 
-                      "Originaria delle isole Salomone e dell'Asia tropicale. Diffusa nelle foreste pluviali tropicali, ora coltivata in tutto il mondo come pianta d'appartamento."
-                    }
-                    {identificationResult.plantName.toLowerCase().includes('monstera') && 
-                      "Nativa delle foreste pluviali dell'America Centrale e del Sud (Messico, Guatemala, Costa Rica). Cresce naturalmente come epifita sui tronchi degli alberi."
-                    }
-                    {identificationResult.plantName.toLowerCase().includes('ficus') && 
-                      "Ampia distribuzione nelle regioni tropicali e subtropicali di tutto il mondo. Molte specie sono native dell'Asia, Africa e Australia."
-                    }
-                    {identificationResult.plantName.toLowerCase().includes('sansevieria') && 
-                      "Originaria dell'Africa tropicale occidentale (Nigeria, Congo). Cresce naturalmente nelle zone aride e semi-aride dell'Africa subsahariana."
-                    }
-                    {identificationResult.plantName.toLowerCase().includes('dracaena') && 
-                      "Nativa dell'Africa tropicale, Madagascar e alcune isole dell'Oceano Indiano. Habitat naturale nelle foreste tropicali umide."
-                    }
-                    {identificationResult.plantName.toLowerCase().includes('philodendron') && 
-                      "Originaria delle foreste tropicali del Sud America, principalmente Brasile, Colombia ed Ecuador. Cresce come epifita negli ambienti forestali umidi."
-                    }
-                    {identificationResult.plantName.toLowerCase().includes('chlorophytum') && 
-                      "Nativa del Sud Africa. Cresce naturalmente nelle praterie e nelle zone rocciose dell'Africa meridionale e orientale."
-                    }
-                    {!identificationResult.plantName.toLowerCase().match(/(pothos|monstera|ficus|sansevieria|dracaena|philodendron|chlorophytum)/) && 
-                      "Distribuzione geografica variabile a seconda della specie. Consulta guide botaniche specializzate per informazioni specifiche sull'habitat naturale."
-                    }
-                  </p>
-                </div>
+                {/* Informazioni geografiche e habitat da GBIF */}
+                {gbifInfo ? (
+                  <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+                    <h4 className="font-medium text-blue-800 mb-2 flex items-center gap-2">
+                      <Globe className="h-4 w-4" />
+                      Distribuzione Geografica Reale
+                    </h4>
+                    <div className="space-y-2 text-sm text-blue-700">
+                      {gbifInfo.nativeCountries && gbifInfo.nativeCountries.length > 0 && (
+                        <div className="flex items-start gap-2">
+                          <MapPin className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+                          <div>
+                            <span className="font-medium">Habitat nativo: </span>
+                            {gbifInfo.nativeCountries.slice(0, 5).join(', ')}
+                            {gbifInfo.nativeCountries.length > 5 && ` e altri ${gbifInfo.nativeCountries.length - 5} paesi`}
+                          </div>
+                        </div>
+                      )}
+                      {gbifInfo.introducedCountries && gbifInfo.introducedCountries.length > 0 && (
+                        <div className="flex items-start gap-2">
+                          <MapPin className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                          <div>
+                            <span className="font-medium">Coltivata in: </span>
+                            {gbifInfo.introducedCountries.slice(0, 3).join(', ')}
+                            {gbifInfo.introducedCountries.length > 3 && ` e altri ${gbifInfo.introducedCountries.length - 3} paesi`}
+                          </div>
+                        </div>
+                      )}
+                      {gbifInfo.totalOccurrences && (
+                        <div className="text-xs text-blue-600 mt-2">
+                          📊 {gbifInfo.totalOccurrences.toLocaleString()} osservazioni registrate in GBIF
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ) : isLoadingGBIF ? (
+                  <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+                    <div className="flex items-center gap-2 text-gray-600">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-400"></div>
+                      <span className="text-sm">Caricamento dati geografici...</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+                    <h4 className="font-medium text-gray-600 mb-2 flex items-center gap-2">
+                      <Info className="h-4 w-4" />
+                      Informazioni Geografiche
+                    </h4>
+                    <p className="text-sm text-gray-600">
+                      Dati geografici specifici non disponibili per questa specie.
+                    </p>
+                  </div>
+                )}
               </div>
 
               {/* Descrizione e caratteristiche */}
               <div>
                 <div className="mb-4">
-                  <h4 className="font-medium text-gray-700 mb-2">Caratteristiche della pianta:</h4>
+                  <h4 className="font-medium text-gray-700 mb-2">Caratteristiche specifiche:</h4>
                   <div className="text-sm text-gray-600 space-y-2">
-                    <p>
-                      {identificationResult.plantName.toLowerCase().includes('pothos') && 
-                        "Pianta rampicante sempreverde con foglie cuoriformi variegate. Molto resistente e tollerante, ideale per principianti. Cresce rapidamente in condizioni di luce indiretta."
-                      }
-                      {identificationResult.plantName.toLowerCase().includes('monstera') && 
-                        "Caratterizzata dalle iconiche foglie fenestrate (con buchi naturali). Pianta rampicante che può raggiungere grandi dimensioni. Richiede supporti per la crescita verticale."
-                      }
-                      {identificationResult.plantName.toLowerCase().includes('ficus') && 
-                        "Varietà molto diverse: da piccole piante d'appartamento ad alberi ornamentali. Foglie generalmente coriacee e lucide. Molte specie producono frutti commestibili."
-                      }
-                      {identificationResult.plantName.toLowerCase().includes('sansevieria') && 
-                        "Pianta succulenta con foglie erette, carnose e spesso variegate. Estremamente resistente alla siccità e alla scarsa illuminazione. Fiorisce raramente in interno."
-                      }
-                      {identificationResult.plantName.toLowerCase().includes('dracaena') && 
-                        "Pianta arbustiva con foglie lunghe e strette, spesso variegate. Crescita lenta ma costante. Forma naturalmente un tronco legnoso con l'età."
-                      }
-                      {identificationResult.plantName.toLowerCase().includes('philodendron') && 
-                        "Pianta tropicale con foglie larghe e lucide. Molte varietà sono rampicanti. Apprezza ambienti caldi e umidi con luce filtrata."
-                      }
-                      {identificationResult.plantName.toLowerCase().includes('chlorophytum') && 
-                        "Pianta erbacea perenne con foglie lineari spesso variegate. Produce stoloni con plantule che facilitano la propagazione. Molto adattabile."
-                      }
-                      {!identificationResult.plantName.toLowerCase().match(/(pothos|monstera|ficus|sansevieria|dracaena|philodendron|chlorophytum)/) && 
-                        "Pianta con caratteristiche specifiche della sua specie. Per informazioni dettagliate sulla morfologia e le esigenze colturali, consulta guide botaniche specializzate."
-                      }
-                    </p>
+                    {getSpecificPlantInfo(identificationResult.scientificName, identificationResult.plantName)}
                     
                     <div className="bg-green-50 p-3 rounded-lg mt-3">
-                      <p className="font-medium text-green-800 mb-1">💡 Consigli di cura:</p>
-                      <p className="text-green-700">
-                        {identificationResult.plantName.toLowerCase().includes('pothos') && 
-                          "Luce indiretta brillante, annaffiature quando il terreno è asciutto in superficie, temperature 18-24°C."
-                        }
-                        {identificationResult.plantName.toLowerCase().includes('monstera') && 
-                          "Luce indiretta brillante, terreno umido ma ben drenato, supporto per rampicamento, umidità alta."
-                        }
-                        {identificationResult.plantName.toLowerCase().includes('ficus') && 
-                          "Luce brillante senza sole diretto, annaffiature regolari ma moderate, evitare spostamenti frequenti."
-                        }
-                        {identificationResult.plantName.toLowerCase().includes('sansevieria') && 
-                          "Luce da bassa a brillante, annaffiature rade (ogni 2-3 settimane), terreno ben drenante."
-                        }
-                        {identificationResult.plantName.toLowerCase().includes('dracaena') && 
-                          "Luce indiretta, terreno leggermente umido, temperature costanti 18-22°C, evitare ristagni."
-                        }
-                        {identificationResult.plantName.toLowerCase().includes('philodendron') && 
-                          "Luce filtrata brillante, terreno umido, alta umidità ambientale, fertilizzazioni regolari in primavera-estate."
-                        }
-                        {identificationResult.plantName.toLowerCase().includes('chlorophytum') && 
-                          "Luce da media a brillante, annaffiature regolari, tollera temperature fresche, fertilizzare in stagione di crescita."
-                        }
-                        {!identificationResult.plantName.toLowerCase().match(/(pothos|monstera|ficus|sansevieria|dracaena|philodendron|chlorophytum)/) && 
-                          "Consulta guide specifiche per le esigenze di luce, acqua, temperatura e umidità di questa specie."
-                        }
-                      </p>
+                      <p className="font-medium text-green-800 mb-1">💡 Consigli di cura specifici:</p>
+                      <div className="text-green-700">
+                        {getSpecificCareInstructions(identificationResult.scientificName, identificationResult.plantName)}
+                      </div>
                     </div>
+
+                    {/* Classificazione tassonomica */}
+                    {gbifInfo && (
+                      <div className="bg-gray-50 p-3 rounded-lg mt-3">
+                        <p className="font-medium text-gray-800 mb-1">🌿 Classificazione tassonomica:</p>
+                        <div className="text-gray-700 text-sm space-y-1">
+                          {gbifInfo.kingdom && <div><span className="font-medium">Regno:</span> {gbifInfo.kingdom}</div>}
+                          {gbifInfo.phylum && <div><span className="font-medium">Phylum:</span> {gbifInfo.phylum}</div>}
+                          {gbifInfo.class && <div><span className="font-medium">Classe:</span> {gbifInfo.class}</div>}
+                          {gbifInfo.order && <div><span className="font-medium">Ordine:</span> {gbifInfo.order}</div>}
+                          {gbifInfo.family && <div><span className="font-medium">Famiglia:</span> {gbifInfo.family}</div>}
+                          {gbifInfo.genus && <div><span className="font-medium">Genere:</span> {gbifInfo.genus}</div>}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
 
