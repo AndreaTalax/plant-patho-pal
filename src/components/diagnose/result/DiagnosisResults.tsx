@@ -45,6 +45,91 @@ export const DiagnosisResults: React.FC<DiagnosisResultsProps> = ({ results, isF
         </Alert>
       )}
 
+      {/* Identificazione principale della pianta con informazioni geografiche e descrizione */}
+      {mostLikelyPlant && (
+        <div className="bg-white rounded-lg p-6 border border-green-200 shadow-sm">
+          <div className="flex items-start gap-4">
+            <div className="flex-shrink-0">
+              <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                <Leaf className="h-6 w-6 text-green-600" />
+              </div>
+            </div>
+            <div className="flex-1">
+              <div className="flex items-center gap-3 mb-2">
+                <h3 className="text-xl font-bold text-gray-900">{mostLikelyPlant.plantName}</h3>
+                <ConfidenceBadge confidence={mostLikelyPlant.confidence} />
+              </div>
+              
+              {mostLikelyPlant.scientificName && (
+                <p className="text-gray-600 italic text-sm mb-3">{mostLikelyPlant.scientificName}</p>
+              )}
+
+              {/* Informazioni geografiche */}
+              {results.gbifInfo && !isFallback && (
+                <div className="mb-4">
+                  <div className="flex items-start gap-2 mb-2">
+                    <MapPin className="h-4 w-4 text-blue-500 mt-1 flex-shrink-0" />
+                    <div className="text-sm text-gray-700">
+                      <span className="font-medium">Distribuzione geografica: </span>
+                      {results.gbifInfo.nativeCountries?.length > 0 ? (
+                        <>
+                          Nativa di: <span className="text-green-700 font-medium">
+                            {results.gbifInfo.nativeCountries.slice(0, 3).join(', ')}
+                            {results.gbifInfo.nativeCountries.length > 3 && ` e altri ${results.gbifInfo.nativeCountries.length - 3} paesi`}
+                          </span>
+                          {results.gbifInfo.introducedCountries?.length > 0 && (
+                            <>. Coltivata in: <span className="text-blue-700">
+                              {results.gbifInfo.introducedCountries.slice(0, 2).join(', ')}
+                              {results.gbifInfo.introducedCountries.length > 2 && ` e altri ${results.gbifInfo.introducedCountries.length - 2} paesi`}
+                            </span></>
+                          )}
+                        </>
+                      ) : (
+                        'Distribuzione globale nelle regioni temperate e tropicali'
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Descrizione della pianta */}
+              <div className="bg-green-50 p-4 rounded-lg">
+                <div className="flex items-start gap-2">
+                  <Info className="h-4 w-4 text-green-600 mt-1 flex-shrink-0" />
+                  <div className="text-sm text-green-800">
+                    <p className="font-medium mb-1">Informazioni sulla pianta:</p>
+                    <p>
+                      {results.gbifInfo?.family && (
+                        <>Appartiene alla famiglia delle <span className="font-medium">{results.gbifInfo.family}</span>. </>
+                      )}
+                      {mostLikelyPlant.plantName.toLowerCase().includes('pothos') && 
+                        "È una pianta tropicale sempreverde, molto popolare come pianta d'appartamento per la sua resistenza e facilità di cura. Cresce bene in condizioni di luce indiretta e richiede annaffiature moderate."
+                      }
+                      {mostLikelyPlant.plantName.toLowerCase().includes('monstera') && 
+                        "È una pianta tropicale originaria delle foreste pluviali dell'America Centrale. Caratterizzata dalle sue grandi foglie fenestrate, è molto apprezzata come pianta ornamentale d'interno."
+                      }
+                      {mostLikelyPlant.plantName.toLowerCase().includes('ficus') && 
+                        "È un genere di piante che comprende sia specie d'appartamento che alberi ornamentali. Generalmente preferisce posizioni luminose ma non sole diretto e annaffiature regolari ma moderate."
+                      }
+                      {mostLikelyPlant.plantName.toLowerCase().includes('sansevieria') && 
+                        "Conosciuta anche come 'lingua di suocera', è una pianta succulenta molto resistente, originaria dell'Africa tropicale. È ideale per principianti grazie alla sua capacità di tollerare neglect e condizioni di scarsa illuminazione."
+                      }
+                      {!mostLikelyPlant.plantName.toLowerCase().match(/(pothos|monstera|ficus|sansevieria)/) && 
+                        "È una specie vegetale che può essere coltivata sia in interno che in esterno, a seconda delle condizioni climatiche della zona. Per informazioni specifiche sulla cura, consulta guide specializzate per questa specie."
+                      }
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 mt-3 pt-3 border-t border-gray-100">
+                <span className="text-xs text-gray-500">Identificata da: {mostLikelyPlant.provider}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
 
       {/* Tutte le identificazioni trovate */}
       {results.plantIdentification.length > 1 && (
