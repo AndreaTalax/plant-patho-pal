@@ -28,7 +28,7 @@ export interface GBIFSpeciesInfo {
 }
 
 export class GBIFService {
-  private static readonly BASE_URL = 'https://api.gbif.org/v1';
+  private static readonly SUPABASE_FUNCTION_URL = 'https://otdmqmpxukifoxjlgzmq.supabase.co/functions/v1/gbif-proxy';
   
   /**
    * Cerca una specie per nome scientifico
@@ -37,9 +37,17 @@ export class GBIFService {
     try {
       console.log(`🌍 GBIF: Ricerca specie "${scientificName}"`);
       
-      // Prima cerca la specie nel registry GBIF
-      const searchUrl = `${this.BASE_URL}/species/search?q=${encodeURIComponent(scientificName)}&limit=5`;
-      const searchResponse = await fetch(searchUrl);
+      // Usa la edge function come proxy per evitare problemi CORS
+      const searchResponse = await fetch(this.SUPABASE_FUNCTION_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'searchSpecies',
+          scientificName: scientificName
+        })
+      });
       
       if (!searchResponse.ok) {
         throw new Error(`GBIF search failed: ${searchResponse.status}`);
@@ -96,30 +104,25 @@ export class GBIFService {
     try {
       console.log(`🗺️ GBIF: Ottengo distribuzione per specie ${speciesKey}`);
       
-      // Ottieni le occorrenze per paese
-      const occurrenceUrl = `${this.BASE_URL}/occurrence/search?taxon_key=${speciesKey}&facet=country&limit=0`;
-      const occurrenceResponse = await fetch(occurrenceUrl);
+      // Usa la edge function come proxy
+      const distributionResponse = await fetch(this.SUPABASE_FUNCTION_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'getDistribution',
+          speciesKey: speciesKey
+        })
+      });
       
-      if (!occurrenceResponse.ok) {
-        throw new Error(`GBIF occurrence search failed: ${occurrenceResponse.status}`);
+      if (!distributionResponse.ok) {
+        throw new Error(`GBIF distribution search failed: ${distributionResponse.status}`);
       }
       
-      const occurrenceData = await occurrenceResponse.json();
+      const { occurrence: occurrenceData, distribution: distributionData } = await distributionResponse.json();
       const countryFacets = occurrenceData.facets?.find((f: any) => f.field === 'COUNTRY')?.counts || [];
-      
-      // Ottieni informazioni dettagliate sulla distribuzione
-      const distributionUrl = `${this.BASE_URL}/species/${speciesKey}/distributions`;
-      
-      let distributionDetails: any[] = [];
-      try {
-        const distributionResponse = await fetch(distributionUrl);
-        if (distributionResponse.ok) {
-          const distributionData = await distributionResponse.json();
-          distributionDetails = distributionData.results || [];
-        }
-      } catch (error) {
-        console.warn('GBIF distribution details not available:', error);
-      }
+      const distributionDetails = distributionData?.results || [];
       
       const all: GBIFDistribution[] = [];
       const native: string[] = [];
