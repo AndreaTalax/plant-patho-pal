@@ -17,5 +17,26 @@ export const supabase = createClient<Database>(
   }
 );
 
+// Gestione degli errori del refresh token
+supabase.auth.onAuthStateChange((event, session) => {
+  if (event === 'TOKEN_REFRESHED' && !session) {
+    console.warn('🔄 Token refresh failed, clearing corrupted session');
+    // Pulisci tutto il localStorage relativo all'auth di Supabase
+    if (typeof window !== 'undefined') {
+      const keys = Object.keys(localStorage);
+      keys.forEach(key => {
+        if (key.startsWith('sb-otdmqmpxukifoxjlgzmq-auth-token')) {
+          localStorage.removeItem(key);
+        }
+      });
+    }
+  }
+  
+  // Gestisci altri errori di autenticazione
+  if (event === 'SIGNED_OUT' || (event === 'TOKEN_REFRESHED' && !session)) {
+    console.log('🔓 Session ended, navigation should work normally now');
+  }
+});
+
 // Export constants for use in other files
 export const EXPERT_ID = '07c7fe19-33c3-4782-b9a0-4e87c8aa7044'; // Marco Nigro (fitopatologo)
