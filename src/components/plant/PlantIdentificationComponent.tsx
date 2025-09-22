@@ -11,6 +11,7 @@ import { toast } from 'sonner';
 import CameraCapture from '@/components/diagnose/CameraCapture';
 import { PlantImageValidator } from '@/services/plantImageValidation';
 import { GBIFService, type GBIFSpeciesInfo } from '@/services/gbifService';
+import { PlantariumService, type PlantariumPlantInfo } from '@/services/plantariumService';
 
 interface PlantIdentificationComponentProps {
   onUpgrade?: () => void;
@@ -22,6 +23,8 @@ const PlantIdentificationComponent: React.FC<PlantIdentificationComponentProps> 
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [gbifInfo, setGbifInfo] = useState<GBIFSpeciesInfo | null>(null);
   const [isLoadingGBIF, setIsLoadingGBIF] = useState(false);
+  const [plantariumInfo, setPlantariumInfo] = useState<PlantariumPlantInfo | null>(null);
+  const [isLoadingPlantarium, setIsLoadingPlantarium] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const {
@@ -64,6 +67,29 @@ const PlantIdentificationComponent: React.FC<PlantIdentificationComponentProps> 
     }
   };
 
+  const fetchPlantariumInfo = async (scientificName: string) => {
+    console.log('📖 Avvio ricerca Plantarium per:', scientificName);
+    setIsLoadingPlantarium(true);
+    setPlantariumInfo(null); // Reset stato precedente
+    
+    try {
+      const info = await PlantariumService.getPlantInfo(scientificName);
+      console.log('📚 Dati Plantarium ricevuti:', info);
+      setPlantariumInfo(info);
+      
+      if (info) {
+        console.log('✅ Plantarium info impostata con successo');
+      } else {
+        console.log('⚠️ Nessun dato Plantarium trovato per questa specie');
+      }
+    } catch (error) {
+      console.error('❌ Errore nel recupero informazioni Plantarium:', error);
+      toast.error('Impossibile recuperare informazioni enciclopediche');
+    } finally {
+      setIsLoadingPlantarium(false);
+    }
+  };
+
   const handleCameraCapture = async (imageDataUrl: string) => {
     // Convert data URL to File
     const response = await fetch(imageDataUrl);
@@ -100,17 +126,23 @@ const PlantIdentificationComponent: React.FC<PlantIdentificationComponentProps> 
       return; // Stop processing if validation fails
     }
 
-    // Reset GBIF info per nuova identificazione
+    // Reset info per nuova identificazione
     setGbifInfo(null);
+    setPlantariumInfo(null);
     
     const result = await identifyPlant(file);
     
-    // Se l'identificazione è riuscita, recupera informazioni GBIF
+    // Se l'identificazione è riuscita, recupera informazioni da entrambe le fonti
     if (result?.scientificName) {
-      console.log('🌍 Recupero dati GBIF per:', result.scientificName);
-      await fetchGBIFInfo(result.scientificName);
+      console.log('🌍 Recupero dati esterni per:', result.scientificName);
+      
+      // Fetch parallelo per migliori performance
+      await Promise.all([
+        fetchGBIFInfo(result.scientificName),
+        fetchPlantariumInfo(result.scientificName)
+      ]);
     } else {
-      console.log('❌ Nessun nome scientifico disponibile per GBIF');
+      console.log('❌ Nessun nome scientifico disponibile per ricerche esterne');
     }
   };
 
@@ -135,11 +167,13 @@ const PlantIdentificationComponent: React.FC<PlantIdentificationComponentProps> 
     fileInputRef.current?.click();
   };
 
-  // Reset identificazione e dati GBIF
+  // Reset identificazione e dati esterni
   const resetIdentification = () => {
     originalResetIdentification();
     setGbifInfo(null);
     setIsLoadingGBIF(false);
+    setPlantariumInfo(null);
+    setIsLoadingPlantarium(false);
   };
 
   // Funzione per ottenere informazioni enciclopediche specifiche sulla pianta
@@ -566,12 +600,30 @@ const PlantIdentificationComponent: React.FC<PlantIdentificationComponentProps> 
                 )}
               </div>
 
-              {/* Caratteristiche specifiche */}
+              {/* Caratteristiche specifiche da Plantarium */}
               <div>
                 <div className="mb-4">
                   <h4 className="font-medium text-gray-700 mb-2">Caratteristiche specifiche:</h4>
-                  <div className="text-sm text-gray-600 space-y-2">
-                    {getSpecificPlantInfo(identificationResult.scientificName, identificationResult.plantName)}
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                    {isLoadingPlantarium ? (
+                      <div className="flex items-center space-x-2">
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-600"></div>
+                        <span className="text-sm text-gray-600">Caricamento informazioni enciclopediche...</span>
+                      </div>
+                    ) : plantariumInfo ? (
+                      <div className="prose prose-sm max-w-none">
+                        <div 
+                          className="text-gray-700 text-sm leading-relaxed whitespace-pre-line"
+                          dangerouslySetInnerHTML={{ 
+                            __html: PlantariumService.formatEncyclopedicText(plantariumInfo).replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') 
+                          }}
+                        />
+                      </div>
+                    ) : (
+                      <p className="text-gray-700 text-sm leading-relaxed">
+                        Informazioni enciclopediche non disponibili per questa specie.
+                      </p>
+                    )}
 
                     {/* Classificazione tassonomica */}
                     {gbifInfo && (
