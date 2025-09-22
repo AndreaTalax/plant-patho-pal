@@ -11,7 +11,6 @@ import CameraCapture from '@/components/diagnose/CameraCapture';
 import { PlantImageValidator } from '@/services/plantImageValidation';
 import { GBIFService, type GBIFSpeciesInfo } from '@/services/gbifService';
 import { PlantariumService, type PlantariumPlantInfo } from '@/services/plantariumService';
-import APIKeyTester from '@/components/testing/APIKeyTester';
 
 interface PlantIdentificationComponentProps {
   onUpgrade?: () => void;
@@ -142,18 +141,6 @@ const PlantIdentificationComponent: React.FC<PlantIdentificationComponentProps> 
 
   return (
     <div className="w-full max-w-4xl mx-auto space-y-6">
-      {/* API Status Tester */}
-      <Card className="border-amber-200 bg-amber-50">
-        <CardHeader>
-          <CardTitle className="text-amber-800 flex items-center gap-2 text-lg">
-            🔧 Diagnostica API Keys
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <APIKeyTester />
-        </CardContent>
-      </Card>
-
       {/* Header */}
       <Card className="bg-gradient-to-r from-drplant-green/5 to-drplant-blue-light/10 border-drplant-green/20">
         <CardHeader className="text-center">
