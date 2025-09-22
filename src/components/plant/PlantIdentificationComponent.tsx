@@ -254,24 +254,23 @@ const PlantIdentificationComponent: React.FC<PlantIdentificationComponentProps> 
         className="hidden"
       />
 
-      {/* Risultati */}
       {identificationResult && !isIdentifying && (
         <Card className="border-drplant-green/20">
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle className="text-drplant-blue-dark flex items-center gap-2">
                 <Leaf className="h-5 w-5 text-drplant-green" />
-                Risultato Identificazione
+                Risultato Identificazione e Diagnosi
               </CardTitle>
               <Button variant="outline" size="sm" onClick={resetIdentification}>
                 Nuova Identificazione
               </Button>
             </div>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid md:grid-cols-2 gap-4">
+          <CardContent className="space-y-6">
+            <div className="grid md:grid-cols-2 gap-6">
               
-              {/* COLONNA SINISTRA: distribuzione */}
+              {/* COLONNA SINISTRA: distribuzione geografica */}
               <div>
                 <h3 className="font-semibold text-lg text-drplant-blue-dark mb-2">
                   {identificationResult.plantName}
@@ -279,6 +278,9 @@ const PlantIdentificationComponent: React.FC<PlantIdentificationComponentProps> 
                 <p className="text-gray-600 italic mb-2">
                   {identificationResult.scientificName}
                 </p>
+                <Badge variant="secondary" className="mb-4">
+                  Confidenza: {identificationResult.confidence}%
+                </Badge>
 
                 {gbifInfo || plantariumInfo ? (
                   <div className="mt-4 p-3 bg-blue-50 rounded-lg">
@@ -339,6 +341,67 @@ const PlantIdentificationComponent: React.FC<PlantIdentificationComponentProps> 
                     <p className="text-sm text-gray-600">
                       Dati geografici specifici non disponibili per questa specie.
                     </p>
+                  </div>
+                )}
+
+                {/* STATO DI SALUTE */}
+                {identificationResult.healthAssessment && (
+                  <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                    <h4 className="font-medium text-green-800 mb-2 flex items-center gap-2">
+                      <Leaf className="h-4 w-4" />
+                      Stato di Salute
+                    </h4>
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Badge 
+                          variant={identificationResult.healthAssessment.isHealthy ? "default" : "destructive"}
+                          className="text-xs"
+                        >
+                          {identificationResult.healthAssessment.isHealthy ? '✅ Sana' : '⚠️ Problemi rilevati'}
+                        </Badge>
+                        <span className="text-sm text-gray-600">
+                          Score: {identificationResult.healthAssessment.overallScore}%
+                        </span>
+                      </div>
+                      
+                      {identificationResult.healthAssessment.diseases.length > 0 && (
+                        <div className="mt-3">
+                          <h5 className="font-medium text-red-700 text-sm mb-2">
+                            🔬 Malattie/Problemi rilevati:
+                          </h5>
+                          <div className="space-y-2">
+                            {identificationResult.healthAssessment.diseases.slice(0, 2).map((disease, idx) => (
+                              <div key={idx} className="bg-red-50 border border-red-200 rounded p-2">
+                                <div className="flex items-center justify-between mb-1">
+                                  <span className="font-medium text-red-800 text-sm">{disease.name}</span>
+                                  <Badge variant="outline" className="text-xs">
+                                    {disease.confidence}% confidenza
+                                  </Badge>
+                                </div>
+                                <p className="text-xs text-red-600 mb-1">
+                                  <strong>Causa:</strong> {disease.cause}
+                                </p>
+                                {disease.symptoms.length > 0 && (
+                                  <p className="text-xs text-gray-600 mb-1">
+                                    <strong>Sintomi:</strong> {disease.symptoms.slice(0, 2).join(', ')}
+                                  </p>
+                                )}
+                                {disease.treatments.length > 0 && (
+                                  <p className="text-xs text-green-700">
+                                    <strong>Trattamenti:</strong> {disease.treatments.slice(0, 2).join(', ')}
+                                  </p>
+                                )}
+                              </div>
+                            ))}
+                            {identificationResult.healthAssessment.diseases.length > 2 && (
+                              <p className="text-xs text-gray-500 italic">
+                                ... e altre {identificationResult.healthAssessment.diseases.length - 2} condizioni rilevate
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
