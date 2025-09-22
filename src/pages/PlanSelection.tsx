@@ -5,14 +5,12 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Badge } from "@/components/ui/badge";
 import { Check, Star, Crown, Building, Users, Leaf } from "lucide-react";
 import { useTheme } from "@/context/ThemeContext";
-import { useAuth } from "@/context/AuthContext";
 
 export type PlanType = 'privati' | 'business' | 'professionisti' | 'tutti';
 
 const PlanSelection = () => {
   const navigate = useNavigate();
   const { t } = useTheme();
-  const { isAuthenticated } = useAuth();
   const [selectedPlan, setSelectedPlan] = useState<PlanType | null>(null);
 
   const handlePlanSelection = (planType: PlanType) => {
@@ -26,14 +24,8 @@ const PlanSelection = () => {
     
     // Salva la selezione del piano nel localStorage
     localStorage.setItem('selectedPlanType', planType);
-    
-    // Se l'utente è già autenticato, vai alla pagina di sottoscrizione
-    // Altrimenti vai al login
-    if (isAuthenticated) {
-      navigate('/plan-subscription-selection', { state: { planType } });
-    } else {
-      navigate('/login', { state: { planType } });
-    }
+    // Naviga alla pagina di login con il piano selezionato
+    navigate('/login', { state: { planType } });
   };
 
   const handlePlantIdentificationSelect = () => {
