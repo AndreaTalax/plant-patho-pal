@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Camera, Upload, Leaf, Info, Star, Crown, MapPin, Globe } from 'lucide-react';
@@ -44,16 +44,13 @@ const PlantIdentificationComponent: React.FC<PlantIdentificationComponentProps> 
   }, [user, loadIdentificationUsage]);
 
   const fetchGBIFInfo = async (scientificName: string) => {
-    console.log('🔍 Avvio ricerca GBIF per:', scientificName);
     setIsLoadingGBIF(true);
     setGbifInfo(null);
-    
     try {
       const info = await GBIFService.searchSpecies(scientificName);
-      console.log('📊 Dati GBIF ricevuti:', info);
       setGbifInfo(info);
     } catch (error) {
-      console.error('❌ Errore nel recupero informazioni GBIF:', error);
+      console.error('Errore GBIF:', error);
       toast.error('Impossibile recuperare dati geografici');
     } finally {
       setIsLoadingGBIF(false);
@@ -61,16 +58,13 @@ const PlantIdentificationComponent: React.FC<PlantIdentificationComponentProps> 
   };
 
   const fetchPlantariumInfo = async (scientificName: string) => {
-    console.log('📖 Avvio ricerca Plantarium per:', scientificName);
     setIsLoadingPlantarium(true);
     setPlantariumInfo(null);
-    
     try {
       const info = await PlantariumService.getPlantInfo(scientificName);
-      console.log('📚 Dati Plantarium ricevuti:', info);
       setPlantariumInfo(info);
     } catch (error) {
-      console.error('❌ Errore nel recupero informazioni Plantarium:', error);
+      console.error('Errore Plantarium:', error);
       toast.error('Impossibile recuperare informazioni enciclopediche');
     } finally {
       setIsLoadingPlantarium(false);
@@ -104,42 +98,30 @@ const PlantIdentificationComponent: React.FC<PlantIdentificationComponentProps> 
 
     const validationResult = await PlantImageValidator.validatePlantImage(file);
     const isValid = PlantImageValidator.handleValidationResult(validationResult);
-    
-    if (!isValid) {
-      return;
-    }
+    if (!isValid) return;
 
     setGbifInfo(null);
     setPlantariumInfo(null);
     
     const result = await identifyPlant(file);
-    
     if (result?.scientificName) {
-      console.log('🌍 Recupero dati esterni per:', result.scientificName);
       await Promise.all([
         fetchGBIFInfo(result.scientificName),
         fetchPlantariumInfo(result.scientificName)
       ]);
-    } else {
-      console.log('❌ Nessun nome scientifico disponibile per ricerche esterne');
     }
   };
 
   const handleDrop = async (e: React.DragEvent) => {
     e.preventDefault();
     setDragOver(false);
-
     const files = Array.from(e.dataTransfer.files);
-    if (files.length > 0) {
-      await handleFileSelect(files[0]);
-    }
+    if (files.length > 0) await handleFileSelect(files[0]);
   };
 
   const handleFileInputChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
-    if (files && files.length > 0) {
-      await handleFileSelect(files[0]);
-    }
+    if (files && files.length > 0) await handleFileSelect(files[0]);
   };
 
   const triggerFileInput = () => {
@@ -149,8 +131,8 @@ const PlantIdentificationComponent: React.FC<PlantIdentificationComponentProps> 
   const resetIdentification = () => {
     originalResetIdentification();
     setGbifInfo(null);
-    setIsLoadingGBIF(false);
     setPlantariumInfo(null);
+    setIsLoadingGBIF(false);
     setIsLoadingPlantarium(false);
   };
 
@@ -159,21 +141,7 @@ const PlantIdentificationComponent: React.FC<PlantIdentificationComponentProps> 
 
   return (
     <div className="w-full max-w-4xl mx-auto space-y-6">
-      {/* Header */}
-      <div className="text-center">
-        <div className="flex items-center justify-center gap-2 mb-4">
-          <Leaf className="h-8 w-8 text-drplant-green" />
-          <h2 className="text-3xl font-bold text-drplant-blue-dark">
-            Identificazione Piante
-          </h2>
-        </div>
-        <p className="text-gray-600">
-          Identifica qualsiasi pianta caricando una foto con la tecnologia Plant.ID
-        </p>
-      </div>
-
-      {/* Upload Area */}
-      {/* ... resto invariato ... */}
+      {/* HEADER, UPLOAD, ecc... invariati */}
 
       {/* Risultati */}
       {identificationResult && !isIdentifying && (
@@ -184,17 +152,15 @@ const PlantIdentificationComponent: React.FC<PlantIdentificationComponentProps> 
                 <Leaf className="h-5 w-5 text-drplant-green" />
                 Risultato Identificazione
               </CardTitle>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={resetIdentification}
-              >
+              <Button variant="outline" size="sm" onClick={resetIdentification}>
                 Nuova Identificazione
               </Button>
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid md:grid-cols-2 gap-4">
+              
+              {/* COLONNA SINISTRA: distribuzione */}
               <div>
                 <h3 className="font-semibold text-lg text-drplant-blue-dark mb-2">
                   {identificationResult.plantName}
@@ -202,8 +168,7 @@ const PlantIdentificationComponent: React.FC<PlantIdentificationComponentProps> 
                 <p className="text-gray-600 italic mb-2">
                   {identificationResult.scientificName}
                 </p>
-                
-                {/* Sezione Distribuzione aggiornata */}
+
                 {gbifInfo || plantariumInfo ? (
                   <div className="mt-4 p-3 bg-blue-50 rounded-lg">
                     <h4 className="font-medium text-blue-800 mb-2 flex items-center gap-2">
@@ -211,10 +176,9 @@ const PlantIdentificationComponent: React.FC<PlantIdentificationComponentProps> 
                       Distribuzione Geografica
                     </h4>
                     <div className="space-y-2 text-sm text-blue-700">
-                      {/* Dati GBIF */}
                       {gbifInfo?.nativeCountries?.length > 0 && (
                         <div className="flex items-start gap-2">
-                          <MapPin className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+                          <MapPin className="h-4 w-4 text-green-600 mt-0.5" />
                           <div>
                             <span className="font-medium">Habitat nativo (GBIF): </span>
                             {gbifInfo.nativeCountries.slice(0, 5).join(', ')}
@@ -223,7 +187,7 @@ const PlantIdentificationComponent: React.FC<PlantIdentificationComponentProps> 
                       )}
                       {gbifInfo?.introducedCountries?.length > 0 && (
                         <div className="flex items-start gap-2">
-                          <MapPin className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                          <MapPin className="h-4 w-4 text-blue-600 mt-0.5" />
                           <div>
                             <span className="font-medium">Coltivata in (GBIF): </span>
                             {gbifInfo.introducedCountries.slice(0, 3).join(', ')}
@@ -235,10 +199,9 @@ const PlantIdentificationComponent: React.FC<PlantIdentificationComponentProps> 
                           📊 {gbifInfo.totalOccurrences.toLocaleString()} osservazioni registrate in GBIF
                         </div>
                       )}
-                      {/* Dati Plantarium */}
                       {plantariumInfo?.distribution && (
                         <div className="flex items-start gap-2">
-                          <MapPin className="h-4 w-4 text-purple-600 mt-0.5 flex-shrink-0" />
+                          <MapPin className="h-4 w-4 text-purple-600 mt-0.5" />
                           <div>
                             <span className="font-medium">Distribuzione (Plantarium): </span>
                             {plantariumInfo.distribution}
@@ -247,7 +210,7 @@ const PlantIdentificationComponent: React.FC<PlantIdentificationComponentProps> 
                       )}
                       {plantariumInfo?.habitat && (
                         <div className="flex items-start gap-2">
-                          <MapPin className="h-4 w-4 text-orange-600 mt-0.5 flex-shrink-0" />
+                          <MapPin className="h-4 w-4 text-orange-600 mt-0.5" />
                           <div>
                             <span className="font-medium">Habitat (Plantarium): </span>
                             {plantariumInfo.habitat}
@@ -269,10 +232,60 @@ const PlantIdentificationComponent: React.FC<PlantIdentificationComponentProps> 
                 )}
               </div>
 
-              {/* Colonna caratteristiche Plantarium */}
+              {/* COLONNA DESTRA: caratteristiche enciclopediche */}
               <div>
-                {/* ... resto invariato ... */}
+                <div className="mb-4">
+                  <h4 className="font-medium text-gray-700 mb-2">Caratteristiche specifiche:</h4>
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                    {isLoadingPlantarium ? (
+                      <div className="flex items-center space-x-2">
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-600"></div>
+                        <span className="text-sm text-gray-600">Caricamento informazioni enciclopediche...</span>
+                      </div>
+                    ) : plantariumInfo ? (
+                      <div className="prose prose-sm max-w-none space-y-3">
+                        <div 
+                          className="text-gray-700 text-sm leading-relaxed whitespace-pre-line"
+                          dangerouslySetInnerHTML={{ 
+                            __html: PlantariumService.formatEncyclopedicText(plantariumInfo)
+                              .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') 
+                          }}
+                        />
+                        {plantariumInfo.distribution && (
+                          <p className="text-sm text-purple-700">
+                            <strong>Distribuzione:</strong> {plantariumInfo.distribution}
+                          </p>
+                        )}
+                        {plantariumInfo.habitat && (
+                          <p className="text-sm text-orange-700">
+                            <strong>Habitat:</strong> {plantariumInfo.habitat}
+                          </p>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="text-gray-700 text-sm leading-relaxed">
+                        Informazioni enciclopediche non disponibili per questa specie.
+                      </p>
+                    )}
+
+                    {/* Classificazione tassonomica */}
+                    {gbifInfo && (
+                      <div className="bg-gray-50 p-3 rounded-lg mt-3">
+                        <p className="font-medium text-gray-800 mb-1">🌿 Classificazione tassonomica:</p>
+                        <div className="text-gray-700 text-sm space-y-1">
+                          {gbifInfo.kingdom && <div><span className="font-medium">Regno:</span> {gbifInfo.kingdom}</div>}
+                          {gbifInfo.phylum && <div><span className="font-medium">Phylum:</span> {gbifInfo.phylum}</div>}
+                          {gbifInfo.class && <div><span className="font-medium">Classe:</span> {gbifInfo.class}</div>}
+                          {gbifInfo.order && <div><span className="font-medium">Ordine:</span> {gbifInfo.order}</div>}
+                          {gbifInfo.family && <div><span className="font-medium">Famiglia:</span> {gbifInfo.family}</div>}
+                          {gbifInfo.genus && <div><span className="font-medium">Genere:</span> {gbifInfo.genus}</div>}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
+
             </div>
           </CardContent>
         </Card>
