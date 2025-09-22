@@ -141,7 +141,118 @@ const PlantIdentificationComponent: React.FC<PlantIdentificationComponentProps> 
 
   return (
     <div className="w-full max-w-4xl mx-auto space-y-6">
-      {/* HEADER, UPLOAD, ecc... invariati */}
+      {/* Header */}
+      <Card className="bg-gradient-to-r from-drplant-green/5 to-drplant-blue-light/10 border-drplant-green/20">
+        <CardHeader className="text-center">
+          <CardTitle className="text-2xl font-bold text-drplant-blue-dark flex items-center justify-center gap-2">
+            <Leaf className="h-6 w-6 text-drplant-green" />
+            Identificazione Pianta
+          </CardTitle>
+          <p className="text-gray-600 mt-2">
+            Carica una foto della tua pianta per scoprire di che specie si tratta
+          </p>
+          {user && !usage.has_premium_plan && (
+            <div className="flex items-center justify-center gap-2 mt-2">
+              <span className="text-sm text-gray-500">
+                Identificazioni rimaste: <Badge variant="outline">{remainingIdentifications}</Badge>
+              </span>
+            </div>
+          )}
+        </CardHeader>
+      </Card>
+
+      {/* Upload Area */}
+      {!identificationResult && !isIdentifying && (
+        <Card className="border-2 border-dashed border-drplant-green/30 hover:border-drplant-green/50 transition-colors">
+          <CardContent className="p-8">
+            <div
+              className={`text-center space-y-4 ${dragOver ? 'bg-drplant-green/5 rounded-lg p-4' : ''}`}
+              onDragOver={(e) => {
+                e.preventDefault();
+                setDragOver(true);
+              }}
+              onDragLeave={() => setDragOver(false)}
+              onDrop={handleDrop}
+            >
+              <div className="flex justify-center space-x-4">
+                <Button
+                  onClick={() => setIsCameraOpen(true)}
+                  className="flex items-center gap-2"
+                  size="lg"
+                >
+                  <Camera className="h-5 w-5" />
+                  Usa Fotocamera
+                </Button>
+                <Button
+                  onClick={triggerFileInput}
+                  variant="outline"
+                  size="lg"
+                  className="flex items-center gap-2"
+                >
+                  <Upload className="h-5 w-5" />
+                  Carica Foto
+                </Button>
+              </div>
+              <p className="text-gray-500 text-sm">
+                Oppure trascina qui la tua immagine
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Loading State */}
+      {isIdentifying && (
+        <Card className="border-drplant-blue/20">
+          <CardContent className="p-8 text-center">
+            <div className="flex flex-col items-center space-y-4">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-drplant-green"></div>
+              <h3 className="text-lg font-semibold text-drplant-blue-dark">
+                Identificazione in corso...
+              </h3>
+              <p className="text-gray-600">
+                Sto analizzando la tua pianta e raccogliendo informazioni dettagliate
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Upgrade Prompt */}
+      {showUpgradePrompt && (
+        <Alert className="border-amber-200 bg-amber-50">
+          <Crown className="h-4 w-4 text-amber-600" />
+          <AlertDescription className="text-amber-800">
+            <div className="flex items-center justify-between">
+              <span>Hai esaurito le identificazioni gratuite. Passa al piano Premium per identificazioni illimitate!</span>
+              <Button onClick={onUpgrade} size="sm" className="ml-4">
+                Upgrade
+              </Button>
+            </div>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Camera Modal */}
+      {isCameraOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-4 max-w-md w-full mx-4">
+            <CameraCapture
+              onCapture={handleCameraCapture}
+              onCancel={handleCameraCancel}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Hidden File Input */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleFileInputChange}
+        accept="image/*"
+        className="hidden"
+      />
 
       {/* Risultati */}
       {identificationResult && !isIdentifying && (
