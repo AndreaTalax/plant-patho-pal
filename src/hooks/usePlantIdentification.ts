@@ -12,21 +12,6 @@ export interface PlantIdentificationResult {
   familyName?: string;
   description?: string;
   images?: string[];
-  // Plant Health Assessment da Plant.ID
-  healthAssessment?: {
-    isHealthy: boolean;
-    overallScore: number;
-    diseases: Array<{
-      name: string;
-      confidence: number;
-      symptoms: string[];
-      treatments: string[];
-      cause: string;
-      source: string;
-      severity: 'low' | 'medium' | 'high';
-    }>;
-    issues: any[];
-  };
 }
 
 export interface PlantIdentificationUsage {
@@ -126,55 +111,36 @@ export const usePlantIdentification = () => {
         reader.readAsDataURL(imageFile);
       });
 
-      // Chiama l'API di diagnosi completa Plant.ID (con health assessment)
-      const { data, error } = await supabase.functions.invoke('real-plant-diagnosis', {
+      // Chiama l'API Plant.ID tramite Supabase Edge Function
+      const { data, error } = await supabase.functions.invoke('plant-id-diagnosis', {
         body: { 
           imageBase64: imageBase64
         }
       });
 
       if (error) {
-        console.error('Errore diagnosi Plant.ID:', error);
-        toast.error('Errore nell\'identificazione e diagnosi della pianta');
+        console.error('Errore identificazione Plant.ID:', error);
+        toast.error('Errore nell\'identificazione della pianta');
         return null;
       }
 
-      // Processa i risultati dalla diagnosi completa
-      console.log('🌿 Real Plant Diagnosis response:', data);
-
-      if (!data?.plantIdentification || data.plantIdentification.length === 0) {
+      // Processa i risultati
+      const topSuggestion = data.suggestions?.[0];
+      if (!topSuggestion) {
         toast.warning('Nessuna identificazione trovata per questa immagine');
         return null;
       }
 
-      // Prendi la migliore identificazione
-      const bestIdentification = data.plantIdentification[0];
-      
-      // Costruisci l'health assessment dai risultati
-      const healthAssessment = data.healthAnalysis ? {
-        isHealthy: data.healthAnalysis.isHealthy,
-        overallScore: data.healthAnalysis.overallScore || 0,
-        diseases: data.diseases || [],
-        issues: data.healthAnalysis.issues || []
-      } : undefined;
-
       const result: PlantIdentificationResult = {
-        plantName: bestIdentification.name || 'Pianta non identificata',
-        scientificName: bestIdentification.scientificName || 'Specie sconosciuta',
-        confidence: Math.round(bestIdentification.confidence || 70),
-        commonNames: [], // Sarà popolato se disponibile nei dati
-        probability: Math.round(bestIdentification.confidence || 70),
-        familyName: bestIdentification.family,
-        description: undefined, // Verrà integrato da Plantarium/GBIF
-        images: [], // Sarà popolato se disponibile
-        healthAssessment: healthAssessment
+        plantName: topSuggestion.plant_name || 'Pianta non identificata',
+        scientificName: topSuggestion.plant_details?.scientific_name || 'Specie sconosciuta',
+        confidence: Math.round((topSuggestion.probability || 0.7) * 100),
+        commonNames: topSuggestion.plant_details?.common_names || [],
+        probability: Math.round((topSuggestion.probability || 0.7) * 100),
+        familyName: topSuggestion.plant_details?.taxonomy?.family,
+        description: topSuggestion.plant_details?.wiki_description?.value,
+        images: topSuggestion.similar_images?.map((img: any) => img.url) || []
       };
-
-      console.log('🌿 Processed plant result:', {
-        plantName: result.plantName,
-        isHealthy: result.healthAssessment?.isHealthy,
-        diseaseCount: result.healthAssessment?.diseases?.length || 0
-      });
 
       setIdentificationResult(result);
       
