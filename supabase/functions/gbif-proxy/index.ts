@@ -9,6 +9,7 @@ serve(async (req) => {
 
   try {
     const { action, scientificName, speciesKey } = await req.json()
+    console.log(`🔍 GBIF: Received request - action: ${action}, scientificName: ${scientificName}, speciesKey: ${speciesKey}`)
 
     const GBIF_BASE_URL = 'https://api.gbif.org/v1'
 
@@ -70,31 +71,36 @@ serve(async (req) => {
       // 3. Se non ci sono dati specifici, prova a cercare il genere
       if ((!occurrenceData.facets || occurrenceData.facets.length === 0) && !distributionData?.results?.length) {
         console.log('🔄 GBIF: No specific data found, trying genus-level search')
+        console.log(`🧬 GBIF: Scientific name provided: ${scientificName}`)
         
-        // Estrai il genere dal nome scientifico (prima parola)
-        const genusUrl = `${GBIF_BASE_URL}/species/search?q=${encodeURIComponent(scientificName.split(' ')[0])}&limit=5`
-        try {
-          const genusResponse = await fetch(genusUrl)
-          if (genusResponse.ok) {
-            const genusData = await genusResponse.json()
-            if (genusData.results && genusData.results.length > 0) {
-              const genusKey = genusData.results[0].key
-              const genusOccurrenceUrl = `${GBIF_BASE_URL}/occurrence/search?taxon_key=${genusKey}&facet=country&limit=20`
-              const genusOccurrenceResponse = await fetch(genusOccurrenceUrl)
-              if (genusOccurrenceResponse.ok) {
-                const genusOccurrenceData = await genusOccurrenceResponse.json()
-                console.log(`🌿 GBIF: Found ${genusOccurrenceData.count || 0} genus-level occurrences`)
-                
-                // Unisci i dati se il genere ha più informazioni
-                if (genusOccurrenceData.facets && genusOccurrenceData.facets.length > 0) {
-                  occurrenceData.facets = genusOccurrenceData.facets
-                  occurrenceData.count = genusOccurrenceData.count
+        if (scientificName) {
+          // Estrai il genere dal nome scientifico (prima parola)
+          const genus = scientificName.split(' ')[0]
+          console.log(`🌿 GBIF: Extracted genus: ${genus}`)
+          const genusUrl = `${GBIF_BASE_URL}/species/search?q=${encodeURIComponent(genus)}&limit=5`
+          try {
+            const genusResponse = await fetch(genusUrl)
+            if (genusResponse.ok) {
+              const genusData = await genusResponse.json()
+              if (genusData.results && genusData.results.length > 0) {
+                const genusKey = genusData.results[0].key
+                const genusOccurrenceUrl = `${GBIF_BASE_URL}/occurrence/search?taxon_key=${genusKey}&facet=country&limit=20`
+                const genusOccurrenceResponse = await fetch(genusOccurrenceUrl)
+                if (genusOccurrenceResponse.ok) {
+                  const genusOccurrenceData = await genusOccurrenceResponse.json()
+                  console.log(`🌿 GBIF: Found ${genusOccurrenceData.count || 0} genus-level occurrences`)
+                  
+                  // Unisci i dati se il genere ha più informazioni
+                  if (genusOccurrenceData.facets && genusOccurrenceData.facets.length > 0) {
+                    occurrenceData.facets = genusOccurrenceData.facets
+                    occurrenceData.count = genusOccurrenceData.count
+                  }
                 }
               }
             }
+          } catch (error) {
+            console.warn('GBIF genus search failed:', error)
           }
-        } catch (error) {
-          console.warn('GBIF genus search failed:', error)
         }
       }
       

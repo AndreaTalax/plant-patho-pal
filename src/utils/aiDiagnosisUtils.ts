@@ -117,11 +117,11 @@ export const diseaseDetails = {
     environmentalConditions: 'Moderate temperatures, high nitrogen levels in plants, early spring growth.',
     spreadMechanism: 'Winged adults fly to new plants. Reproduce rapidly with each adult producing 40-60 offspring.',
     preventionTips: [
-      'Encourage beneficial insects like ladybugs and lacewings',
-      'Use reflective mulch to deter aphids',
-      'Avoid excessive nitrogen fertilization',
-      'Plant trap crops like nasturtiums',
-      'Use yellow sticky traps to monitor populations'
+      'Incoraggiare insetti utili come coccinelle e crisope',
+      'Usare pacciamatura riflettente per scoraggiare gli afidi',
+      'Evitare fertilizzazione eccessiva con azoto',
+      'Piantare colture trappola come i nasturzi',
+      'Usare trappole adesive gialle per monitorare le popolazioni'
     ]
   },
   'root-rot': {
@@ -186,11 +186,11 @@ export const diseaseDetails = {
     spreadMechanism: 'Spread by rain, insects (particularly bees), birds, and contaminated pruning tools. Can be dormant in winter cankers.',
     regulatoryStatus: 'EPPO A2 List quarantine pest',
     preventionTips: [
-      'Plant resistant varieties',
-      'Avoid excessive nitrogen fertilization',
-      'Prune during dormant season',
-      'Sterilize pruning tools between cuts',
-      'Apply copper-based or antibiotic treatments preventatively during bloom'
+      'Piantare varietà resistenti',
+      'Evitare fertilizzazione eccessiva con azoto',
+      'Potare durante la stagione di riposo',
+      'Sterilizzare gli attrezzi di potatura tra un taglio e l\'altro',
+      'Applicare trattamenti preventivi a base di rame o antibiotici durante la fioritura'
     ]
   }
 };
