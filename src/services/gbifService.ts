@@ -28,7 +28,6 @@ export interface GBIFSpeciesInfo {
 }
 
 export class GBIFService {
-  private static readonly SUPABASE_FUNCTION_URL = 'https://otdmqmpxukifoxjlgzmq.supabase.co/functions/v1/gbif-proxy';
   
   /**
    * Cerca una specie per nome scientifico
@@ -37,23 +36,22 @@ export class GBIFService {
     try {
       console.log(`🌍 GBIF: Ricerca specie "${scientificName}"`);
       
+      // Importa supabase client
+      const { supabase } = await import('@/integrations/supabase/client');
+      
       // Usa la edge function come proxy per evitare problemi CORS
-      const searchResponse = await fetch(this.SUPABASE_FUNCTION_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+      const { data: searchResponse, error: searchError } = await supabase.functions.invoke('gbif-proxy', {
+        body: {
           action: 'searchSpecies',
           scientificName: scientificName
-        })
+        }
       });
       
-      if (!searchResponse.ok) {
-        throw new Error(`GBIF search failed: ${searchResponse.status}`);
+      if (searchError) {
+        throw new Error(`GBIF search failed: ${searchError.message}`);
       }
       
-      const searchData = await searchResponse.json();
+      const searchData = searchResponse;
       
       if (!searchData.results || searchData.results.length === 0) {
         console.log(`⚠️ GBIF: Nessuna specie trovata per "${scientificName}"`);
@@ -104,23 +102,22 @@ export class GBIFService {
     try {
       console.log(`🗺️ GBIF: Ottengo distribuzione per specie ${speciesKey}`);
       
+      // Importa supabase client
+      const { supabase } = await import('@/integrations/supabase/client');
+      
       // Usa la edge function come proxy
-      const distributionResponse = await fetch(this.SUPABASE_FUNCTION_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+      const { data: distributionResponse, error: distributionError } = await supabase.functions.invoke('gbif-proxy', {
+        body: {
           action: 'getDistribution',
           speciesKey: speciesKey
-        })
+        }
       });
       
-      if (!distributionResponse.ok) {
-        throw new Error(`GBIF distribution search failed: ${distributionResponse.status}`);
+      if (distributionError) {
+        throw new Error(`GBIF distribution search failed: ${distributionError.message}`);
       }
       
-      const { occurrence: occurrenceData, distribution: distributionData } = await distributionResponse.json();
+      const { occurrence: occurrenceData, distribution: distributionData } = distributionResponse;
       const countryFacets = occurrenceData.facets?.find((f: any) => f.field === 'COUNTRY')?.counts || [];
       const distributionDetails = distributionData?.results || [];
       

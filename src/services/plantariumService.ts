@@ -18,7 +18,6 @@ export interface PlantariumPlantInfo {
 }
 
 export class PlantariumService {
-  private static readonly SUPABASE_FUNCTION_URL = 'https://otdmqmpxukifoxjlgzmq.supabase.co/functions/v1/plantarium-proxy';
   
   /**
    * Cerca informazioni enciclopediche per una specie
@@ -27,22 +26,19 @@ export class PlantariumService {
     try {
       console.log(`📖 Plantarium: Ricerca informazioni per "${scientificName}"`);
       
-      const response = await fetch(this.SUPABASE_FUNCTION_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+      // Importa supabase client
+      const { supabase } = await import('@/integrations/supabase/client');
+      
+      const { data, error } = await supabase.functions.invoke('plantarium-proxy', {
+        body: {
           action: 'getPlantInfo',
           scientificName: scientificName
-        })
+        }
       });
       
-      if (!response.ok) {
-        throw new Error(`Plantarium search failed: ${response.status}`);
+      if (error) {
+        throw new Error(`Plantarium search failed: ${error.message}`);
       }
-      
-      const data = await response.json();
       
       if (data.error) {
         console.log(`⚠️ Plantarium: ${data.error}`);
