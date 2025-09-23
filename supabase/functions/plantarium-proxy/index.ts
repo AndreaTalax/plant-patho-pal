@@ -93,14 +93,28 @@ serve(async (req) => {
             }
             
             if (needsDescription && wikiData.description) {
-              plantInfo.description = wikiData.description
-              console.log('✅ Added description from Wikipedia')
+              // Se la descrizione viene dall'inglese, prova a tradurla
+              if (wikiData.description && wikiData.description.includes('is known by') || wikiData.description.includes('is a species of')) {
+                const translatedDescription = await translateToItalian(wikiData.description)
+                plantInfo.description = translatedDescription || wikiData.description
+                console.log('✅ Added translated description from Wikipedia')
+              } else {
+                plantInfo.description = wikiData.description
+                console.log('✅ Added description from Wikipedia')
+              }
             }
 
             // Se ancora manca la descrizione, usa l'estratto di Wikipedia
             if (!plantInfo.description && wikiData.extract) {
-              plantInfo.description = wikiData.extract
-              console.log('✅ Used Wikipedia extract as description')
+              // Controlla se l'estratto è in inglese e traducilo se necessario
+              if (wikiData.extract.includes('is known by') || wikiData.extract.includes('is a species of')) {
+                const translatedExtract = await translateToItalian(wikiData.extract)
+                plantInfo.description = translatedExtract || wikiData.extract
+                console.log('✅ Used translated Wikipedia extract as description')
+              } else {
+                plantInfo.description = wikiData.extract
+                console.log('✅ Used Wikipedia extract as description')
+              }
             }
           }
         } catch (wikiError) {
@@ -181,11 +195,14 @@ async function getWikipediaData(scientificName: string) {
       
       const enWikiData = await enWikiResponse.json()
       
+      // Traduci il testo dall'inglese all'italiano
+      const translatedDescription = await translateToItalian(enWikiData.extract)
+      
       return {
-        extract: enWikiData.extract,
-        description: enWikiData.extract,
-        distribution: extractDistributionFromText(enWikiData.extract),
-        habitat: extractHabitatFromText(enWikiData.extract)
+        extract: translatedDescription || enWikiData.extract,
+        description: translatedDescription || enWikiData.extract,
+        distribution: extractDistributionFromText(translatedDescription || enWikiData.extract),
+        habitat: extractHabitatFromText(translatedDescription || enWikiData.extract)
       }
     }
     
@@ -286,17 +303,48 @@ async function searchWikipediaFallback(scientificName: string) {
       }
     })
     
+    let wikiData: any = null
+    let isFromEnglish = false
+    
     if (!wikiResponse.ok) {
-      throw new Error('Wikipedia search failed')
+      console.log('❌ Italian Wikipedia not found, trying English Wikipedia')
+      
+      // Prova con Wikipedia inglese
+      const enSearchUrl = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(scientificName)}`
+      const enWikiResponse = await fetch(enSearchUrl, {
+        headers: {
+          'User-Agent': 'Plant-Identification-App/1.0'
+        }
+      })
+      
+      if (!enWikiResponse.ok) {
+        throw new Error('Wikipedia search failed in both languages')
+      }
+      
+      wikiData = await enWikiResponse.json()
+      isFromEnglish = true
+    } else {
+      wikiData = await wikiResponse.json()
     }
     
-    const wikiData = await wikiResponse.json()
+    // Se i dati vengono dall'inglese, traducili
+    let description = wikiData.extract || 'Informazioni enciclopediche non disponibili.'
+    let characteristics = wikiData.extract ? `${wikiData.extract}` : undefined
+    
+    if (isFromEnglish && wikiData.extract) {
+      const translatedDescription = await translateToItalian(wikiData.extract)
+      if (translatedDescription) {
+        description = translatedDescription
+        characteristics = translatedDescription
+        console.log('✅ Wikipedia content translated from English to Italian')
+      }
+    }
     
     const plantInfo = {
       scientificName: scientificName,
       commonName: wikiData.displaytitle !== scientificName ? wikiData.displaytitle : undefined,
-      description: wikiData.extract || 'Informazioni enciclopediche non disponibili.',
-      characteristics: wikiData.extract ? `Estratto da Wikipedia: ${wikiData.extract}` : undefined,
+      description: description,
+      characteristics: characteristics,
       imageUrl: wikiData.thumbnail?.source
     }
     
@@ -307,7 +355,6 @@ async function searchWikipediaFallback(scientificName: string) {
         status: 200,
       },
     )
-    
   } catch (error) {
     console.error('Wikipedia fallback error:', error)
     
@@ -325,5 +372,49 @@ async function searchWikipediaFallback(scientificName: string) {
         status: 200,
       },
     )
+  }
+}
+
+// Funzione per tradurre testo dall'inglese all'italiano
+async function translateToItalian(text: string): Promise<string | null> {
+  if (!text) return null
+  
+  try {
+    console.log('🔄 Translating text to Italian...')
+    
+    // Usa un dizionario di traduzioni comuni per termini botanici
+    const botanicalTranslations: { [key: string]: string } = {
+      'is known by the common names': 'è conosciuta con i nomi comuni',
+      'is a species of': 'è una specie di',
+      'bulbous flowering plant': 'pianta bulbosa da fiore',
+      'flowering plant': 'pianta da fiore',
+      'in the family': 'della famiglia',
+      'can reach a height of': 'può raggiungere un\'altezza di',
+      'can carry up to': 'può portare fino a',
+      'flowers': 'fiori',
+      'greenish white': 'bianco-verdastri',
+      'flowering stems': 'steli floreali',
+      'pregnant onion': 'cipolla gravida',
+      'false sea onion': 'falsa cipolla di mare',
+      'sea-onion': 'cipolla di mare'
+    }
+    
+    let translatedText = text
+    
+    // Applica le traduzioni botaniche comuni
+    for (const [english, italian] of Object.entries(botanicalTranslations)) {
+      const regex = new RegExp(english, 'gi')
+      translatedText = translatedText.replace(regex, italian)
+    }
+    
+    // Traduzioni specifiche per numeri e unità di misura
+    translatedText = translatedText.replace(/(\d+)\s*cm/g, '$1 cm').replace(/(\d+)\s*m/g, '$1 m')
+    
+    console.log('✅ Text translated to Italian')
+    return translatedText
+    
+  } catch (error) {
+    console.error('❌ Translation failed:', error)
+    return null
   }
 }

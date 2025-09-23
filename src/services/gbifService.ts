@@ -65,7 +65,7 @@ export class GBIFService {
       console.log(`✅ GBIF: Trovata specie ${species.scientificName} (key: ${speciesKey})`);
       
       // Ottieni la distribuzione geografica
-      const distribution = await this.getSpeciesDistribution(speciesKey);
+      const distribution = await this.getSpeciesDistribution(speciesKey, species.scientificName || scientificName);
       
       return {
         scientificName: species.scientificName || scientificName,
@@ -93,7 +93,7 @@ export class GBIFService {
   /**
    * Ottiene la distribuzione geografica di una specie
    */
-  private static async getSpeciesDistribution(speciesKey: number): Promise<{
+  private static async getSpeciesDistribution(speciesKey: number, scientificName?: string): Promise<{
     all: GBIFDistribution[];
     native: string[];
     introduced: string[];
@@ -109,7 +109,8 @@ export class GBIFService {
       const { data: distributionResponse, error: distributionError } = await supabase.functions.invoke('gbif-proxy', {
         body: {
           action: 'getDistribution',
-          speciesKey: speciesKey
+          speciesKey: speciesKey,
+          scientificName: scientificName
         }
       });
       
@@ -124,13 +125,14 @@ export class GBIFService {
       const all: GBIFDistribution[] = [];
       const native: string[] = [];
       const introduced: string[] = [];
-      let totalOccurrences = 0;
+      
+      // Usa il conteggio totale diretto dall'API GBIF se disponibile
+      let totalOccurrences = occurrenceData.count || 0;
       
       // Processa i risultati delle occorrenze per paese
       for (const countryFacet of countryFacets.slice(0, 20)) { // Limita ai primi 20 paesi per performance
         const countryCode = countryFacet.name;
         const count = countryFacet.count;
-        totalOccurrences += count;
         
         // Trova dettagli aggiuntivi sulla distribuzione se disponibili
         const distributionInfo = distributionDetails.find(d => 
@@ -160,7 +162,12 @@ export class GBIFService {
         }
       }
       
-      console.log(`✅ GBIF: Distribuzione ottenuta - ${all.length} paesi, ${totalOccurrences} occorrenze`);
+      console.log(`✅ GBIF: Distribuzione ottenuta - ${all.length} paesi, ${totalOccurrences} occorrenze totali`);
+      
+      // Se non abbiamo paesi ma abbiamo occorrenze, mostra almeno il numero
+      if (all.length === 0 && totalOccurrences > 0) {
+        console.log(`📊 GBIF: Nessun dettaglio per paese ma ${totalOccurrences} occorrenze trovate`);
+      }
       
       return {
         all,
