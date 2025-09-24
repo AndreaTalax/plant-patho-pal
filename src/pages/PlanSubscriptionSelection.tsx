@@ -30,12 +30,20 @@ const PlanSubscriptionSelection = () => {
   useEffect(() => {
     if (!isAuthenticated) {
       navigate('/login');
+      return;
     }
   }, [isAuthenticated, navigate]);
 
-  // Don't render anything if not authenticated
+  // Show loading state if not authenticated instead of early return
   if (!isAuthenticated) {
-    return null;
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-drplant-blue-light via-white to-drplant-green/10 flex flex-col items-center justify-center px-4 py-8">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-drplant-green mx-auto mb-4"></div>
+          <p className="text-gray-600">Redirecting to login...</p>
+        </div>
+      </div>
+    );
   }
 
   const handlePlanSelection = (planType: PlanType) => {
@@ -49,14 +57,6 @@ const PlanSubscriptionSelection = () => {
     }
   };
 
-  // Auto-select professional plan if navigating directly from chat
-  useEffect(() => {
-    const searchParams = new URLSearchParams(window.location.search);
-    if (searchParams.get('direct') === 'professional') {
-      setSelectedPlan('professionisti');
-      setCurrentStep('professional');
-    }
-  }, []);
 
   const handleSubscriptionSelect = (option: string) => {
     localStorage.setItem('selectedSubscriptionOption', option);
