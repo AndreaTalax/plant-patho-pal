@@ -53,6 +53,7 @@ function App() {
                     <Route path="/" element={<Index />} />
                     <Route path="/login" element={<Login />} />
                     <Route path="/plan-selection" element={<PlanSelection />} />
+                    <Route path="/plan-subscription" element={<PlanSubscriptionSelection />} />
                     <Route path="/plant-identification" element={<PlantIdentification />} />
                     <Route path="/signup" element={<SignUp />} />
                     <Route path="/complete-profile" element={<CompleteProfile />} />

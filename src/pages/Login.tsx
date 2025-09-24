@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,6 +19,7 @@ const Login = () => {
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
   const { login } = useAuth();
   const { language, setLanguage, t } = useTheme();
   const [showForgotPassword, setShowForgotPassword] = useState(false);
@@ -71,10 +72,27 @@ const Login = () => {
         });
         
         setTimeout(() => {
+          // Controlla se c'è un piano selezionato
+          const planTypeFromState = location.state?.planType;
+          const planTypeFromStorage = localStorage.getItem('selectedPlanType');
+          const selectedPlanType = planTypeFromState || planTypeFromStorage;
+          
           // test@gmail.com va sempre alla selezione piano per testare tutte le funzionalità
-          // Altri admin vanno direttamente alla home, utenti normali alla selezione piano
           const isTestAccount = emailLower === 'test@gmail.com';
-          const redirectPath = isTestAccount ? "/plan-selection" : (isAdminEmail ? "/" : "/plan-selection");
+          
+          let redirectPath = "/";
+          
+          if (isTestAccount) {
+            redirectPath = "/plan-selection";
+          } else if (selectedPlanType && ['privati', 'business', 'professionisti'].includes(selectedPlanType)) {
+            // Se ha selezionato un piano, va alla sottoscrizione
+            redirectPath = "/plan-subscription";
+          } else if (isAdminEmail) {
+            redirectPath = "/";
+          } else {
+            redirectPath = "/plan-selection";
+          }
+          
           navigate(redirectPath, { replace: true });
         }, 500);
       } else {
