@@ -1,8 +1,10 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { corsHeaders } from '../_shared/cors.ts'
 
+const GBIF_BASE_URL = 'https://api.gbif.org/v1'
+
 serve(async (req) => {
-  // Handle CORS preflight requests
+  // ✅ Gestione preflight per CORS
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
@@ -11,10 +13,15 @@ serve(async (req) => {
     const { action, scientificName, speciesKey } = await req.json()
     console.log(`🔍 GBIF: Received request - action: ${action}, scientificName: ${scientificName}, speciesKey: ${speciesKey}`)
 
-    const GBIF_BASE_URL = 'https://api.gbif.org/v1'
-
     // 🔎 Ricerca specie
     if (action === 'searchSpecies') {
+      if (!scientificName) {
+        return new Response(JSON.stringify({ error: 'Missing scientificName' }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400,
+        })
+      }
+
       const searchUrl = `${GBIF_BASE_URL}/species/search?q=${encodeURIComponent(scientificName)}&limit=5`
       console.log(`📡 GBIF: Searching species → ${searchUrl}`)
 
@@ -31,7 +38,14 @@ serve(async (req) => {
     }
 
     // 🗺️ Distribuzione e occorrenze
-    if (action === 'getDistribution' && speciesKey) {
+    if (action === 'getDistribution') {
+      if (!speciesKey) {
+        return new Response(JSON.stringify({ error: 'Missing speciesKey' }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400,
+        })
+      }
+
       console.log(`🔍 GBIF: Fetching distribution for species key ${speciesKey}`)
 
       // 1. Distribuzione dettagliata
@@ -39,6 +53,7 @@ serve(async (req) => {
       let distributionData: any = { results: [] }
 
       try {
+        console.log(`📡 GBIF: Fetching distribution data → ${distributionUrl}`)
         const distributionResponse = await fetch(distributionUrl)
         if (distributionResponse.ok) {
           distributionData = await distributionResponse.json()
@@ -50,7 +65,7 @@ serve(async (req) => {
         console.warn('⚠️ GBIF distribution fetch error:', err)
       }
 
-      // 2. Occorrenze aggregate per paese (✅ usa taxonKey)
+      // 2. Occorrenze aggregate per paese (✅ usa taxonKey, facet=COUNTRY, limit=0)
       const occurrenceUrl = `${GBIF_BASE_URL}/occurrence/search?taxonKey=${speciesKey}&facet=COUNTRY&facetLimit=200&limit=0`
       let occurrenceData: any = { count: 0, facets: [] }
 
@@ -76,6 +91,7 @@ serve(async (req) => {
       })
     }
 
+    // ❌ Azione non valida
     return new Response(JSON.stringify({ error: 'Invalid action' }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 400,
