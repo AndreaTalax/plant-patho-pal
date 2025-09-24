@@ -65,8 +65,8 @@ serve(async (req) => {
         console.warn('⚠️ GBIF distribution fetch error:', err)
       }
 
-      // 2. Occorrenze aggregate per paese (✅ usa taxonKey, facet=COUNTRY, limit=0)
-      const occurrenceUrl = `${GBIF_BASE_URL}/occurrence/search?taxonKey=${speciesKey}&facet=COUNTRY&facetLimit=200&limit=0`
+      // 2. Occorrenze aggregate per paese (✅ usa taxon_key, non taxonKey)
+      const occurrenceUrl = `${GBIF_BASE_URL}/occurrence/search?taxon_key=${speciesKey}&facet=COUNTRY&facetLimit=200&limit=0`
       let occurrenceData: any = { count: 0, facets: [] }
 
       try {
@@ -75,6 +75,14 @@ serve(async (req) => {
         if (occurrenceResponse.ok) {
           occurrenceData = await occurrenceResponse.json()
           console.log(`📊 GBIF: Found ${occurrenceData.count || 0} occurrences`)
+
+          // 🔎 Log dettagli sui facet COUNTRY
+          const countryFacet = occurrenceData.facets?.find((f: any) => f.field === 'COUNTRY')
+          if (countryFacet?.counts?.length) {
+            console.log(`🌍 GBIF: Country facets →`, countryFacet.counts.slice(0, 5)) // primi 5 paesi
+          } else {
+            console.log('⚠️ GBIF: Nessun facet COUNTRY trovato')
+          }
         } else {
           console.warn(`⚠️ GBIF: Occurrence request failed with status ${occurrenceResponse.status}`)
         }
