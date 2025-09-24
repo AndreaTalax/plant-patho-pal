@@ -1,10 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { corsHeaders } from '../_shared/cors.ts'
 
-const GBIF_BASE_URL = 'https://api.gbif.org/v1'
-
 serve(async (req) => {
-  // ✅ Gestione preflight per CORS
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
@@ -13,15 +11,10 @@ serve(async (req) => {
     const { action, scientificName, speciesKey } = await req.json()
     console.log(`🔍 GBIF: Received request - action: ${action}, scientificName: ${scientificName}, speciesKey: ${speciesKey}`)
 
+    const GBIF_BASE_URL = 'https://api.gbif.org/v1'
+
     // 🔎 Ricerca specie
     if (action === 'searchSpecies') {
-      if (!scientificName) {
-        return new Response(JSON.stringify({ error: 'Missing scientificName' }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 400,
-        })
-      }
-
       const searchUrl = `${GBIF_BASE_URL}/species/search?q=${encodeURIComponent(scientificName)}&limit=5`
       console.log(`📡 GBIF: Searching species → ${searchUrl}`)
 
@@ -38,14 +31,7 @@ serve(async (req) => {
     }
 
     // 🗺️ Distribuzione e occorrenze
-    if (action === 'getDistribution') {
-      if (!speciesKey) {
-        return new Response(JSON.stringify({ error: 'Missing speciesKey' }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 400,
-        })
-      }
-
+    if (action === 'getDistribution' && speciesKey) {
       console.log(`🔍 GBIF: Fetching distribution for species key ${speciesKey}`)
 
       // 1. Distribuzione dettagliata
@@ -53,7 +39,6 @@ serve(async (req) => {
       let distributionData: any = { results: [] }
 
       try {
-        console.log(`📡 GBIF: Fetching distribution data → ${distributionUrl}`)
         const distributionResponse = await fetch(distributionUrl)
         if (distributionResponse.ok) {
           distributionData = await distributionResponse.json()
@@ -65,30 +50,35 @@ serve(async (req) => {
         console.warn('⚠️ GBIF distribution fetch error:', err)
       }
 
-      // 2. Occorrenze aggregate per paese (✅ usa taxon_key, non taxonKey)
-      const occurrenceUrl = `${GBIF_BASE_URL}/occurrence/search?taxon_key=${speciesKey}&facet=COUNTRY&facetLimit=200&limit=0`
-      let occurrenceData: any = { count: 0, facets: [] }
-
-      try {
-        console.log(`📡 GBIF: Fetching occurrence data → ${occurrenceUrl}`)
-        const occurrenceResponse = await fetch(occurrenceUrl)
-        if (occurrenceResponse.ok) {
-          occurrenceData = await occurrenceResponse.json()
-          console.log(`📊 GBIF: Found ${occurrenceData.count || 0} occurrences`)
-
-          // 🔎 Log dettagli sui facet COUNTRY
-          const countryFacet = occurrenceData.facets?.find((f: any) => f.field === 'COUNTRY')
-          if (countryFacet?.counts?.length) {
-            console.log(`🌍 GBIF: Country facets →`, countryFacet.counts.slice(0, 5)) // primi 5 paesi
-          } else {
-            console.log('⚠️ GBIF: Nessun facet COUNTRY trovato')
+      // 2. Occorrenze aggregate con fallback COUNTRY → GADM_GID
+      async function fetchOccurrenceWithFallback(speciesKey: string) {
+        const facetsToTry = ["COUNTRY", "GADM_GID"]
+        for (const facet of facetsToTry) {
+          const occurrenceUrl = `${GBIF_BASE_URL}/occurrence/search?taxon_key=${speciesKey}&facet=${facet}&facetLimit=200&limit=0`
+          console.log(`📡 GBIF: Fetching occurrence data with facet=${facet} → ${occurrenceUrl}`)
+          try {
+            const response = await fetch(occurrenceUrl)
+            if (response.ok) {
+              const data = await response.json()
+              const facetData = data.facets?.find((f: any) => f.field === facet)
+              if (facetData?.counts?.length) {
+                console.log(`✅ GBIF: Found ${facetData.counts.length} results using facet=${facet}`)
+                return data
+              } else {
+                console.log(`ℹ️ GBIF: No results with facet=${facet}`)
+              }
+            } else {
+              console.warn(`⚠️ GBIF: Occurrence request failed with status ${response.status}`)
+            }
+          } catch (err) {
+            console.warn(`⚠️ GBIF occurrence fetch error with facet=${facet}:`, err)
           }
-        } else {
-          console.warn(`⚠️ GBIF: Occurrence request failed with status ${occurrenceResponse.status}`)
         }
-      } catch (err) {
-        console.warn('⚠️ GBIF occurrence fetch error:', err)
+        console.warn("⚠️ GBIF: Nessun facet valido trovato")
+        return { count: 0, facets: [] }
       }
+
+      const occurrenceData = await fetchOccurrenceWithFallback(speciesKey)
 
       return new Response(JSON.stringify({
         occurrence: occurrenceData,
@@ -99,7 +89,6 @@ serve(async (req) => {
       })
     }
 
-    // ❌ Azione non valida
     return new Response(JSON.stringify({ error: 'Invalid action' }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 400,
