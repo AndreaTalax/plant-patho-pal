@@ -222,19 +222,26 @@ export class GBIFService {
    * Formatta la distribuzione in un testo leggibile
    */
   static formatDistributionText(gbifInfo: GBIFSpeciesInfo): string {
-    if (!gbifInfo.distribution.length) {
-      return 'Distribuzione geografica non disponibile';
+    if (!gbifInfo.distribution.length && gbifInfo.totalOccurrences === 0) {
+      return 'Stato non identificato';
     }
     
-    // Filtra solo i nomi dei paesi, escludendo codici numerici
+    // Filtra solo i nomi dei paesi, escludendo codici numerici e stringhe vuote
     const topCountries = gbifInfo.distribution
       .slice(0, 10)
       .map(d => d.country)
-      .filter(country => isNaN(Number(country))) // Escludi numeri
-      .filter(country => country && country.length > 2); // Escludi codici brevi
+      .filter(country => {
+        if (!country || country.trim() === '') return false;
+        if (isNaN(Number(country))) return country.length > 2; // Escludi codici brevi
+        return false; // Escludi numeri
+      });
     
     if (topCountries.length === 0) {
-      return 'Distribuzione geografica non disponibile';
+      // Se abbiamo occorrenze ma non paesi specifici
+      if (gbifInfo.totalOccurrences > 0) {
+        return `${gbifInfo.totalOccurrences.toLocaleString()} occorrenze registrate - Stato non identificato`;
+      }
+      return 'Stato non identificato';
     }
     
     const additionalCount = Math.max(0, gbifInfo.distribution.length - 10);
