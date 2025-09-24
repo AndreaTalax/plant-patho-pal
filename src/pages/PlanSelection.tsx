@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -11,6 +12,7 @@ export type PlanType = 'privati' | 'business' | 'professionisti' | 'tutti';
 const PlanSelection = () => {
   const navigate = useNavigate();
   const { t } = useTheme();
+  const { isAuthenticated } = useAuth();
   const [selectedPlan, setSelectedPlan] = useState<PlanType | null>(null);
 
   const handlePlanSelection = (planType: PlanType) => {
@@ -24,8 +26,14 @@ const PlanSelection = () => {
     
     // Salva la selezione del piano nel localStorage
     localStorage.setItem('selectedPlanType', planType);
-    // Naviga alla pagina di login con il piano selezionato
-    navigate('/login', { state: { planType } });
+    
+    // Se l'utente è già autenticato, vai direttamente alla selezione sottoscrizione
+    if (isAuthenticated) {
+      navigate('/plan-subscription');
+    } else {
+      // Se non è autenticato, vai al login con il piano selezionato
+      navigate('/login', { state: { planType } });
+    }
   };
 
   const handlePlantIdentificationSelect = () => {
