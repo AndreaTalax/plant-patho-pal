@@ -226,17 +226,23 @@ export class GBIFService {
       return 'Distribuzione geografica non disponibile';
     }
     
-    const topCountries = gbifInfo.distribution.slice(0, 10).map(d => d.country);
-    const additionalCount = gbifInfo.distribution.length - 10;
+    // Filtra solo i nomi dei paesi, escludendo codici numerici
+    const topCountries = gbifInfo.distribution
+      .slice(0, 10)
+      .map(d => d.country)
+      .filter(country => isNaN(Number(country))) // Escludi numeri
+      .filter(country => country && country.length > 2); // Escludi codici brevi
+    
+    if (topCountries.length === 0) {
+      return 'Distribuzione geografica non disponibile';
+    }
+    
+    const additionalCount = Math.max(0, gbifInfo.distribution.length - 10);
     
     let text = `Distribuita principalmente in: ${topCountries.join(', ')}`;
     
     if (additionalCount > 0) {
       text += ` e altri ${additionalCount} paesi`;
-    }
-    
-    if (gbifInfo.totalOccurrences > 0) {
-      text += `. Totale occorrenze registrate: ${gbifInfo.totalOccurrences.toLocaleString()}`;
     }
     
     return text;
