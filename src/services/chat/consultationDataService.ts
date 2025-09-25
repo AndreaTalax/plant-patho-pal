@@ -60,6 +60,13 @@ export class ConsultationDataService {
         hasDiagnosis: !!diagnosisResult
       });
 
+      // Controlla prima se il PDF è già stato inviato
+      const alreadySent = await this.isConsultationDataSent(conversationId);
+      if (alreadySent) {
+        console.log('ℹ️ PDF consultazione già inviato per questa conversazione');
+        return true;
+      }
+
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         console.error('❌ User non autenticato');
@@ -74,7 +81,13 @@ export class ConsultationDataService {
       }
 
       // Genera il PDF professionale
-      console.log('📄 Generazione PDF in corso...');
+      console.log('📄 Generazione PDF in corso...', {
+        plantData,
+        userProfile,
+        diagnosisResult,
+        conversationId
+      });
+      
       const { data: pdfResult, error: pdfError } = await supabase.functions.invoke('generate-professional-pdf', {
         body: {
           plantData,
@@ -87,8 +100,15 @@ export class ConsultationDataService {
         },
       });
 
-      if (pdfError || !pdfResult?.success) {
+      console.log('📄 Risposta PDF function:', { pdfResult, pdfError });
+
+      if (pdfError) {
         console.error('❌ Errore generazione PDF:', pdfError);
+        return false;
+      }
+
+      if (!pdfResult?.success) {
+        console.error('❌ PDF function returned no success:', pdfResult);
         return false;
       }
 
@@ -169,7 +189,7 @@ export class ConsultationDataService {
         .from('messages')
         .select('id')
         .eq('conversation_id', conversationId)
-        .ilike('content', '%CONSULENZA PROFESSIONALE - DATI COMPLETI%')
+        .ilike('text', '%CONSULENZA PROFESSIONALE - DATI COMPLETI%')
         .limit(1);
 
       if (error) {
