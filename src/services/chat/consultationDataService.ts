@@ -115,34 +115,30 @@ export class ConsultationDataService {
 
       console.log('✅ PDF generato con successo:', pdfResult.fileName);
 
-      // Crea il messaggio con attachment PDF
+      // Invia il messaggio principale con PDF come link diretto  
       const pdfMessage = [
         "📋 **CONSULENZA PROFESSIONALE - DATI COMPLETI**",
         "",
         "Ho preparato un documento PDF completo con tutti i dati della consulenza:",
         "",
         "• Dati personali del paziente",
-        "• Informazioni dettagliate della pianta",
+        "• Informazioni dettagliate della pianta", 
         "• Risultati della diagnosi AI (se disponibili)",
         "• Foto della pianta (se presente)",
         "",
-        "Il documento è pronto per la revisione professionale."
+        "Il documento è pronto per la revisione professionale.",
+        "",
+        `📎 **[Scarica PDF Consulenza](${pdfResult.pdfUrl})**`
       ].join('\n');
 
-      // Invia il messaggio principale con PDF come attachment
+      // Invia il messaggio con il PDF come link
       const { data: messageResult, error: messageError } = await supabase.functions.invoke('send-message', {
         body: {
           conversationId,
           recipientId: MARCO_NIGRO_ID,
           text: pdfMessage,
           imageUrl: null,
-          products: null,
-          attachments: [{
-            type: 'pdf',
-            url: pdfResult.pdfUrl,
-            name: pdfResult.fileName || 'consulenza-completa.pdf',
-            size: pdfResult.fileSize || null
-          }]
+          products: null
         },
         headers: {
           Authorization: `Bearer ${session.access_token}`,
