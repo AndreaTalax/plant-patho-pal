@@ -114,6 +114,7 @@ export class ConsultationDataService {
       }
 
       console.log('✅ PDF generato con successo:', pdfResult.fileName);
+      console.log('📎 URL PDF generato:', pdfResult.pdfUrl);
 
       // Invia il messaggio principale con PDF come link diretto  
       const pdfMessage = [
@@ -130,6 +131,9 @@ export class ConsultationDataService {
         "",
         `📎 **[Scarica PDF Consulenza](${pdfResult.pdfUrl})**`
       ].join('\n');
+
+      console.log('📋 Messaggio PDF che verrà inviato:');
+      console.log(pdfMessage);
 
       // Invia il messaggio con il PDF come link
       const { data: messageResult, error: messageError } = await supabase.functions.invoke('send-message', {
