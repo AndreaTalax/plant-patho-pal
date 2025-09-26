@@ -26,6 +26,7 @@ import DiagnosisResult from './diagnose/result/DiagnosisResult';
 import { useDiagnosisLimits } from '@/hooks/useDiagnosisLimits';
 import { AIApiSetup } from './diagnose/AIApiSetup';
 import { ApiKeyManager } from './diagnose/ApiKeyManager';
+import { MARCO_NIGRO_ID } from '@/components/phytopathologist';
 import { supabase } from '@/integrations/supabase/client';
 import { convertPlantInfoToString } from '@/utils/plantInfoUtils';
 
@@ -335,18 +336,86 @@ const DiagnoseTab = () => {
   const handleSelectExpert = useCallback(async () => {
     console.log('🩺 Selezione consulenza esperto...');
     
-    // Update plant info to indicate expert consultation
-    const updatedPlantInfo = { 
-      ...plantInfo, 
-      sendToExpert: true, 
-      useAI: false 
-    };
-    setPlantInfo(updatedPlantInfo);
+    // 🔒 CONTROLLO ABBONAMENTO - Blocca se non abbonato
+    if (!hasActiveSubscription()) {
+      console.log('❌ Abbonamento richiesto per consulenza esperto');
+      setShowPaymentModal(true);
+      return;
+    }
     
-    // Invia dati solo ora, quando l'utente sceglie esplicitamente
-    const sent = await sendDataToExpert(false);
+    if (!userProfile?.id) {
+      toast.error('Accesso richiesto per la consulenza esperto');
+      return;
+    }
     
-    if (sent) {
+    try {
+      console.log('🚀 CREAZIONE CHAT ESPERTO SENZA DIAGNOSI AI');
+      
+      // Crea conversazione con l'esperto
+      const { data: conversation, error: convError } = await supabase
+        .from('conversations')
+        .insert({
+          user_id: userProfile.id,
+          expert_id: MARCO_NIGRO_ID,
+          title: `Consulenza Fitopatologo - ${plantInfo.name || 'Pianta'}`,
+          status: 'active'
+        })
+        .select()
+        .single();
+
+      if (convError) {
+        console.error("Error creating conversation:", convError);
+        throw convError;
+      }
+
+      console.log("✅ Conversazione creata:", conversation.id);
+
+      // Prepara i dati per il PDF (senza diagnosi AI)
+      const plantData = {
+        plantName: plantInfo.name || 'Pianta non specificata',
+        symptoms: Array.isArray(plantInfo.symptoms) ? plantInfo.symptoms.join(', ') : plantInfo.symptoms || 'Sintomi non specificati',
+        environment: plantInfo.isIndoor ? 'Interno' : 'Esterno',
+        wateringFrequency: plantInfo.wateringFrequency || 'Non specificata',
+        sunExposure: plantInfo.lightExposure || 'Non specificata',
+        imageUrl: uploadedImage,
+        useAI: false
+      };
+
+      const userData = {
+        firstName: userProfile.first_name || '',
+        lastName: userProfile.last_name || '',
+        email: userProfile.email || userProfile.email,
+        birthDate: userProfile.birth_date || 'Non specificata',
+        birthPlace: userProfile.birth_place || 'Non specificato'
+      };
+
+      console.log("📊 Generazione PDF senza diagnosi AI:", { plantData, userData });
+
+      // Genera e invia PDF automaticamente
+      const { ConsultationDataService } = await import('@/services/chat/consultationDataService');
+      const success = await ConsultationDataService.sendInitialConsultationData(
+        conversation.id,
+        plantData,
+        userData,
+        false // fromAIDiagnosis = false
+      );
+
+      if (success) {
+        console.log("✅ PDF INVIATO AUTOMATICAMENTE SENZA DIAGNOSI AI!");
+        toast.success('PDF con i dati della pianta inviato automaticamente al fitopatologo!');
+      } else {
+        console.error("❌ Errore invio PDF automatico");
+        toast.error('Errore nell\'invio automatico del PDF');
+      }
+      
+      // Update plant info to indicate expert consultation
+      const updatedPlantInfo = { 
+        ...plantInfo, 
+        sendToExpert: true, 
+        useAI: false 
+      };
+      setPlantInfo(updatedPlantInfo);
+      setDataSentToExpert(true);
       setCurrentStage('result');
       
       // Navigate to chat tab after a short delay
@@ -357,8 +426,12 @@ const DiagnoseTab = () => {
       toast.success('Reindirizzamento alla chat con l\'esperto...', {
         description: 'Tutte le informazioni sono state inviate'
       });
+      
+    } catch (error) {
+      console.error("❌ Errore nella creazione della consulenza esperto:", error);
+      toast.error("Errore nell'avvio della consulenza");
     }
-  }, [sendDataToExpert, setPlantInfo, plantInfo]);
+  }, [userProfile, plantInfo, uploadedImage, hasActiveSubscription, setPlantInfo]);
 
   // Reset to start new analysis
   const handleNewAnalysis = useCallback(() => {
