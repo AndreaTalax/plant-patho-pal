@@ -154,10 +154,13 @@ const ActionButtons = ({
   };
   
   const handleChatWithExpert = () => {
+    console.log("🔥 BUTTON CLICKED: handleChatWithExpert called");
     console.log("🎯 handleChatWithExpert called", { onChatWithExpert: !!onChatWithExpert });
     if (onChatWithExpert) {
+      console.log("📞 Calling onChatWithExpert prop");
       onChatWithExpert();
     } else {
+      console.log("🚀 Calling startChatWithExpert directly");
       startChatWithExpert();
     }
   };

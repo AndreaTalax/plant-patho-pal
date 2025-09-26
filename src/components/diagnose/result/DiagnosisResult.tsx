@@ -78,6 +78,8 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
   hasExpertChatAccess,
   analysisData, // nuova prop opzionale per compatibilità
 }) => {
+  console.log('🎯 DiagnosisResult component rendered');
+  
   const { user } = useAuth();
   const { hasExpertChatAccess: premiumAccess } = usePremiumStatus();
   const { saveDiagnosis, isSaving: savingDiagnosis } = useSaveDiagnosis();
@@ -217,7 +219,9 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
 
   // Funzione per gestire il click su "Chat con l'esperto" - ora richiede pagamento premium
   const handleChatWithExpert = async () => {
+    console.log('🔥 DIAGNOSIS RESULT: handleChatWithExpert button clicked!');
     console.log('🗣️ Click su Chat con l\'esperto...');
+    console.log('🔍 User status:', { user: !!user, hasAccess: resolvedHasExpertChatAccess });
     
     if (!user) {
       console.error('❌ Utente non autenticato');
