@@ -421,6 +421,16 @@ const DiagnoseTab = () => {
 
   // Render based on current stage
   const renderCurrentStage = () => {
+    console.log('🔥 DiagnoseTab renderCurrentStage - currentStage:', currentStage);
+    console.log('🔥 DiagnoseTab state summary:', {
+      currentStage,
+      uploadedImage: !!uploadedImage,
+      diagnosedDisease: !!diagnosedDisease,
+      analysisDetails: !!analysisDetails,
+      diagnosisResult: !!diagnosisResult,
+      isAnalyzing
+    });
+    
     switch (currentStage) {
       case 'info':
         return (
