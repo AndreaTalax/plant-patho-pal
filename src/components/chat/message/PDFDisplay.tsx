@@ -1,121 +1,63 @@
-import { useState } from 'react';
+import { useState } from 'react'; 
 import { FileText, Download, ExternalLink, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 interface PDFDisplayProps {
-  pdfUrl: string;
+  pdfPath: string;   // 🔹 ora riceve il path e non l’URL
   fileName?: string;
 }
 
-export const PDFDisplay = ({ pdfUrl, fileName }: PDFDisplayProps) => {
+export const PDFDisplay = ({ pdfPath, fileName }: PDFDisplayProps) => {
   const [isLoading, setIsLoading] = useState(false);
 
+  // 🔽 Scarica il PDF
   const handleDownload = async () => {
     try {
       setIsLoading(true);
-      console.log('🔍 Download PDF con autenticazione...', { pdfUrl, fileName });
-      
-      // Prova prima il download diretto se è un URL pubblico
-      if (pdfUrl.includes('/object/public/pdfs/')) {
-        console.log('📁 URL pubblico rilevato, tentativo download diretto...');
-        try {
-          const response = await fetch(pdfUrl);
-          if (response.ok) {
-            const blob = await response.blob();
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = fileName || 'documento.pdf';
-            document.body.appendChild(a);
-            a.click();
-            window.URL.revokeObjectURL(url);
-            document.body.removeChild(a);
-            
-            console.log('✅ PDF scaricato tramite fetch diretto');
-            toast.success('PDF scaricato con successo!');
-            return;
-          }
-        } catch (directError) {
-          console.log('⚠️ Download diretto fallito, provo con Supabase...', directError);
-        }
-      }
-      
-      // Estrai il path dal URL completo per download tramite Supabase
-      const urlParts = pdfUrl.split('/object/public/pdfs/');
-      if (urlParts.length < 2) {
-        console.error('❌ Formato URL PDF non valido:', pdfUrl);
-        toast.error('URL PDF non valido');
-        return;
-      }
-      
-      const urlPath = urlParts[1];
-      console.log('📁 Path PDF estratto per Supabase:', urlPath);
-      
-      // Usa il client Supabase autenticato per scaricare il file
+
       const { data, error } = await supabase.storage
         .from('pdfs')
-        .download(urlPath);
-        
-      if (error) {
-        console.error('❌ Errore download PDF da Supabase:', error);
-        toast.error('Errore nel download del PDF: ' + error.message);
+        .createSignedUrl(pdfPath, 3600);
+
+      if (error || !data?.signedUrl) {
+        console.error('❌ Errore creazione URL firmato per download:', error);
+        toast.error('Errore nel download del PDF');
         return;
       }
-      
-      console.log('✅ PDF scaricato tramite Supabase');
-      
-      // Crea il download
-      const url = window.URL.createObjectURL(data);
+
       const a = document.createElement('a');
-      a.href = url;
+      a.href = data.signedUrl;
       a.download = fileName || 'documento.pdf';
       document.body.appendChild(a);
       a.click();
-      window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
-      
+
       toast.success('PDF scaricato con successo!');
-    } catch (error) {
-      console.error('❌ Errore nel download del PDF:', error);
+    } catch (err) {
+      console.error('❌ Errore nel download del PDF:', err);
       toast.error('Errore nel download del PDF');
     } finally {
       setIsLoading(false);
     }
   };
 
+  // 👁️ Visualizza PDF
   const handleView = async () => {
     try {
-      console.log('👁️ Apertura PDF per visualizzazione...', pdfUrl);
-      
-      // Estrai il path dal URL completo
-      const urlPath = pdfUrl.split('/object/public/pdfs/')[1];
-      if (!urlPath) {
-        console.error('❌ Formato URL PDF non valido per visualizzazione:', pdfUrl);
-        // Fallback: prova ad aprire l'URL direttamente
-        window.open(pdfUrl, '_blank');
-        return;
-      }
-      
-      // Crea un URL firmato per la visualizzazione sicura
       const { data, error } = await supabase.storage
         .from('pdfs')
-        .createSignedUrl(urlPath, 3600); // URL valido per 1 ora
-        
-      if (error) {
-        console.error('❌ Errore creazione URL firmato:', error);
-        // Fallback: prova ad aprire l'URL originale
-        window.open(pdfUrl, '_blank');
+        .createSignedUrl(pdfPath, 3600);
+
+      if (error || !data?.signedUrl) {
+        console.error('❌ Errore creazione URL firmato per visualizzazione:', error);
         return;
       }
-      
-      console.log('✅ URL firmato creato per visualizzazione PDF');
+
       window.open(data.signedUrl, '_blank');
-    } catch (error) {
-      console.error('❌ Errore apertura PDF:', error);
-      // Fallback: prova ad aprire l'URL originale
-      window.open(pdfUrl, '_blank');
+    } catch (err) {
+      console.error('❌ Errore apertura PDF:', err);
     }
   };
 
@@ -131,11 +73,9 @@ export const PDFDisplay = ({ pdfUrl, fileName }: PDFDisplayProps) => {
           </div>
           <div className="flex-1 min-w-0">
             <h4 className="text-sm font-medium text-gray-900 truncate">
-              {fileName || 'Documento PDF'}
+              {fileName || pdfPath.split('/').pop()}
             </h4>
-            <p className="text-xs text-gray-500 mt-1">
-              File PDF allegato
-            </p>
+            <p className="text-xs text-gray-500 mt-1">File PDF allegato</p>
           </div>
         </div>
 
@@ -162,7 +102,7 @@ export const PDFDisplay = ({ pdfUrl, fileName }: PDFDisplayProps) => {
           </Button>
         </div>
 
-        {/* Alternative link for fallback */}
+        {/* Fallback */}
         <div className="mt-2 pt-2 border-t border-gray-100">
           <button
             onClick={handleView}
