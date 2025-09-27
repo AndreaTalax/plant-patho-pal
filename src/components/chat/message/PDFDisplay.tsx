@@ -10,8 +10,8 @@ interface MessageContentProps {
   onSendMessage?: (content: {
     text?: string;
     image_url?: string;
-    audio?: File;
-    pdf?: File;
+    audioBlob?: Blob;
+    fileData?: File;
     type: 'text' | 'image' | 'audio' | 'pdf';
   }) => void;
 }
@@ -55,15 +55,15 @@ const renderMarkdownLinks = (text: string) => {
   return parts.length > 1 ? parts : text;
 };
 
-// Componente per inviare contenuti multimediali
-const MediaSender = ({ onSendMessage }: { onSendMessage?: MessageContentProps['onSendMessage'] }) => {
+// Componente semplificato per invio media
+const SimpleMediaSender = ({ onSendMessage }: { onSendMessage?: MessageContentProps['onSendMessage'] }) => {
   const [isRecording, setIsRecording] = useState(false);
   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const audioInputRef = useRef<HTMLInputElement>(null);
   const pdfInputRef = useRef<HTMLInputElement>(null);
 
-  // Gestione registrazione audio
+  // Registrazione audio semplificata
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -76,15 +76,16 @@ const MediaSender = ({ onSendMessage }: { onSendMessage?: MessageContentProps['o
 
       recorder.onstop = () => {
         const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-        const audioFile = new File([audioBlob], 'voice-message.webm', { type: 'audio/webm' });
+        const audioUrl = URL.createObjectURL(audioBlob);
         
         onSendMessage?.({
           text: '🎵 Messaggio vocale',
+          image_url: audioUrl,
           type: 'audio',
-          audio: audioFile
+          audioBlob: audioBlob
         });
 
-        // Ferma tutti i track dello stream
+        // Ferma lo stream
         stream.getTracks().forEach(track => track.stop());
       };
 
@@ -92,8 +93,8 @@ const MediaSender = ({ onSendMessage }: { onSendMessage?: MessageContentProps['o
       setMediaRecorder(recorder);
       setIsRecording(true);
     } catch (error) {
-      console.error('Errore durante l\'avvio della registrazione:', error);
-      alert('Impossibile accedere al microfono. Verifica le autorizzazioni.');
+      console.error('❌ Errore registrazione:', error);
+      alert('Impossibile accedere al microfono');
     }
   };
 
@@ -105,49 +106,48 @@ const MediaSender = ({ onSendMessage }: { onSendMessage?: MessageContentProps['o
     }
   };
 
-  // Gestione upload file immagine
-  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  // Upload file semplificato
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>, fileType: 'image' | 'audio' | 'pdf') => {
     const file = event.target.files?.[0];
-    if (file && file.type.startsWith('image/')) {
-      const imageUrl = URL.createObjectURL(file);
-      onSendMessage?.({
-        text: '🖼️ Immagine allegata',
-        image_url: imageUrl,
-        type: 'image'
-      });
+    if (!file) return;
+
+    // Verifica tipo file
+    const isValidType = 
+      (fileType === 'image' && file.type.startsWith('image/')) ||
+      (fileType === 'audio' && file.type.startsWith('audio/')) ||
+      (fileType === 'pdf' && file.type === 'application/pdf');
+
+    if (!isValidType) {
+      alert(`Tipo di file non valido per ${fileType}`);
+      return;
     }
+
+    const fileUrl = URL.createObjectURL(file);
+    let messageText = '';
+    
+    switch (fileType) {
+      case 'image':
+        messageText = '🖼️ Immagine allegata';
+        break;
+      case 'audio':
+        messageText = '🎵 File audio allegato';
+        break;
+      case 'pdf':
+        messageText = `📄 PDF: ${file.name}`;
+        break;
+    }
+
+    onSendMessage?.({
+      text: messageText,
+      image_url: fileUrl,
+      type: fileType,
+      fileData: file
+    });
+
+    // Reset input
+    event.target.value = '';
   };
 
-  // Gestione upload audio file
-  const handleAudioUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file && file.type.startsWith('audio/')) {
-      const audioUrl = URL.createObjectURL(file);
-      onSendMessage?.({
-        text: '🎵 File audio allegato',
-        image_url: audioUrl,
-        type: 'audio',
-        audio: file
-      });
-    }
-  };
-
-  // Gestione upload PDF
-  const handlePDFUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file && file.type === 'application/pdf') {
-      const pdfUrl = URL.createObjectURL(file);
-      onSendMessage?.({
-        text: `📄 PDF allegato: ${file.name}`,
-        image_url: pdfUrl,
-        type: 'pdf',
-        pdf: file,
-        originalFile: file  // ← Passa il file originale
-      });
-    }
-  };
-
-  // Invio emoticon
   const sendEmoji = (emoji: string) => {
     onSendMessage?.({
       text: emoji,
@@ -159,13 +159,13 @@ const MediaSender = ({ onSendMessage }: { onSendMessage?: MessageContentProps['o
 
   return (
     <div className="flex flex-wrap gap-2 p-3 bg-gray-50 rounded-lg border-t">
-      {/* Emoticon rapide */}
-      <div className="flex gap-1">
-        {['😊', '👍', '❤️', '😂', '🤔', '👌', '🎉', '😍'].map(emoji => (
+      {/* Emoticon */}
+      <div className="flex gap-1 flex-wrap">
+        {['😊', '👍', '❤️', '😂', '🤔', '👌', '🎉', '😍', '🔥', '👏'].map(emoji => (
           <button
             key={emoji}
             onClick={() => sendEmoji(emoji)}
-            className="p-2 hover:bg-gray-200 rounded-lg transition-colors text-lg"
+            className="p-2 hover:bg-gray-200 rounded-lg transition-colors text-lg hover:scale-110"
             title={`Invia ${emoji}`}
           >
             {emoji}
@@ -177,10 +177,10 @@ const MediaSender = ({ onSendMessage }: { onSendMessage?: MessageContentProps['o
 
       {/* Controlli media */}
       <div className="flex gap-2">
-        {/* Pulsante registrazione audio */}
+        {/* Audio Recording */}
         <button
           onClick={isRecording ? stopRecording : startRecording}
-          className={`p-2 rounded-lg transition-colors ${
+          className={`p-2 rounded-lg transition-all ${
             isRecording 
               ? 'bg-red-500 text-white animate-pulse' 
               : 'bg-blue-500 text-white hover:bg-blue-600'
@@ -190,7 +190,7 @@ const MediaSender = ({ onSendMessage }: { onSendMessage?: MessageContentProps['o
           {isRecording ? '⏹️' : '🎤'}
         </button>
 
-        {/* Upload immagine */}
+        {/* Upload buttons */}
         <button
           onClick={() => fileInputRef.current?.click()}
           className="p-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
@@ -199,16 +199,14 @@ const MediaSender = ({ onSendMessage }: { onSendMessage?: MessageContentProps['o
           🖼️
         </button>
 
-        {/* Upload audio */}
         <button
           onClick={() => audioInputRef.current?.click()}
           className="p-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors"
-          title="Carica file audio"
+          title="Carica audio"
         >
           🎵
         </button>
 
-        {/* Upload PDF */}
         <button
           onClick={() => pdfInputRef.current?.click()}
           className="p-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
@@ -218,26 +216,26 @@ const MediaSender = ({ onSendMessage }: { onSendMessage?: MessageContentProps['o
         </button>
       </div>
 
-      {/* Input file nascosti */}
+      {/* Input nascosti */}
       <input
         ref={fileInputRef}
         type="file"
         accept="image/*"
-        onChange={handleImageUpload}
+        onChange={(e) => handleFileUpload(e, 'image')}
         className="hidden"
       />
       <input
         ref={audioInputRef}
         type="file"
         accept="audio/*"
-        onChange={handleAudioUpload}
+        onChange={(e) => handleFileUpload(e, 'audio')}
         className="hidden"
       />
       <input
         ref={pdfInputRef}
         type="file"
         accept=".pdf"
-        onChange={handlePDFUpload}
+        onChange={(e) => handleFileUpload(e, 'pdf')}
         className="hidden"
       />
     </div>
@@ -245,91 +243,60 @@ const MediaSender = ({ onSendMessage }: { onSendMessage?: MessageContentProps['o
 };
 
 export const MessageContent = ({ message, onSendMessage }: MessageContentProps) => {
-  // Verifica se il messaggio è audio
-  const isAudioMessage = message.text?.includes('🎵 Messaggio vocale') || 
-                         message.text === '🎵 Messaggio vocale' ||
-                         message.text?.includes('🎵 File audio') ||
+  // Verifica tipo messaggio
+  const isAudioMessage = message.text?.includes('🎵') || 
                          (message.image_url && (
-                           message.image_url.includes('audio_') || 
+                           message.image_url.includes('audio') || 
                            message.image_url.includes('.webm') ||
                            message.image_url.includes('.mp3') ||
-                           message.image_url.includes('.wav') ||
-                           message.image_url.includes('.m4a') ||
-                           message.image_url.includes('audio-messages')
+                           message.image_url.includes('.wav')
                          ));
 
-  // Verifica se il messaggio è un PDF
-  const isPDFMessage = message.text?.includes('📄 PDF allegato') || 
-                       message.text?.includes('PDF allegato') ||
-                       (message.image_url && (
-                         message.image_url.includes('.pdf') || 
-                         message.image_url.includes('application/pdf')
-                       ));
+  const isPDFMessage = message.text?.includes('📄') || 
+                       (message.image_url && message.image_url.includes('.pdf'));
 
-  // Debug logging per messaggi PDF e di consultazione
-  if (message.text?.includes('CONSULENZA PROFESSIONALE') || 
-      message.text?.includes('Preventivo Professionale') ||
-      message.text?.includes('Scarica PDF')) {
-    console.log('🔍 PDF Message Content:', {
-      id: message.id,
-      text: message.text,
-      textLength: message.text?.length,
-      hasMarkdownLink: message.text?.includes('[') && message.text?.includes(']'),
-      sender: message.sender,
-      fullText: message.text
-    });
-  }
+  const isImageMessage = message.text?.includes('🖼️') ||
+                        (message.image_url && !isAudioMessage && !isPDFMessage);
 
-  // Render del contenuto del messaggio
-  const renderMessageContent = () => {
-    if (isAudioMessage && message.image_url) {
-      return <AudioMessage audioUrl={message.image_url} />;
-    }
-
-    if (isPDFMessage && message.image_url) {
-      return (
-        <div className="space-y-3">
-          {message.text && (
-            <div className="whitespace-pre-wrap leading-relaxed">
-              {renderMarkdownLinks(message.text)}
-            </div>
-          )}
-          <PDFDisplay 
-            pdfPath={message.image_url} 
-            fileName="Documento.pdf"
-            originalFile={message.originalFile} 
-          />
-        </div>
-      );
-    }
-
-    return (
-      <div className="space-y-3">
-        {message.text && (
-          <div className="whitespace-pre-wrap leading-relaxed">
-            {renderMarkdownLinks(message.text)}
-          </div>
-        )}
-        
-        {message.image_url && !isAudioMessage && !isPDFMessage && (
-          <ImageDisplay imageUrl={message.image_url} />
-        )}
-
-        {message.products && message.products.length > 0 && (
-          <ProductRecommendations products={message.products} />
-        )}
-      </div>
-    );
-  };
+  console.log('📝 Message Debug:', {
+    text: message.text,
+    hasImageUrl: !!message.image_url,
+    isAudio: isAudioMessage,
+    isPDF: isPDFMessage,
+    isImage: isImageMessage
+  });
 
   return (
     <div className="space-y-3">
-      {renderMessageContent()}
-      
-      {/* Mostra i controlli per l'invio solo se è fornita la funzione onSendMessage */}
-      {onSendMessage && (
-        <MediaSender onSendMessage={onSendMessage} />
+      {/* Contenuto del messaggio */}
+      {message.text && (
+        <div className="whitespace-pre-wrap leading-relaxed">
+          {renderMarkdownLinks(message.text)}
+        </div>
       )}
+      
+      {/* Media display */}
+      {message.image_url && (
+        <>
+          {isAudioMessage && <AudioMessage audioUrl={message.image_url} />}
+          {isPDFMessage && (
+            <PDFDisplay 
+              pdfPath={message.image_url} 
+              fileName={message.text?.split(': ')[1] || 'documento.pdf'}
+              originalFile={message.originalFile}
+            />
+          )}
+          {isImageMessage && <ImageDisplay imageUrl={message.image_url} />}
+        </>
+      )}
+
+      {/* Prodotti */}
+      {message.products && message.products.length > 0 && (
+        <ProductRecommendations products={message.products} />
+      )}
+      
+      {/* Controlli invio */}
+      <SimpleMediaSender onSendMessage={onSendMessage} />
     </div>
   );
 };
