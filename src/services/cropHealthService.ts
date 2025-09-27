@@ -1,42 +1,25 @@
-import { supabase } from '@/integrations/supabase/client';
-
-export interface CropHealthDisease {
-  name: string;
-  probability: number;
-  description: string;
-  treatment: string;
-  symptoms: string[];
-  cause: string;
-  severity: 'low' | 'medium' | 'high';
-}
-
-export interface CropHealthResult {
-  isHealthy: boolean;
-  diseases: CropHealthDisease[];
-  healthScore: number;
-  suggestions: string[];
-}
-
-/**
- * Servizio per l'analisi delle malattie delle piante usando Plant.ID Crop Health API
- * Utilizza la chiave API dedicata per crop.health
- */
 export class CropHealthService {
-  
-  /**
-   * Analizza le malattie delle piante usando Plant.ID Crop Health
-   */
-  static async analyzePlantHealth(imageBase64: string, plantName?: string): Promise<CropHealthResult> {
+  static async analyzePlantHealth(
+    imageBase64: string,
+    plantName?: string
+  ): Promise<CropHealthResult> {
     try {
       console.log('🏥 CropHealth: Avvio analisi malattie...');
-      
+
       const { data, error } = await supabase.functions.invoke('crop-health-analysis', {
-        body: { 
+        body: {
           imageBase64: imageBase64.replace(/^data:image\/[a-z]+;base64,/, ''),
           plantName: plantName,
-          modifiers: ['crops_fast', 'similar_images', 'health_all'], // Modificatori per crop health
-          diseaseDetails: ['cause', 'common_names', 'classification', 'description', 'treatment', 'url']
-        }
+          modifiers: ['crops_fast', 'similar_images', 'health_all'],
+          diseaseDetails: [
+            'cause',
+            'common_names',
+            'classification',
+            'description',
+            'treatment',
+            'url',
+          ],
+        },
       });
 
       if (error) {
@@ -44,130 +27,126 @@ export class CropHealthService {
         throw error;
       }
 
-      if (!data?.health_assessment) {
-        console.log('⚠️ Nessuna valutazione sanitaria nella risposta');
+      console.log('📦 Risposta API completa:', JSON.stringify(data, null, 2));
+
+      const healthAssessment = data?.health_assessment;
+      if (!healthAssessment) {
+        console.warn('⚠️ Nessuna valutazione sanitaria trovata');
         return {
           isHealthy: true,
           diseases: [],
           healthScore: 80,
-          suggestions: ['Pianta sembra in buona salute', 'Continua il monitoraggio regolare']
+          suggestions: [
+            'Pianta sembra in buona salute',
+            'Continua il monitoraggio regolare',
+          ],
         };
       }
 
-      const healthAssessment = data.health_assessment;
-      const diseases: CropHealthDisease[] = [];
+      const diseases: CropHealthDisease[] = (healthAssessment.diseases ?? [])
+        .filter((d: any) => d.probability > 0.1)
+        .map((d: any, index: number) => {
+          console.log(`🔍 Malattia ${index + 1}:`, JSON.stringify(d, null, 2));
 
-      // Processa le malattie rilevate
-      if (healthAssessment.diseases && Array.isArray(healthAssessment.diseases)) {
-        for (const disease of healthAssessment.diseases) {
-          if (disease.probability > 0.1) { // Solo malattie con probabilità > 10%
-            diseases.push({
-              name: disease.name || 'Malattia non identificata',
-              probability: Math.round(disease.probability * 100),
-              description: disease.disease_details?.description || 'Descrizione non disponibile',
-              treatment: disease.disease_details?.treatment?.biological?.[0] || 
-                        disease.disease_details?.treatment?.chemical?.[0] || 
-                        'Consulta un esperto per il trattamento',
-              symptoms: this.extractSymptoms(disease),
-              cause: disease.disease_details?.cause || 'Causa non specificata',
-              severity: this.calculateSeverity(disease.probability)
-            });
-          }
-        }
-      }
+          const treatmentBio = Array.isArray(d.disease_details?.treatment?.biological)
+            ? d.disease_details.treatment.biological.join(', ')
+            : '';
+          const treatmentChem = Array.isArray(d.disease_details?.treatment?.chemical)
+            ? d.disease_details.treatment.chemical.join(', ')
+            : '';
 
-      // Ordina le malattie per probabilità decrescente
-      diseases.sort((a, b) => b.probability - a.probability);
+          console.log('💊 Treatment biologico:', treatmentBio);
+          console.log('💊 Treatment chimico:', treatmentChem);
 
-      const isHealthy = healthAssessment.is_healthy?.probability > 0.5 || diseases.length === 0;
-      const healthScore = Math.round((healthAssessment.is_healthy?.probability || 0.8) * 100);
+          return {
+            name: d.name || 'Malattia non identificata',
+            probability: Math.round(d.probability * 100),
+            description: d.disease_details?.description || 'Descrizione non disponibile',
+            treatment: treatmentBio || treatmentChem || 'Consulta un esperto per il trattamento',
+            symptoms: this.extractSymptoms(d),
+            cause: d.disease_details?.cause || 'Causa non specificata',
+            severity: this.calculateSeverity(d.probability),
+          };
+        })
+        .sort((a, b) => b.probability - a.probability);
+
+      const isHealthy =
+        typeof healthAssessment.is_healthy === 'boolean'
+          ? healthAssessment.is_healthy
+          : (healthAssessment.is_healthy?.probability || 0) > 0.5 || diseases.length === 0;
+
+      const healthScore = Math.round(
+        typeof healthAssessment.is_healthy === 'boolean'
+          ? isHealthy
+            ? 100
+            : 40
+          : (healthAssessment.is_healthy?.probability || 0.8) * 100
+      );
 
       const suggestions = this.generateSuggestions(isHealthy, diseases, healthScore);
 
-      console.log(`✅ CropHealth: Analisi completata - ${diseases.length} malattie rilevate, salute: ${healthScore}%`);
+      console.log(
+        `✅ Analisi completata - ${diseases.length} malattie rilevate, salute: ${healthScore}%`
+      );
 
       return {
         isHealthy,
         diseases,
         healthScore,
-        suggestions
+        suggestions,
       };
-
     } catch (error) {
-      console.error('CropHealth analysis error:', error);
-      
-      // Fallback in caso di errore
+      console.error('❌ CropHealth analysis error:', error);
       return {
-        isHealthy: true,
+        isHealthy: false,
         diseases: [],
-        healthScore: 50,
+        healthScore: 40,
         suggestions: [
           'Analisi automatica non riuscita',
           'Consulta un esperto per una valutazione dettagliata',
-          'Monitora la pianta per eventuali cambiamenti'
-        ]
+          'Monitora la pianta per eventuali cambiamenti',
+        ],
       };
     }
   }
 
-  /**
-   * Estrae i sintomi dalla risposta dell'API
-   */
   private static extractSymptoms(disease: any): string[] {
     const symptoms: string[] = [];
-    
+
     if (disease.disease_details?.description) {
-      // Estrai sintomi dalla descrizione se disponibile
-      const description = disease.disease_details.description;
-      if (description.includes('symptoms') || description.includes('sintomi')) {
-        symptoms.push(description);
-      }
+      symptoms.push(disease.disease_details.description);
     }
-    
+
     if (disease.disease_details?.classification?.includes('fungal')) {
       symptoms.push('Possibile infezione fungina');
     }
-    
     if (disease.disease_details?.classification?.includes('bacterial')) {
       symptoms.push('Possibile infezione batterica');
     }
-    
     if (disease.disease_details?.classification?.includes('viral')) {
       symptoms.push('Possibile infezione virale');
     }
 
-    // Se non ci sono sintomi specifici, aggiungi sintomi generici basati sul nome della malattia
-    if (symptoms.length === 0) {
-      if (disease.name?.toLowerCase().includes('spot')) {
-        symptoms.push('Macchie sulle foglie');
-      }
-      if (disease.name?.toLowerCase().includes('blight')) {
-        symptoms.push('Ingiallimento e appassimento');
-      }
-      if (disease.name?.toLowerCase().includes('rust')) {
-        symptoms.push('Macchie color ruggine');
-      }
-      if (disease.name?.toLowerCase().includes('mildew')) {
-        symptoms.push('Muffa polverosa');
-      }
-    }
-    
+    const nameLower = disease.name?.toLowerCase() || '';
+    if (nameLower.includes('spot')) symptoms.push('Macchie sulle foglie');
+    if (nameLower.includes('blight')) symptoms.push('Ingiallimento e appassimento');
+    if (nameLower.includes('rust')) symptoms.push('Macchie color ruggine');
+    if (nameLower.includes('mildew')) symptoms.push('Muffa polverosa');
+
     return symptoms.length > 0 ? symptoms : ['Sintomi visibili sulla pianta'];
   }
 
-  /**
-   * Calcola la severità basata sulla probabilità
-   */
   private static calculateSeverity(probability: number): 'low' | 'medium' | 'high' {
     if (probability > 0.7) return 'high';
     if (probability > 0.4) return 'medium';
     return 'low';
   }
 
-  /**
-   * Genera suggerimenti basati sui risultati dell'analisi
-   */
-  private static generateSuggestions(isHealthy: boolean, diseases: CropHealthDisease[], healthScore: number): string[] {
+  private static generateSuggestions(
+    isHealthy: boolean,
+    diseases: CropHealthDisease[],
+    healthScore: number
+  ): string[] {
     const suggestions: string[] = [];
 
     if (isHealthy && healthScore > 80) {
@@ -175,8 +154,7 @@ export class CropHealthService {
       suggestions.push('Continua le cure regolari');
       suggestions.push('Monitora periodicamente per prevenire problemi');
     } else if (diseases.length > 0) {
-      const highSeverityDiseases = diseases.filter(d => d.severity === 'high');
-      
+      const highSeverityDiseases = diseases.filter((d) => d.severity === 'high');
       if (highSeverityDiseases.length > 0) {
         suggestions.push('⚠️ Rilevate malattie ad alta gravità - intervieni immediatamente');
         suggestions.push('Consulta un esperto per un piano di trattamento specifico');
@@ -184,10 +162,9 @@ export class CropHealthService {
         suggestions.push('Rilevati alcuni problemi di salute');
         suggestions.push('Applica i trattamenti suggeriti');
       }
-      
       suggestions.push('Migliora le condizioni ambientali (ventilazione, irrigazione)');
       suggestions.push('Rimuovi parti della pianta gravemente colpite');
-      suggestions.push('Monitora attentamente l\'evoluzione nei prossimi giorni');
+      suggestions.push("Monitora attentamente l'evoluzione nei prossimi giorni");
     } else {
       suggestions.push('Salute della pianta incerta');
       suggestions.push('Osserva attentamente per sintomi visibili');
