@@ -1,4 +1,4 @@
-
+import React, { useState, useRef } from 'react';
 import { Message } from '../types';
 import { AudioMessage } from './AudioMessage';
 import { ImageDisplay } from './ImageDisplay';
@@ -7,11 +7,17 @@ import { ProductRecommendations } from './ProductRecommendations';
 
 interface MessageContentProps {
   message: Message;
+  onSendMessage?: (content: {
+    text?: string;
+    image_url?: string;
+    audio?: File;
+    pdf?: File;
+    type: 'text' | 'image' | 'audio' | 'pdf';
+  }) => void;
 }
 
 // Function to render markdown links as clickable HTML links
 const renderMarkdownLinks = (text: string) => {
-  // Regex per trovare link markdown: [testo](url)
   const markdownLinkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
   
   const parts = [];
@@ -19,12 +25,10 @@ const renderMarkdownLinks = (text: string) => {
   let match;
   
   while ((match = markdownLinkRegex.exec(text)) !== null) {
-    // Aggiungi il testo prima del link
     if (match.index > lastIndex) {
       parts.push(text.slice(lastIndex, match.index));
     }
     
-    // Aggiungi il link come elemento cliccabile
     const linkText = match[1];
     const linkUrl = match[2];
     
@@ -44,7 +48,6 @@ const renderMarkdownLinks = (text: string) => {
     lastIndex = match.index + match[0].length;
   }
   
-  // Aggiungi il testo rimanente
   if (lastIndex < text.length) {
     parts.push(text.slice(lastIndex));
   }
@@ -52,10 +55,199 @@ const renderMarkdownLinks = (text: string) => {
   return parts.length > 1 ? parts : text;
 };
 
-export const MessageContent = ({ message }: MessageContentProps) => {
+// Componente per inviare contenuti multimediali
+const MediaSender = ({ onSendMessage }: { onSendMessage?: MessageContentProps['onSendMessage'] }) => {
+  const [isRecording, setIsRecording] = useState(false);
+  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const audioInputRef = useRef<HTMLInputElement>(null);
+  const pdfInputRef = useRef<HTMLInputElement>(null);
+
+  // Gestione registrazione audio
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      const audioChunks: Blob[] = [];
+
+      recorder.ondataavailable = (event) => {
+        audioChunks.push(event.data);
+      };
+
+      recorder.onstop = () => {
+        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+        const audioFile = new File([audioBlob], 'voice-message.webm', { type: 'audio/webm' });
+        
+        onSendMessage?.({
+          text: '🎵 Messaggio vocale',
+          type: 'audio',
+          audio: audioFile
+        });
+
+        // Ferma tutti i track dello stream
+        stream.getTracks().forEach(track => track.stop());
+      };
+
+      recorder.start();
+      setMediaRecorder(recorder);
+      setIsRecording(true);
+    } catch (error) {
+      console.error('Errore durante l\'avvio della registrazione:', error);
+      alert('Impossibile accedere al microfono. Verifica le autorizzazioni.');
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorder && mediaRecorder.state === 'recording') {
+      mediaRecorder.stop();
+      setIsRecording(false);
+      setMediaRecorder(null);
+    }
+  };
+
+  // Gestione upload file immagine
+  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file && file.type.startsWith('image/')) {
+      const imageUrl = URL.createObjectURL(file);
+      onSendMessage?.({
+        text: '🖼️ Immagine allegata',
+        image_url: imageUrl,
+        type: 'image'
+      });
+    }
+  };
+
+  // Gestione upload audio file
+  const handleAudioUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file && file.type.startsWith('audio/')) {
+      const audioUrl = URL.createObjectURL(file);
+      onSendMessage?.({
+        text: '🎵 File audio allegato',
+        image_url: audioUrl,
+        type: 'audio',
+        audio: file
+      });
+    }
+  };
+
+  // Gestione upload PDF
+  const handlePDFUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file && file.type === 'application/pdf') {
+      const pdfUrl = URL.createObjectURL(file);
+      onSendMessage?.({
+        text: `📄 PDF allegato: ${file.name}`,
+        image_url: pdfUrl,
+        type: 'pdf',
+        pdf: file
+      });
+    }
+  };
+
+  // Invio emoticon
+  const sendEmoji = (emoji: string) => {
+    onSendMessage?.({
+      text: emoji,
+      type: 'text'
+    });
+  };
+
+  if (!onSendMessage) return null;
+
+  return (
+    <div className="flex flex-wrap gap-2 p-3 bg-gray-50 rounded-lg border-t">
+      {/* Emoticon rapide */}
+      <div className="flex gap-1">
+        {['😊', '👍', '❤️', '😂', '🤔', '👌', '🎉', '😍'].map(emoji => (
+          <button
+            key={emoji}
+            onClick={() => sendEmoji(emoji)}
+            className="p-2 hover:bg-gray-200 rounded-lg transition-colors text-lg"
+            title={`Invia ${emoji}`}
+          >
+            {emoji}
+          </button>
+        ))}
+      </div>
+
+      <div className="flex-1" />
+
+      {/* Controlli media */}
+      <div className="flex gap-2">
+        {/* Pulsante registrazione audio */}
+        <button
+          onClick={isRecording ? stopRecording : startRecording}
+          className={`p-2 rounded-lg transition-colors ${
+            isRecording 
+              ? 'bg-red-500 text-white animate-pulse' 
+              : 'bg-blue-500 text-white hover:bg-blue-600'
+          }`}
+          title={isRecording ? 'Ferma registrazione' : 'Registra audio'}
+        >
+          {isRecording ? '⏹️' : '🎤'}
+        </button>
+
+        {/* Upload immagine */}
+        <button
+          onClick={() => fileInputRef.current?.click()}
+          className="p-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
+          title="Carica immagine"
+        >
+          🖼️
+        </button>
+
+        {/* Upload audio */}
+        <button
+          onClick={() => audioInputRef.current?.click()}
+          className="p-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors"
+          title="Carica file audio"
+        >
+          🎵
+        </button>
+
+        {/* Upload PDF */}
+        <button
+          onClick={() => pdfInputRef.current?.click()}
+          className="p-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+          title="Carica PDF"
+        >
+          📄
+        </button>
+      </div>
+
+      {/* Input file nascosti */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        onChange={handleImageUpload}
+        className="hidden"
+      />
+      <input
+        ref={audioInputRef}
+        type="file"
+        accept="audio/*"
+        onChange={handleAudioUpload}
+        className="hidden"
+      />
+      <input
+        ref={pdfInputRef}
+        type="file"
+        accept=".pdf"
+        onChange={handlePDFUpload}
+        className="hidden"
+      />
+    </div>
+  );
+};
+
+export const MessageContent = ({ message, onSendMessage }: MessageContentProps) => {
   // Verifica se il messaggio è audio
   const isAudioMessage = message.text?.includes('🎵 Messaggio vocale') || 
                          message.text === '🎵 Messaggio vocale' ||
+                         message.text?.includes('🎵 File audio') ||
                          (message.image_url && (
                            message.image_url.includes('audio_') || 
                            message.image_url.includes('.webm') ||
@@ -87,11 +279,25 @@ export const MessageContent = ({ message }: MessageContentProps) => {
     });
   }
 
-  if (isAudioMessage && message.image_url) {
-    return <AudioMessage audioUrl={message.image_url} />;
-  }
+  // Render del contenuto del messaggio
+  const renderMessageContent = () => {
+    if (isAudioMessage && message.image_url) {
+      return <AudioMessage audioUrl={message.image_url} />;
+    }
 
-  if (isPDFMessage && message.image_url) {
+    if (isPDFMessage && message.image_url) {
+      return (
+        <div className="space-y-3">
+          {message.text && (
+            <div className="whitespace-pre-wrap leading-relaxed">
+              {renderMarkdownLinks(message.text)}
+            </div>
+          )}
+          <PDFDisplay pdfPath={message.image_url} fileName="Documento.pdf" />
+        </div>
+      );
+    }
+
     return (
       <div className="space-y-3">
         {message.text && (
@@ -99,25 +305,25 @@ export const MessageContent = ({ message }: MessageContentProps) => {
             {renderMarkdownLinks(message.text)}
           </div>
         )}
-        <PDFDisplay pdfPath={message.image_url} fileName="Documento.pdf" />
+        
+        {message.image_url && !isAudioMessage && !isPDFMessage && (
+          <ImageDisplay imageUrl={message.image_url} />
+        )}
+
+        {message.products && message.products.length > 0 && (
+          <ProductRecommendations products={message.products} />
+        )}
       </div>
     );
-  }
+  };
 
   return (
     <div className="space-y-3">
-      {message.text && (
-        <div className="whitespace-pre-wrap leading-relaxed">
-          {renderMarkdownLinks(message.text)}
-        </div>
-      )}
+      {renderMessageContent()}
       
-      {message.image_url && !isAudioMessage && !isPDFMessage && (
-        <ImageDisplay imageUrl={message.image_url} />
-      )}
-
-      {message.products && message.products.length > 0 && (
-        <ProductRecommendations products={message.products} />
+      {/* Mostra i controlli per l'invio solo se è fornita la funzione onSendMessage */}
+      {onSendMessage && (
+        <MediaSender onSendMessage={onSendMessage} />
       )}
     </div>
   );
