@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { FileText, Download, ExternalLink, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 interface PDFDisplayProps {
   pdfUrl: string;
@@ -13,9 +15,33 @@ export const PDFDisplay = ({ pdfUrl, fileName }: PDFDisplayProps) => {
   const handleDownload = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch(pdfUrl);
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
+      console.log('🔍 Download PDF con autenticazione...', pdfUrl);
+      
+      // Estrai il path dal URL completo
+      const urlPath = pdfUrl.split('/object/public/pdfs/')[1];
+      if (!urlPath) {
+        console.error('❌ Formato URL PDF non valido:', pdfUrl);
+        toast.error('URL PDF non valido');
+        return;
+      }
+      
+      console.log('📁 Path PDF estratto:', urlPath);
+      
+      // Usa il client Supabase autenticato per scaricare il file
+      const { data, error } = await supabase.storage
+        .from('pdfs')
+        .download(urlPath);
+        
+      if (error) {
+        console.error('❌ Errore download PDF da Supabase:', error);
+        toast.error('Errore nel download del PDF: ' + error.message);
+        return;
+      }
+      
+      console.log('✅ PDF scaricato tramite Supabase');
+      
+      // Crea il download
+      const url = window.URL.createObjectURL(data);
       const a = document.createElement('a');
       a.href = url;
       a.download = fileName || 'documento.pdf';
@@ -23,15 +49,48 @@ export const PDFDisplay = ({ pdfUrl, fileName }: PDFDisplayProps) => {
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
+      
+      toast.success('PDF scaricato con successo!');
     } catch (error) {
-      console.error('Errore nel download del PDF:', error);
+      console.error('❌ Errore nel download del PDF:', error);
+      toast.error('Errore nel download del PDF');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleView = () => {
-    window.open(pdfUrl, '_blank');
+  const handleView = async () => {
+    try {
+      console.log('👁️ Apertura PDF per visualizzazione...', pdfUrl);
+      
+      // Estrai il path dal URL completo
+      const urlPath = pdfUrl.split('/object/public/pdfs/')[1];
+      if (!urlPath) {
+        console.error('❌ Formato URL PDF non valido per visualizzazione:', pdfUrl);
+        // Fallback: prova ad aprire l'URL direttamente
+        window.open(pdfUrl, '_blank');
+        return;
+      }
+      
+      // Crea un URL firmato per la visualizzazione sicura
+      const { data, error } = await supabase.storage
+        .from('pdfs')
+        .createSignedUrl(urlPath, 3600); // URL valido per 1 ora
+        
+      if (error) {
+        console.error('❌ Errore creazione URL firmato:', error);
+        // Fallback: prova ad aprire l'URL originale
+        window.open(pdfUrl, '_blank');
+        return;
+      }
+      
+      console.log('✅ URL firmato creato per visualizzazione PDF');
+      window.open(data.signedUrl, '_blank');
+    } catch (error) {
+      console.error('❌ Errore apertura PDF:', error);
+      // Fallback: prova ad aprire l'URL originale
+      window.open(pdfUrl, '_blank');
+    }
   };
 
   return (
