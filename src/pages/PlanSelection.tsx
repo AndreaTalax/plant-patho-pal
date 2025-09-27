@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -6,14 +6,24 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Badge } from "@/components/ui/badge";
 import { Check, Star, Crown, Building, Users, Leaf } from "lucide-react";
 import { useTheme } from "@/context/ThemeContext";
+import { MARCO_NIGRO_ID } from "@/components/phytopathologist";
 
 export type PlanType = 'privati' | 'business' | 'professionisti' | 'tutti';
 
 const PlanSelection = () => {
   const navigate = useNavigate();
   const { t } = useTheme();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const [selectedPlan, setSelectedPlan] = useState<PlanType | null>(null);
+
+  // Check if user is admin and redirect to dashboard
+  useEffect(() => {
+    if (isAuthenticated && user?.id === MARCO_NIGRO_ID) {
+      console.log('👨‍💼 Account amministratore rilevato nella selezione piani, reindirizzamento alla dashboard...');
+      navigate('/', { replace: true });
+      return;
+    }
+  }, [isAuthenticated, user, navigate]);
 
   const handlePlanSelection = (planType: PlanType) => {
     setSelectedPlan(planType);

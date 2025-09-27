@@ -7,15 +7,25 @@ import { useTheme } from "@/context/ThemeContext";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { LogOut } from "lucide-react";
+import { MARCO_NIGRO_ID } from "@/components/phytopathologist";
 
 export type PlanType = 'privati' | 'business' | 'professionisti';
 
 const PlanSubscriptionSelection = () => {
   const navigate = useNavigate();
-  const { isAuthenticated, logout } = useAuth();
+  const { isAuthenticated, logout, user } = useAuth();
   const { language } = useTheme();
   const [selectedPlan, setSelectedPlan] = useState<PlanType>('privati');
   const [currentStep, setCurrentStep] = useState<'selection' | 'subscription' | 'professional'>('subscription');
+
+  // Check if user is admin and redirect to dashboard
+  useEffect(() => {
+    if (isAuthenticated && user?.id === MARCO_NIGRO_ID) {
+      console.log('👨‍💼 Account amministratore rilevato, reindirizzamento alla dashboard...');
+      navigate('/', { replace: true });
+      return;
+    }
+  }, [isAuthenticated, user, navigate]);
 
   // Load selected plan from localStorage and set appropriate step
   useEffect(() => {
