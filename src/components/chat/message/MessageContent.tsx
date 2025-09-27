@@ -99,7 +99,7 @@ export const MessageContent = ({ message }: MessageContentProps) => {
             {renderMarkdownLinks(message.text)}
           </div>
         )}
-        <PDFDisplay pdfUrl={message.image_url} fileName="Documento.pdf" />
+        <PDFDisplay pdfPath={message.image_url} fileName="Documento.pdf" />
       </div>
     );
   }
