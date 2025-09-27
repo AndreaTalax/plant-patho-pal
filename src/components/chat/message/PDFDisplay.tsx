@@ -15,17 +15,43 @@ export const PDFDisplay = ({ pdfUrl, fileName }: PDFDisplayProps) => {
   const handleDownload = async () => {
     try {
       setIsLoading(true);
-      console.log('🔍 Download PDF con autenticazione...', pdfUrl);
+      console.log('🔍 Download PDF con autenticazione...', { pdfUrl, fileName });
       
-      // Estrai il path dal URL completo
-      const urlPath = pdfUrl.split('/object/public/pdfs/')[1];
-      if (!urlPath) {
+      // Prova prima il download diretto se è un URL pubblico
+      if (pdfUrl.includes('/object/public/pdfs/')) {
+        console.log('📁 URL pubblico rilevato, tentativo download diretto...');
+        try {
+          const response = await fetch(pdfUrl);
+          if (response.ok) {
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = fileName || 'documento.pdf';
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+            
+            console.log('✅ PDF scaricato tramite fetch diretto');
+            toast.success('PDF scaricato con successo!');
+            return;
+          }
+        } catch (directError) {
+          console.log('⚠️ Download diretto fallito, provo con Supabase...', directError);
+        }
+      }
+      
+      // Estrai il path dal URL completo per download tramite Supabase
+      const urlParts = pdfUrl.split('/object/public/pdfs/');
+      if (urlParts.length < 2) {
         console.error('❌ Formato URL PDF non valido:', pdfUrl);
         toast.error('URL PDF non valido');
         return;
       }
       
-      console.log('📁 Path PDF estratto:', urlPath);
+      const urlPath = urlParts[1];
+      console.log('📁 Path PDF estratto per Supabase:', urlPath);
       
       // Usa il client Supabase autenticato per scaricare il file
       const { data, error } = await supabase.storage
