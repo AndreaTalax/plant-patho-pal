@@ -265,23 +265,25 @@ const ChatTab = () => {
           <div className="mt-8 space-y-4">
             <ChatTestButton />
             
-            {/* Pulsante prominente per nuovo preventivo professionale */}
-            <div className="text-center">
-              <Button
-                onClick={() => {
-                  const event = new CustomEvent('switchTab', { detail: 'professional-quote' });
-                  window.dispatchEvent(event);
-                }}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 text-lg font-semibold shadow-lg"
-                size="lg"
-              >
-                <FileText className="h-5 w-5 mr-3" />
-                Nuovo Preventivo Professionale
-              </Button>
-              <p className="text-sm text-gray-600 mt-2">
-                Richiedi un preventivo personalizzato per la tua azienda
-              </p>
-            </div>
+            {/* Pulsante per nuovo preventivo professionale - solo per professionisti */}
+            {selectedPlan === 'professionisti' && (
+              <div className="text-center">
+                <Button
+                  onClick={() => {
+                    const event = new CustomEvent('switchTab', { detail: 'professional-quote' });
+                    window.dispatchEvent(event);
+                  }}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 text-lg font-semibold shadow-lg"
+                  size="lg"
+                >
+                  <FileText className="h-5 w-5 mr-3" />
+                  Nuovo Preventivo Professionale
+                </Button>
+                <p className="text-sm text-gray-600 mt-2">
+                  Richiedi un preventivo personalizzato per la tua azienda
+                </p>
+              </div>
+            )}
             
             <div className="text-center space-x-4">
               <Button

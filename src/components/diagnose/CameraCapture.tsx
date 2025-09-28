@@ -109,6 +109,15 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
     console.log('❌ Cancel button clicked, stopping camera');
     triggerHaptic('light');
     cancelTimer();
+    
+    // Stop the camera stream first
+    if (stream) {
+      stream.getTracks().forEach(track => {
+        track.stop();
+        console.log('🛑 Camera track stopped during cancel:', track.kind);
+      });
+    }
+    
     stopCamera();
     onCancel();
   };

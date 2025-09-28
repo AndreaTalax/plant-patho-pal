@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { Message } from '../types';
 import { AudioMessage } from './AudioMessage';
 import { ImageDisplay } from './ImageDisplay';
-import { PDFDisplay } from './PDFDisplay';
+import PDFDisplay from './PDFDisplay';
 import { ProductRecommendations } from './ProductRecommendations';
 
 interface MessageContentProps {
@@ -283,7 +283,6 @@ export const MessageContent = ({ message, onSendMessage }: MessageContentProps) 
             <PDFDisplay 
               pdfPath={message.image_url} 
               fileName={message.text?.split(': ')[1] || 'documento.pdf'}
-              originalFile={message.originalFile}
             />
           )}
           {isImageMessage && <ImageDisplay imageUrl={message.image_url} />}

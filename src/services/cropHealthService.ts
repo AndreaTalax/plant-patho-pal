@@ -1,3 +1,22 @@
+import { supabase } from '@/integrations/supabase/client';
+
+export interface CropHealthResult {
+  isHealthy: boolean;
+  diseases: CropHealthDisease[];
+  healthScore: number;
+  suggestions: string[];
+}
+
+export interface CropHealthDisease {
+  name: string;
+  probability: number;
+  description?: string;
+  treatment?: string;
+  severity?: 'low' | 'medium' | 'high';
+  symptoms?: string[];
+  cause?: string;
+}
+
 export class CropHealthService {
   static async analyzePlantHealth(
     imageBase64: string,
