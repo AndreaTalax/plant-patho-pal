@@ -11,6 +11,7 @@ serve(async (req) => {
   try {
     const results = {
       plantId: { status: 'unknown', error: null },
+      plantIdCropHealth: { status: 'unknown', error: null },
       plantNet: { status: 'unknown', error: null },
       eppo: { status: 'unknown', error: null }
     };
@@ -52,6 +53,45 @@ serve(async (req) => {
     } else {
       results.plantId.status = 'missing_key';
       console.log('❌ Plant.ID API key missing');
+    }
+
+    // Test Plant.ID Crop Health API
+    const plantIdCropHealthKey = Deno.env.get('PLANT_ID_CROP_HEALTH_API_KEY');
+    if (plantIdCropHealthKey) {
+      try {
+        console.log('🌱 Testing Plant.ID Crop Health API...');
+        const testImage = '/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCdABmX/9k=';
+        
+        const response = await fetch('https://crop.disease.id/api/v1/identification', {
+          method: 'POST',
+          headers: {
+            'Api-Key': plantIdCropHealthKey,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            images: [testImage],
+            modifiers: ['crops_fast'],
+            disease_details: ['description']
+          }),
+        });
+
+        if (response.ok) {
+          results.plantIdCropHealth.status = 'working';
+          console.log('✅ Plant.ID Crop Health API is working');
+        } else {
+          const errorText = await response.text();
+          results.plantIdCropHealth.status = 'error';
+          results.plantIdCropHealth.error = `HTTP ${response.status}: ${errorText}`;
+          console.log(`❌ Plant.ID Crop Health API error: ${response.status} - ${errorText}`);
+        }
+      } catch (error) {
+        results.plantIdCropHealth.status = 'error';
+        results.plantIdCropHealth.error = error.message;
+        console.log(`❌ Plant.ID Crop Health API exception: ${error.message}`);
+      }
+    } else {
+      results.plantIdCropHealth.status = 'missing_key';
+      console.log('❌ Plant.ID Crop Health API key missing');
     }
 
     // Test PlantNet API

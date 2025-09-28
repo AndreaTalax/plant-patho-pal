@@ -23,6 +23,13 @@ serve(async (req) => {
     }
 
     console.log('🏥 Crop-Health Analysis: Starting disease analysis...');
+    console.log('📥 Received data:', {
+      hasImage: !!imageBase64,
+      imageLength: imageBase64?.length,
+      plantName,
+      modifiers,
+      diseaseDetails
+    });
     
     const cropHealthApiKey = Deno.env.get('PLANT_ID_CROP_HEALTH_API_KEY');
     if (!cropHealthApiKey) {
@@ -32,16 +39,32 @@ serve(async (req) => {
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+    
+    console.log('🔑 Using Crop Health API key:', cropHealthApiKey.substring(0, 8) + '...');
+
+    // Verifica che l'immagine sia nel formato corretto
+    const cleanBase64 = imageBase64.replace(/^data:image\/[a-z]+;base64,/, '');
+    console.log('🖼️ Image processing:', {
+      originalLength: imageBase64.length,
+      cleanedLength: cleanBase64.length,
+      isBase64: /^[A-Za-z0-9+/]*={0,2}$/.test(cleanBase64)
+    });
 
     // Prepara il payload per Plant.ID Crop Health API
     const payload = {
-      images: [imageBase64],
+      images: [cleanBase64],
       modifiers: modifiers || ["crops_fast", "similar_images", "health_all"],
       disease_details: diseaseDetails || ["cause", "common_names", "classification", "description", "treatment", "url"],
       ...(plantName && { plant_details: plantName })
     };
 
     console.log('📡 Calling Plant.ID Crop Health API...');
+    console.log('📦 Payload structure:', {
+      imageCount: payload.images.length,
+      modifiers: payload.modifiers,
+      diseaseDetails: payload.disease_details,
+      hasPlantDetails: !!payload.plant_details
+    });
     
     const response = await fetch('https://crop.disease.id/api/v1/identification', {
       method: 'POST',

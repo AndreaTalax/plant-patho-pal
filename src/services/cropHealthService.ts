@@ -23,11 +23,15 @@ export class CropHealthService {
     plantName?: string
   ): Promise<CropHealthResult> {
     try {
-      console.log('🏥 CropHealth: Avvio analisi malattie...');
+      console.log('🏥 CropHealth: Avvio analisi malattie...', {
+        hasImage: !!imageBase64,
+        imageLength: imageBase64?.length,
+        plantName
+      });
 
       const { data, error } = await supabase.functions.invoke('crop-health-analysis', {
         body: {
-          imageBase64: imageBase64.replace(/^data:image\/[a-z]+;base64,/, ''),
+          imageBase64: imageBase64,
           plantName: plantName,
           modifiers: ['crops_fast', 'similar_images', 'health_all'],
           diseaseDetails: [

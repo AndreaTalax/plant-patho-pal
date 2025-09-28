@@ -13,26 +13,30 @@ serve(async (req) => {
     // Check available API keys
     const openaiKey = Deno.env.get('OPENAI_API_KEY');
     const plantidKey = Deno.env.get('PLANT_ID_API_KEY');
+    const plantidCropHealthKey = Deno.env.get('PLANT_ID_CROP_HEALTH_API_KEY');
     const eppoToken = Deno.env.get('EPPO_AUTH_TOKEN');
     const plantnetKey = Deno.env.get('PLANT_NET_KEY');
 
     console.log('🔑 Checking API keys availability...');
     console.log(`OpenAI: ${openaiKey ? '✅ Available' : '❌ Missing'}`);
     console.log(`Plant.ID: ${plantidKey ? '✅ Available' : '❌ Missing'}`);
+    console.log(`Plant.ID Crop Health: ${plantidCropHealthKey ? '✅ Available' : '❌ Missing'}`);
     console.log(`EPPO: ${eppoToken ? '✅ Available' : '❌ Missing'}`);
     console.log(`PlantNet: ${plantnetKey ? '✅ Available' : '❌ Missing'}`);
 
     const status = {
       openai: !!openaiKey,
       plantid: !!plantidKey,
+      plantidCropHealth: !!plantidCropHealthKey,
       eppo: !!eppoToken,
       plantnet: !!plantnetKey,
       summary: {
-        total: 4,
-        configured: [openaiKey, plantidKey, eppoToken, plantnetKey].filter(Boolean).length,
+        total: 5,
+        configured: [openaiKey, plantidKey, plantidCropHealthKey, eppoToken, plantnetKey].filter(Boolean).length,
         missing: [
           !openaiKey && 'OPENAI_API_KEY',
-          !plantidKey && 'PLANT_ID_API_KEY', 
+          !plantidKey && 'PLANT_ID_API_KEY',
+          !plantidCropHealthKey && 'PLANT_ID_CROP_HEALTH_API_KEY',
           !eppoToken && 'EPPO_AUTH_TOKEN',
           !plantnetKey && 'PLANT_NET_KEY'
         ].filter(Boolean)
