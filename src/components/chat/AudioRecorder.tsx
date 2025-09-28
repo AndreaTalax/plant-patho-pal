@@ -64,6 +64,7 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({
   };
 
   const startRecording = async () => {
+    console.log('🎤 Click registrazione audio per amministratore');
     if (!navigator.mediaDevices?.getUserMedia) {
       enhancedToast.error("Browser non supportato", {
         description: "Il tuo browser non supporta la registrazione audio"

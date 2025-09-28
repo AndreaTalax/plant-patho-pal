@@ -80,6 +80,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
   };
 
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    console.log('📎 Click su carica file per amministratore');
     const file = event.target.files?.[0];
     if (!file || !userProfile?.id) return;
 
@@ -141,12 +142,15 @@ const MessageInput: React.FC<MessageInputProps> = ({
   };
 
   const handleEmojiSelect = (emoji: any) => {
+    console.log('😀 Emoji selezionata:', emoji);
     if (emoji?.native) {
       // Feedback tattile per emoji selezionata
       triggerHaptic('reaction');
       
       setMessage(prev => prev + emoji.native);
       setShowEmojiPicker(false);
+      
+      console.log('😀 Emoji aggiunta al messaggio');
       
       // Focus back to textarea
       if (textareaRef.current) {
@@ -197,7 +201,10 @@ const MessageInput: React.FC<MessageInputProps> = ({
             <AccessibleButton
               variant="ghost"
               size="sm"
-              onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+              onClick={() => {
+                console.log('😀 Click emoji per amministratore, current state:', showEmojiPicker);
+                setShowEmojiPicker(!showEmojiPicker);
+              }}
               disabled={isSending || isUploading}
               label="Seleziona emoji"
               className="h-10 w-10 p-0"
@@ -218,7 +225,10 @@ const MessageInput: React.FC<MessageInputProps> = ({
           <AccessibleButton
             variant="ghost"
             size="sm"
-            onClick={() => fileInputRef.current?.click()}
+            onClick={() => {
+              console.log('📎 Click allegati per amministratore');
+              fileInputRef.current?.click();
+            }}
             disabled={isSending || isUploading}
             label="Carica immagine o PDF"
             className="h-10 w-10 p-0"
