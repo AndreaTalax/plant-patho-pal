@@ -16,13 +16,13 @@ interface MessageContentProps {
   }) => void;
 }
 
-// Function to render markdown links as clickable HTML links or PDF components
+// 🔗 Converte i link markdown in <a> o <PDFDisplay>
 const renderMarkdownLinks = (text: string) => {
   const markdownLinkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
   
-  const parts = [];
+  const parts: (string | JSX.Element)[] = [];
   let lastIndex = 0;
-  let match;
+  let match: RegExpExecArray | null;
   
   while ((match = markdownLinkRegex.exec(text)) !== null) {
     if (match.index > lastIndex) {
@@ -32,13 +32,12 @@ const renderMarkdownLinks = (text: string) => {
     const linkText = match[1];
     const linkUrl = match[2];
     
-    // Check if this is a PDF link
-    if (linkUrl.includes('.pdf')) {
+    if (linkUrl.toLowerCase().endsWith('.pdf')) {
       parts.push(
         <div key={match.index} className="my-2">
           <PDFDisplay 
             pdfPath={linkUrl}
-            fileName={linkText}
+            fileName={linkText || "documento.pdf"}
           />
         </div>
       );
@@ -49,7 +48,6 @@ const renderMarkdownLinks = (text: string) => {
           href={linkUrl} 
           target="_blank" 
           rel="noopener noreferrer"
-          download
           className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 underline font-medium"
         >
           {linkText}
@@ -64,10 +62,10 @@ const renderMarkdownLinks = (text: string) => {
     parts.push(text.slice(lastIndex));
   }
   
-  return parts.length > 1 ? parts : text;
+  return <>{parts}</>;
 };
 
-// Componente semplificato per invio media
+// 📎 Componente semplificato per invio media
 const SimpleMediaSender = ({ onSendMessage }: { onSendMessage?: MessageContentProps['onSendMessage'] }) => {
   const [isRecording, setIsRecording] = useState(false);
   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
@@ -75,7 +73,6 @@ const SimpleMediaSender = ({ onSendMessage }: { onSendMessage?: MessageContentPr
   const audioInputRef = useRef<HTMLInputElement>(null);
   const pdfInputRef = useRef<HTMLInputElement>(null);
 
-  // Registrazione audio semplificata
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -97,7 +94,6 @@ const SimpleMediaSender = ({ onSendMessage }: { onSendMessage?: MessageContentPr
           audioBlob: audioBlob
         });
 
-        // Ferma lo stream
         stream.getTracks().forEach(track => track.stop());
       };
 
@@ -118,12 +114,10 @@ const SimpleMediaSender = ({ onSendMessage }: { onSendMessage?: MessageContentPr
     }
   };
 
-  // Upload file semplificato
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>, fileType: 'image' | 'audio' | 'pdf') => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    // Verifica tipo file
     const isValidType = 
       (fileType === 'image' && file.type.startsWith('image/')) ||
       (fileType === 'audio' && file.type.startsWith('audio/')) ||
@@ -156,7 +150,6 @@ const SimpleMediaSender = ({ onSendMessage }: { onSendMessage?: MessageContentPr
       fileData: file
     });
 
-    // Reset input
     event.target.value = '';
   };
 
@@ -189,7 +182,6 @@ const SimpleMediaSender = ({ onSendMessage }: { onSendMessage?: MessageContentPr
 
       {/* Controlli media */}
       <div className="flex gap-2">
-        {/* Audio Recording */}
         <button
           onClick={isRecording ? stopRecording : startRecording}
           className={`p-2 rounded-lg transition-all ${
@@ -202,7 +194,6 @@ const SimpleMediaSender = ({ onSendMessage }: { onSendMessage?: MessageContentPr
           {isRecording ? '⏹️' : '🎤'}
         </button>
 
-        {/* Upload buttons */}
         <button
           onClick={() => fileInputRef.current?.click()}
           className="p-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
@@ -255,20 +246,19 @@ const SimpleMediaSender = ({ onSendMessage }: { onSendMessage?: MessageContentPr
 };
 
 export const MessageContent = ({ message, onSendMessage }: MessageContentProps) => {
-  // Verifica tipo messaggio
-  const isAudioMessage = message.text?.includes('🎵') || 
-                         (message.image_url && (
-                           message.image_url.includes('audio') || 
-                           message.image_url.includes('.webm') ||
-                           message.image_url.includes('.mp3') ||
-                           message.image_url.includes('.wav')
-                         ));
+  const isAudioMessage =
+    (message.image_url && (
+      message.image_url.includes('audio') || 
+      message.image_url.endsWith('.webm') ||
+      message.image_url.endsWith('.mp3') ||
+      message.image_url.endsWith('.wav')
+    ));
 
-  const isPDFMessage = message.text?.includes('📄') || 
-                       (message.image_url && message.image_url.includes('.pdf'));
+  const isPDFMessage =
+    (message.image_url && message.image_url.toLowerCase().endsWith('.pdf'));
 
-  const isImageMessage = message.text?.includes('🖼️') ||
-                        (message.image_url && !isAudioMessage && !isPDFMessage);
+  const isImageMessage =
+    (message.image_url && !isAudioMessage && !isPDFMessage);
 
   console.log('📝 Message Debug:', {
     text: message.text,
@@ -280,14 +270,14 @@ export const MessageContent = ({ message, onSendMessage }: MessageContentProps) 
 
   return (
     <div className="space-y-3">
-      {/* Contenuto del messaggio */}
+      {/* Testo + parsing link */}
       {message.text && (
         <div className="whitespace-pre-wrap leading-relaxed">
           {renderMarkdownLinks(message.text)}
         </div>
       )}
       
-      {/* Media display */}
+      {/* Media */}
       {message.image_url && (
         <>
           {isAudioMessage && <AudioMessage audioUrl={message.image_url} />}
@@ -306,7 +296,6 @@ export const MessageContent = ({ message, onSendMessage }: MessageContentProps) 
         <ProductRecommendations products={message.products} />
       )}
       
-      {/* Controlli invio */}
       <SimpleMediaSender onSendMessage={onSendMessage} />
     </div>
   );
