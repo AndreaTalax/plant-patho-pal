@@ -16,7 +16,7 @@ interface MessageContentProps {
   }) => void;
 }
 
-// Function to render markdown links as clickable HTML links
+// Function to render markdown links as clickable HTML links or PDF components
 const renderMarkdownLinks = (text: string) => {
   const markdownLinkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
   
@@ -32,18 +32,30 @@ const renderMarkdownLinks = (text: string) => {
     const linkText = match[1];
     const linkUrl = match[2];
     
-    parts.push(
-      <a 
-        key={match.index}
-        href={linkUrl} 
-        target="_blank" 
-        rel="noopener noreferrer"
-        download
-        className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 underline font-medium"
-      >
-        {linkText}
-      </a>
-    );
+    // Check if this is a PDF link
+    if (linkUrl.includes('.pdf')) {
+      parts.push(
+        <div key={match.index} className="my-2">
+          <PDFDisplay 
+            pdfPath={linkUrl}
+            fileName={linkText}
+          />
+        </div>
+      );
+    } else {
+      parts.push(
+        <a 
+          key={match.index}
+          href={linkUrl} 
+          target="_blank" 
+          rel="noopener noreferrer"
+          download
+          className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 underline font-medium"
+        >
+          {linkText}
+        </a>
+      );
+    }
     
     lastIndex = match.index + match[0].length;
   }
