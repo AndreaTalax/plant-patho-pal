@@ -403,28 +403,35 @@ const ProfessionalExpertDashboard = () => {
     window.dispatchEvent(new CustomEvent('switchTab', { detail: 'profile' }));
   };
 
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <div className="flex items-center gap-2">
-          <Loader2 className="h-6 w-6 animate-spin text-drplant-green" />
-          <span className="text-gray-600">Caricamento dashboard professionale...</span>
-        </div>
-      </div>
-    );
-  }
+// ...tutto il codice sopra resta uguale
 
-  // Se è selezionata una conversazione, mostra solo la chat
-  if (selectedConversation) {
-    return (
-      <div className="min-h-screen bg-white">
+if (loading) {
+  return (
+    <div className="flex justify-center items-center h-64">
+      <div className="flex items-center gap-2">
+        <Loader2 className="h-6 w-6 animate-spin text-drplant-green" />
+        <span className="text-gray-600">Caricamento dashboard professionale...</span>
+      </div>
+    </div>
+  );
+}
+
+// ✅ FIX: dettaglio chat con layout coerente
+if (selectedConversation) {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-4 md:p-6">
+      <div className="max-w-7xl mx-auto">
         <ExpertChatDetailView
           conversation={selectedConversation}
           onBack={() => setSelectedConversation(null)}
         />
       </div>
-    );
-  }
+    </div>
+  );
+}
+
+// ...tutto il resto del return originale
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-4 md:p-6">
