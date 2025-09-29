@@ -414,6 +414,18 @@ const ProfessionalExpertDashboard = () => {
     );
   }
 
+  // Se è selezionata una conversazione, mostra solo la chat
+  if (selectedConversation) {
+    return (
+      <div className="min-h-screen bg-white">
+        <ExpertChatDetailView
+          conversation={selectedConversation}
+          onBack={() => setSelectedConversation(null)}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-4 md:p-6">
       <div className="max-w-7xl mx-auto space-y-4 md:space-y-6">
