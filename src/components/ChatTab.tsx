@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { UserChatViewRealtime } from './chat/UserChatViewRealtime';
 import { ConnectionStatus } from './ConnectionStatus';
-import { MessageCircle, Crown, FileText } from 'lucide-react';
+import { MessageCircle, Crown, FileText, Trash2, Bell } from 'lucide-react';
 import { usePremiumStatus } from '@/services/premiumService';
 import { Button } from '@/components/ui/button';
 import { PremiumPaywallModal } from './diagnose/PremiumPaywallModal';
@@ -18,6 +18,7 @@ interface ActiveConversation {
   last_message_text?: string;
   last_message_at?: string;
   created_at: string;
+  unread_count?: number;
 }
 
 const ChatTab = () => {
@@ -79,6 +80,18 @@ const ChatTab = () => {
             }
           }
 
+          // Conta i messaggi non letti per ogni conversazione
+          for (const conv of list) {
+            const { count } = await supabase
+              .from('messages')
+              .select('*', { count: 'exact', head: true })
+              .eq('conversation_id', conv.id)
+              .eq('recipient_id', user.id)
+              .eq('read', false);
+            
+            conv.unread_count = count || 0;
+          }
+
           setActiveConversations(list);
           // Se c'è una sola conversazione, selezionala automaticamente
           if (list.length === 1) {
@@ -119,6 +132,42 @@ const ChatTab = () => {
       window.removeEventListener('switchTab', handleTabSwitch as EventListener);
     };
   }, [isAuthenticated, user?.id]);
+
+  // Funzione per eliminare una conversazione
+  const handleDeleteConversation = async (conversationId: string, e: React.MouseEvent) => {
+    e.stopPropagation(); // Previeni l'apertura della conversazione
+    
+    if (!confirm('Sei sicuro di voler eliminare questa conversazione? Questa azione non può essere annullata.')) {
+      return;
+    }
+
+    try {
+      console.log('🗑️ Eliminazione conversazione:', conversationId);
+      const { error } = await supabase.functions.invoke('delete-conversation', {
+        body: { conversationId }
+      });
+
+      if (error) {
+        console.error('❌ Errore nell\'eliminazione:', error);
+        alert('Errore nell\'eliminazione della conversazione');
+        return;
+      }
+
+      // Rimuovi la conversazione dalla lista
+      setActiveConversations(prev => prev.filter(c => c.id !== conversationId));
+      
+      // Se era la conversazione selezionata, deselezionala
+      if (selectedConversationId === conversationId) {
+        setSelectedConversationId(null);
+      }
+
+      console.log('✅ Conversazione eliminata con successo');
+    } catch (error) {
+      console.error('❌ Errore nell\'eliminazione:', error);
+      alert('Errore nell\'eliminazione della conversazione');
+    }
+  };
+
 
   if (!isAuthenticated || !user) {
     return (
@@ -211,7 +260,6 @@ const ChatTab = () => {
               Continua le conversazioni con il fitopatologo Marco Nigro
             </p>
           </div>
-
           <div className="space-y-4">
             {activeConversations.map((conversation) => (
               <Card 
@@ -221,15 +269,38 @@ const ChatTab = () => {
               >
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between">
-                    <CardTitle className="text-lg">
-                      Conversazione con Marco Nigro
-                    </CardTitle>
-                    <Badge 
-                      variant={conversation.status === 'active' ? 'default' : 'secondary'}
-                      className="bg-green-100 text-green-800"
-                    >
-                      Attiva
-                    </Badge>
+                    <div className="flex items-center gap-2">
+                      <CardTitle className="text-lg">
+                        Conversazione con Marco Nigro
+                      </CardTitle>
+                      {conversation.unread_count && conversation.unread_count > 0 && (
+                        <div className="relative">
+                          <Bell className="h-5 w-5 text-primary animate-pulse" />
+                          <Badge 
+                            variant="destructive" 
+                            className="absolute -top-2 -right-2 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs"
+                          >
+                            {conversation.unread_count}
+                          </Badge>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge 
+                        variant={conversation.status === 'active' ? 'default' : 'secondary'}
+                        className="bg-green-100 text-green-800"
+                      >
+                        Attiva
+                      </Badge>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={(e) => handleDeleteConversation(conversation.id, e)}
+                        className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                   <CardDescription>
                     Iniziata il {new Date(conversation.created_at).toLocaleDateString('it-IT', {
