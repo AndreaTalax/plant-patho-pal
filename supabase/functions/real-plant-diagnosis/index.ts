@@ -130,13 +130,15 @@ async function diagnoseWithPlantIdHealth(imageBase64: string): Promise<DiseaseDe
       },
       body: JSON.stringify({
         images: [imageBase64],
-        modifiers: ["crops_fast"],
+        modifiers: ["crops_fast", "similar_images"],
         language: "it",
         disease_details: [
           "common_names",
           "description", 
           "treatment",
-          "classification"
+          "classification",
+          "cause",
+          "local_name"
         ]
       }),
       signal: AbortSignal.timeout(15000)
@@ -154,17 +156,55 @@ async function diagnoseWithPlantIdHealth(imageBase64: string): Promise<DiseaseDe
     }
 
     return data.health_assessment.diseases
-      .filter((disease: any) => disease.probability > 0.1)
-      .slice(0, 5)
-      .map((disease: any) => ({
-        name: disease.name,
-        confidence: Math.round(disease.probability * 100),
-        symptoms: disease.disease_details?.description ? [disease.disease_details.description] : [],
-        treatments: disease.disease_details?.treatment?.biological || disease.disease_details?.treatment?.chemical || [],
-        cause: disease.disease_details?.classification?.type || 'Malattia identificata',
-        source: 'Plant.id Health',
-        severity: disease.probability > 0.7 ? 'high' : disease.probability > 0.4 ? 'medium' : 'low'
-      }));
+      .filter((disease: any) => disease.probability > 0.05)
+      .slice(0, 8)
+      .map((disease: any) => {
+        const details = disease.disease_details || {};
+        
+        // Estrai sintomi dalla descrizione
+        let symptoms: string[] = [];
+        if (details.description) {
+          symptoms.push(details.description);
+        }
+        if (details.local_name && details.local_name !== disease.name) {
+          symptoms.push(`Nome locale: ${details.local_name}`);
+        }
+        
+        // Estrai trattamenti dettagliati
+        let treatments: string[] = [];
+        if (details.treatment) {
+          if (Array.isArray(details.treatment.biological) && details.treatment.biological.length > 0) {
+            treatments.push('BIOLOGICO: ' + details.treatment.biological.join('; '));
+          }
+          if (Array.isArray(details.treatment.chemical) && details.treatment.chemical.length > 0) {
+            treatments.push('CHIMICO: ' + details.treatment.chemical.join('; '));
+          }
+          if (Array.isArray(details.treatment.prevention) && details.treatment.prevention.length > 0) {
+            treatments.push('PREVENZIONE: ' + details.treatment.prevention.join('; '));
+          }
+        }
+        
+        // Determina la causa dettagliata
+        let cause = 'Malattia identificata';
+        if (details.cause) {
+          cause = details.cause;
+        } else if (details.classification) {
+          const classification = details.classification;
+          if (classification.kingdom) cause = classification.kingdom;
+          if (classification.phylum) cause += ` (${classification.phylum})`;
+          if (classification.class) cause += ` - ${classification.class}`;
+        }
+        
+        return {
+          name: disease.name || disease.disease_details?.common_names?.[0] || 'Problema identificato',
+          confidence: Math.round(disease.probability * 100),
+          symptoms: symptoms.length > 0 ? symptoms : ['Sintomi visibili nell\'analisi dell\'immagine'],
+          treatments: treatments.length > 0 ? treatments : ['Consultare un fitopatologo per trattamenti specifici'],
+          cause,
+          source: 'Plant.id Health Assessment',
+          severity: disease.probability > 0.6 ? 'high' : disease.probability > 0.3 ? 'medium' : 'low'
+        };
+      });
 
   } catch (error) {
     console.error('❌ Plant.id health diagnosis error:', error.message);
@@ -246,34 +286,42 @@ async function analyzeWithOpenAI(imageBase64: string): Promise<{ plants: PlantId
         messages: [
           {
             role: 'system',
-            content: `Sei un esperto fitopatologo. Analizza l'immagine e identifica:
-1. La pianta (nome comune e scientifico)
-2. Eventuali malattie, parassiti o problemi
-3. Sintomi visibili
-4. Trattamenti consigliati
+            content: `Sei un esperto fitopatologo con anni di esperienza nel riconoscimento di malattie delle piante. Analizza attentamente l'immagine fornita e identifica:
+
+1. La pianta (nome comune italiano e nome scientifico)
+2. Eventuali malattie, parassiti, carenze nutrizionali o problemi fisiologici
+3. Sintomi visibili specifici e dettagliati
+4. Trattamenti consigliati specifici con principi attivi quando possibile
+5. Cause precise della malattia o del problema
+
+Sii MOLTO SPECIFICO nelle diagnosi. Non usare termini generici come "rust" o "fungal disease", ma indica il nome scientifico della malattia (es. "Puccinia graminis - Ruggine del grano", "Phytophthora infestans - Peronospora della patata", "Alternaria solani - Alternariosi del pomodoro").
+
+Per i sintomi, descrivi dettagliatamente cosa si vede (es. "macchie circolari brune con alone giallo sul margine fogliare" invece di "macchie sulle foglie").
+
+Per i trattamenti, indica prodotti specifici o principi attivi (es. "tebuconazolo" invece di "fungicida") e distingui tra trattamenti biologici e chimici.
 
 Rispondi in formato JSON con questa struttura:
 {
   "pianta": {
-    "nomeComune": "...",
-    "nomeScientifico": "...",
-    "famiglia": "...",
+    "nomeComune": "nome italiano della pianta",
+    "nomeScientifico": "nome scientifico completo (Genere species)",
+    "famiglia": "famiglia botanica",
     "confidenza": numero 1-100
   },
   "malattie": [
     {
-      "nome": "...",
+      "nome": "Nome completo specifico della malattia (nome scientifico + nome comune)",
       "confidenza": numero 1-100,
-      "sintomi": ["..."],
-      "trattamenti": ["..."],
-      "causa": "...",
+      "sintomi": ["lista dettagliata dei sintomi visibili specifici"],
+      "trattamenti": ["trattamenti specifici con principi attivi o metodi"],
+      "causa": "agente patogeno specifico (es. fungo, batterio, virus, carenza) con nome scientifico",
       "gravita": "bassa|media|alta"
     }
   ],
   "salute": {
     "punteggioGenerale": numero 1-100,
     "sana": true/false,
-    "note": "..."
+    "note": "note specifiche sullo stato della pianta"
   }
 }`
           },
@@ -354,37 +402,71 @@ async function searchEppoDatabase(plantName: string): Promise<DiseaseDetection[]
   try {
     console.log('🗄️ Searching EPPO database for:', plantName);
     
-    const response = await fetch(`https://data.eppo.int/api/rest/1.0/tools/search?kw=${encodeURIComponent(plantName)}`, {
+    // Prima cerca la pianta per ottenere il codice EPPO
+    const searchResponse = await fetch(`https://data.eppo.int/api/rest/1.0/tools/search?kw=${encodeURIComponent(plantName)}&searchfor=plants`, {
       headers: {
-        'Authorization': `Bearer ${eppoApiKey}`,
+        'authtoken': eppoApiKey,
         'Content-Type': 'application/json'
       },
       signal: AbortSignal.timeout(10000)
     });
 
-    if (!response.ok) {
-      throw new Error(`EPPO API error: ${response.status}`);
+    if (!searchResponse.ok) {
+      throw new Error(`EPPO search API error: ${searchResponse.status}`);
     }
 
-    const data = await response.json();
-    console.log('✅ EPPO search completed');
+    const searchData = await searchResponse.json();
     
-    if (!data || !Array.isArray(data)) {
+    if (!searchData || searchData.length === 0) {
+      console.log('⚠️ No EPPO results for plant:', plantName);
       return [];
     }
 
-    // Filter per malattie e parassiti
-    const diseases = data
-      .filter((item: any) => item.type === 'disease' || item.type === 'pest')
-      .slice(0, 3)
+    // Prendi il primo risultato (quello più rilevante)
+    const plantCode = searchData[0]?.eppocode;
+    
+    if (!plantCode) {
+      return [];
+    }
+
+    // Cerca le malattie associate a questa pianta
+    const hostsResponse = await fetch(`https://data.eppo.int/api/rest/1.0/tools/hosts?hostcode=${plantCode}`, {
+      headers: {
+        'authtoken': eppoApiKey,
+        'Content-Type': 'application/json'
+      },
+      signal: AbortSignal.timeout(10000)
+    });
+
+    if (!hostsResponse.ok) {
+      throw new Error(`EPPO hosts API error: ${hostsResponse.status}`);
+    }
+
+    const hostsData = await hostsResponse.json();
+    console.log('✅ EPPO database search completed');
+    
+    if (!hostsData || !Array.isArray(hostsData)) {
+      return [];
+    }
+
+    // Filtra e mappa le malattie più rilevanti
+    const diseases = hostsData
+      .filter((item: any) => item.pestcode && item.fullname)
+      .slice(0, 5)
       .map((item: any) => ({
-        name: item.prefname || item.fullname || 'Problema EPPO',
-        confidence: 75,
-        symptoms: ['Registrato nel database EPPO come potenziale minaccia'],
-        treatments: ['Consultare protocolli fitosanitari EPPO'],
-        cause: `${item.type === 'disease' ? 'Malattia' : 'Parassita'} catalogato EPPO`,
-        source: 'Database EPPO',
-        severity: 'medium' as const
+        name: `${item.fullname} (Codice EPPO: ${item.pestcode})`,
+        confidence: 70,
+        symptoms: [
+          `Patogeno registrato nel database EPPO come minaccia per ${plantName}`,
+          item.preferred ? 'Classificato come organismo di quarantena o regolamentato' : 'Organismo dannoso conosciuto'
+        ],
+        treatments: [
+          'Consultare le linee guida fitosanitarie EPPO specifiche per questo patogeno',
+          'Applicare protocolli di prevenzione e controllo secondo normativa fitosanitaria europea'
+        ],
+        cause: `Organismo dannoso catalogato EPPO: ${item.codetype || 'Patogeno'}`,
+        source: 'Database EPPO (European and Mediterranean Plant Protection Organization)',
+        severity: item.preferred ? 'high' as const : 'medium' as const
       }));
 
     return diseases;
