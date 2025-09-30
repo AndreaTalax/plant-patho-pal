@@ -11,7 +11,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { MARCO_NIGRO_ID } from '@/components/phytopathologist';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ChatTestButton } from './chat/ChatTestButton';
 
 interface ActiveConversation {
   id: string;
@@ -263,8 +262,6 @@ const ChatTab = () => {
           </div>
 
           <div className="mt-8 space-y-4">
-            <ChatTestButton />
-            
             {/* Pulsante per nuovo preventivo professionale - solo per professionisti */}
             {selectedPlan === 'professionisti' && (
               <div className="text-center">
