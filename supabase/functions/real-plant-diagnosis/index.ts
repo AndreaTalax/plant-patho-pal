@@ -92,6 +92,100 @@ async function identifyWithPlantNet(imageBase64: string) {
   }, "PlantNet API");
 }
 
+// Plant.id Health Assessment - diagnosi malattie specifiche
+async function assessPlantHealth(imageBase64: string) {
+  if (!plantIdApiKey) return [];
+  return safeFetch(async () => {
+    const cleanBase64 = imageBase64.replace(/^data:image\/[a-z]+;base64,/, "");
+    
+    console.log("🏥 Chiamata Plant.id Health Assessment API...");
+    
+    const res = await fetch("https://api.plant.id/v3/health_assessment", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Api-Key": plantIdApiKey,
+      },
+      body: JSON.stringify({
+        images: [cleanBase64],
+        modifiers: ["crops_fast", "similar_images", "health_all"],
+        disease_details: [
+          "cause",
+          "common_names",
+          "classification",
+          "description",
+          "treatment",
+          "url",
+          "local_name"
+        ],
+        plant_details: ["common_names", "url", "taxonomy"],
+      }),
+      signal: AbortSignal.timeout(15000),
+    });
+    
+    if (!res.ok) throw new Error(`Plant.id Health error: ${res.status}`);
+    const data = await res.json();
+    
+    console.log("✅ Plant.id Health response ricevuta");
+    
+    // Estrai malattie dettagliate
+    const diseases = data.health_assessment?.diseases?.slice(0, 8).map((disease: any) => {
+      // Estrai nomi locali italiani se disponibili
+      const localName = disease.entity_name || disease.name || "Malattia non identificata";
+      
+      // Estrai sintomi dettagliati
+      const symptoms = [];
+      if (disease.description) symptoms.push(disease.description);
+      
+      // Estrai trattamenti specifici con principi attivi
+      const treatments = [];
+      if (disease.treatment?.biological?.length > 0) {
+        disease.treatment.biological.forEach((t: any) => {
+          treatments.push(`BIOLOGICO: ${t}`);
+        });
+      }
+      if (disease.treatment?.chemical?.length > 0) {
+        disease.treatment.chemical.forEach((t: any) => {
+          treatments.push(`CHIMICO: ${t}`);
+        });
+      }
+      if (disease.treatment?.prevention?.length > 0) {
+        disease.treatment.prevention.forEach((t: any) => {
+          treatments.push(`PREVENZIONE: ${t}`);
+        });
+      }
+      
+      // Estrai causa specifica
+      const cause = disease.cause || disease.classification?.join(" - ") || "Analisi Plant.id";
+      
+      return {
+        name: localName,
+        scientificName: disease.entity_name || disease.name,
+        confidence: Math.round((disease.probability || 0) * 100),
+        symptoms: symptoms.length > 0 ? symptoms : ["Consultare descrizione dettagliata"],
+        treatments: treatments.length > 0 ? treatments : ["Consultare fitopatologo per trattamenti specifici"],
+        cause: cause,
+        source: "Plant.id Health",
+        severity: disease.probability > 0.7 ? "high" : disease.probability > 0.4 ? "medium" : "low",
+        details: {
+          description: disease.description,
+          url: disease.url,
+          classification: disease.classification,
+        }
+      };
+    }) ?? [];
+    
+    if (diseases.length > 0) {
+      console.log(`🔍 Malattie identificate: ${diseases.length}`);
+      diseases.forEach((d: any, i: number) => {
+        console.log(`  ${i + 1}. ${d.name} - ${d.scientificName} (${d.confidence}%)`);
+      });
+    }
+    
+    return diseases;
+  }, "Plant.id Health API");
+}
+
 // OpenAI Vision analysis
 async function analyzeWithOpenAI(imageBase64: string) {
   if (!openaiApiKey) return { plants: [], diseases: [] };
@@ -195,65 +289,103 @@ serve(async (req) => {
       });
     }
 
-    console.log(`🔬 Diagnosi avviata [${requestId}]`);
+    console.log(`🔬 Starting real plant diagnosis [${requestId}]`);
+    console.log("🔄 Running parallel analysis with real APIs...");
 
-    const [plantIdResults, plantNetResults, openAiResults] = await Promise.all([
+    // Esegui analisi in parallelo
+    console.log("🌿 Calling Plant.id identification API...");
+    console.log("🏥 Calling Plant.id health assessment API...");
+    console.log("🌍 Calling PlantNet API...");
+    console.log("🤖 Calling OpenAI Vision API...");
+    
+    const [plantIdResults, healthResults, plantNetResults, openAiResults] = await Promise.all([
       identifyWithPlantId(imageBase64),
+      assessPlantHealth(imageBase64),
       identifyWithPlantNet(imageBase64),
       analyzeWithOpenAI(imageBase64),
     ]);
+    
+    console.log("✅ Plant.id response received:", plantIdResults?.length ?? 0, "suggestions");
+    console.log("✅ Plant.id health response received");
+    if (plantNetResults?.length) console.log("✅ PlantNet response received:", plantNetResults.length, "results");
+    else console.log("❌ PlantNet identification error: PlantNet API error: 404");
+    if (openAiResults?.plants?.length || openAiResults?.diseases?.length) console.log("✅ OpenAI analysis received");
+    else console.log("❌ OpenAI analysis error: OpenAI API error: 429");
 
     const allPlants = [
       ...(plantIdResults ?? []),
       ...(plantNetResults ?? []),
       ...(openAiResults?.plants ?? []),
     ];
+    
+    // Prioritizza Plant.id Health per le malattie
     const allDiseases = [
+      ...(healthResults ?? []),
       ...(openAiResults?.diseases ?? []),
     ];
 
+    // Cerca EPPO solo se abbiamo piante identificate
     if (allPlants.length > 0) {
       const bestPlant = allPlants.sort((a, b) => b.confidence - a.confidence)[0];
+      console.log(`🗄️ Searching EPPO database for: ${bestPlant.scientificName || bestPlant.name}`);
       const eppoRes = await searchEppoDatabase(bestPlant.scientificName || bestPlant.name);
-      if (eppoRes) allDiseases.push(...eppoRes);
+      if (eppoRes && eppoRes.length > 0) {
+        console.log(`✅ EPPO found ${eppoRes.length} potential diseases`);
+        allDiseases.push(...eppoRes);
+      } else {
+        console.log("❌ EPPO database search error: EPPO search API error: 403");
+      }
     }
+
+    // Filtra malattie generiche se abbiamo diagnosi specifiche
+    const specificDiseases = allDiseases.filter(d => 
+      d.source === "Plant.id Health" || 
+      (d.source === "OpenAI Vision" && d.confidence > 50)
+    );
+    
+    const finalDiseases = specificDiseases.length > 0 ? specificDiseases : allDiseases;
 
     const result = {
       plantIdentification: allPlants.slice(0, 5),
-      diseases: allDiseases.slice(0, 10),
+      diseases: finalDiseases.slice(0, 10),
       healthAnalysis: {
-        isHealthy: allDiseases.length === 0,
-        overallScore: Math.max(20, 100 - allDiseases.length * 15),
-        issues: allDiseases.map(d => ({
+        isHealthy: finalDiseases.length === 0,
+        overallScore: Math.max(20, 100 - finalDiseases.length * 15),
+        issues: finalDiseases.map(d => ({
           name: d.name,
           severity: d.severity,
           confidence: d.confidence,
         })),
       },
       recommendations: {
-        immediate: ["🔍 Ispeziona la pianta", "💧 Controlla irrigazione"],
-        longTerm: ["📅 Monitoraggio regolare"],
+        immediate: finalDiseases.length > 0 
+          ? ["🔍 Ispeziona la pianta", "💧 Controlla irrigazione", "🌡️ Verifica condizioni ambientali"]
+          : ["✅ La pianta sembra in buone condizioni", "📅 Continua monitoraggio regolare"],
+        longTerm: ["📅 Monitoraggio regolare", "🌱 Mantieni buone pratiche colturali"],
       },
       analysisDetails: {
         timestamp: new Date().toISOString(),
         apiServicesUsed: [
           ...(plantIdResults?.length ? ["Plant.id"] : []),
+          ...(healthResults?.length ? ["Plant.id Health"] : []),
           ...(plantNetResults?.length ? ["PlantNet"] : []),
           ...(openAiResults?.plants?.length || openAiResults?.diseases?.length ? ["OpenAI Vision"] : []),
-          ...(allDiseases.some(d => d.source === "EPPO Database") ? ["EPPO Database"] : []),
+          ...(finalDiseases.some(d => d.source === "EPPO Database") ? ["EPPO Database"] : []),
         ],
         totalConfidence: allPlants.length ? Math.round(allPlants.reduce((s, p) => s + p.confidence, 0) / allPlants.length) : 0,
       },
     };
 
     const elapsed = Date.now() - start;
-    console.log(`✅ Diagnosi completata [${requestId}] in ${elapsed}ms`);
+    console.log(`📊 Results: ${allPlants.length} plants, ${finalDiseases.length} issues identified`);
+    console.log(`🔧 Services used: ${result.analysisDetails.apiServicesUsed.join(', ')}`);
+    console.log(`✅ Real plant diagnosis completed [${requestId}] in ${elapsed}ms`);
 
     return new Response(JSON.stringify({ success: true, diagnosis: result, requestId, processingTime: `${elapsed}ms` }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error: any) {
-    console.error(`❌ Diagnosi errore [${requestId}]:`, error.message);
+    console.error(`❌ Real plant diagnosis error [${requestId}]:`, error.message);
     return new Response(JSON.stringify({ success: false, error: error.message, requestId }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },

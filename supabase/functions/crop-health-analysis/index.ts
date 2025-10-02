@@ -29,11 +29,12 @@ serve(async (req) => {
 
     console.log("🏥 Crop-Health Analysis: Starting disease analysis...");
 
-    const cropHealthApiKey = Deno.env.get("PLANT_ID_CROP_HEALTH_API_KEY");
+    // ✅ Usa la chiave PLANT_ID_API_KEY corretta
+    const cropHealthApiKey = Deno.env.get("PLANT_ID_API_KEY");
     if (!cropHealthApiKey) {
-      console.error("❌ PLANT_ID_CROP_HEALTH_API_KEY not found");
+      console.error("❌ PLANT_ID_API_KEY not found");
       return new Response(
-        JSON.stringify({ error: "Crop Health API key not configured" }),
+        JSON.stringify({ error: "Plant.id API key not configured" }),
         {
           status: 500,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
