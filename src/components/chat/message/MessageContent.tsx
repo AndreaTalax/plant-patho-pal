@@ -18,7 +18,8 @@ interface MessageContentProps {
 
 // 🔗 Converte i link markdown in <a> o <PDFDisplay>
 const renderMarkdownLinks = (text: string) => {
-  const markdownLinkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
+  // Supporta link markdown anche con spazi/newline tra ] e (
+  const markdownLinkRegex = /\[([^\]]+)\]\s*\(([^)]+)\)/g;
   
   const parts: (string | JSX.Element)[] = [];
   let lastIndex = 0;
