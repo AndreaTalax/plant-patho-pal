@@ -55,7 +55,7 @@ const Header = () => {
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link to="/" className="flex items-center space-x-2 font-bold text-xl text-drplant-green">
+          <Link to="/?tab=diagnose" className="flex items-center space-x-2 font-bold text-xl text-drplant-green">
             <img 
               src="/lovable-uploads/72d5a60c-404a-4167-9430-511af91c523b.png" 
               alt="Dr.Plant Logo" 
