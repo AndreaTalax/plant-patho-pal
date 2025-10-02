@@ -44,11 +44,21 @@ const Header = () => {
   };
 
   const menuItems = [
-    { name: 'Home', icon: Home, path: '/?tab=diagnose' },
-    { name: 'Chi Siamo', icon: Info, path: '/about' },
-    { name: 'Servizi', icon: Briefcase, path: '/services' },
-    { name: 'Contatti', icon: Phone, path: '/contact' },
+    { name: 'Home', icon: Home, path: '/?tab=diagnose', isTabSwitch: true },
+    { name: 'Chi Siamo', icon: Info, path: '/about', isTabSwitch: false },
+    { name: 'Servizi', icon: Briefcase, path: '/services', isTabSwitch: false },
+    { name: 'Contatti', icon: Phone, path: '/contact', isTabSwitch: false },
   ];
+
+  const handleMenuClick = (item: typeof menuItems[0]) => {
+    setIsMenuOpen(false);
+    if (item.isTabSwitch) {
+      // Per Home, usa navigate con replace per forzare il cambio anche se sei già su /
+      navigate('/?tab=diagnose', { replace: true });
+    } else {
+      navigate(item.path);
+    }
+  };
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border/50 shadow-sm">
@@ -69,14 +79,25 @@ const Header = () => {
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center space-x-6">
             {menuItems.map((item) => (
-              <Link
-                key={item.name}
-                to={item.path}
-                className="flex items-center space-x-1 text-gray-600 hover:text-drplant-green transition-colors duration-200"
-              >
-                <item.icon className="h-4 w-4" />
-                <span>{item.name}</span>
-              </Link>
+              item.isTabSwitch ? (
+                <button
+                  key={item.name}
+                  onClick={() => handleMenuClick(item)}
+                  className="flex items-center space-x-1 text-gray-600 hover:text-drplant-green transition-colors duration-200"
+                >
+                  <item.icon className="h-4 w-4" />
+                  <span>{item.name}</span>
+                </button>
+              ) : (
+                <Link
+                  key={item.name}
+                  to={item.path}
+                  className="flex items-center space-x-1 text-gray-600 hover:text-drplant-green transition-colors duration-200"
+                >
+                  <item.icon className="h-4 w-4" />
+                  <span>{item.name}</span>
+                </Link>
+              )
             ))}
           </nav>
 
@@ -128,16 +149,28 @@ const Header = () => {
           <div className="container mx-auto px-4 py-4">
             <nav className="flex flex-col space-y-4">
               {menuItems.map((item) => (
-                <Link
-                  key={item.name}
-                  to={item.path}
-                  onClick={() => setIsMenuOpen(false)}
-                  className="flex items-center space-x-3 text-gray-600 hover:text-drplant-green transition-colors duration-200 py-2"
-                >
-                  <item.icon className="h-5 w-5" />
-                  <span>{item.name}</span>
-                </Link>
+                item.isTabSwitch ? (
+                  <button
+                    key={item.name}
+                    onClick={() => handleMenuClick(item)}
+                    className="flex items-center space-x-3 text-gray-600 hover:text-drplant-green transition-colors duration-200 py-2 text-left"
+                  >
+                    <item.icon className="h-5 w-5" />
+                    <span>{item.name}</span>
+                  </button>
+                ) : (
+                  <Link
+                    key={item.name}
+                    to={item.path}
+                    onClick={() => setIsMenuOpen(false)}
+                    className="flex items-center space-x-3 text-gray-600 hover:text-drplant-green transition-colors duration-200 py-2"
+                  >
+                    <item.icon className="h-5 w-5" />
+                    <span>{item.name}</span>
+                  </Link>
+                )
               ))}
+              
               
               <div className="border-t border-gray-200 pt-4">
                 {isAuthenticated ? (

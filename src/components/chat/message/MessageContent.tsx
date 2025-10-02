@@ -18,6 +18,11 @@ interface MessageContentProps {
 
 // 🔗 Converte i link markdown in <a> o <PDFDisplay>
 const renderMarkdownLinks = (text: string) => {
+  // Rimuovi prima eventuali ** di grassetto che avvolgono i link
+  let cleanedText = text.replace(/\*\*\[/g, '[').replace(/\]\s*\([^)]+\)\*\*/g, (match) => {
+    return match.replace(/\*\*/g, '');
+  });
+  
   // Supporta link markdown anche con spazi/newline tra ] e (
   const markdownLinkRegex = /\[([^\]]+)\]\s*\(([^)]+)\)/g;
   
@@ -25,13 +30,13 @@ const renderMarkdownLinks = (text: string) => {
   let lastIndex = 0;
   let match: RegExpExecArray | null;
   
-  while ((match = markdownLinkRegex.exec(text)) !== null) {
+  while ((match = markdownLinkRegex.exec(cleanedText)) !== null) {
     if (match.index > lastIndex) {
-      parts.push(text.slice(lastIndex, match.index));
+      parts.push(cleanedText.slice(lastIndex, match.index));
     }
     
     const linkText = match[1];
-    const linkUrl = match[2];
+    const linkUrl = match[2].trim(); // Rimuovi spazi
     
     if (linkUrl.toLowerCase().endsWith('.pdf')) {
       parts.push(
@@ -59,8 +64,8 @@ const renderMarkdownLinks = (text: string) => {
     lastIndex = match.index + match[0].length;
   }
   
-  if (lastIndex < text.length) {
-    parts.push(text.slice(lastIndex));
+  if (lastIndex < cleanedText.length) {
+    parts.push(cleanedText.slice(lastIndex));
   }
   
   return <>{parts}</>;
