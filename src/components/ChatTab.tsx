@@ -56,29 +56,7 @@ const ChatTab = () => {
           setActiveConversations([]);
         } else {
           console.log('✅ ChatTab: Conversazioni attive trovate:', conversations);
-          let list = (conversations || []) as ActiveConversation[];
-
-          // Fallback: se non ci sono conversazioni attive, recupera l'ultima qualsiasi e riattivala
-          if (list.length === 0) {
-            console.log('ℹ️ Nessuna conversazione attiva. Cerco conversazioni archiviate/chiuse...');
-            const { data: anyConversations, error: anyError } = await supabase
-              .from('conversations')
-              .select('id, status, last_message_text, last_message_at, created_at, updated_at')
-              .eq('user_id', user.id)
-              .eq('expert_id', MARCO_NIGRO_ID)
-              .order('updated_at', { ascending: false })
-              .limit(1);
-
-            if (!anyError && anyConversations && anyConversations.length > 0) {
-              const conv = anyConversations[0] as ActiveConversation;
-              console.log('🔄 Riattivo conversazione trovata:', conv.id, conv.status);
-              await supabase
-                .from('conversations')
-                .update({ status: 'active', updated_at: new Date().toISOString() })
-                .eq('id', conv.id);
-              list = [{ ...conv, status: 'active' }];
-            }
-          }
+          const list = (conversations || []) as ActiveConversation[];
 
           // Conta i messaggi non letti per ogni conversazione
           for (const conv of list) {
@@ -143,17 +121,19 @@ const ChatTab = () => {
 
     try {
       console.log('🗑️ Eliminazione conversazione:', conversationId);
+      
+      // Usa la edge function per eliminare
       const { error } = await supabase.functions.invoke('delete-conversation', {
         body: { conversationId }
       });
 
       if (error) {
-        console.error('❌ Errore nell\'eliminazione:', error);
+        console.error('❌ Errore edge function:', error);
         alert('Errore nell\'eliminazione della conversazione');
         return;
       }
 
-      // Rimuovi la conversazione dalla lista
+      // Rimuovi immediatamente dalla lista locale
       setActiveConversations(prev => prev.filter(c => c.id !== conversationId));
       
       // Se era la conversazione selezionata, deselezionala

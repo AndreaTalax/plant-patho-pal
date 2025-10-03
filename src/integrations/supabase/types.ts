@@ -306,6 +306,7 @@ export type Database = {
           id: string
           image_url: string | null
           metadata: Json | null
+          pdf_path: string | null
           products: Json | null
           read: boolean
           recipient_id: string
@@ -321,6 +322,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           metadata?: Json | null
+          pdf_path?: string | null
           products?: Json | null
           read?: boolean
           recipient_id: string
@@ -336,6 +338,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           metadata?: Json | null
+          pdf_path?: string | null
           products?: Json | null
           read?: boolean
           recipient_id?: string

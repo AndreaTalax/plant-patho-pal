@@ -211,14 +211,17 @@ export const useExpertConversation = (userId: string) => {
     try {
       console.log('🗑️ Deleting conversation:', conversationId);
       
-      // Use the correct method name from the service
-      const { error } = await supabase
-        .from('conversations')
-        .delete()
-        .eq('id', conversationId);
+      // Use the edge function to delete conversation
+      const { error } = await supabase.functions.invoke('delete-conversation', {
+        body: { conversationId }
+      });
       
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Error from edge function:', error);
+        throw error;
+      }
       
+      // Remove from local state
       setConversations(prev => prev.filter(c => c.id !== conversationId));
       
       if (currentConversation?.id === conversationId) {
