@@ -144,37 +144,90 @@ serve(async (req) => {
       doc.setFontSize(12);
       doc.setFont("helvetica", "normal");
 
-      if (diagnosisResult.diseases && diagnosisResult.diseases.length > 0) {
-        doc.text("Malattie identificate:", 25, yPosition);
+      // Handle different result structures
+      const diseases = diagnosisResult.diseases || [];
+      
+      if (diseases && diseases.length > 0) {
+        doc.text("Malattie e problemi identificati:", 25, yPosition);
         yPosition += 7;
 
-        diagnosisResult.diseases.forEach((disease: any, index: number) => {
+        diseases.forEach((disease: any, index: number) => {
           if (yPosition > 260) {
             doc.addPage();
             yPosition = 20;
           }
           
-          const probability = disease.probability ? `(${Math.round(disease.probability * 100)}%)` : '';
-          doc.text(`${index + 1}. ${disease.name} ${probability}`, 30, yPosition);
+          const diseaseName = disease.disease || disease.name || 'Malattia sconosciuta';
+          const confidence = disease.confidence ? `(${Math.round(disease.confidence)}% confidenza)` : '';
+          
+          doc.setFont("helvetica", "bold");
+          doc.text(`${index + 1}. ${diseaseName} ${confidence}`, 30, yPosition);
           yPosition += 7;
+          
+          doc.setFont("helvetica", "normal");
 
-          if (disease.treatment) {
-            doc.text(`   Trattamento suggerito: ${disease.treatment}`, 30, yPosition);
+          // Symptoms
+          if (disease.symptoms && disease.symptoms.length > 0) {
+            doc.text(`   Sintomi: ${disease.symptoms.slice(0, 3).join(', ')}`, 30, yPosition);
             yPosition += 7;
           }
+
+          // Treatments
+          if (disease.treatments && disease.treatments.length > 0) {
+            doc.text(`   Trattamenti suggeriti:`, 30, yPosition);
+            yPosition += 7;
+            disease.treatments.slice(0, 2).forEach((treatment: any) => {
+              if (yPosition > 270) {
+                doc.addPage();
+                yPosition = 20;
+              }
+              const treatmentText = typeof treatment === 'string' ? treatment : treatment.name || treatment.description || '';
+              if (treatmentText) {
+                doc.text(`     - ${treatmentText.substring(0, 60)}`, 30, yPosition);
+                yPosition += 6;
+              }
+            });
+          }
+
+          // Severity
+          if (disease.severity) {
+            const severityLabel = disease.severity === 'high' ? 'Alta' : disease.severity === 'medium' ? 'Media' : 'Bassa';
+            doc.text(`   Gravita: ${severityLabel}`, 30, yPosition);
+            yPosition += 7;
+          }
+
+          yPosition += 3; // Space between diseases
         });
       }
 
-      if (diagnosisResult.health_assessment) {
+      // Health assessment
+      if (diagnosisResult.healthAssessment) {
         yPosition += 5;
-        doc.text(`Valutazione generale: ${diagnosisResult.health_assessment}`, 25, yPosition);
+        doc.setFont("helvetica", "bold");
+        doc.text(`Valutazione generale: ${diagnosisResult.healthAssessment}`, 25, yPosition);
+        yPosition += 7;
+        doc.setFont("helvetica", "normal");
+      }
+
+      // Plant identification from diagnosis
+      if (diagnosisResult.plantIdentification) {
+        yPosition += 5;
+        doc.text(`Identificazione pianta: ${diagnosisResult.plantIdentification}`, 25, yPosition);
         yPosition += 7;
       }
 
-      if (diagnosisResult.plant_identification) {
+      // Primary disease summary
+      if (diagnosisResult.primaryDisease && diagnosisResult.primaryDisease.name) {
         yPosition += 5;
-        doc.text(`Identificazione pianta: ${diagnosisResult.plant_identification}`, 25, yPosition);
+        doc.setFont("helvetica", "bold");
+        doc.text(`Problema principale: ${diagnosisResult.primaryDisease.name}`, 25, yPosition);
         yPosition += 7;
+        doc.setFont("helvetica", "normal");
+        
+        if (diagnosisResult.primaryDisease.confidence) {
+          doc.text(`Confidenza: ${diagnosisResult.primaryDisease.confidence}%`, 25, yPosition);
+          yPosition += 7;
+        }
       }
     }
 

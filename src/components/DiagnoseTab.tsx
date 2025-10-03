@@ -114,12 +114,20 @@ const DiagnoseTab = () => {
     } else if (diagnosisResult && currentStage === 'analyzing') {
       setCurrentStage('result');
       
-      // Save diagnosis result to context for chat PDF generation
-      if (diagnosisResult) {
-        console.log('💾 Saving diagnosis result to context for chat:', diagnosisResult);
+      // Save complete diagnosis results to context for chat PDF generation
+      if (analysisDetails?.risultatiCompleti) {
+        console.log('💾 Saving complete diagnosis results to context for chat:', analysisDetails);
         setPlantInfo({
           ...plantInfo,
-          diagnosisResult: diagnosisResult
+          diagnosisResult: {
+            // Save structured diagnosis data
+            plantIdentification: diagnosisResult,
+            diseases: analysisDetails.risultatiCompleti.detectedDiseases || [],
+            healthAssessment: analysisDetails.multiServiceInsights?.isHealthy ? 'Sana' : 'Richiede attenzione',
+            confidence: analysisDetails.multiServiceInsights?.agreementScore || 0,
+            primaryDisease: diagnosedDisease,
+            analysisComplete: true
+          }
         });
       }
     }
