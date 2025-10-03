@@ -12,6 +12,7 @@ export interface PlantInfo {
   infoComplete: boolean;
   uploadedFile?: File | null;
   uploadedImageUrl?: string | null;
+  diagnosisResult?: any; // AI diagnosis result
 }
 
 interface PlantInfoContextType {
@@ -30,7 +31,8 @@ const defaultPlantInfo: PlantInfo = {
   name: '', // Default to empty string
   infoComplete: false,
   uploadedFile: null,
-  uploadedImageUrl: null
+  uploadedImageUrl: null,
+  diagnosisResult: null
 };
 
 const PlantInfoContext = createContext<PlantInfoContextType | undefined>(undefined);

@@ -113,6 +113,15 @@ const DiagnoseTab = () => {
       setCurrentStage('analyzing');
     } else if (diagnosisResult && currentStage === 'analyzing') {
       setCurrentStage('result');
+      
+      // Save diagnosis result to context for chat PDF generation
+      if (diagnosisResult) {
+        console.log('💾 Saving diagnosis result to context for chat:', diagnosisResult);
+        setPlantInfo({
+          ...plantInfo,
+          diagnosisResult: diagnosisResult
+        });
+      }
     }
   }, [isAnalyzing, diagnosisResult, diagnosedDisease, analysisDetails, currentStage, uploadedImage]);
 

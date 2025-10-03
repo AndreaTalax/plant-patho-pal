@@ -213,7 +213,8 @@ export const useUserChatRealtime = (userId: string) => {
         imageUrl: plantInfo.uploadedImageUrl,
         aiDiagnosis: (plantInfo as any).aiDiagnosis,
         useAI: plantInfo.useAI,
-        sendToExpert: plantInfo.sendToExpert
+        sendToExpert: plantInfo.sendToExpert,
+        diagnosisResult: plantInfo.diagnosisResult // Include diagnosis result for PDF
       };
 
       // Prepare comprehensive user data from profile
@@ -233,7 +234,7 @@ export const useUserChatRealtime = (userId: string) => {
         plantData,
         userData,
         plantInfo.useAI || false,
-        (plantData as any)?.diagnosisResult || null
+        plantInfo.diagnosisResult || null // Pass diagnosis result to generate PDF with AI results
       );
 
       if (!success) {
