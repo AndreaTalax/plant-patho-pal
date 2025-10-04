@@ -158,6 +158,9 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
   }
 
   // Prepara i dati della diagnosi per l'invio all'esperto con tutte le proprietà richieste
+  // Estrai le malattie rilevate da analysisDetails
+  const detectedDiseases = analysisDetails?.risultatiCompleti?.detectedDiseases || [];
+  
   const diagnosisData = {
     plantType: plantInfo?.name || effectiveDiagnosis?.name || 'Pianta non identificata',
     plantVariety: analysisDetails?.multiServiceInsights?.plantSpecies || '',
@@ -407,14 +410,102 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
         </div>
       </div>
 
-      {/* Sezione malattie e problemi - stile migliorato con più alternative */}
-      {(effectiveDiagnosis || analysisDetails?.risultatiCompleti?.detectedDiseases?.length) && (
-        <div className="bg-gradient-to-br from-red-50 to-pink-50 p-4 rounded-xl shadow-lg border border-red-200">
+      {/* Sezione malattie rilevate dall'AI - NUOVA */}
+      {detectedDiseases && detectedDiseases.length > 0 && (
+        <div className="bg-gradient-to-br from-red-50 to-orange-50 p-4 rounded-xl shadow-lg border border-red-200">
           <h2 className="text-xl font-bold flex items-center gap-3 mb-4">
             <div className="w-10 h-10 bg-red-500 rounded-full flex items-center justify-center">
               🦠
             </div>
-            Analisi Problemi e Malattie
+            Malattie Rilevate dall'Analisi AI
+          </h2>
+          
+          <div className="grid gap-4">
+            {detectedDiseases.map((disease: any, index: number) => (
+              <div key={index} className="p-4 bg-white rounded-lg border-l-4 border-red-400 shadow-sm hover:shadow-md transition-shadow">
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex-1">
+                    <h3 className="font-bold text-red-800 text-lg flex items-center gap-2">
+                      🚨 {disease.disease || disease.name}
+                      <span className="px-2 py-1 bg-red-100 text-red-800 text-xs rounded-full">
+                        {Math.round(disease.confidence || 0)}% affidabilità
+                      </span>
+                      {disease.provider && (
+                        <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                          {disease.provider}
+                        </span>
+                      )}
+                    </h3>
+                    {disease.description && (
+                      <p className="text-red-600 mt-2">{disease.description}</p>
+                    )}
+                  </div>
+                </div>
+                
+                <div className="grid md:grid-cols-3 gap-4 mt-4">
+                  {disease.additionalInfo?.cause && (
+                    <div className="bg-red-50 p-3 rounded-lg">
+                      <h4 className="font-semibold text-red-700 mb-2 flex items-center gap-1">
+                        🔍 Causa
+                      </h4>
+                      <p className="text-sm text-red-600">{disease.additionalInfo.cause}</p>
+                    </div>
+                  )}
+
+                  {Array.isArray(disease.symptoms) && disease.symptoms.length > 0 && (
+                    <div className="bg-orange-50 p-3 rounded-lg">
+                      <h4 className="font-semibold text-orange-700 mb-2 flex items-center gap-1">
+                        📋 Sintomi
+                      </h4>
+                      <ul className="text-sm text-orange-600 space-y-1">
+                        {disease.symptoms.map((symptom: string, idx: number) => (
+                          <li key={idx} className="flex items-start gap-2">
+                            <div className="w-1.5 h-1.5 bg-orange-500 rounded-full mt-2 flex-shrink-0"></div>
+                            {symptom}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {Array.isArray(disease.treatments) && disease.treatments.length > 0 && (
+                    <div className="bg-green-50 p-3 rounded-lg">
+                      <h4 className="font-semibold text-green-700 mb-2 flex items-center gap-1">
+                        💊 Trattamenti
+                      </h4>
+                      <ul className="text-sm text-green-600 space-y-1">
+                        {disease.treatments.map((treatment: string, idx: number) => (
+                          <li key={idx} className="flex items-start gap-2">
+                            <div className="w-1.5 h-1.5 bg-green-500 rounded-full mt-2 flex-shrink-0"></div>
+                            {treatment}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+
+                {disease.severity && (
+                  <div className="mt-3 p-2 bg-yellow-50 rounded-lg border border-yellow-200">
+                    <p className="text-sm text-yellow-800">
+                      <strong>Gravità:</strong> <span className="capitalize">{disease.severity}</span>
+                    </p>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Sezione malattie e problemi - stile migliorato con più alternative */}
+      {(effectiveDiagnosis || analysisDetails?.risultatiCompleti?.detectedDiseases?.length) && (
+        <div className="bg-gradient-to-br from-amber-50 to-yellow-50 p-4 rounded-xl shadow-lg border border-amber-200">
+          <h2 className="text-xl font-bold flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 bg-amber-500 rounded-full flex items-center justify-center">
+              ⚠️
+            </div>
+            Analisi Aggiuntiva Problemi
           </h2>
           
           <div className="grid gap-4">
