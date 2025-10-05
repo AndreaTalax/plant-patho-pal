@@ -158,8 +158,10 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
   }
 
   // Prepara i dati della diagnosi per l'invio all'esperto con tutte le proprietà richieste
-  // Estrai le malattie rilevate da analysisDetails
-  const detectedDiseases = analysisDetails?.risultatiCompleti?.detectedDiseases || [];
+  // Estrai le malattie rilevate da analysisDetails o da plantInfo.diagnosisResult salvato nel context
+  const detectedDiseases = analysisDetails?.risultatiCompleti?.detectedDiseases 
+    || plantInfo?.diagnosisResult?.diseases 
+    || [];
   
   const diagnosisData = {
     plantType: plantInfo?.name || effectiveDiagnosis?.name || 'Pianta non identificata',
@@ -283,12 +285,16 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
         .limit(1);
 
       if (conversations && conversations.length > 0) {
+        // Use the complete diagnosisResult from plantInfo context that includes structured diseases data
+        const completeDiagnosisResult = plantInfo.diagnosisResult || diagnosedDisease || analysisDetails || analysisData;
+        console.log('📤 Sending complete diagnosis result to expert:', completeDiagnosisResult);
+        
         await ConsultationDataService.sendInitialConsultationData(
           conversations[0].id,
           plantData,
           userData,
           true,
-          diagnosedDisease || analysisDetails || analysisData
+          completeDiagnosisResult
         );
       }
       

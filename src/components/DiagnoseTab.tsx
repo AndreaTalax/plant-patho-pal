@@ -649,7 +649,8 @@ const DiagnoseTab = () => {
           diagnosedDisease: !!diagnosedDisease,  
           analysisDetails: !!analysisDetails,
           diagnosisResult: !!diagnosisResult,
-          plantInfo: plantInfo?.name || 'no name'
+          plantInfo: plantInfo?.name || 'no name',
+          hasSavedDiagnosisResult: !!plantInfo.diagnosisResult
         });
         
         // Usa diagnosisResult se non ci sono diagnosedDisease o analysisDetails
@@ -658,7 +659,7 @@ const DiagnoseTab = () => {
             <div className="animate-slide-in-right">
               <DiagnosisResult
                 imageSrc={uploadedImage}
-                plantInfo={convertPlantInfoToString(plantInfo)}
+                plantInfo={plantInfo}
                 analysisData={diagnosedDisease || undefined}
                 isAnalyzing={false}
                 onStartNewAnalysis={handleNewAnalysis}
