@@ -504,17 +504,32 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
         </div>
       )}
 
-      {/* Sezione malattie e problemi - stile migliorato con più alternative */}
-      {(effectiveDiagnosis || analysisDetails?.risultatiCompleti?.detectedDiseases?.length) && (
-        <div className="bg-gradient-to-br from-amber-50 to-yellow-50 p-4 rounded-xl shadow-lg border border-amber-200">
-          <h2 className="text-xl font-bold flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 bg-amber-500 rounded-full flex items-center justify-center">
-              ⚠️
+      {/* Sezione malattie e problemi - sempre visibile */}
+      <div className="bg-gradient-to-br from-amber-50 to-yellow-50 p-4 rounded-xl shadow-lg border border-amber-200">
+        <h2 className="text-xl font-bold flex items-center gap-3 mb-4">
+          <div className="w-10 h-10 bg-amber-500 rounded-full flex items-center justify-center">
+            {resolvedIsHealthy ? '✅' : '⚠️'}
+          </div>
+          {resolvedIsHealthy ? 'Stato di Salute' : 'Analisi Aggiuntiva Problemi'}
+        </h2>
+        
+        {/* Messaggio se la pianta è sana */}
+        {resolvedIsHealthy && !effectiveDiagnosis && (!detectedDiseases || detectedDiseases.length === 0) && (
+          <div className="p-4 bg-white rounded-lg border-l-4 border-green-500 shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="text-4xl">🌿</div>
+              <div className="flex-1">
+                <h3 className="font-bold text-green-800 text-lg mb-2">Nessuna malattia rilevata</h3>
+                <p className="text-green-700">
+                  La tua pianta appare in buona salute! Non sono stati rilevati segni evidenti di malattie o problemi. 
+                  Continua con la normale manutenzione e controlla regolarmente lo stato della pianta.
+                </p>
+              </div>
             </div>
-            Analisi Aggiuntiva Problemi
-          </h2>
-          
-          <div className="grid gap-4">
+          </div>
+        )}
+        
+        <div className="grid gap-4">
             {/* Malattia principale */}
             {effectiveDiagnosis && (
               <div className="p-4 bg-white rounded-lg border-l-4 border-red-500 shadow-sm hover:shadow-md transition-shadow">
@@ -633,7 +648,7 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
             )}
           </div>
         </div>
-      )}
+      </div>
 
       {/* Sezione prodotti consigliati - stile migliorato */}
       <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-4 rounded-xl shadow-lg border border-blue-200">
