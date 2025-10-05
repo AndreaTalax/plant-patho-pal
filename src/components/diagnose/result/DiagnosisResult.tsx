@@ -647,7 +647,6 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
               )
             )}
           </div>
-        </div>
       </div>
 
       {/* Sezione prodotti consigliati - stile migliorato */}
