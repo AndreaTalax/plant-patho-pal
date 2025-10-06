@@ -23,7 +23,7 @@ export const useUserChatRealtime = (userId: string) => {
   const [initialDataSent, setInitialDataSent] = useState(false);
   const [dataSyncChecked, setDataSyncChecked] = useState(false);
 
-  // Avvia chat con l’esperto
+  // Avvia chat con l'esperto (SENZA gestire la sottoscrizione realtime qui)
   const startChatWithExpert = useCallback(async () => {
     if (isInitializing) return;
 
@@ -44,32 +44,7 @@ export const useUserChatRealtime = (userId: string) => {
       const existingMessages = await MessageService.loadMessages(conversation.id);
       setMessages(existingMessages || []);
 
-      // Configura sottoscrizione realtime
-      const channelName = `conversation_${conversation.id}`;
-      const channel = supabase
-        .channel(channelName)
-        .on(
-          'postgres_changes',
-          {
-            event: 'INSERT',
-            schema: 'public',
-            table: 'messages',
-            filter: `conversation_id=eq.${conversation.id}`
-          },
-          (payload) => {
-            const newMessage = payload.new as DatabaseMessage;
-            setMessages(prev => {
-              if (prev.some(msg => msg.id === newMessage.id)) return prev;
-              return [...prev, newMessage];
-            });
-          }
-        )
-        .subscribe(status => {
-          setIsConnected(status === 'SUBSCRIBED');
-        });
-
-      // Cleanup
-      return () => supabase.removeChannel(channel);
+      console.log('✅ Chat inizializzata con successo:', conversation.id);
 
     } catch (error: any) {
       console.error('Errore inizializzazione chat:', error);
@@ -78,6 +53,56 @@ export const useUserChatRealtime = (userId: string) => {
       setIsInitializing(false);
     }
   }, [userId, isInitializing]);
+
+  // Gestione sottoscrizione realtime - separata e gestita correttamente
+  useEffect(() => {
+    if (!currentConversationId) {
+      setIsConnected(false);
+      return;
+    }
+
+    console.log('🔌 Setting up realtime subscription for conversation:', currentConversationId);
+
+    const channelName = `conversation_${currentConversationId}`;
+    const channel = supabase
+      .channel(channelName)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages',
+          filter: `conversation_id=eq.${currentConversationId}`
+        },
+        (payload) => {
+          console.log('📨 New message received via realtime:', payload.new);
+          const newMessage = payload.new as DatabaseMessage;
+          setMessages(prev => {
+            if (prev.some(msg => msg.id === newMessage.id)) {
+              console.log('ℹ️ Message already exists, skipping');
+              return prev;
+            }
+            return [...prev, newMessage];
+          });
+        }
+      )
+      .subscribe(status => {
+        console.log('🔌 Realtime status:', status);
+        setIsConnected(status === 'SUBSCRIBED');
+        
+        if (status === 'CHANNEL_ERROR') {
+          console.error('❌ Channel error detected');
+          // Non tentare riconnessione automatica per evitare loop
+        }
+      });
+
+    // Cleanup quando cambia conversazione o componente si smonta
+    return () => {
+      console.log('🔌 Cleaning up realtime subscription for:', currentConversationId);
+      supabase.removeChannel(channel);
+      setIsConnected(false);
+    };
+  }, [currentConversationId]);
 
   // Invia messaggio
   const handleSendMessage = useCallback(async (text: string, imageUrl?: string) => {
