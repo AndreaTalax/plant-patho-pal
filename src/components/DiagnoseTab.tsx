@@ -98,7 +98,7 @@ const DiagnoseTab = () => {
     checkApiStatus();
   }, []);
 
-  // Monitor analysis state
+  // Monitor analysis state - salva sempre i risultati quando l'analisi è completa
   useEffect(() => {
     console.log('🔍 Monitor analysis state:', {
       isAnalyzing,
@@ -114,22 +114,39 @@ const DiagnoseTab = () => {
     } else if (diagnosisResult && currentStage === 'analyzing') {
       setCurrentStage('result');
       
-      // Save complete diagnosis results to context for chat PDF generation
-      if (analysisDetails?.risultatiCompleti) {
-        console.log('💾 Saving complete diagnosis results to context for chat:', analysisDetails);
-        setPlantInfo({
-          ...plantInfo,
-          diagnosisResult: {
-            // Save structured diagnosis data
-            plantIdentification: diagnosisResult,
-            diseases: analysisDetails.risultatiCompleti.detectedDiseases || [],
-            healthAssessment: analysisDetails.multiServiceInsights?.isHealthy ? 'Sana' : 'Richiede attenzione',
-            confidence: analysisDetails.multiServiceInsights?.agreementScore || 0,
-            primaryDisease: diagnosedDisease,
-            analysisComplete: true
-          }
-        });
-      }
+      // CRITICAL: Salva SEMPRE i risultati della diagnosi nel context per la chat
+      const completeDiagnosisData = {
+        // Dati identificazione pianta
+        plantIdentification: diagnosisResult,
+        plantName: diagnosedDisease?.name || 'Pianta non identificata',
+        
+        // Dati malattie rilevate
+        diseases: analysisDetails?.risultatiCompleti?.detectedDiseases || [],
+        primaryDisease: diagnosedDisease,
+        
+        // Valutazione salute
+        isHealthy: analysisDetails?.multiServiceInsights?.isHealthy ?? !diagnosedDisease,
+        healthAssessment: analysisDetails?.multiServiceInsights?.isHealthy ? 'Sana' : 'Richiede attenzione',
+        
+        // Affidabilità e provider
+        confidence: analysisDetails?.multiServiceInsights?.agreementScore || (diagnosedDisease?.confidence ?? 0),
+        primaryService: analysisDetails?.multiServiceInsights?.primaryService,
+        
+        // Metadati analisi
+        analysisComplete: true,
+        analyzedAt: new Date().toISOString(),
+        
+        // Dati completi per riferimento
+        fullAnalysisDetails: analysisDetails
+      };
+      
+      console.log('💾 Saving complete diagnosis to PlantInfoContext:', completeDiagnosisData);
+      
+      setPlantInfo({
+        ...plantInfo,
+        diagnosisResult: completeDiagnosisData,
+        useAI: true  // Marca che è stata usata l'AI
+      });
     }
   }, [isAnalyzing, diagnosisResult, diagnosedDisease, analysisDetails, currentStage, uploadedImage]);
 

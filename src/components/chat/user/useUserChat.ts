@@ -126,13 +126,14 @@ export const useUserChat = (userId: string) => {
 
       // Prepare comprehensive plant data from context
       const plantData = {
-        symptoms: plantInfo.symptoms || 'Nessun sintomo specificato',
+        symptoms: Array.isArray(plantInfo.symptoms) 
+          ? plantInfo.symptoms.join(', ') 
+          : plantInfo.symptoms || 'Nessun sintomo specificato',
         wateringFrequency: plantInfo.wateringFrequency || 'Non specificata',
         sunExposure: plantInfo.lightExposure || 'Non specificata',
         environment: plantInfo.isIndoor ? 'Interno' : 'Esterno',
-        plantName: plantInfo.name || 'Pianta non identificata',
+        plantName: plantInfo.name || plantInfo.diagnosisResult?.plantName || 'Pianta non identificata',
         imageUrl: plantInfo.uploadedImageUrl,
-        aiDiagnosis: (plantInfo as any).aiDiagnosis,
         useAI: plantInfo.useAI,
         sendToExpert: plantInfo.sendToExpert
       };
@@ -146,7 +147,19 @@ export const useUserChat = (userId: string) => {
         birthPlace: userProfile.birth_place || 'Non specificato'
       };
 
-      console.log('📊 Sending data:', { plantData, userData });
+      // CRITICAL: Passa il diagnosisResult completo dal context
+      const diagnosisResult = plantInfo.diagnosisResult;
+
+      console.log('📊 Sending data to expert:', { 
+        plantData, 
+        userData, 
+        hasDiagnosis: !!diagnosisResult,
+        diagnosisPreview: diagnosisResult ? {
+          diseases: diagnosisResult.diseases?.length || 0,
+          isHealthy: diagnosisResult.isHealthy,
+          confidence: diagnosisResult.confidence
+        } : 'No diagnosis'
+      });
 
       // Send comprehensive data using the service
       const success = await ConsultationDataService.sendInitialConsultationData(
@@ -154,7 +167,7 @@ export const useUserChat = (userId: string) => {
         plantData,
         userData,
         plantInfo.useAI || false,
-        (plantData as any)?.diagnosisResult || null
+        diagnosisResult // Passa il diagnosisResult completo
       );
 
       if (!success) {

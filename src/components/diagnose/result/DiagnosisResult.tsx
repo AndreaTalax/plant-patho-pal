@@ -243,76 +243,23 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
     }
 
     try {
-      // Se ha accesso premium, invia la diagnosi e apri la chat
-      console.log('📤 Invio dati diagnosi all\'esperto (utente premium)...');
+      console.log('📤 Preparazione apertura chat con esperto (diagnosi AI completata)...');
+      console.log('📊 Dati diagnosi disponibili in PlantInfoContext:', plantInfo.diagnosisResult);
       
-      // Usa il nuovo sistema PDF
-      const { ConsultationDataService } = await import('@/services/chat/consultationDataService');
+      // Non inviare qui - lascia che useUserChat gestisca l'invio automatico
+      // quando la chat viene aperta. Il PlantInfoContext contiene già tutti i dati.
       
-      // Prepara i dati per il PDF usando le props disponibili
-      const plantData = {
-        symptoms: typeof plantInfo.symptoms === 'string' ? plantInfo.symptoms : 
-                 Array.isArray(plantInfo.symptoms) ? plantInfo.symptoms.join(', ') : 'Da specificare',
-        wateringFrequency: plantInfo.wateringFrequency || 'Non specificata',
-        sunExposure: plantInfo.lightExposure || 'Non specificata', 
-        environment: plantInfo.isIndoor ? 'Interno' : 'Esterno',
-        plantName: plantInfo.name || diagnosedDisease?.name || 'Pianta non identificata',
-        imageUrl: imageSrc,
-        aiDiagnosis: diagnosisData,
-        useAI: true
-      };
-
-      const { data: userProfile } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single();
-
-      const userData = {
-        firstName: userProfile?.first_name,
-        lastName: userProfile?.last_name,
-        email: userProfile?.email,
-        birthDate: userProfile?.birth_date,
-        birthPlace: userProfile?.birth_place
-      };
-
-      // Trova conversazione esistente
-      const { data: conversations } = await supabase
-        .from('conversations')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('expert_id', '550e8400-e29b-41d4-a716-446655440003')
-        .limit(1);
-
-      if (conversations && conversations.length > 0) {
-        // Use the complete diagnosisResult from plantInfo context that includes structured diseases data
-        const completeDiagnosisResult = plantInfo.diagnosisResult || diagnosedDisease || analysisDetails || analysisData;
-        console.log('📤 Sending complete diagnosis result to expert:', completeDiagnosisResult);
-        
-        await ConsultationDataService.sendInitialConsultationData(
-          conversations[0].id,
-          plantData,
-          userData,
-          true,
-          completeDiagnosisResult
-        );
-      }
+      toast.success('Apertura chat con l\'esperto...', {
+        description: 'I dati della diagnosi verranno inviati automaticamente'
+      });
       
-      console.log('✅ Dati diagnosi inviati all\'esperto con successo');
-      toast.success('Diagnosi inviata all\'esperto!');
-      
-      // Poi chiama la funzione originale per aprire la chat
+      // Apri la chat - useUserChat si occuperà di inviare automaticamente i dati
       if (onChatWithExpert) {
         await onChatWithExpert();
       }
     } catch (error) {
-      console.error('❌ Errore nell\'invio dati all\'esperto:', error);
-      toast.error('Errore nell\'invio della diagnosi');
-      
-      // Anche in caso di errore, prova ad aprire la chat
-      if (onChatWithExpert) {
-        await onChatWithExpert();
-      }
+      console.error('❌ Errore nell\'apertura chat:', error);
+      toast.error('Errore nell\'apertura della chat');
     }
   };
 
