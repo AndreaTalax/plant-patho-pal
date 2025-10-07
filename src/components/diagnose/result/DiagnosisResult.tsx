@@ -205,7 +205,145 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
         </div>
       </div>
 
-      {/* ... tutte le sezioni di rendering invariato ... */}
+      {/* SEZIONE MALATTIE RILEVATE */}
+      {detectedDiseases && detectedDiseases.length > 0 && (
+        <div className="bg-gradient-to-br from-orange-50 to-red-50 p-6 rounded-xl shadow-lg border border-orange-200">
+          <div className="flex items-center gap-2 mb-4">
+            <span className="text-2xl">⚠️</span>
+            <h2 className="text-xl font-bold text-orange-800">
+              Malattie Rilevate ({detectedDiseases.length})
+            </h2>
+          </div>
+          
+          <div className="space-y-4">
+            {detectedDiseases.map((disease: any, index: number) => (
+              <div key={index} className="bg-white p-4 rounded-lg border border-orange-200">
+                <div className="flex items-start justify-between mb-2">
+                  <h3 className="font-bold text-lg text-red-700">{disease.name || disease.label}</h3>
+                  {disease.confidence && (
+                    <span className="px-3 py-1 bg-orange-100 text-orange-800 rounded-full text-sm font-medium">
+                      {Math.round(disease.confidence * 100)}% confidenza
+                    </span>
+                  )}
+                </div>
+                
+                {disease.description && (
+                  <p className="text-sm text-gray-700 mb-3">{disease.description}</p>
+                )}
+                
+                {disease.symptoms && disease.symptoms.length > 0 && (
+                  <div className="mb-3">
+                    <h4 className="font-semibold text-sm text-gray-800 mb-1">Sintomi:</h4>
+                    <ul className="list-disc list-inside text-sm text-gray-600 space-y-1">
+                      {disease.symptoms.map((symptom: string, idx: number) => (
+                        <li key={idx}>{symptom}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                
+                {disease.treatment && (
+                  <div className="mb-3">
+                    <h4 className="font-semibold text-sm text-gray-800 mb-1">Trattamento consigliato:</h4>
+                    <p className="text-sm text-gray-700">{disease.treatment}</p>
+                  </div>
+                )}
+                
+                {/* Prodotti consigliati per questa malattia */}
+                <div className="mt-4 pt-4 border-t border-gray-200">
+                  <h4 className="font-semibold text-sm text-gray-800 mb-2">🛒 Prodotti consigliati:</h4>
+                  <ProductSuggestions diseaseName={disease.name || disease.label} maxItems={3} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* RESOCONTO FINALE - Incrocio tra foto e malattie */}
+      {analysisDetails && (
+        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-6 rounded-xl shadow-lg border border-blue-200">
+          <div className="flex items-center gap-2 mb-4">
+            <span className="text-2xl">📊</span>
+            <h2 className="text-xl font-bold text-blue-800">Resoconto Finale Analisi</h2>
+          </div>
+          
+          <div className="space-y-4">
+            {/* Valutazione generale */}
+            <div className="bg-white p-4 rounded-lg border border-blue-200">
+              <h3 className="font-bold text-lg text-blue-700 mb-2">Valutazione Generale</h3>
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <span className="font-semibold">Stato salute:</span>
+                  <span className={`ml-2 px-2 py-1 rounded ${
+                    resolvedIsHealthy 
+                      ? 'bg-green-100 text-green-800' 
+                      : 'bg-red-100 text-red-800'
+                  }`}>
+                    {resolvedIsHealthy ? '✅ Sana' : '⚠️ Richiede attenzione'}
+                  </span>
+                </div>
+                <div>
+                  <span className="font-semibold">Affidabilità analisi:</span>
+                  <span className="ml-2">{Math.round(resolvedConfidence)}%</span>
+                </div>
+                {analysisDetails.multiServiceInsights?.agreementScore && (
+                  <div>
+                    <span className="font-semibold">Concordanza AI:</span>
+                    <span className="ml-2">{Math.round(analysisDetails.multiServiceInsights.agreementScore * 100)}%</span>
+                  </div>
+                )}
+                {analysisDetails.multiServiceInsights?.primaryService && (
+                  <div>
+                    <span className="font-semibold">Servizio primario:</span>
+                    <span className="ml-2">{analysisDetails.multiServiceInsights.primaryService}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Analisi visiva */}
+            {analysisDetails.multiServiceInsights && (
+              <div className="bg-white p-4 rounded-lg border border-blue-200">
+                <h3 className="font-bold text-lg text-blue-700 mb-2">🔍 Analisi Visiva dell'Immagine</h3>
+                <div className="text-sm space-y-2">
+                  {analysisDetails.multiServiceInsights.plantName && (
+                    <p><span className="font-semibold">Pianta identificata:</span> {analysisDetails.multiServiceInsights.plantName}</p>
+                  )}
+                  {analysisDetails.multiServiceInsights.plantPart && (
+                    <p><span className="font-semibold">Parte analizzata:</span> {analysisDetails.multiServiceInsights.plantPart}</p>
+                  )}
+                  {analysisDetails.multiServiceInsights.description && (
+                    <p><span className="font-semibold">Osservazioni:</span> {analysisDetails.multiServiceInsights.description}</p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Raccomandazioni */}
+            <div className="bg-white p-4 rounded-lg border border-blue-200">
+              <h3 className="font-bold text-lg text-blue-700 mb-2">💡 Raccomandazioni</h3>
+              {resolvedIsHealthy ? (
+                <p className="text-sm text-gray-700">
+                  La pianta appare in buone condizioni. Continua con le cure attuali e monitora regolarmente per prevenire eventuali problemi.
+                </p>
+              ) : (
+                <div className="text-sm text-gray-700 space-y-2">
+                  <p className="font-semibold text-red-700">La pianta richiede attenzione immediata:</p>
+                  <ul className="list-disc list-inside space-y-1">
+                    {detectedDiseases.length > 0 && (
+                      <li>Sono state rilevate {detectedDiseases.length} malattia/e che richiedono trattamento</li>
+                    )}
+                    <li>Consulta i prodotti consigliati sopra per il trattamento</li>
+                    <li>Monitora l'evoluzione dei sintomi nei prossimi giorni</li>
+                    <li>Per una diagnosi approfondita, consulta un esperto</li>
+                  </ul>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="mt-4">
         <ActionButtons
