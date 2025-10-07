@@ -59,11 +59,16 @@ export class ConsultationDataService {
         hasDiagnosis: !!diagnosisResult
       });
 
-      // Controlla prima se il PDF è già stato inviato
-      const alreadySent = await this.isConsultationDataSent(conversationId);
-      if (alreadySent) {
-        console.log('ℹ️ PDF consultazione già inviato per questa conversazione');
-        return true;
+      // Se c'è una diagnosi AI, invia sempre un nuovo PDF aggiornato
+      // Altrimenti controlla se i dati base sono già stati inviati
+      if (!diagnosisResult) {
+        const alreadySent = await this.isConsultationDataSent(conversationId);
+        if (alreadySent) {
+          console.log('ℹ️ Dati base già inviati, nessuna diagnosi AI da aggiungere');
+          return true;
+        }
+      } else {
+        console.log('🔄 Invio PDF con diagnosi AI aggiornata...');
       }
 
       const { data: { user } } = await supabase.auth.getUser();

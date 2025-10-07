@@ -104,12 +104,14 @@ export class PushNotificationService {
         throw new Error('Service Worker non disponibile');
       }
 
+      const applicationServerKey = this.urlB64ToUint8Array(
+        // Chiave pubblica VAPID - dovrebbe essere configurata nelle secrets
+        'BEl62iUYgUivxIkv69yViEuiBIa40HI6VH8I5_9S7fVgWCzD6V5nHJPKdD2CnwGmPYpwB8lBhyAhCJCzZuJv9Hs'
+      );
+
       const subscription = await this.swRegistration.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: this.urlB64ToUint8Array(
-          // Chiave pubblica VAPID - dovrebbe essere configurata nelle secrets
-          'BEl62iUYgUivxIkv69yViEuiBIa40HI6VH8I5_9S7fVgWCzD6V5nHJPKdD2CnwGmPYpwB8lBhyAhCJCzZuJv9Hs'
-        )
+        applicationServerKey: applicationServerKey as BufferSource
       });
 
       // Salva la subscription nel database usando una query raw per evitare problemi di tipo

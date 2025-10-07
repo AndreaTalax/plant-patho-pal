@@ -165,19 +165,29 @@ export const useUserChatRealtime = (userId: string) => {
   /** 🚀 Invio automatico dati diagnosi AI */
   useEffect(() => {
     if (!currentConversationId || !userProfile || !dataSyncChecked) return;
-    if (initialDataSent) return;
     if (!plantInfo) return;
 
-    // se la diagnosi AI diventa disponibile dopo l’inizializzazione, trigger immediato
-    if (!plantInfo.diagnosisResult) {
-      console.log('⏳ Attesa diagnosi AI per invio automatico...');
+    // Se non c'è diagnosi AI e i dati sono già stati inviati, non fare nulla
+    if (!plantInfo.diagnosisResult && initialDataSent) {
+      console.log('ℹ️ Dati base già inviati, nessuna diagnosi AI disponibile');
+      return;
+    }
+
+    // Se c'è una diagnosi AI, inviala sempre (anche se i dati base erano già stati inviati)
+    const shouldSendDiagnosis = plantInfo.diagnosisResult && plantInfo.useAI;
+    
+    if (!shouldSendDiagnosis && initialDataSent) {
+      console.log('ℹ️ Dati già inviati e nessuna diagnosi AI da inviare');
       return;
     }
 
     const sendData = async () => {
       try {
-        console.log('📤 Invio automatico dati diagnosi + PDF...');
-        setInitialDataSent(true);
+        console.log('📤 Invio automatico dati consultazione + PDF...', {
+          hasDiagnosis: !!plantInfo.diagnosisResult,
+          useAI: plantInfo.useAI,
+          alreadySent: initialDataSent
+        });
 
         const plantData = {
           symptoms: plantInfo.symptoms || 'Nessun sintomo specificato',
@@ -209,15 +219,17 @@ export const useUserChatRealtime = (userId: string) => {
         );
 
         if (success) {
-          console.log('✅ Dati diagnosi AI inviati correttamente');
-          toast.success('Diagnosi AI e PDF inviati all\'esperto');
+          console.log('✅ Dati consultazione inviati correttamente');
+          if (plantInfo.diagnosisResult) {
+            toast.success('Diagnosi AI e PDF inviati all\'esperto');
+          }
+          setInitialDataSent(true);
         } else {
           throw new Error('Invio non riuscito');
         }
       } catch (err) {
-        console.error('❌ Errore invio diagnosi AI:', err);
-        setInitialDataSent(false);
-        toast.error('Errore nell\'invio della diagnosi AI all\'esperto');
+        console.error('❌ Errore invio dati consultazione:', err);
+        toast.error('Errore nell\'invio dei dati all\'esperto');
       }
     };
 
