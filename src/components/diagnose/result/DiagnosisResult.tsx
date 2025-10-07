@@ -269,37 +269,57 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
           </div>
           
           <div className="space-y-4">
-            {/* Valutazione generale */}
+            {/* Valutazione generale - Malattie specifiche rilevate */}
             <div className="bg-white p-4 rounded-lg border border-blue-200">
-              <h3 className="font-bold text-lg text-blue-700 mb-2">Valutazione Generale</h3>
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div>
-                  <span className="font-semibold">Stato salute:</span>
-                  <span className={`ml-2 px-2 py-1 rounded ${
-                    resolvedIsHealthy 
-                      ? 'bg-green-100 text-green-800' 
-                      : 'bg-red-100 text-red-800'
-                  }`}>
-                    {resolvedIsHealthy ? '✅ Sana' : '⚠️ Richiede attenzione'}
-                  </span>
-                </div>
-                <div>
-                  <span className="font-semibold">Affidabilità analisi:</span>
-                  <span className="ml-2">{Math.round(resolvedConfidence)}%</span>
-                </div>
-                {analysisDetails.multiServiceInsights?.agreementScore && (
-                  <div>
-                    <span className="font-semibold">Concordanza AI:</span>
-                    <span className="ml-2">{Math.round(analysisDetails.multiServiceInsights.agreementScore * 100)}%</span>
+              <h3 className="font-bold text-lg text-blue-700 mb-3">Valutazione Generale - Possibili Malattie</h3>
+              {detectedDiseases.length > 0 ? (
+                <div className="space-y-3">
+                  <p className="text-sm text-gray-700 mb-3">
+                    Basandosi sull'analisi visiva della foto, sono state identificate le seguenti possibili malattie:
+                  </p>
+                  <ul className="space-y-2">
+                    {detectedDiseases.map((disease: any, index: number) => (
+                      <li key={index} className="flex items-start gap-2 text-sm">
+                        <span className="text-red-600 font-bold mt-0.5">{index + 1}.</span>
+                        <div className="flex-1">
+                          <span className="font-semibold text-gray-900">{disease.name || disease.label}</span>
+                          {disease.confidence && (
+                            <span className="ml-2 text-gray-600">
+                              (Confidenza: {Math.round(disease.confidence * 100)}%)
+                            </span>
+                          )}
+                          {disease.symptoms && disease.symptoms.length > 0 && (
+                            <p className="text-gray-600 mt-1 text-xs">
+                              Sintomi principali: {disease.symptoms.slice(0, 2).join(', ')}
+                            </p>
+                          )}
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="mt-3 pt-3 border-t border-gray-200 grid grid-cols-2 gap-2 text-xs">
+                    <div>
+                      <span className="font-semibold">Affidabilità analisi:</span>
+                      <span className="ml-1">{Math.round(resolvedConfidence)}%</span>
+                    </div>
+                    {analysisDetails.multiServiceInsights?.agreementScore && (
+                      <div>
+                        <span className="font-semibold">Concordanza AI:</span>
+                        <span className="ml-1">{Math.round(analysisDetails.multiServiceInsights.agreementScore * 100)}%</span>
+                      </div>
+                    )}
                   </div>
-                )}
-                {analysisDetails.multiServiceInsights?.primaryService && (
-                  <div>
-                    <span className="font-semibold">Servizio primario:</span>
-                    <span className="ml-2">{analysisDetails.multiServiceInsights.primaryService}</span>
-                  </div>
-                )}
-              </div>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <p className="text-sm text-green-700">
+                    ✅ Non sono state rilevate malattie evidenti nell'analisi della foto.
+                  </p>
+                  <p className="text-xs text-gray-600">
+                    La pianta appare in buone condizioni di salute.
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Analisi visiva */}
@@ -320,24 +340,57 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
               </div>
             )}
 
-            {/* Raccomandazioni */}
+            {/* Raccomandazioni con prodotti */}
             <div className="bg-white p-4 rounded-lg border border-blue-200">
-              <h3 className="font-bold text-lg text-blue-700 mb-2">💡 Raccomandazioni</h3>
+              <h3 className="font-bold text-lg text-blue-700 mb-3">💡 Raccomandazioni e Prodotti Utili</h3>
               {resolvedIsHealthy ? (
-                <p className="text-sm text-gray-700">
-                  La pianta appare in buone condizioni. Continua con le cure attuali e monitora regolarmente per prevenire eventuali problemi.
-                </p>
+                <div className="space-y-3">
+                  <p className="text-sm text-gray-700">
+                    La pianta appare in buone condizioni. Continua con le cure attuali e monitora regolarmente per prevenire eventuali problemi.
+                  </p>
+                  <div className="pt-3 border-t border-gray-200">
+                    <h4 className="font-semibold text-sm text-gray-800 mb-2">🛒 Prodotti per la manutenzione:</h4>
+                    <ProductSuggestions 
+                      diseaseName="manutenzione pianta sana" 
+                      maxItems={4}
+                    />
+                  </div>
+                </div>
               ) : (
-                <div className="text-sm text-gray-700 space-y-2">
-                  <p className="font-semibold text-red-700">La pianta richiede attenzione immediata:</p>
-                  <ul className="list-disc list-inside space-y-1">
+                <div className="space-y-3">
+                  <p className="font-semibold text-red-700 text-sm">La pianta richiede attenzione immediata:</p>
+                  <ul className="list-disc list-inside space-y-1 text-sm text-gray-700">
                     {detectedDiseases.length > 0 && (
-                      <li>Sono state rilevate {detectedDiseases.length} malattia/e che richiedono trattamento</li>
+                      <li>Rilevate {detectedDiseases.length} possibile/i malattia/e</li>
                     )}
-                    <li>Consulta i prodotti consigliati sopra per il trattamento</li>
+                    <li>Consulta i prodotti specifici consigliati qui sotto</li>
                     <li>Monitora l'evoluzione dei sintomi nei prossimi giorni</li>
-                    <li>Per una diagnosi approfondita, consulta un esperto</li>
+                    <li>Per diagnosi approfondita, consulta un esperto</li>
                   </ul>
+                  
+                  <div className="pt-3 border-t border-gray-200">
+                    <h4 className="font-semibold text-sm text-gray-800 mb-2">🛒 Prodotti consigliati per il trattamento:</h4>
+                    {detectedDiseases.length > 0 ? (
+                      <div className="space-y-3">
+                        {detectedDiseases.slice(0, 2).map((disease: any, index: number) => (
+                          <div key={index} className="bg-gray-50 p-3 rounded-lg">
+                            <p className="text-xs font-semibold text-gray-700 mb-2">
+                              Per {disease.name || disease.label}:
+                            </p>
+                            <ProductSuggestions 
+                              diseaseName={disease.name || disease.label} 
+                              maxItems={3}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <ProductSuggestions 
+                        diseaseName="trattamento generale piante" 
+                        maxItems={4}
+                      />
+                    )}
+                  </div>
                 </div>
               )}
             </div>
