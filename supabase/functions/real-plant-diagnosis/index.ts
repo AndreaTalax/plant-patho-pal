@@ -284,40 +284,78 @@ async function searchEppoDatabase(plantName: string, visualSymptoms: string[]) {
     
     console.log(`✅ Codice EPPO trovato: ${eppoCode} per ${plant.prefname || plantName}`);
     
-    // Ora cerca le malattie/parassiti che colpiscono questa pianta usando categorization
-    const categorizationUrl = `https://data.eppo.int/api/rest/1.0/taxon/${eppoCode}/categorization?authtoken=${eppoAuthToken}`;
-    console.log(`📡 Ricerca categorization per ${eppoCode}...`);
+    // Prova prima con l'endpoint pests
+    const pestsUrl = `https://data.eppo.int/api/rest/1.0/taxon/${eppoCode}/pests?authtoken=${eppoAuthToken}`;
+    console.log(`📡 Ricerca pests per ${eppoCode}...`);
     
-    const categorizationRes = await fetch(categorizationUrl, {
-      signal: AbortSignal.timeout(10000),
-    });
-    
-    if (!categorizationRes.ok) {
-      console.log(`⚠️ EPPO categorization error: ${categorizationRes.status}`);
-      return [];
+    let pestsData = null;
+    try {
+      const pestsRes = await fetch(pestsUrl, {
+        signal: AbortSignal.timeout(10000),
+      });
+      
+      if (pestsRes.ok) {
+        pestsData = await pestsRes.json();
+        console.log(`✅ EPPO pests trovati: ${pestsData?.length ?? 0}`);
+      } else {
+        console.log(`⚠️ EPPO pests error: ${pestsRes.status}`);
+      }
+    } catch (e) {
+      console.log(`⚠️ EPPO pests fetch failed:`, e);
     }
     
-    const categorizationData = await categorizationRes.json();
-    console.log(`✅ EPPO categorization trovate ${categorizationData?.length ?? 0} categorie`);
-    
-    // Estrai pests e diseases dalle categorie
-    const pestsAndDiseases: any[] = [];
-    if (categorizationData && Array.isArray(categorizationData)) {
-      for (const category of categorizationData) {
-        if (category.pests && Array.isArray(category.pests)) {
-          pestsAndDiseases.push(...category.pests.map((p: any) => ({ ...p, type: 'pest' })));
-        }
-        if (category.diseases && Array.isArray(category.diseases)) {
-          pestsAndDiseases.push(...category.diseases.map((d: any) => ({ ...d, type: 'disease' })));
+    // Se pests non funziona, prova con un approccio alternativo: cerca direttamente malattie comuni
+    if (!pestsData || pestsData.length === 0) {
+      console.log(`⚠️ Nessun risultato da /pests, provo ricerca diretta malattie comuni...`);
+      
+      // Lista di malattie comuni da cercare per questa pianta
+      const commonDiseases = [
+        'powdery mildew',
+        'rust',
+        'leaf spot',
+        'anthracnose',
+        'root rot',
+        'blight'
+      ];
+      
+      for (const diseaseTerm of commonDiseases.slice(0, 3)) {
+        const searchDiseaseUrl = `https://data.eppo.int/api/rest/1.0/tools/search?kw=${encodeURIComponent(plantName + ' ' + diseaseTerm)}&authtoken=${eppoAuthToken}`;
+        
+        try {
+          const diseaseSearchRes = await fetch(searchDiseaseUrl, {
+            signal: AbortSignal.timeout(8000),
+          });
+          
+          if (diseaseSearchRes.ok) {
+            const diseaseResults = await diseaseSearchRes.json();
+            if (diseaseResults && Array.isArray(diseaseResults) && diseaseResults.length > 0) {
+              for (const disease of diseaseResults.slice(0, 2)) {
+                allDiseases.push({
+                  name: disease.fullname || disease.prefname || disease.scientificname,
+                  scientificName: disease.scientificname || disease.prefname,
+                  eppoCode: disease.eppocode,
+                  confidence: 60,
+                  symptoms: [`Malattia potenziale identificata nel database EPPO`, ...visualSymptoms.slice(0, 2)],
+                  treatments: ["Consultare un fitopatologo per diagnosi e trattamenti specifici"],
+                  cause: disease.codetype || "Patogeno",
+                  source: "EPPO Database",
+                  severity: "medium",
+                });
+              }
+            }
+          }
+        } catch (e) {
+          console.log(`⚠️ Ricerca malattia ${diseaseTerm} fallita`);
         }
       }
+      
+      console.log(`✅ EPPO ricerca alternativa completata: ${allDiseases.length} risultati`);
+      return allDiseases;
     }
     
-    console.log(`✅ EPPO trovati ${pestsAndDiseases.length} pests/diseases totali`);
-    
-    if (pestsAndDiseases.length > 0) {
-      // Prendi i primi 8 pests/diseases
-      for (const item of pestsAndDiseases.slice(0, 8)) {
+    // Se abbiamo dati da pests, processali
+    if (pestsData && Array.isArray(pestsData) && pestsData.length > 0) {
+      for (const item of pestsData.slice(0, 8)) {
         const itemName = item.fullname || item.prefname || item.scientificname || "Patogeno non identificato";
         
         // Calcola confidence basandosi su sintomi visivi
