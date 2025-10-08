@@ -2,6 +2,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { FallbackSuggestionsService } from './fallbackSuggestionsService';
 import { GBIFService, type GBIFSpeciesInfo } from './gbifService';
 import { CropHealthService, type CropHealthResult } from './cropHealthService';
+import { searchEppoDatabase, type EppoSearchResult } from '@/utils/plant-analysis/eppoIntegration';
 
 export interface GlobalPlantIdentification {
   name: string;
@@ -29,7 +30,7 @@ export interface GlobalIdentificationResult {
   eppoInfo?: {
     plants: any[];
     pests: any[];
-    diseases: any[];
+    diseases: EppoSearchResult[];
   };
   success: boolean;
   isFallback?: boolean;
@@ -74,17 +75,32 @@ export class GlobalPlantIdentificationService {
         // Ottieni il miglior risultato per l'analisi aggiuntiva
         const bestPlant = this.getBestPlantIdentification(plantIdentifications);
         
-        // Esegui analisi aggiuntive in parallelo
-        const [gbifInfo, cropHealthAnalysis] = await Promise.allSettled([
+        // Costruisci descrizione sintomi dalle malattie rilevate
+        const symptomsDescription = diseases.length > 0 
+          ? diseases.map(d => d.symptoms.join(', ')).join('; ')
+          : 'Analisi generale della pianta';
+        
+        // Esegui analisi aggiuntive in parallelo, includendo EPPO
+        const [gbifInfo, cropHealthAnalysis, eppoResults] = await Promise.allSettled([
           bestPlant?.scientificName ? GBIFService.searchSpecies(bestPlant.scientificName) : Promise.resolve(null),
-          CropHealthService.analyzePlantHealth(imageBase64, bestPlant?.name)
+          CropHealthService.analyzePlantHealth(imageBase64, bestPlant?.name),
+          bestPlant?.name ? searchEppoDatabase(bestPlant.name, symptomsDescription) : Promise.resolve([])
         ]);
+
+        const eppoData = eppoResults.status === 'fulfilled' && eppoResults.value.length > 0 
+          ? eppoResults.value 
+          : [];
 
         return {
           plantIdentification: plantIdentifications,
           diseases: diseases,
           gbifInfo: gbifInfo.status === 'fulfilled' ? gbifInfo.value : undefined,
           cropHealthAnalysis: cropHealthAnalysis.status === 'fulfilled' ? cropHealthAnalysis.value : undefined,
+          eppoInfo: eppoData.length > 0 ? {
+            plants: [],
+            pests: eppoData.filter(r => r.category === 'pest'),
+            diseases: eppoData.filter(r => r.category === 'disease')
+          } : undefined,
           success: true,
           isFallback: false
         };
@@ -110,10 +126,17 @@ export class GlobalPlantIdentificationService {
         };
 
         // Analisi aggiuntive anche per PlantNet
-        const [gbifInfo, cropHealthAnalysis] = await Promise.allSettled([
+        const symptomsDescription = 'Analisi generale pianta da PlantNet';
+        
+        const [gbifInfo, cropHealthAnalysis, eppoResults] = await Promise.allSettled([
           plantIdentification.scientificName ? GBIFService.searchSpecies(plantIdentification.scientificName) : Promise.resolve(null),
-          CropHealthService.analyzePlantHealth(imageBase64, plantIdentification.name)
+          CropHealthService.analyzePlantHealth(imageBase64, plantIdentification.name),
+          plantIdentification.name ? searchEppoDatabase(plantIdentification.name, symptomsDescription) : Promise.resolve([])
         ]);
+
+        const eppoData = eppoResults.status === 'fulfilled' && eppoResults.value.length > 0 
+          ? eppoResults.value 
+          : [];
 
         return {
           plantIdentification: [plantIdentification],
@@ -128,6 +151,11 @@ export class GlobalPlantIdentificationService {
             })) : [],
           gbifInfo: gbifInfo.status === 'fulfilled' ? gbifInfo.value : undefined,
           cropHealthAnalysis: cropHealthAnalysis.status === 'fulfilled' ? cropHealthAnalysis.value : undefined,
+          eppoInfo: eppoData.length > 0 ? {
+            plants: [],
+            pests: eppoData.filter(r => r.category === 'pest'),
+            diseases: eppoData.filter(r => r.category === 'disease')
+          } : undefined,
           success: true,
           isFallback: false
         };
@@ -149,11 +177,20 @@ export class GlobalPlantIdentificationService {
           family: diagnosis.plantIdentification.family
         };
 
-        // Anche per il fallback, prova ad ottenere info GBIF e crop health
-        const [gbifInfo, cropHealthAnalysis] = await Promise.allSettled([
+        // Anche per il fallback, prova ad ottenere info GBIF, crop health e EPPO
+        const symptomsDescription = diagnosis.healthAnalysis.issues
+          .map((issue: any) => issue.symptoms?.join(', ') || issue.description)
+          .join('; ');
+        
+        const [gbifInfo, cropHealthAnalysis, eppoResults] = await Promise.allSettled([
           plantId.scientificName ? GBIFService.searchSpecies(plantId.scientificName) : Promise.resolve(null),
-          CropHealthService.analyzePlantHealth(imageBase64, plantId.name)
+          CropHealthService.analyzePlantHealth(imageBase64, plantId.name),
+          plantId.name ? searchEppoDatabase(plantId.name, symptomsDescription) : Promise.resolve([])
         ]);
+
+        const eppoData = eppoResults.status === 'fulfilled' && eppoResults.value.length > 0 
+          ? eppoResults.value 
+          : [];
 
         return {
           plantIdentification: [plantId],
@@ -167,6 +204,11 @@ export class GlobalPlantIdentificationService {
           })),
           gbifInfo: gbifInfo.status === 'fulfilled' ? gbifInfo.value : undefined,
           cropHealthAnalysis: cropHealthAnalysis.status === 'fulfilled' ? cropHealthAnalysis.value : undefined,
+          eppoInfo: eppoData.length > 0 ? {
+            plants: [],
+            pests: eppoData.filter(r => r.category === 'pest'),
+            diseases: eppoData.filter(r => r.category === 'disease')
+          } : undefined,
           success: true,
           isFallback: true,
           fallbackMessage: 'Identificazione tramite AI di backup'

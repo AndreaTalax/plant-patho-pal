@@ -272,7 +272,90 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
             {/* Valutazione generale - Malattie specifiche rilevate */}
             <div className="bg-white p-4 rounded-lg border border-blue-200">
               <h3 className="font-bold text-lg text-blue-700 mb-3">Valutazione Generale - Possibili Malattie</h3>
-              {detectedDiseases.length > 0 ? (
+              
+              {/* Mostra prima i risultati EPPO se disponibili (database ufficiale) */}
+              {analysisDetails?.risultatiCompleti?.eppoInfo?.diseases && 
+               analysisDetails.risultatiCompleti.eppoInfo.diseases.length > 0 && (
+                <div className="space-y-3 mb-4">
+                  <div className="flex items-center gap-2 mb-2 bg-green-50 px-3 py-2 rounded-lg border border-green-200">
+                    <span className="text-lg">🔬</span>
+                    <p className="text-sm font-semibold text-green-800">
+                      Risultati dal Database EPPO (European Plant Protection Organization)
+                    </p>
+                  </div>
+                  <p className="text-sm text-gray-700 mb-3">
+                    Basandosi sull'analisi visiva della foto e sul database EPPO, sono state identificate le seguenti malattie reali:
+                  </p>
+                  <ul className="space-y-3">
+                    {analysisDetails.risultatiCompleti.eppoInfo.diseases.slice(0, 5).map((disease: any, index: number) => (
+                      <li key={index} className="bg-gradient-to-r from-green-50 to-blue-50 p-3 rounded-lg border-l-4 border-green-500">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-start gap-2 flex-1">
+                            <span className="text-green-600 font-bold mt-0.5">{index + 1}.</span>
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="font-bold text-gray-900">{disease.name}</span>
+                                <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-xs font-medium">
+                                  {Math.round(disease.probability * 100)}% EPPO
+                                </span>
+                              </div>
+                              <p className="text-xs text-gray-500 mt-1">Codice EPPO: {disease.eppoCode}</p>
+                              {disease.description && (
+                                <p className="text-sm text-gray-700 mt-2">{disease.description}</p>
+                              )}
+                              {disease.symptoms && disease.symptoms.length > 0 && (
+                                <p className="text-xs text-gray-600 mt-2">
+                                  <span className="font-semibold">Sintomi:</span> {disease.symptoms.slice(0, 3).join(', ')}
+                                </p>
+                              )}
+                              {disease.regulatoryStatus && disease.regulatoryStatus.length > 0 && (
+                                <div className="mt-2 flex items-center gap-1">
+                                  <span className="text-xs font-semibold text-red-600">⚠️ Organismo regolamentato</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                  
+                  {/* Mostra parassiti EPPO se presenti */}
+                  {analysisDetails.risultatiCompleti.eppoInfo.pests && 
+                   analysisDetails.risultatiCompleti.eppoInfo.pests.length > 0 && (
+                    <div className="mt-4 pt-4 border-t border-gray-200">
+                      <p className="text-sm font-semibold text-orange-700 mb-2">🐛 Possibili parassiti identificati:</p>
+                      <ul className="space-y-2">
+                        {analysisDetails.risultatiCompleti.eppoInfo.pests.slice(0, 3).map((pest: any, index: number) => (
+                          <li key={index} className="bg-orange-50 p-2 rounded-lg border border-orange-200 text-sm">
+                            <span className="font-semibold">{pest.name}</span>
+                            <span className="ml-2 text-gray-600">({Math.round(pest.probability * 100)}%)</span>
+                            {pest.description && <p className="text-xs text-gray-600 mt-1">{pest.description}</p>}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  
+                  <div className="mt-3 pt-3 border-t border-gray-200 grid grid-cols-2 gap-2 text-xs">
+                    <div>
+                      <span className="font-semibold">Affidabilità analisi:</span>
+                      <span className="ml-1">{Math.round(resolvedConfidence)}%</span>
+                    </div>
+                    {analysisDetails.multiServiceInsights?.agreementScore && (
+                      <div>
+                        <span className="font-semibold">Concordanza AI:</span>
+                        <span className="ml-1">{Math.round(analysisDetails.multiServiceInsights.agreementScore * 100)}%</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+              
+              {/* Se non ci sono risultati EPPO, mostra le malattie dall'AI */}
+              {(!analysisDetails?.risultatiCompleti?.eppoInfo?.diseases || 
+                analysisDetails.risultatiCompleti.eppoInfo.diseases.length === 0) && 
+               detectedDiseases.length > 0 && (
                 <div className="space-y-3">
                   <p className="text-sm text-gray-700 mb-3">
                     Basandosi sull'analisi visiva della foto, sono state identificate le seguenti possibili malattie:
@@ -310,7 +393,11 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
                     )}
                   </div>
                 </div>
-              ) : (
+              )}
+              
+              {(!analysisDetails?.risultatiCompleti?.eppoInfo?.diseases || 
+                analysisDetails.risultatiCompleti.eppoInfo.diseases.length === 0) && 
+               detectedDiseases.length === 0 && (
                 <div className="space-y-2">
                   <p className="text-sm text-green-700">
                     ✅ Non sono state rilevate malattie evidenti nell'analisi della foto.
@@ -370,7 +457,25 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
                   
                   <div className="pt-3 border-t border-gray-200">
                     <h4 className="font-semibold text-sm text-gray-800 mb-2">🛒 Prodotti consigliati per il trattamento:</h4>
-                    {detectedDiseases.length > 0 ? (
+                    
+                    {/* Usa prima i risultati EPPO se disponibili */}
+                    {analysisDetails?.risultatiCompleti?.eppoInfo?.diseases && 
+                     analysisDetails.risultatiCompleti.eppoInfo.diseases.length > 0 ? (
+                      <div className="space-y-3">
+                        {analysisDetails.risultatiCompleti.eppoInfo.diseases.slice(0, 2).map((disease: any, index: number) => (
+                          <div key={index} className="bg-gradient-to-br from-green-50 to-blue-50 p-3 rounded-lg border border-green-200">
+                            <p className="text-xs font-semibold text-green-800 mb-2 flex items-center gap-1">
+                              <span>🔬</span>
+                              Per {disease.name} (EPPO):
+                            </p>
+                            <ProductSuggestions 
+                              diseaseName={disease.name} 
+                              maxItems={3}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    ) : detectedDiseases.length > 0 ? (
                       <div className="space-y-3">
                         {detectedDiseases.slice(0, 2).map((disease: any, index: number) => (
                           <div key={index} className="bg-gray-50 p-3 rounded-lg">
@@ -378,7 +483,7 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
                               Per {disease.name || disease.label}:
                             </p>
                             <ProductSuggestions 
-                              diseaseName={disease.name || disease.label} 
+                              diseaseName={disease.name || disease.label}
                               maxItems={3}
                             />
                           </div>
@@ -386,7 +491,7 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
                       </div>
                     ) : (
                       <ProductSuggestions 
-                        diseaseName="trattamento generale piante" 
+                        diseaseName="trattamento generale piante"
                         maxItems={4}
                       />
                     )}
