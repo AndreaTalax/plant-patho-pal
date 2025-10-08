@@ -1,4 +1,3 @@
-
 project_id = "otdmqmpxukifoxjlgzmq"
 
 [functions.assign-specialist]
@@ -100,6 +99,17 @@ verify_jwt = true
 [functions.save-diagnosis]
 verify_jwt = true
 
+# 👇 aggiungi la tua funzione EPPO qui
+[functions.eppo-api]
+verify_jwt = false
+
 [auth.hooks.send_email]
 enabled = true
 uri = "{{PROJECT_REF}}/functions/v1/send-password-reset"
+
+# 👇 nuova sezione per chiarezza: elenco dei secrets usati dal progetto
+[secrets]
+OPENAI_API_KEY = "sk-..."
+PLANT_ID_API_KEY = "..."
+PLANTNET_API_KEY = "..."
+EPPO_AUTH_TOKEN = "9159803cacf305136f429b555feac7b6"
