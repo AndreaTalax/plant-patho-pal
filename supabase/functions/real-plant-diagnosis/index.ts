@@ -284,26 +284,41 @@ async function searchEppoDatabase(plantName: string, visualSymptoms: string[]) {
     
     console.log(`✅ Codice EPPO trovato: ${eppoCode} per ${plant.prefname || plantName}`);
     
-    // Ora cerca gli host (malattie che colpiscono questa pianta)
-    const hostsUrl = `https://data.eppo.int/api/rest/1.0/taxon/${eppoCode}/hosts?authtoken=${eppoAuthToken}`;
-    console.log(`📡 Ricerca malattie/parassiti per ${eppoCode}...`);
+    // Ora cerca le malattie/parassiti che colpiscono questa pianta usando categorization
+    const categorizationUrl = `https://data.eppo.int/api/rest/1.0/taxon/${eppoCode}/categorization?authtoken=${eppoAuthToken}`;
+    console.log(`📡 Ricerca categorization per ${eppoCode}...`);
     
-    const hostsRes = await fetch(hostsUrl, {
+    const categorizationRes = await fetch(categorizationUrl, {
       signal: AbortSignal.timeout(10000),
     });
     
-    if (!hostsRes.ok) {
-      console.log(`⚠️ EPPO hosts error: ${hostsRes.status}`);
+    if (!categorizationRes.ok) {
+      console.log(`⚠️ EPPO categorization error: ${categorizationRes.status}`);
       return [];
     }
     
-    const hostsData = await hostsRes.json();
-    console.log(`✅ EPPO trovate ${hostsData?.length ?? 0} malattie/parassiti`);
+    const categorizationData = await categorizationRes.json();
+    console.log(`✅ EPPO categorization trovate ${categorizationData?.length ?? 0} categorie`);
     
-    if (hostsData && Array.isArray(hostsData) && hostsData.length > 0) {
-      // Prendi le prime 8 malattie/parassiti
-      for (const item of hostsData.slice(0, 8)) {
-        const itemName = item.fullname || item.prefname || item.scientificname;
+    // Estrai pests e diseases dalle categorie
+    const pestsAndDiseases: any[] = [];
+    if (categorizationData && Array.isArray(categorizationData)) {
+      for (const category of categorizationData) {
+        if (category.pests && Array.isArray(category.pests)) {
+          pestsAndDiseases.push(...category.pests.map((p: any) => ({ ...p, type: 'pest' })));
+        }
+        if (category.diseases && Array.isArray(category.diseases)) {
+          pestsAndDiseases.push(...category.diseases.map((d: any) => ({ ...d, type: 'disease' })));
+        }
+      }
+    }
+    
+    console.log(`✅ EPPO trovati ${pestsAndDiseases.length} pests/diseases totali`);
+    
+    if (pestsAndDiseases.length > 0) {
+      // Prendi i primi 8 pests/diseases
+      for (const item of pestsAndDiseases.slice(0, 8)) {
+        const itemName = item.fullname || item.prefname || item.scientificname || "Patogeno non identificato";
         
         // Calcola confidence basandosi su sintomi visivi
         let confidence = 65;
@@ -316,7 +331,7 @@ async function searchEppoDatabase(plantName: string, visualSymptoms: string[]) {
           if (hasMatchingSymptom) confidence += 15;
         }
         
-        const isParasite = item.eppocode?.startsWith('1') || item.codetype?.toLowerCase().includes('insect');
+        const isParasite = item.type === 'pest';
         
         allDiseases.push({
           name: isParasite ? `Parassita: ${itemName}` : itemName,
@@ -333,7 +348,7 @@ async function searchEppoDatabase(plantName: string, visualSymptoms: string[]) {
               : "Consultare un fitopatologo per trattamenti specifici",
             "Seguire le linee guida EPPO"
           ],
-          cause: item.codetype || (isParasite ? "Parassita" : "Patogeno"),
+          cause: item.type === 'pest' ? "Parassita" : "Patogeno",
           source: "EPPO Database",
           severity: confidence > 75 ? "high" : "medium",
         });
