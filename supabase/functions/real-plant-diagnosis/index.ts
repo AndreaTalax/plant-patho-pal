@@ -108,7 +108,7 @@ async function assessPlantHealth(imageBase64: string) {
       },
       body: JSON.stringify({
         images: [cleanBase64],
-        modifiers: ["crops_fast", "similar_images", "health_all"],
+        modifiers: ["similar_images"],
         disease_details: [
           "cause",
           "common_names",
