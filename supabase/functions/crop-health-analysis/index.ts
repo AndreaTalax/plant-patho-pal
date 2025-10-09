@@ -45,11 +45,10 @@ serve(async (req) => {
     // Clean base64 string
     const cleanBase64 = imageBase64.replace(/^data:image\/[a-z]+;base64,/, "");
 
-    // ✅ Payload corretto per Plant.id
+    // ✅ Payload corretto per Plant.id v3 API
     const payload = {
       images: [cleanBase64],
-      modifiers: modifiers ||
-        ["crops_fast", "similar_images", "health_all"],
+      modifiers: modifiers || ["similar_images"],
       disease_details: diseaseDetails ||
         [
           "cause",
@@ -59,7 +58,7 @@ serve(async (req) => {
           "treatment",
           "url",
         ],
-      plant_details: ["common_names", "url", "taxonomy"], // <-- array valido
+      plant_details: ["common_names", "url", "taxonomy"],
     };
 
     console.log("📡 Calling Plant.id Health API...");
