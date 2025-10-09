@@ -254,7 +254,9 @@ async function searchEppoDatabase(plantName: string, visualSymptoms: string[]) {
     const allDiseases: any[] = [];
     
     // 1. Cerca malattie comuni per sintomi visibili (es. "oidio", "muffa bianca")
-    const commonSymptomKeywords = ["oidio", "powdery mildew", "white spots", "muffa", "rust", "ruggine"];
+    const seenEppoCodes = new Set<string>();
+    const commonSymptomKeywords = ["oidio", "powdery mildew", "white spots", "muffa"];
+    
     for (const symptom of commonSymptomKeywords) {
       const symptomSearchParams = new URLSearchParams({
         kw: symptom,
@@ -277,14 +279,25 @@ async function searchEppoDatabase(plantName: string, visualSymptoms: string[]) {
           const symptomData = await symptomRes.json();
           if (symptomData && Array.isArray(symptomData) && symptomData.length > 0) {
             console.log(`✅ EPPO malattie per sintomo "${symptom}": ${symptomData.length}`);
-            for (const disease of symptomData.slice(0, 3)) {
+            
+            // Prendi solo la prima malattia più rilevante per sintomo
+            for (const disease of symptomData.slice(0, 1)) {
+              const eppoCode = disease.eppocode;
+              
+              // Deduplicazione: salta se già aggiunta
+              if (seenEppoCodes.has(eppoCode)) {
+                console.log(`⏭️ Malattia già aggiunta: ${eppoCode}`);
+                continue;
+              }
+              
+              seenEppoCodes.add(eppoCode);
               const diseaseName = disease.fullname || disease.prefname || disease.scientificname || "Malattia non identificata";
               
               allDiseases.push({
                 name: diseaseName,
                 scientificName: disease.scientificname || diseaseName,
-                eppoCode: disease.eppocode,
-                confidence: 85, // Alta confidenza per match sintomo
+                eppoCode: eppoCode,
+                confidence: 85,
                 symptoms: [
                   `Sintomi compatibili con ${symptom}`,
                   "Macchie bianche/polverulente sulle foglie",
