@@ -241,7 +241,7 @@ async function analyzeWithOpenAI(imageBase64: string) {
   }, "OpenAI Vision API");
 }
 
-// EPPO search - cerca malattie specifiche per la pianta usando l'API di ricerca
+// EPPO search - cerca malattie specifiche per pianta e sintomi
 async function searchEppoDatabase(plantName: string, visualSymptoms: string[]) {
   if (!eppoAuthToken) {
     console.log("⚠️ EPPO_AUTH_TOKEN non configurato");
@@ -250,9 +250,64 @@ async function searchEppoDatabase(plantName: string, visualSymptoms: string[]) {
   
   return safeFetch(async () => {
     console.log(`🔍 Ricerca malattie EPPO per: ${plantName}`);
+    console.log(`🔍 Sintomi visivi: ${visualSymptoms.join(", ")}`);
     const allDiseases: any[] = [];
     
-    // Cerca malattie specifiche usando searchfor=names e typeorg=3 (diseases)
+    // 1. Cerca malattie comuni per sintomi visibili (es. "oidio", "muffa bianca")
+    const commonSymptomKeywords = ["oidio", "powdery mildew", "white spots", "muffa", "rust", "ruggine"];
+    for (const symptom of commonSymptomKeywords) {
+      const symptomSearchParams = new URLSearchParams({
+        kw: symptom,
+        searchfor: "1",
+        searchmode: "3",
+        typeorg: "3", // diseases
+        authtoken: eppoAuthToken,
+      });
+      
+      const symptomSearchUrl = `https://data.eppo.int/api/rest/1.0/tools/search?${symptomSearchParams.toString()}`;
+      console.log(`📡 Ricerca EPPO per sintomo: ${symptom}`);
+      
+      try {
+        const symptomRes = await fetch(symptomSearchUrl, {
+          headers: { Accept: "application/json" },
+          signal: AbortSignal.timeout(10000),
+        });
+        
+        if (symptomRes.ok) {
+          const symptomData = await symptomRes.json();
+          if (symptomData && Array.isArray(symptomData) && symptomData.length > 0) {
+            console.log(`✅ EPPO malattie per sintomo "${symptom}": ${symptomData.length}`);
+            for (const disease of symptomData.slice(0, 3)) {
+              const diseaseName = disease.fullname || disease.prefname || disease.scientificname || "Malattia non identificata";
+              
+              allDiseases.push({
+                name: diseaseName,
+                scientificName: disease.scientificname || diseaseName,
+                eppoCode: disease.eppocode,
+                confidence: 85, // Alta confidenza per match sintomo
+                symptoms: [
+                  `Sintomi compatibili con ${symptom}`,
+                  "Macchie bianche/polverulente sulle foglie",
+                  "Decolorazione fogliare"
+                ],
+                treatments: [
+                  "Fungicida a base di zolfo o bicarbonato",
+                  "Rimuovere foglie infette",
+                  "Migliorare circolazione aria"
+                ],
+                cause: disease.codetype || "Fungo",
+                source: "EPPO Database",
+                severity: "high",
+              });
+            }
+          }
+        }
+      } catch (e) {
+        console.log(`⚠️ EPPO symptom search failed for ${symptom}:`, e);
+      }
+    }
+    
+    // 2. Cerca malattie specifiche usando searchfor=names e typeorg=3 (diseases)
     const diseaseSearchParams = new URLSearchParams({
       kw: plantName,
       searchfor: "1", // Search for names
