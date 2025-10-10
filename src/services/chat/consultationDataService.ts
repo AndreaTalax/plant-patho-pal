@@ -84,15 +84,16 @@ export class ConsultationDataService {
         return false;
       }
 
-      // Genera il PDF professionale
-      console.log('📄 Generazione PDF in corso...', {
-        plantData,
-        userProfile,
-        diagnosisResult,
+      // Genera il PDF professionale in background (non blocca l'interfaccia)
+      console.log('📄 Avvio generazione PDF in background...', {
+        plantData: plantData?.plantName,
+        userProfile: userProfile?.email,
+        hasDiagnosis: !!diagnosisResult,
         conversationId
       });
       
-      const { data: pdfResult, error: pdfError } = await supabase.functions.invoke('generate-professional-pdf', {
+      // Chiamata non bloccante - il PDF verrà generato in background
+      supabase.functions.invoke('generate-professional-pdf', {
         body: {
           plantData,
           userProfile,
@@ -102,89 +103,19 @@ export class ConsultationDataService {
         headers: {
           Authorization: `Bearer ${session.access_token}`,
         },
-      });
-
-      console.log('📄 Risposta PDF function:', { pdfResult, pdfError });
-
-      if (pdfError) {
-        console.error('❌ Errore generazione PDF:', pdfError);
-        // Fallback: invia i dati come messaggio testuale
-        return await this.sendTextualConsultationData(conversationId, plantData, userProfile, diagnosisResult);
-      }
-
-      if (!pdfResult?.success || !pdfResult?.pdfUrl) {
-        console.error('❌ PDF function returned no success or no pdfUrl:', pdfResult);
-        // Fallback: invia i dati come messaggio testuale
-        return await this.sendTextualConsultationData(conversationId, plantData, userProfile, diagnosisResult);
-      }
-
-      console.log('✅ PDF generato con successo:', pdfResult.fileName);
-      console.log('📎 URL PDF generato:', pdfResult.pdfUrl);
-
-      // Invia il messaggio principale con PDF come link diretto  
-      const pdfMessage = [
-        "📋 **CONSULENZA PROFESSIONALE - DATI COMPLETI**",
-        "",
-        "Ho preparato un documento PDF completo con tutti i dati della consulenza:",
-        "",
-        "• Dati personali del paziente",
-        "• Informazioni dettagliate della pianta", 
-        "• Risultati della diagnosi AI (se disponibili)",
-        "• Foto della pianta (se presente)",
-        "",
-        "Il documento è pronto per la revisione professionale.",
-        "",
-        `📎 **[Scarica PDF Consulenza](${pdfResult.pdfUrl})**`
-      ].join('\n');
-
-      console.log('📋 Messaggio PDF che verrà inviato:');
-      console.log(pdfMessage);
-
-      // Invia il messaggio con il PDF come link
-      const { data: messageResult, error: messageError } = await supabase.functions.invoke('send-message', {
-        body: {
-          conversationId,
-          recipientId: MARCO_NIGRO_ID,
-          text: pdfMessage,
-          imageUrl: null,
-          products: null
-        },
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      });
-
-      if (messageError || !messageResult?.success) {
-        console.error('❌ Errore invio messaggio PDF:', messageError);
-        // Fallback con link diretto
-        return await this.sendPDFLinkMessage(conversationId, pdfResult.pdfUrl, pdfResult.fileName);
-      }
-
-      // Se c'è un'immagine, inviala come messaggio separato
-      if (plantData?.imageUrl) {
-        console.log('📸 Invio immagine pianta...');
-        const { data: imageResult, error: imageError } = await supabase.functions.invoke('send-message', {
-          body: {
-            conversationId,
-            recipientId: MARCO_NIGRO_ID,
-            text: '📸 Foto della pianta in consulenza',
-            imageUrl: plantData.imageUrl,
-            products: null
-          },
-          headers: {
-            Authorization: `Bearer ${session.access_token}`,
-          },
-        });
-
-        if (imageError) {
-          console.error('⚠️ Warning: Errore invio immagine:', imageError);
+      }).then(({ data: pdfResult, error: pdfError }) => {
+        if (pdfError) {
+          console.error('❌ Errore generazione PDF background:', pdfError);
         } else {
-          console.log('✅ Immagine inviata con successo');
+          console.log('✅ PDF generato in background:', pdfResult);
         }
-      }
+      });
 
-      console.log('✅ INVIO PDF CONSULTAZIONE - COMPLETATO CON SUCCESSO');
-      return true;
+      // Continua immediatamente senza aspettare il PDF
+      console.log('⚡ Invio dati consultazione (PDF in background)...');
+      
+      // Invia subito i dati testuali mentre il PDF viene generato
+      return await this.sendTextualConsultationData(conversationId, plantData, userProfile, diagnosisResult);
 
     } catch (error) {
       console.error('❌ ERRORE CRITICO INVIO PDF CONSULTAZIONE:', error);

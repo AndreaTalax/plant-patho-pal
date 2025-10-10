@@ -50,7 +50,7 @@ export const useUserChatRealtime = (userId: string) => {
     }
   }, [userId, isInitializing]);
 
-  /** 🔌 Gestione realtime con auto-reconnect */
+  /** 🔌 Gestione realtime con auto-reconnect ottimizzato */
   useEffect(() => {
     if (!currentConversationId) {
       setIsConnected(false);
@@ -59,10 +59,39 @@ export const useUserChatRealtime = (userId: string) => {
 
     console.log('🔌 Impostazione canale realtime per:', currentConversationId);
     const channelName = `conversation_${currentConversationId}`;
+    let channel: any = null;
+    let reconnectTimeout: NodeJS.Timeout | null = null;
+    let isCleaningUp = false;
+
+    const cleanup = () => {
+      isCleaningUp = true;
+      if (reconnectTimeout) {
+        clearTimeout(reconnectTimeout);
+        reconnectTimeout = null;
+      }
+      if (channel) {
+        console.log('🧹 Rimozione canale:', channelName);
+        supabase.removeChannel(channel);
+        channel = null;
+      }
+      setIsConnected(false);
+    };
 
     const setupChannel = () => {
-      const channel = supabase
-        .channel(channelName)
+      if (isCleaningUp) return;
+      
+      // Rimuovi il canale precedente se esiste
+      if (channel) {
+        supabase.removeChannel(channel);
+      }
+
+      channel = supabase
+        .channel(channelName, {
+          config: {
+            broadcast: { self: false },
+            presence: { key: userId }
+          }
+        })
         .on(
           'postgres_changes',
           {
@@ -80,26 +109,35 @@ export const useUserChatRealtime = (userId: string) => {
           }
         )
         .subscribe((status) => {
-          console.log('📡 Stato canale:', status);
-          setIsConnected(status === 'SUBSCRIBED');
+          if (isCleaningUp) return;
 
-          if (status === 'CHANNEL_ERROR' || status === 'CLOSED') {
-            console.warn('⚠️ Connessione persa, tentativo di riconnessione tra 3s...');
-            setTimeout(setupChannel, 3000);
+          console.log('📡 Stato canale:', status);
+          
+          if (status === 'SUBSCRIBED') {
+            setIsConnected(true);
+            // Rimuovi timeout di riconnessione se esiste
+            if (reconnectTimeout) {
+              clearTimeout(reconnectTimeout);
+              reconnectTimeout = null;
+            }
+          } else if (status === 'CHANNEL_ERROR' || status === 'CLOSED') {
+            setIsConnected(false);
+            // Non riconnettere se stiamo pulendo
+            if (!isCleaningUp && !reconnectTimeout) {
+              console.warn('⚠️ Connessione persa, riconnessione tra 5s...');
+              reconnectTimeout = setTimeout(() => {
+                reconnectTimeout = null;
+                setupChannel();
+              }, 5000);
+            }
           }
         });
-
-      return channel;
     };
 
-    const channel = setupChannel();
+    setupChannel();
 
-    return () => {
-      console.log('🧹 Pulizia canale realtime:', channelName);
-      supabase.removeChannel(channel);
-      setIsConnected(false);
-    };
-  }, [currentConversationId]);
+    return cleanup;
+  }, [currentConversationId, userId]);
 
   /** ✉️ Invio messaggi */
   const handleSendMessage = useCallback(
