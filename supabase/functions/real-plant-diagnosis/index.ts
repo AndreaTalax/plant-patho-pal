@@ -31,100 +31,6 @@ async function safeFetch<T>(fn: () => Promise<T>, label: string): Promise<T | nu
   }
 }
 
-/**
- * Semplice estrazione di keyword dai testi lunghi di sintomi:
- * - rimuove caratteri non alfanumerici
- * - frammenta in frasi / parole chiave utili
- * - filtra parole molto corte
- */
-function extractSymptomKeywords(symptomTexts: string[] = []): string[] {
-  const keywords = new Set<string>();
-  for (const t of symptomTexts) {
-    if (!t) continue;
-    // sostituisci punteggiatura con punto e split in frasi
-    const cleaned = t.replace(/[^\wÀ-ÿ\s\-]/g, " ").replace(/\s+/g, " ").trim();
-    // split su parole/frasi principali (semplice heuristica)
-    const parts = cleaned.split(/\b(?:,|;|\.)\b/).map(p => p.trim()).filter(Boolean);
-    for (const p of parts) {
-      const short = p.toLowerCase();
-      if (short.length > 3) {
-        keywords.add(short);
-      } else {
-        // se la parte è troppo corta, splittala in parole
-        p.split(" ").forEach(w => {
-          const ww = w.trim().toLowerCase();
-          if (ww.length > 3) keywords.add(ww);
-        });
-      }
-    }
-  }
-  return Array.from(keywords).slice(0, 6); // massimo 6 keyword utili
-}
-
-/**
- * Espande una lista di sintomi con sinonimi e termini rilevanti (it/en/latino common)
- * Questa mappa è estendibile / personalizzabile.
- */
-function expandSymptoms(symptoms: string[]): string[] {
-  const expansions: Record<string, string[]> = {
-    "leaf spot": ["leaf spot", "macchia fogliare", "ticchiolatura", "scab", "spot"],
-    "macchia fogliare": ["leaf spot", "macchia fogliare", "ticchiolatura", "spot"],
-    "ticchiolatura": ["ticchiolatura", "scab", "Venturia", "Venturia pyrina", "Venturia inaequalis"],
-    "macchie bianche": ["powdery mildew", "oidio", "muffa bianca", "powdery"],
-    "ruggine": ["rust", "ruggine", "Puccinia", "Gymnosporangium"],
-    "ingiallimento": ["chlorosis", "ingiallimento fogliare", "chlorosis"],
-    "necrosi": ["necrosis", "necrosi", "tissue death"],
-    // aggiungi altre regole che conosci
-  };
-
-  const result = new Set<string>();
-  for (const s of symptoms) {
-    const key = s.toLowerCase();
-    // se esiste una espansione precisa, usala
-    let added = false;
-    for (const k of Object.keys(expansions)) {
-      if (key.includes(k)) {
-        expansions[k].forEach(e => result.add(e));
-        added = true;
-      }
-    }
-    // altrimenti aggiungi la stringa originale e qualche forma di fallback
-    if (!added) {
-      result.add(s);
-      // tentativo di aggiungere inglese italiano generico
-      if (key.includes("macchia") || key.includes("spot")) {
-        result.add("leaf spot");
-      } else if (key.includes("oidio") || key.includes("powder")) {
-        result.add("powdery mildew");
-      } else if (key.includes("ruggine") || key.includes("rust")) {
-        result.add("rust");
-      }
-    }
-  }
-
-  return Array.from(result).slice(0, 8); // limita il numero di keyword inviate a EPPO
-}
-
-/**
- * Mappatura di emergenza: sintomo generico + specie -> malattie probabili (nomi "human readable")
- * Personalizza aggiungendo specie utili per il tuo target.
- */
-const symptomToDiseaseMapping: Record<string, Record<string, string[]>> = {
-  "leaf spot": {
-    "malus domestica": ["Ticchiolatura del melo (Venturia inaequalis)"],
-    "pyrus communis": ["Ticchiolatura del pero (Venturia pyrina)"],
-    "prunus persica": ["Maculatura fogliare del pesco (varie cause)"],
-  },
-  "ticchiolatura": {
-    "malus domestica": ["Ticchiolatura del melo (Venturia inaequalis)"],
-    "pyrus communis": ["Ticchiolatura del pero (Venturia pyrina)"],
-  },
-  "rust": {
-    "prunus": ["Ruggine (Puccinia/Gymnosporangium)"],
-  },
-  // inserisci qui altre mappature note
-};
-
 // ---------- Identification (unchanged logic, mantenuto come prima) ----------
 
 // Plant.id identification
@@ -343,59 +249,12 @@ async function searchEppoDatabase(plantName: string, visualSymptoms: string[]) {
   }
 
   return safeFetch(async () => {
-    console.log(`🔍 Ricerca malattie EPPO per: ${plantName}`);
-    console.log(`🔍 Sintomi visivi raw: ${visualSymptoms.join(" | ")}`);
+    console.log(`🔍 Ricerca malattie EPPO per pianta specifica: ${plantName}`);
 
     const allDiseases: any[] = [];
     const seenEppoCodes = new Set<string>();
 
-    // 1) Estrai keyword utili a partire dai sintomi testuali
-    const symptomKeywords = extractSymptomKeywords(visualSymptoms);
-    console.log("🔎 Symptom keywords extracted:", symptomKeywords);
-
-    // 2) Mappatura diretta quando troviamo sintomi generici (es. leaf spot) -> malattie note per la specie
-    const mappedDiseases: string[] = [];
-    for (const sk of symptomKeywords) {
-      for (const mapKey of Object.keys(symptomToDiseaseMapping)) {
-        if (sk.includes(mapKey)) {
-          // prova a mappare sulla specie (plantName in lower case)
-          const plantLc = (plantName || "").toLowerCase();
-          const candidates = symptomToDiseaseMapping[mapKey];
-          for (const speciesKey of Object.keys(candidates)) {
-            if (plantLc.includes(speciesKey) || speciesKey.includes(plantLc) || plantLc.includes(speciesKey.split(" ")[0])) {
-              mappedDiseases.push(...candidates[speciesKey]);
-            }
-          }
-        }
-      }
-    }
-    // dedup mapped
-    const uniqueMapped = Array.from(new Set(mappedDiseases));
-    if (uniqueMapped.length > 0) {
-      console.log("🎯 Mapped diseases from symptoms+plant:", uniqueMapped);
-      uniqueMapped.forEach(md => {
-        allDiseases.push({
-          name: md,
-          scientificName: md,
-          eppoCode: `MAPPED-${md.replace(/\s+/g, "-").toLowerCase()}`,
-          confidence: 92,
-          symptoms: visualSymptoms.slice(0, 3),
-          treatments: ["Consultare linee guida specifiche per la malattia mappata"],
-          cause: "Mapped heuristics",
-          source: "Local mapping",
-          severity: "high",
-        });
-      });
-    }
-
-    // 3) Espandi i sintomi e prepara query per EPPO
-    const expanded = expandSymptoms(symptomKeywords.length > 0 ? symptomKeywords : visualSymptoms);
-    // se non abbiamo nessuna keyword valida, aggiungi fallback basico
-    if (expanded.length === 0) expanded.push("leaf spot", "fungal infection", plantName);
-
-    console.log("🔁 Expanded search terms for EPPO:", expanded);
-
-    // funzione helper per chiamata EPPO search
+    // Funzione helper per chiamata EPPO search
     async function queryEppo(kw: string, typeorg: string) {
       const params = new URLSearchParams({
         kw,
@@ -418,87 +277,68 @@ async function searchEppoDatabase(plantName: string, visualSymptoms: string[]) {
       }
     }
 
-    // 4) Cerca per ogni termine espanso (diseases)
-    for (const term of expanded.slice(0, 6)) { // limitiamo il numero di chiamate
-      console.log(`📡 EPPO search disease term: ${term}`);
-      const data = await queryEppo(term, "3");
-      if (!data || !Array.isArray(data)) continue;
-      // prendi solo top 3 risultati per termine
-      for (const disease of data.slice(0, 3)) {
-        const eppoCode = disease.eppocode;
-        if (!eppoCode || seenEppoCodes.has(eppoCode)) continue;
-        seenEppoCodes.add(eppoCode);
-
-        const diseaseName = disease.fullname || disease.prefname || disease.scientificname || "Malattia non identificata";
-        const confidenceBase = 70;
-        // boost se nome malattia contiene una delle keyword
-        let confidence = confidenceBase;
-        const diseaseNameLower = (diseaseName || "").toLowerCase();
-        if (symptomKeywords.some(sk => diseaseNameLower.includes(sk))) confidence += 15;
-        if (plantName && diseaseNameLower.includes(plantName.toLowerCase().split(" ")[0])) confidence += 5;
-
-        allDiseases.push({
-          name: diseaseName,
-          scientificName: disease.scientificname || diseaseName,
-          eppoCode,
-          confidence,
-          symptoms: [`Risultato EPPO per "${term}"`, ...visualSymptoms.slice(0, 2)],
-          treatments: ["Vedi linee guida EPPO per trattamenti specifici"],
-          cause: disease.codetype || "Patogeno",
-          source: "EPPO Database",
-          severity: confidence > 80 ? "high" : confidence > 65 ? "medium" : "low",
-        });
-      }
-    }
-
-    // 5) Cerca per nome della pianta (diseases)
+    // 1) Cerca malattie specifiche per nome della pianta (diseases - typeorg=3)
     const plantQuery = (plantName || "").trim();
     if (plantQuery) {
-      console.log(`📡 EPPO search by plant name: ${plantQuery}`);
-      const d = await queryEppo(plantQuery, "3");
-      if (Array.isArray(d) && d.length > 0) {
-        for (const disease of d.slice(0, 8)) {
+      console.log(`📡 EPPO: Ricerca malattie specifiche per pianta: ${plantQuery}`);
+      const diseasesData = await queryEppo(plantQuery, "3");
+      if (Array.isArray(diseasesData) && diseasesData.length > 0) {
+        console.log(`✅ EPPO: Trovate ${diseasesData.length} malattie per ${plantQuery}`);
+        
+        for (const disease of diseasesData.slice(0, 5)) {
           const eppoCode = disease.eppocode;
           if (!eppoCode || seenEppoCodes.has(eppoCode)) continue;
           seenEppoCodes.add(eppoCode);
 
           const diseaseName = disease.fullname || disease.prefname || disease.scientificname || "Malattia non identificata";
-          let confidence = 70;
+          
+          // Confidence come decimale tra 0 e 1
+          let confidence = 0.75; // 75% base per malattie EPPO specifiche della pianta
+          
+          // Boost se i sintomi visivi contengono keywords rilevanti per questa malattia
           const diseaseNameLower = diseaseName.toLowerCase();
-          if (symptomKeywords.some(sk => diseaseNameLower.includes(sk))) confidence += 15;
+          const hasMatchingSymptoms = visualSymptoms.some(symptom => {
+            const s = symptom.toLowerCase();
+            return diseaseNameLower.includes(s) || s.includes(diseaseNameLower.split(' ')[0]);
+          });
+          if (hasMatchingSymptoms) confidence = Math.min(0.90, confidence + 0.15);
 
           allDiseases.push({
             name: diseaseName,
             scientificName: disease.scientificname || diseaseName,
             eppoCode,
-            confidence,
-            symptoms: [`Malattia registrata nel database EPPO per ${plantQuery}`, ...visualSymptoms.slice(0, 2)],
-            treatments: ["Consultare un fitopatologo per trattamenti mirati", "Seguire le linee guida EPPO"],
+            confidence, // Ora è tra 0 e 1
+            symptoms: visualSymptoms.length > 0 ? visualSymptoms.slice(0, 3) : [`Malattia registrata EPPO per ${plantQuery}`],
+            treatments: ["Consultare un fitopatologo per trattamenti mirati", "Seguire le linee guida EPPO specifiche"],
             cause: disease.codetype || "Patogeno",
             source: "EPPO Database",
-            severity: confidence > 80 ? "high" : confidence > 65 ? "medium" : "low",
+            severity: confidence > 0.85 ? "high" : confidence > 0.70 ? "medium" : "low",
           });
         }
+      } else {
+        console.log(`⚠️ EPPO: Nessuna malattia trovata per ${plantQuery}`);
       }
     }
 
-    // 6) Cerca anche parassiti (typeorg=2)
+    // 2) Cerca anche parassiti specifici della pianta (typeorg=2)
     if (plantQuery) {
-      console.log(`📡 EPPO search pests for: ${plantQuery}`);
-      const pests = await queryEppo(plantQuery, "2");
-      if (Array.isArray(pests) && pests.length > 0) {
-        for (const pest of pests.slice(0, 5)) {
+      console.log(`📡 EPPO: Ricerca parassiti per pianta: ${plantQuery}`);
+      const pestsData = await queryEppo(plantQuery, "2");
+      if (Array.isArray(pestsData) && pestsData.length > 0) {
+        console.log(`✅ EPPO: Trovati ${pestsData.length} parassiti per ${plantQuery}`);
+        
+        for (const pest of pestsData.slice(0, 3)) {
           const eppoCode = pest.eppocode;
           if (!eppoCode || seenEppoCodes.has(eppoCode)) continue;
           seenEppoCodes.add(eppoCode);
 
           const pestName = pest.fullname || pest.prefname || pest.scientificname || "Parassita non identificato";
           allDiseases.push({
-            name: `Parassita: ${pestName}`,
+            name: pestName,
             scientificName: pest.scientificname || pestName,
             eppoCode,
-            confidence: 65,
-            symptoms: [`Parassita segnalato su ${plantQuery}`, ...visualSymptoms.slice(0, 1)],
+            confidence: 0.70, // 70% per parassiti
+            symptoms: visualSymptoms.length > 0 ? visualSymptoms.slice(0, 2) : [`Parassita segnalato su ${plantQuery}`],
             treatments: ["Trattamento antiparassitario specifico", "Consultare un fitopatologo per la gestione integrata"],
             cause: "Parassita",
             source: "EPPO Database",
