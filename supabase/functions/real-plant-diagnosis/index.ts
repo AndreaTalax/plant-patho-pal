@@ -128,58 +128,65 @@ async function assessPlantHealth(imageBase64: string) {
     const data = await res.json();
 
     console.log("✅ Plant.id Health response ricevuta");
+    console.log("🔍 Raw health data:", JSON.stringify(data.health_assessment, null, 2));
 
-    const diseases = data.health_assessment?.diseases?.slice(0, 8).map((disease: any) => {
-      const localName = disease.entity_name || disease.name || "Malattia non identificata";
-      const symptoms: string[] = [];
-      if (disease.description) symptoms.push(disease.description);
-      if (disease.disease_signs && Array.isArray(disease.disease_signs)) {
-        disease.disease_signs.forEach((s: any) => {
-          if (s && typeof s === "string") symptoms.push(s);
-        });
-      }
-
-      const treatments: string[] = [];
-      if (disease.treatment?.biological?.length > 0) {
-        disease.treatment.biological.forEach((t: any) => {
-          treatments.push(`BIOLOGICO: ${t}`);
-        });
-      }
-      if (disease.treatment?.chemical?.length > 0) {
-        disease.treatment.chemical.forEach((t: any) => {
-          treatments.push(`CHIMICO: ${t}`);
-        });
-      }
-      if (disease.treatment?.prevention?.length > 0) {
-        disease.treatment.prevention.forEach((t: any) => {
-          treatments.push(`PREVENZIONE: ${t}`);
-        });
-      }
-
-      const cause = disease.cause || disease.classification?.join(" - ") || "Analisi Plant.id";
-
-      return {
-        name: localName,
-        scientificName: disease.entity_name || disease.name,
-        confidence: Math.round((disease.probability || 0) * 100),
-        symptoms: symptoms.length > 0 ? symptoms : ["Consultare descrizione dettagliata"],
-        treatments: treatments.length > 0 ? treatments : ["Consultare fitopatologo per trattamenti specifici"],
-        cause: cause,
-        source: "Plant.id Health",
-        severity: disease.probability > 0.7 ? "high" : disease.probability > 0.4 ? "medium" : "low",
-        details: {
-          description: disease.description,
-          url: disease.url,
-          classification: disease.classification,
+    // Malattie identificate con soglia più bassa per catturare anche malattie con probabilità media-bassa
+    const diseases = data.health_assessment?.diseases
+      ?.filter((disease: any) => disease.probability > 0.15) // Soglia abbassata da implicito 0 a 0.15 (15%)
+      ?.slice(0, 8)
+      ?.map((disease: any) => {
+        const localName = disease.entity_name || disease.name || "Malattia non identificata";
+        const symptoms: string[] = [];
+        if (disease.description) symptoms.push(disease.description);
+        if (disease.disease_signs && Array.isArray(disease.disease_signs)) {
+          disease.disease_signs.forEach((s: any) => {
+            if (s && typeof s === "string") symptoms.push(s);
+          });
         }
-      };
-    }) ?? [];
+
+        const treatments: string[] = [];
+        if (disease.treatment?.biological?.length > 0) {
+          disease.treatment.biological.forEach((t: any) => {
+            treatments.push(`BIOLOGICO: ${t}`);
+          });
+        }
+        if (disease.treatment?.chemical?.length > 0) {
+          disease.treatment.chemical.forEach((t: any) => {
+            treatments.push(`CHIMICO: ${t}`);
+          });
+        }
+        if (disease.treatment?.prevention?.length > 0) {
+          disease.treatment.prevention.forEach((t: any) => {
+            treatments.push(`PREVENZIONE: ${t}`);
+          });
+        }
+
+        const cause = disease.cause || disease.classification?.join(" - ") || "Analisi Plant.id";
+
+        return {
+          name: localName,
+          scientificName: disease.entity_name || disease.name,
+          confidence: disease.probability, // Mantieni come decimale 0-1
+          symptoms: symptoms.length > 0 ? symptoms : ["Consultare descrizione dettagliata"],
+          treatments: treatments.length > 0 ? treatments : ["Consultare fitopatologo per trattamenti specifici"],
+          cause: cause,
+          source: "Plant.id Health",
+          severity: disease.probability > 0.7 ? "high" : disease.probability > 0.4 ? "medium" : "low",
+          details: {
+            description: disease.description,
+            url: disease.url,
+            classification: disease.classification,
+          }
+        };
+      }) ?? [];
 
     if (diseases.length > 0) {
       console.log(`🔍 Malattie identificate: ${diseases.length}`);
       diseases.forEach((d: any, i: number) => {
-        console.log(`  ${i + 1}. ${d.name} - ${d.scientificName} (${d.confidence}%)`);
+        console.log(`  ${i + 1}. ${d.name} - ${d.scientificName} (${Math.round(d.confidence * 100)}%)`);
       });
+    } else {
+      console.log("⚠️ Nessuna malattia rilevata da Plant.id Health (soglia 15%)");
     }
 
     return diseases;
