@@ -84,15 +84,13 @@ export class ConsultationDataService {
         return false;
       }
 
-      // Genera il PDF professionale
-      console.log('📄 Generazione PDF in corso...', {
-        plantData,
-        userProfile,
-        diagnosisResult,
-        conversationId
-      });
+      // Invia subito i dati testuali senza aspettare il PDF
+      console.log('📝 Invio immediato dati consultazione come testo...');
+      const success = await this.sendTextualConsultationData(conversationId, plantData, userProfile, diagnosisResult);
       
-      const { data: pdfResult, error: pdfError } = await supabase.functions.invoke('generate-professional-pdf', {
+      // Genera il PDF in background (non-blocking)
+      console.log('📄 Avvio generazione PDF in background...');
+      supabase.functions.invoke('generate-professional-pdf', {
         body: {
           plantData,
           userProfile,
@@ -102,62 +100,34 @@ export class ConsultationDataService {
         headers: {
           Authorization: `Bearer ${session.access_token}`,
         },
-      });
-
-      console.log('📄 Risposta PDF function:', { pdfResult, pdfError });
-
-      if (pdfError) {
-        console.error('❌ Errore generazione PDF:', pdfError);
-        // Fallback: invia i dati come messaggio testuale
-        return await this.sendTextualConsultationData(conversationId, plantData, userProfile, diagnosisResult);
-      }
-
-      if (!pdfResult?.success || !pdfResult?.pdfUrl) {
-        console.error('❌ PDF function returned no success or no pdfUrl:', pdfResult);
-        // Fallback: invia i dati come messaggio testuale
-        return await this.sendTextualConsultationData(conversationId, plantData, userProfile, diagnosisResult);
-      }
-
-      console.log('✅ PDF generato con successo:', pdfResult.fileName);
-      console.log('📎 URL PDF generato:', pdfResult.pdfUrl);
-
-      // Invia il messaggio principale con PDF come link diretto  
-      const pdfMessage = [
-        "📋 **CONSULENZA PROFESSIONALE - DATI COMPLETI**",
-        "",
-        "Ho preparato un documento PDF completo con tutti i dati della consulenza:",
-        "",
-        "• Dati personali del paziente",
-        "• Informazioni dettagliate della pianta", 
-        "• Risultati della diagnosi AI (se disponibili)",
-        "• Foto della pianta (se presente)",
-        "",
-        "Il documento è pronto per la revisione professionale.",
-        "",
-        `📎 **[Scarica PDF Consulenza](${pdfResult.pdfUrl})**`
-      ].join('\n');
-
-      console.log('📋 Messaggio PDF che verrà inviato:');
-      console.log(pdfMessage);
-
-      // Invia il messaggio con il PDF come link
-      const { data: messageResult, error: messageError } = await supabase.functions.invoke('send-message', {
-        body: {
-          conversationId,
-          recipientId: MARCO_NIGRO_ID,
-          text: pdfMessage,
-          imageUrl: null,
-          products: null
-        },
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      });
-
-      if (messageError || !messageResult?.success) {
-        console.error('❌ Errore invio messaggio PDF:', messageError);
-        // Fallback con link diretto
-        return await this.sendPDFLinkMessage(conversationId, pdfResult.pdfUrl, pdfResult.fileName);
+      }).then(({ data: pdfResult, error: pdfError }) => {
+        if (pdfError || !pdfResult?.success || !pdfResult?.pdfUrl) {
+          console.error('❌ Errore generazione PDF in background:', pdfError);
+          return;
+        }
+        
+        console.log('✅ PDF generato in background:', pdfResult.fileName);
+        
+        // Invia il PDF come messaggio separato quando è pronto
+        const pdfMessage = `📎 **[PDF Consulenza Completa](${pdfResult.pdfUrl})**\n\nDocumento generato con tutti i dettagli della consultazione.`;
+        
+        supabase.functions.invoke('send-message', {
+          body: {
+            conversationId,
+            recipientId: MARCO_NIGRO_ID,
+            text: pdfMessage,
+            imageUrl: null,
+            products: null
+          },
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+        }).catch(err => console.error('❌ Errore invio PDF generato:', err));
+      }).catch(err => console.error('❌ Errore generazione PDF:', err));
+      
+      if (!success) {
+        console.error('❌ Errore invio dati testuali');
+        return false;
       }
 
       // Se c'è un'immagine, inviala come messaggio separato
