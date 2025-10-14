@@ -115,7 +115,7 @@ async function assessPlantHealth(imageBase64: string) {
       },
       body: JSON.stringify({
         images: [cleanBase64],
-        modifiers: ["similar_images"],
+        similar_images: true,
         disease_details: [
           "cause",
           "common_names",
@@ -140,10 +140,10 @@ async function assessPlantHealth(imageBase64: string) {
     console.log("✅ Plant.id Health response ricevuta");
     console.log("🔍 Raw health data:", JSON.stringify(data.health_assessment, null, 2));
 
-    // Malattie identificate con soglia molto bassa per massimizzare il rilevamento
+    // Malattie identificate con soglia MOLTO bassa per massimizzare il rilevamento
     const diseases = data.health_assessment?.diseases
-      ?.filter((disease: any) => disease.probability > 0.05) // Soglia abbassata a 5% per catturare anche sospetti
-      ?.slice(0, 10) // Aumentato a 10 malattie
+      ?.filter((disease: any) => disease.probability > 0.01) // Soglia abbassata a 1% per catturare TUTTI i sospetti
+      ?.slice(0, 15) // Aumentato a 15 malattie
       ?.map((disease: any) => {
         const localName = disease.entity_name || disease.name || "Malattia non identificata";
         const symptoms: string[] = [];
@@ -196,52 +196,88 @@ async function assessPlantHealth(imageBase64: string) {
         console.log(`  ${i + 1}. ${d.name} (${Math.round(d.confidence * 100)}%) - Gravità: ${d.severity}`);
       });
     } else {
-      console.log("⚠️ Nessuna malattia rilevata da Plant.id Health (soglia 5%)");
-      console.log("🔍 Risposta raw health_assessment:", JSON.stringify(data.health_assessment, null, 2));
+      console.log("⚠️ Nessuna malattia rilevata da Plant.id Health (soglia 1%)");
+      console.log("🔍 Risposta raw health_assessment:", JSON.stringify(data.health_assessment?.diseases?.slice(0, 5), null, 2));
     }
 
     return diseases;
   }, "Plant.id Health API");
 }
 
-// OpenAI Vision analysis - con retry logic per gestire rate limits
-async function analyzeWithOpenAI(imageBase64: string) {
-  if (!openaiApiKey) return { plants: [], diseases: [] };
+// Lovable AI (Gemini) analysis - sostituisce OpenAI
+async function analyzeWithAI(imageBase64: string) {
+  const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+  if (!LOVABLE_API_KEY) return { plants: [], diseases: [] };
+  
   return safeFetch(async () => {
-    console.log("🤖 Chiamata OpenAI Vision API...");
+    console.log("🤖 Chiamata Lovable AI (Gemini 2.5 Flash)...");
     
-    const res = await fetch("https://api.openai.com/v1/chat/completions", {
+    const cleanBase64 = imageBase64.replace(/^data:image\/[a-z]+;base64,/, '');
+    
+    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${openaiApiKey}`,
+        "Authorization": `Bearer ${LOVABLE_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "gpt-4o-mini", // Uso modello mini per ridurre rate limits
+        model: "google/gemini-2.5-flash",
         messages: [
           {
             role: "system",
-            content: "Sei un esperto fitopatologo. Analizza l'immagine della pianta e identifica eventuali malattie, parassiti o problemi di salute. Rispondi SOLO con un JSON valido nel formato: {\"pianta\":{\"nomeComune\":\"string\",\"nomeScientifico\":\"string\",\"confidenza\":number},\"malattie\":[{\"nome\":\"string\",\"confidenza\":number,\"sintomi\":[\"string\"],\"trattamenti\":[\"string\"],\"causa\":\"string\",\"gravita\":\"low|medium|high\"}]}",
+            content: `Sei un esperto fitopatologo. Analizza attentamente le immagini di piante per identificare QUALSIASI problema di salute, anche minimo.
+
+IMPORTANTE: Anche se la pianta sembra sana, cerca attentamente:
+- Piccole macchie o decolorazioni sulle foglie
+- Bordi delle foglie secchi o arricciati  
+- Segni di stress idrico (foglie cadenti, secche)
+- Colorazione anomala (giallastro, marrone, rossastro)
+- Presenza di parassiti anche piccoli
+- Texture anomala delle foglie
+- Crescita irregolare
+- Puntini, buchi, striature
+
+Rispondi SEMPRE in formato JSON con questa struttura:
+{
+  "pianta": {
+    "nomeComune": "string",
+    "nomeScientifico": "string",
+    "confidenza": number 0-100
+  },
+  "malattie": [
+    {
+      "nome": "nome malattia o problema",
+      "confidenza": number 0-100,
+      "sintomi": ["sintomo1", "sintomo2"],
+      "trattamenti": ["trattamento1", "trattamento2"],
+      "causa": "string",
+      "gravita": "low|medium|high"
+    }
+  ]
+}
+
+Se NON vedi assolutamente alcun problema (molto raro), malattie deve essere array vuoto []`
           },
           {
             role: "user",
             content: [
-              { type: "text", text: "Analizza questa pianta e identifica eventuali malattie o problemi:" },
-              { type: "image_url", image_url: { url: imageBase64 } },
+              { type: "text", text: "Analizza questa immagine di pianta e identifica TUTTI i problemi visibili, anche minimi. Sii molto critico e attento ai dettagli. Cerca macchie, decolorazioni, segni di stress, parassiti." },
+              { type: "image_url", image_url: { url: `data:image/jpeg;base64,${cleanBase64}` } },
             ],
           },
         ],
-        temperature: 0,
-        max_tokens: 1000,
+        temperature: 0.2,
+        max_tokens: 2000,
       }),
-      signal: AbortSignal.timeout(20000),
+      signal: AbortSignal.timeout(25000),
     });
     
     if (!res.ok) {
       const errorText = await res.text();
-      console.error(`❌ OpenAI API error ${res.status}: ${errorText}`);
-      throw new Error(`OpenAI error: ${res.status}`);
+      console.error(`❌ Lovable AI error ${res.status}:`, errorText);
+      throw new Error(`Lovable AI error: ${res.status}`);
     }
+    
     const data = await res.json();
     const content = data.choices[0]?.message?.content;
     const parsed = safeJson(() => JSON.parse(content), {});
@@ -250,20 +286,22 @@ async function analyzeWithOpenAI(imageBase64: string) {
       name: parsed.pianta.nomeComune,
       scientificName: parsed.pianta.nomeScientifico,
       confidence: parsed.pianta.confidenza ?? 70,
-      source: "OpenAI Vision",
+      source: "Lovable AI (Gemini)",
     }] : [];
+    
     const diseases = parsed.malattie?.map((m: any) => ({
       name: m.nome,
-      confidence: m.confidenza ?? 60,
+      confidence: (m.confidenza ?? 60) / 100, // Converti in 0-1
       symptoms: m.sintomi ?? [],
       treatments: m.trattamenti ?? [],
       cause: m.causa ?? "Analisi AI",
-      source: "OpenAI Vision",
-      severity: m.gravita ?? "media",
+      source: "Lovable AI (Gemini)",
+      severity: m.gravita ?? "medium",
     })) ?? [];
 
+    console.log(`✅ Lovable AI: ${plants.length} piante, ${diseases.length} malattie identificate`);
     return { plants, diseases };
-  }, "OpenAI Vision API");
+  }, "Lovable AI");
 }
 
 // ---------- EPPO search (migliorata) ----------
@@ -401,32 +439,32 @@ serve(async (req) => {
     console.log("🌿 Calling Plant.id identification API...");
     console.log("🏥 Calling Plant.id health assessment API...");
     console.log("🌍 Calling PlantNet API...");
-    console.log("🤖 Calling OpenAI Vision API...");
+    console.log("🤖 Calling Lovable AI (Gemini)...");
 
-    const [plantIdResults, healthResults, plantNetResults, openAiResults] = await Promise.all([
+    const [plantIdResults, healthResults, plantNetResults, aiResults] = await Promise.all([
       identifyWithPlantId(imageBase64),
       assessPlantHealth(imageBase64),
       identifyWithPlantNet(imageBase64),
-      analyzeWithOpenAI(imageBase64),
+      analyzeWithAI(imageBase64),
     ]);
 
     console.log("✅ Plant.id response received:", plantIdResults?.length ?? 0, "suggestions");
     console.log("✅ Plant.id health response received");
     if (plantNetResults?.length) console.log("✅ PlantNet response received:", plantNetResults.length, "results");
     else console.log("❌ PlantNet identification error or no results");
-    if (openAiResults?.plants?.length || openAiResults?.diseases?.length) console.log("✅ OpenAI analysis received");
-    else console.log("❌ OpenAI analysis error or no results");
+    if (aiResults?.plants?.length || aiResults?.diseases?.length) console.log("✅ AI analysis received");
+    else console.log("❌ AI analysis error or no results");
 
     const allPlants = [
       ...(plantIdResults ?? []),
       ...(plantNetResults ?? []),
-      ...(openAiResults?.plants ?? []),
+      ...(aiResults?.plants ?? []),
     ];
 
     // Prioritizza Plant.id Health per le malattie
     const allDiseases = [
       ...(healthResults ?? []),
-      ...(openAiResults?.diseases ?? []),
+      ...(aiResults?.diseases ?? []),
     ];
 
     // Estrai sintomi visivi dalle malattie già identificate per migliorare la ricerca EPPO
@@ -460,7 +498,8 @@ serve(async (req) => {
     // Filtra malattie generiche se abbiamo diagnosi specifiche
     const specificDiseases = allDiseases.filter(d =>
       d.source === "Plant.id Health" ||
-      (d.source === "OpenAI Vision" && d.confidence > 50) ||
+      (d.source === "Lovable AI (Gemini)" && d.confidence > 0.5) ||
+      d.source === "EPPO Database" ||
       d.source === "Local mapping"
     );
 
@@ -490,7 +529,7 @@ serve(async (req) => {
           ...(plantIdResults?.length ? ["Plant.id"] : []),
           ...(healthResults?.length ? ["Plant.id Health"] : []),
           ...(plantNetResults?.length ? ["PlantNet"] : []),
-          ...(openAiResults?.plants?.length || openAiResults?.diseases?.length ? ["OpenAI Vision"] : []),
+          ...(aiResults?.plants?.length || aiResults?.diseases?.length ? ["Lovable AI (Gemini)"] : []),
           ...(finalDiseases.some(d => d.source === "EPPO Database") ? ["EPPO Database"] : []),
           ...(finalDiseases.some(d => d.source === "Local mapping") ? ["Local mapping"] : []),
         ],
