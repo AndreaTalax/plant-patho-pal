@@ -116,16 +116,21 @@ async function assessPlantHealth(imageBase64: string) {
       body: JSON.stringify({
         images: [cleanBase64],
         similar_images: true,
-        disease_details: [
-          "cause",
-          "common_names",
-          "classification",
-          "description",
-          "treatment",
-          "url",
-          "local_name"
-        ],
-        plant_details: ["common_names", "url", "taxonomy"],
+        // CORREZIONE: disease_details deve essere un oggetto, non un array
+        disease_details: {
+          cause: true,
+          common_names: true,
+          classification: true,
+          description: true,
+          treatment: true,
+          url: true,
+          local_name: true
+        },
+        plant_details: {
+          common_names: true,
+          url: true,
+          taxonomy: true
+        },
       }),
       signal: AbortSignal.timeout(20000),
     });

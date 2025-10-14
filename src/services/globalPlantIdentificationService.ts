@@ -50,14 +50,11 @@ export class GlobalPlantIdentificationService {
         supabase.functions.invoke('real-plant-diagnosis', {
           body: { imageBase64 }
         }),
-        // Modello locale browser (PlantVillage dataset)
-        (async () => {
-          const supported = await isModelSupported();
-          if (supported) {
-            return await detectPlantDiseases(imageBase64);
-          }
+        // Modello locale browser (Vision Transformer)
+        detectPlantDiseases(imageBase64).catch(err => {
+          console.warn("⚠️ Local model failed, continuing without it:", err);
           return null;
-        })()
+        })
       ]);
 
       const realApiData = realApiResult.status === 'fulfilled' ? realApiResult.value.data : null;

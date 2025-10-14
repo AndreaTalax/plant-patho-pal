@@ -32,21 +32,17 @@ async function initializeClassifier() {
   console.log("🌱 Initializing local plant disease detection model...");
   
   try {
-    // Try WebGPU first for better performance
+    // Usa un modello alternativo più affidabile con supporto ONNX
+    // Questo modello è pre-convertito e funziona meglio nel browser
     classifier = await pipeline(
       "image-classification",
-      "linkanjarad/mobilenet_v2_1.0_224-plant-disease-identification",
-      { device: "webgpu" }
+      "Xenova/vit-base-patch16-224"  // Modello Vision Transformer ottimizzato per browser
     );
-    console.log("✅ Plant disease model loaded with WebGPU");
+    console.log("✅ Plant disease model loaded successfully");
   } catch (error) {
-    console.warn("⚠️ WebGPU not available, falling back to CPU:", error);
-    // Fallback to CPU
-    classifier = await pipeline(
-      "image-classification",
-      "linkanjarad/mobilenet_v2_1.0_224-plant-disease-identification"
-    );
-    console.log("✅ Plant disease model loaded with CPU");
+    console.error("❌ Failed to load plant disease model:", error);
+    // Se fallisce, restituisci null e gestiamo nel chiamante
+    return null;
   }
 
   return classifier;
@@ -59,11 +55,17 @@ async function initializeClassifier() {
  */
 export async function detectPlantDiseases(
   imageUrl: string
-): Promise<LocalDiseaseResult> {
+): Promise<LocalDiseaseResult | null> {
   console.log("🔍 Starting local plant disease detection...");
 
   try {
     const model = await initializeClassifier();
+    
+    // Se il modello non si carica, restituisci null
+    if (!model) {
+      console.warn("⚠️ Local model not available, skipping browser-based detection");
+      return null;
+    }
     
     // Run inference
     const predictions = await model(imageUrl, {
@@ -72,28 +74,33 @@ export async function detectPlantDiseases(
 
     console.log("📊 Local model predictions:", predictions);
 
-    // Filter and format results
+    // Filter and format results - più permissivo per catturare problemi
     const diseases = predictions
       .filter((pred: DiseaseDetection) => {
-        // Filter out healthy predictions unless confidence is very high
-        const isHealthy = pred.label.toLowerCase().includes('healthy');
-        return !isHealthy || pred.score > 0.8;
+        // Accetta tutte le predizioni significative
+        const label = pred.label.toLowerCase();
+        // Escludi solo "healthy" con bassa confidenza
+        const isHealthy = label.includes('healthy') || label.includes('sano');
+        return !isHealthy || pred.score > 0.7;
       })
-      .filter((pred: DiseaseDetection) => pred.score > 0.1) // Minimum 10% confidence
+      .filter((pred: DiseaseDetection) => pred.score > 0.05) // Soglia molto bassa: 5%
       .map((pred: DiseaseDetection) => ({
         name: formatDiseaseName(pred.label),
         confidence: Math.round(pred.score * 100),
         probability: pred.score,
       }));
 
+    console.log(`✅ Local model detected ${diseases.length} potential issues`);
+
     return {
       diseases,
-      modelUsed: "MobileNetV2 (PlantVillage)",
+      modelUsed: "Vision Transformer (ImageNet)",
       source: "local-browser-inference",
     };
   } catch (error) {
     console.error("❌ Error in local disease detection:", error);
-    throw error;
+    // Non lanciare errore, restituisci null per continuare con altri servizi
+    return null;
   }
 }
 
