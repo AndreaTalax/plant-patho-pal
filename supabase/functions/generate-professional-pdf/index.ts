@@ -46,6 +46,26 @@ serve(async (req) => {
       const doc = new jsPDF();
       let yPosition = 20;
 
+      // Scarica e aggiungi il logo Dr.Plant
+      try {
+        const logoResponse = await fetch(`${Deno.env.get("SUPABASE_URL")}/storage/v1/object/public/pdfs/../dr-plant-logo.jpg`);
+        if (logoResponse.ok) {
+          const logoBlob = await logoResponse.blob();
+          const logoBase64 = await new Promise<string>((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.readAsDataURL(logoBlob);
+          });
+          
+          // Aggiungi logo (larghezza 40, altezza proporzionale)
+          doc.addImage(logoBase64, 'JPEG', 20, yPosition, 40, 20);
+        }
+      } catch (logoError) {
+        console.warn("⚠️ Could not load logo:", logoError);
+      }
+
+      yPosition += 25;
+
       // Header del documento
       doc.setFontSize(20);
       doc.setFont("helvetica", "bold");
