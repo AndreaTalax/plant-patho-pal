@@ -59,10 +59,27 @@ export const useUserChatRealtime = (userId: string) => {
 
     console.log('🔌 Impostazione canale realtime per:', currentConversationId);
     const channelName = `conversation_${currentConversationId}`;
+    let reconnectTimeout: NodeJS.Timeout | null = null;
+    let channelInstance: any = null;
 
     const setupChannel = () => {
-      const channel = supabase
-        .channel(channelName)
+      // Pulisci il canale precedente se esiste
+      if (channelInstance) {
+        console.log('🧹 Rimozione canale precedente...');
+        try {
+          supabase.removeChannel(channelInstance);
+        } catch (error) {
+          console.warn('⚠️ Errore rimozione canale precedente:', error);
+        }
+      }
+
+      channelInstance = supabase
+        .channel(channelName, {
+          config: {
+            broadcast: { self: true },
+            presence: { key: currentConversationId }
+          }
+        })
         .on(
           'postgres_changes',
           {
@@ -72,31 +89,72 @@ export const useUserChatRealtime = (userId: string) => {
             filter: `conversation_id=eq.${currentConversationId}`,
           },
           (payload) => {
+            console.log('📨 Nuovo messaggio ricevuto:', payload.new);
             const newMessage = payload.new as DatabaseMessage;
             setMessages((prev) => {
-              if (prev.some((msg) => msg.id === newMessage.id)) return prev;
+              if (prev.some((msg) => msg.id === newMessage.id)) {
+                console.log('⏭️ Messaggio già presente, skip');
+                return prev;
+              }
+              console.log('✅ Aggiunto nuovo messaggio alla lista');
               return [...prev, newMessage];
             });
           }
         )
-        .subscribe((status) => {
-          console.log('📡 Stato canale:', status);
-          setIsConnected(status === 'SUBSCRIBED');
-
-          if (status === 'CHANNEL_ERROR' || status === 'CLOSED') {
-            console.warn('⚠️ Connessione persa, tentativo di riconnessione tra 3s...');
-            setTimeout(setupChannel, 3000);
+        .subscribe((status, err) => {
+          console.log('📡 Stato canale:', status, err);
+          
+          if (status === 'SUBSCRIBED') {
+            console.log('✅ Connessione realtime stabilita');
+            setIsConnected(true);
+            // Pulisci eventuali timeout di riconnessione precedenti
+            if (reconnectTimeout) {
+              clearTimeout(reconnectTimeout);
+              reconnectTimeout = null;
+            }
+          } else if (status === 'CHANNEL_ERROR') {
+            console.error('❌ Errore canale:', err);
+            setIsConnected(false);
+            // Riprova solo se non c'è già un timeout attivo
+            if (!reconnectTimeout) {
+              console.log('⏰ Riconnessione programmata tra 5 secondi...');
+              reconnectTimeout = setTimeout(() => {
+                reconnectTimeout = null;
+                setupChannel();
+              }, 5000);
+            }
+          } else if (status === 'TIMED_OUT') {
+            console.warn('⏰ Timeout connessione');
+            setIsConnected(false);
+          } else if (status === 'CLOSED') {
+            console.log('🔌 Canale chiuso');
+            setIsConnected(false);
           }
         });
 
-      return channel;
+      return channelInstance;
     };
 
     const channel = setupChannel();
 
     return () => {
       console.log('🧹 Pulizia canale realtime:', channelName);
-      supabase.removeChannel(channel);
+      
+      // Pulisci timeout di riconnessione
+      if (reconnectTimeout) {
+        clearTimeout(reconnectTimeout);
+        reconnectTimeout = null;
+      }
+      
+      // Rimuovi canale
+      if (channel) {
+        try {
+          supabase.removeChannel(channel);
+        } catch (error) {
+          console.warn('⚠️ Errore durante pulizia:', error);
+        }
+      }
+      
       setIsConnected(false);
     };
   }, [currentConversationId]);
