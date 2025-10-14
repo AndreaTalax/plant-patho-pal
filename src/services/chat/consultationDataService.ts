@@ -121,7 +121,7 @@ export class ConsultationDataService {
       console.log('✅ PDF generato con successo:', pdfResult.fileName);
       console.log('📎 URL PDF generato:', pdfResult.pdfUrl);
 
-      // Invia il messaggio principale con PDF come link diretto  
+      // Invia il messaggio principale con PDF allegato
       const pdfMessage = [
         "📋 **CONSULENZA PROFESSIONALE - DATI COMPLETI**",
         "",
@@ -132,21 +132,19 @@ export class ConsultationDataService {
         "• Risultati della diagnosi AI (se disponibili)",
         "• Foto della pianta (se presente)",
         "",
-        "Il documento è pronto per la revisione professionale.",
-        "",
-        `📎 **[Scarica PDF Consulenza](${pdfResult.pdfUrl})**`
+        "Il documento è pronto per la revisione professionale."
       ].join('\n');
 
       console.log('📋 Messaggio PDF che verrà inviato:');
       console.log(pdfMessage);
 
-      // Invia il messaggio con il PDF come link
+      // Invia il messaggio con il PDF come image_url per attivare il PDFDisplay
       const { data: messageResult, error: messageError } = await supabase.functions.invoke('send-message', {
         body: {
           conversationId,
           recipientId: MARCO_NIGRO_ID,
           text: pdfMessage,
-          imageUrl: null,
+          imageUrl: pdfResult.pdfUrl, // Il PDF viene passato come imageUrl per essere rilevato
           products: null
         },
         headers: {
