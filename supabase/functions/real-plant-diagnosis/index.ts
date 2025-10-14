@@ -64,31 +64,49 @@ async function identifyWithPlantId(imageBase64: string) {
 
 // PlantNet identification
 async function identifyWithPlantNet(imageBase64: string) {
-  if (!plantNetApiKey) return [];
+  if (!plantNetApiKey) {
+    console.log("⚠️ PlantNet API key non configurato");
+    return [];
+  }
+  
   return safeFetch(async () => {
-    const base64Data = imageBase64.split("base64,")[1];
+    console.log("🔍 Tentativo identificazione PlantNet...");
+    
+    // PlantNet v2 endpoint corretto
+    const base64Data = imageBase64.includes("base64,") 
+      ? imageBase64.split("base64,")[1] 
+      : imageBase64;
+    
     const binaryData = atob(base64Data);
     const uint8Array = new Uint8Array(binaryData.length);
     for (let i = 0; i < binaryData.length; i++) {
       uint8Array[i] = binaryData.charCodeAt(i);
     }
+    
     const blob = new Blob([uint8Array], { type: "image/jpeg" });
     const formData = new FormData();
     formData.append("images", blob, "plant.jpg");
-    formData.append("modifiers", "crops");
-    formData.append("api-key", plantNetApiKey);
+    formData.append("organs", "auto");
 
-    const res = await fetch("https://my-api.plantnet.org/v1/identify/auto", {
+    // Usa v2 endpoint invece di v1
+    const res = await fetch(`https://my-api.plantnet.org/v2/identify/all?api-key=${plantNetApiKey}`, {
       method: "POST",
       body: formData,
-      signal: AbortSignal.timeout(10000),
+      signal: AbortSignal.timeout(15000),
     });
-    if (!res.ok) throw new Error(`PlantNet error: ${res.status}`);
+    
+    if (!res.ok) {
+      console.log(`⚠️ PlantNet returned ${res.status}`);
+      throw new Error(`PlantNet error: ${res.status}`);
+    }
+    
     const data = await res.json();
+    console.log(`✅ PlantNet: ${data.results?.length || 0} risultati`);
+    
     return data.results?.map((r: any) => ({
-      name: r.species?.scientificNameWithoutAuthor || "Specie identificata",
+      name: r.species?.commonNames?.[0] || r.species?.scientificNameWithoutAuthor || "Specie identificata",
       scientificName: r.species?.scientificNameWithoutAuthor || "",
-      confidence: Math.round(r.score * 100),
+      confidence: Math.round((r.score || 0) * 100),
       source: "PlantNet",
     })) ?? [];
   }, "PlantNet API");
@@ -116,8 +134,8 @@ async function assessPlantHealth(imageBase64: string) {
       body: JSON.stringify({
         images: [cleanBase64],
         similar_images: true,
-        health: "all",
-        language: "it"
+        health: "all"
+        // Note: language non supportato in v3 Health API
       }),
       signal: AbortSignal.timeout(20000),
     });
@@ -276,7 +294,7 @@ Se davvero non vedi NESSUN problema (raro), usa malattie: []`
     }
     
     const data = await res.json();
-    const content = data.choices[0]?.message?.content;
+    let content = data.choices[0]?.message?.content;
     
     if (!content) {
       console.log("⚠️ Lovable AI: nessun contenuto nella risposta");
@@ -284,6 +302,9 @@ Se davvero non vedi NESSUN problema (raro), usa malattie: []`
     }
     
     console.log("🤖 Lovable AI raw response:", content.substring(0, 500));
+    
+    // Rimuovi markdown code blocks (```json ... ``` o ``` ... ```)
+    content = content.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
     
     const parsed = safeJson(() => JSON.parse(content), {});
 
