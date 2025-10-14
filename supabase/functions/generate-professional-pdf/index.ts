@@ -41,8 +41,10 @@ serve(async (req) => {
 
     console.log("📄 Starting PDF generation for:", user.id);
 
-    // Avvia la generazione PDF in background
-    const pdfGenerationTask = (async () => {
+    try {
+      // Inizializza jsPDF
+      const doc = new jsPDF();
+      let yPosition = 20;
 
       // Header del documento
       doc.setFontSize(20);
@@ -260,7 +262,7 @@ serve(async (req) => {
       console.log("📄 Uploading PDF to storage...");
 
       // Upload del PDF a Supabase Storage
-      const { data: uploadData, error: uploadError } = await supabaseAdmin
+      const { data: uploadData, error: uploadError } = await supabaseClient
         .storage
         .from("pdfs")
         .upload(fileName, pdfBlob, {
@@ -274,7 +276,7 @@ serve(async (req) => {
       }
 
       // Ottieni URL pubblico
-      const { data: publicUrlData } = supabaseAdmin
+      const { data: publicUrlData } = supabaseClient
         .storage
         .from("pdfs")
         .getPublicUrl(fileName);
