@@ -94,10 +94,20 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
   if (isAnalyzing) return <div className="text-center">Analisi in corso...</div>;
   if (!imageSrc) return <div className="text-center">Nessuna immagine da mostrare.</div>;
 
-  const detectedDiseases =
+  const rawDetectedDiseases =
     analysisDetails?.risultatiCompleti?.detectedDiseases ||
     plantInfo?.diagnosisResult?.diseases ||
     [];
+
+  // Deduplica malattie basandosi sul nome
+  const detectedDiseases = Array.from(
+    new Map(
+      rawDetectedDiseases.map((disease: any) => [
+        disease.name?.toLowerCase() || disease.label?.toLowerCase(),
+        disease
+      ])
+    ).values()
+  );
 
   const diagnosisData = {
     plantType: plantInfo?.name || effectiveDiagnosis?.name || 'Pianta non identificata',

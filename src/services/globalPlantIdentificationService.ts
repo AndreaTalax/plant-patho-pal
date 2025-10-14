@@ -76,34 +76,19 @@ export class GlobalPlantIdentificationService {
 
         const diseases = diagnosis.diseases.map((disease: any) => ({
           name: disease.name,
-          confidence: disease.confidence,
+          confidence: typeof disease.confidence === 'number' && disease.confidence <= 1 
+            ? disease.confidence  // Già normalizzato 0-1
+            : (disease.confidence || 0) / 100, // Converti da percentuale a 0-1
           symptoms: disease.symptoms || [],
           treatments: disease.treatments || [],
           cause: disease.cause || 'Analisi API reale',
           source: disease.source
         }));
 
-        // Aggiungi malattie dal modello locale se disponibili
-        if (localDiseases && localDiseases.diseases.length > 0) {
-          console.log('✅ Aggiunta rilevazioni da modello locale PlantVillage');
-          localDiseases.diseases.forEach((localDisease: any) => {
-            // Evita duplicati
-            const exists = diseases.some((d: any) => 
-              d.name.toLowerCase().includes(localDisease.name.toLowerCase()) ||
-              localDisease.name.toLowerCase().includes(d.name.toLowerCase())
-            );
-            
-            if (!exists) {
-              diseases.push({
-                name: localDisease.name,
-                confidence: localDisease.confidence,
-                symptoms: [],
-                treatments: [],
-                cause: `Rilevato da ${localDiseases.modelUsed}`,
-                source: 'Local ML Model (PlantVillage)'
-              });
-            }
-          });
+        // NON aggiungere malattie dal modello locale se l'API non rileva malattie
+        // Il modello locale ImageNet rileva oggetti generici, non malattie
+        if (localDiseases && localDiseases.diseases.length > 0 && diseases.length > 0) {
+          console.log('⚠️ Modello locale rilevazioni disponibili ma non aggiunto (solo per piante con malattie confermate)');
         }
 
         // Ottieni il miglior risultato per l'analisi aggiuntiva
