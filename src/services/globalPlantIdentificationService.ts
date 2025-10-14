@@ -2,6 +2,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { FallbackSuggestionsService } from './fallbackSuggestionsService';
 import { GBIFService, type GBIFSpeciesInfo } from './gbifService';
 import { searchEppoDatabase, type EppoSearchResult } from '@/utils/plant-analysis/eppoIntegration';
+import { detectPlantDiseases, isModelSupported } from './localPlantDiseaseDetection';
 
 export interface GlobalPlantIdentification {
   name: string;
@@ -43,10 +44,25 @@ export class GlobalPlantIdentificationService {
     try {
       console.log('🌿 Avvio identificazione con API reali unificate...');
       
-      // Usa la nuova funzione con tutte le API reali
-      const { data: realApiData, error: realApiError } = await supabase.functions.invoke('real-plant-diagnosis', {
-        body: { imageBase64 }
-      });
+      // Esegui in parallelo: API remote E modello locale browser
+      const [realApiResult, localModelResult] = await Promise.allSettled([
+        // API remote (Plant.id, OpenAI, EPPO)
+        supabase.functions.invoke('real-plant-diagnosis', {
+          body: { imageBase64 }
+        }),
+        // Modello locale browser (PlantVillage dataset)
+        (async () => {
+          const supported = await isModelSupported();
+          if (supported) {
+            return await detectPlantDiseases(imageBase64);
+          }
+          return null;
+        })()
+      ]);
+
+      const realApiData = realApiResult.status === 'fulfilled' ? realApiResult.value.data : null;
+      const realApiError = realApiResult.status === 'fulfilled' ? realApiResult.value.error : null;
+      const localDiseases = localModelResult.status === 'fulfilled' ? localModelResult.value : null;
 
       if (!realApiError && realApiData?.success) {
         console.log('✅ Analisi con API reali completata con successo');
@@ -69,6 +85,29 @@ export class GlobalPlantIdentificationService {
           cause: disease.cause || 'Analisi API reale',
           source: disease.source
         }));
+
+        // Aggiungi malattie dal modello locale se disponibili
+        if (localDiseases && localDiseases.diseases.length > 0) {
+          console.log('✅ Aggiunta rilevazioni da modello locale PlantVillage');
+          localDiseases.diseases.forEach((localDisease: any) => {
+            // Evita duplicati
+            const exists = diseases.some((d: any) => 
+              d.name.toLowerCase().includes(localDisease.name.toLowerCase()) ||
+              localDisease.name.toLowerCase().includes(d.name.toLowerCase())
+            );
+            
+            if (!exists) {
+              diseases.push({
+                name: localDisease.name,
+                confidence: localDisease.confidence,
+                symptoms: [],
+                treatments: [],
+                cause: `Rilevato da ${localDiseases.modelUsed}`,
+                source: 'Local ML Model (PlantVillage)'
+              });
+            }
+          });
+        }
 
         // Ottieni il miglior risultato per l'analisi aggiuntiva
         const bestPlant = this.getBestPlantIdentification(plantIdentifications);
