@@ -1,31 +1,90 @@
 
 /**
- * Provides a list of product codes based on plant name and health status.
- * @param {string} plantName - Name of the plant.
- * @param {boolean} isHealthy - Indicates if the plant is healthy.
- * @returns {string[]} Array of product codes tailored to the plant's needs.
+ * Seleziona prodotti rilevanti basandosi sulle malattie effettivamente rilevate
+ * @param {string} plantName - Nome della pianta
+ * @param {boolean} isHealthy - Indica se la pianta è sana
+ * @param {Array} diseases - Array di malattie rilevate
+ * @returns {string[]} Array di codici prodotto su misura per i problemi rilevati
  */
-export const selectRelevantProducts = (plantName: string, isHealthy: boolean): string[] => {
-  if (!plantName || typeof plantName !== 'string') {
-    return ['1', '2']; // Default products
+export const selectRelevantProducts = (
+  plantName: string, 
+  isHealthy: boolean,
+  diseases?: Array<{ name: string; cause?: string; symptoms?: string[] }>
+): string[] => {
+  // Se la pianta è sana, prodotti di mantenimento
+  if (isHealthy) {
+    return ['2', '1']; // Fertilizzanti e cura generica
   }
 
-  const plantLower = plantName.toLowerCase();
-
-  if (!isHealthy) {
-    // Disease treatment products
-    if (plantLower.includes('funghi') || plantLower.includes('muffa') || plantLower.includes('fungus')) {
-      return ['1', '3'];
+  // Se abbiamo malattie specifiche, selezioniamo in base a quelle
+  if (diseases && diseases.length > 0) {
+    const productCodes = new Set<string>();
+    
+    diseases.forEach(disease => {
+      const diseaseLower = (disease.name || '').toLowerCase();
+      const causeLower = (disease.cause || '').toLowerCase();
+      const symptomsText = (disease.symptoms || []).join(' ').toLowerCase();
+      const combinedText = `${diseaseLower} ${causeLower} ${symptomsText}`;
+      
+      // Funghi e malattie fungine
+      if (
+        combinedText.includes('fungo') || 
+        combinedText.includes('fungal') ||
+        combinedText.includes('muffa') ||
+        combinedText.includes('oidio') ||
+        combinedText.includes('peronospora') ||
+        combinedText.includes('ruggine') ||
+        combinedText.includes('mold') ||
+        combinedText.includes('rust') ||
+        combinedText.includes('mildew')
+      ) {
+        productCodes.add('1'); // Fungicida Rame Biologico
+        productCodes.add('3'); // Altro fungicida
+      }
+      
+      // Insetti e parassiti
+      if (
+        combinedText.includes('insetto') ||
+        combinedText.includes('insect') ||
+        combinedText.includes('afide') ||
+        combinedText.includes('aphid') ||
+        combinedText.includes('parassita') ||
+        combinedText.includes('pest') ||
+        combinedText.includes('cocciniglia') ||
+        combinedText.includes('tripidi') ||
+        combinedText.includes('acari')
+      ) {
+        productCodes.add('4'); // Bacillus Thuringiensis (insetticida biologico)
+      }
+      
+      // Problemi batterici
+      if (
+        combinedText.includes('batter') ||
+        combinedText.includes('bacterial')
+      ) {
+        productCodes.add('1'); // Fungicida Rame (ha anche effetto battericida)
+        productCodes.add('3');
+      }
+      
+      // Carenze nutrizionali
+      if (
+        combinedText.includes('carenza') ||
+        combinedText.includes('deficiency') ||
+        combinedText.includes('nutrient') ||
+        combinedText.includes('giallo') ||
+        combinedText.includes('yellow') ||
+        combinedText.includes('clorosi')
+      ) {
+        productCodes.add('2'); // Fertilizzante
+      }
+    });
+    
+    // Se abbiamo trovato prodotti specifici, restituiscili
+    if (productCodes.size > 0) {
+      return Array.from(productCodes);
     }
-    if (plantLower.includes('insetti') || plantLower.includes('afidi') || plantLower.includes('pest')) {
-      return ['4', '1'];
-    }
-    return ['1', '2'];
-  } else {
-    // Maintenance products for healthy plants
-    if (plantLower.includes('indoor') || plantLower.includes('interno') || plantLower.includes('casa')) {
-      return ['2', '5'];
-    }
-    return ['2', '1'];
   }
+  
+  // Default per piante malate senza diagnosi specifica
+  return ['1', '2']; // Fungicida base + fertilizzante
 };

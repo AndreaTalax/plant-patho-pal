@@ -116,21 +116,8 @@ async function assessPlantHealth(imageBase64: string) {
       body: JSON.stringify({
         images: [cleanBase64],
         similar_images: true,
-        // CORREZIONE: disease_details deve essere un oggetto, non un array
-        disease_details: {
-          cause: true,
-          common_names: true,
-          classification: true,
-          description: true,
-          treatment: true,
-          url: true,
-          local_name: true
-        },
-        plant_details: {
-          common_names: true,
-          url: true,
-          taxonomy: true
-        },
+        modifiers: ["disease_details", "similar_images"],
+        language: "it",
       }),
       signal: AbortSignal.timeout(20000),
     });
@@ -181,7 +168,7 @@ async function assessPlantHealth(imageBase64: string) {
         return {
           name: localName,
           scientificName: disease.entity_name || disease.name,
-          confidence: disease.probability, // Mantieni come decimale 0-1
+          confidence: Math.round(disease.probability * 100) / 100, // Normalizza SEMPRE come decimale 0-1
           symptoms: symptoms.length > 0 ? symptoms : ["Consultare descrizione dettagliata"],
           treatments: treatments.length > 0 ? treatments : ["Consultare fitopatologo per trattamenti specifici"],
           cause: cause,
@@ -296,7 +283,7 @@ Se NON vedi assolutamente alcun problema (molto raro), malattie deve essere arra
     
     const diseases = parsed.malattie?.map((m: any) => ({
       name: m.nome,
-      confidence: (m.confidenza ?? 60) / 100, // Converti in 0-1
+      confidence: Math.min(1, Math.max(0, (m.confidenza ?? 60) / 100)), // Normalizza SEMPRE 0-1
       symptoms: m.sintomi ?? [],
       treatments: m.trattamenti ?? [],
       cause: m.causa ?? "Analisi AI",
@@ -373,7 +360,7 @@ async function searchEppoDatabase(plantName: string, visualSymptoms: string[]) {
             name: diseaseName,
             scientificName: disease.scientificname || diseaseName,
             eppoCode,
-            confidence,
+            confidence: Math.min(1, Math.max(0, confidence)), // Normalizza 0-1
             symptoms: visualSymptoms.length > 0 ? visualSymptoms.slice(0, 3) : [`Malattia registrata EPPO per ${plantQuery}`],
             treatments: ["Consultare un fitopatologo per trattamenti mirati", "Seguire le linee guida EPPO specifiche"],
             cause: disease.codetype || "Patogeno",
@@ -399,7 +386,7 @@ async function searchEppoDatabase(plantName: string, visualSymptoms: string[]) {
             name: pestName,
             scientificName: pest.scientificname || pestName,
             eppoCode,
-            confidence: 0.70,
+            confidence: 0.70, // Già normalizzato 0-1
             symptoms: visualSymptoms.length > 0 ? visualSymptoms.slice(0, 2) : [`Parassita segnalato su ${plantQuery}`],
             treatments: ["Trattamento antiparassitario specifico", "Consultare un fitopatologo per la gestione integrata"],
             cause: "Parassita",
@@ -436,7 +423,7 @@ async function searchEppoDatabase(plantName: string, visualSymptoms: string[]) {
               name: disease.fullname || disease.prefname || "Malattia comune",
               scientificName: disease.scientificname || "",
               eppoCode,
-              confidence: 0.50, // Confidence più bassa per ricerche generiche
+              confidence: 0.50, // Già normalizzato 0-1
               symptoms: visualSymptoms.slice(0, 2),
               treatments: ["Identificazione richiesta da specialista"],
               cause: "Sintomi comuni",
