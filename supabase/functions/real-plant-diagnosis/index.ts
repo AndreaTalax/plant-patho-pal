@@ -98,8 +98,14 @@ async function identifyWithPlantNet(imageBase64: string) {
 async function assessPlantHealth(imageBase64: string) {
   if (!plantIdApiKey) return [];
   return safeFetch(async () => {
-    const cleanBase64 = imageBase64.replace(/^data:image\/[a-z]+;base64,/, "");
+    // Assicurati che l'immagine sia base64 pura senza prefisso data:image
+    let cleanBase64 = imageBase64;
+    if (imageBase64.includes("base64,")) {
+      cleanBase64 = imageBase64.split("base64,")[1];
+    }
+    
     console.log("🏥 Chiamata Plant.id Health Assessment API...");
+    console.log(`📏 Dimensione immagine base64: ${cleanBase64.length} caratteri`);
 
     const res = await fetch("https://api.plant.id/v3/health_assessment", {
       method: "POST",
@@ -121,19 +127,23 @@ async function assessPlantHealth(imageBase64: string) {
         ],
         plant_details: ["common_names", "url", "taxonomy"],
       }),
-      signal: AbortSignal.timeout(15000),
+      signal: AbortSignal.timeout(20000),
     });
 
-    if (!res.ok) throw new Error(`Plant.id Health error: ${res.status}`);
+    if (!res.ok) {
+      const errorText = await res.text();
+      console.error(`❌ Plant.id Health API error ${res.status}: ${errorText}`);
+      throw new Error(`Plant.id Health error: ${res.status}`);
+    }
     const data = await res.json();
 
     console.log("✅ Plant.id Health response ricevuta");
     console.log("🔍 Raw health data:", JSON.stringify(data.health_assessment, null, 2));
 
-    // Malattie identificate con soglia più bassa per catturare anche malattie con probabilità media-bassa
+    // Malattie identificate con soglia molto bassa per massimizzare il rilevamento
     const diseases = data.health_assessment?.diseases
-      ?.filter((disease: any) => disease.probability > 0.15) // Soglia abbassata da implicito 0 a 0.15 (15%)
-      ?.slice(0, 8)
+      ?.filter((disease: any) => disease.probability > 0.05) // Soglia abbassata a 5% per catturare anche sospetti
+      ?.slice(0, 10) // Aumentato a 10 malattie
       ?.map((disease: any) => {
         const localName = disease.entity_name || disease.name || "Malattia non identificata";
         const symptoms: string[] = [];
@@ -180,23 +190,26 @@ async function assessPlantHealth(imageBase64: string) {
         };
       }) ?? [];
 
+    console.log(`🔍 Malattie identificate da Plant.id Health: ${diseases.length}`);
     if (diseases.length > 0) {
-      console.log(`🔍 Malattie identificate: ${diseases.length}`);
       diseases.forEach((d: any, i: number) => {
-        console.log(`  ${i + 1}. ${d.name} - ${d.scientificName} (${Math.round(d.confidence * 100)}%)`);
+        console.log(`  ${i + 1}. ${d.name} (${Math.round(d.confidence * 100)}%) - Gravità: ${d.severity}`);
       });
     } else {
-      console.log("⚠️ Nessuna malattia rilevata da Plant.id Health (soglia 15%)");
+      console.log("⚠️ Nessuna malattia rilevata da Plant.id Health (soglia 5%)");
+      console.log("🔍 Risposta raw health_assessment:", JSON.stringify(data.health_assessment, null, 2));
     }
 
     return diseases;
   }, "Plant.id Health API");
 }
 
-// OpenAI Vision analysis
+// OpenAI Vision analysis - con retry logic per gestire rate limits
 async function analyzeWithOpenAI(imageBase64: string) {
   if (!openaiApiKey) return { plants: [], diseases: [] };
   return safeFetch(async () => {
+    console.log("🤖 Chiamata OpenAI Vision API...");
+    
     const res = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -204,26 +217,31 @@ async function analyzeWithOpenAI(imageBase64: string) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "gpt-4o",
+        model: "gpt-4o-mini", // Uso modello mini per ridurre rate limits
         messages: [
           {
             role: "system",
-            content: "Sei un esperto fitopatologo. Analizza l'immagine e restituisci JSON con pianta e malattie identificate.",
+            content: "Sei un esperto fitopatologo. Analizza l'immagine della pianta e identifica eventuali malattie, parassiti o problemi di salute. Rispondi SOLO con un JSON valido nel formato: {\"pianta\":{\"nomeComune\":\"string\",\"nomeScientifico\":\"string\",\"confidenza\":number},\"malattie\":[{\"nome\":\"string\",\"confidenza\":number,\"sintomi\":[\"string\"],\"trattamenti\":[\"string\"],\"causa\":\"string\",\"gravita\":\"low|medium|high\"}]}",
           },
           {
             role: "user",
             content: [
-              { type: "text", text: "Analizza questa pianta:" },
+              { type: "text", text: "Analizza questa pianta e identifica eventuali malattie o problemi:" },
               { type: "image_url", image_url: { url: imageBase64 } },
             ],
           },
         ],
         temperature: 0,
-        max_tokens: 800,
+        max_tokens: 1000,
       }),
-      signal: AbortSignal.timeout(15000),
+      signal: AbortSignal.timeout(20000),
     });
-    if (!res.ok) throw new Error(`OpenAI error: ${res.status}`);
+    
+    if (!res.ok) {
+      const errorText = await res.text();
+      console.error(`❌ OpenAI API error ${res.status}: ${errorText}`);
+      throw new Error(`OpenAI error: ${res.status}`);
+    }
     const data = await res.json();
     const content = data.choices[0]?.message?.content;
     const parsed = safeJson(() => JSON.parse(content), {});
