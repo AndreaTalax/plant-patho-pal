@@ -116,8 +116,8 @@ async function assessPlantHealth(imageBase64: string) {
       body: JSON.stringify({
         images: [cleanBase64],
         similar_images: true,
-        modifiers: ["disease_details", "similar_images"],
-        language: "it",
+        health: "all",
+        language: "it"
       }),
       signal: AbortSignal.timeout(20000),
     });
@@ -130,66 +130,62 @@ async function assessPlantHealth(imageBase64: string) {
     const data = await res.json();
 
     console.log("✅ Plant.id Health response ricevuta");
-    console.log("🔍 Raw health data:", JSON.stringify(data.health_assessment, null, 2));
+    
+    if (!data.result?.is_healthy_probability) {
+      console.log("⚠️ Risposta Plant.id Health senza dati di salute");
+      console.log("🔍 Raw response:", JSON.stringify(data, null, 2));
+    }
 
-    // Malattie identificate con soglia MOLTO bassa per massimizzare il rilevamento
-    const diseases = data.health_assessment?.diseases
-      ?.filter((disease: any) => disease.probability > 0.01) // Soglia abbassata a 1% per catturare TUTTI i sospetti
-      ?.slice(0, 15) // Aumentato a 15 malattie
-      ?.map((disease: any) => {
-        const localName = disease.entity_name || disease.name || "Malattia non identificata";
-        const symptoms: string[] = [];
-        if (disease.description) symptoms.push(disease.description);
-        if (disease.disease_signs && Array.isArray(disease.disease_signs)) {
-          disease.disease_signs.forEach((s: any) => {
-            if (s && typeof s === "string") symptoms.push(s);
-          });
+    // Verifica lo stato di salute
+    const isHealthy = data.result?.is_healthy?.binary ?? true;
+    const healthProbability = data.result?.is_healthy?.probability ?? 1.0;
+    
+    console.log(`🏥 Stato salute: ${isHealthy ? 'Sana' : 'Malata'} (confidenza: ${Math.round(healthProbability * 100)}%)`);
+
+    // Estrai malattie se presenti
+    const diseases = [];
+    
+    if (data.result?.disease?.suggestions && Array.isArray(data.result.disease.suggestions)) {
+      console.log(`🔍 Trovate ${data.result.disease.suggestions.length} possibili malattie`);
+      
+      for (const disease of data.result.disease.suggestions.slice(0, 15)) {
+        if (disease.probability < 0.01) continue; // Soglia minima 1%
+        
+        const diseaseName = disease.name || "Malattia non identificata";
+        const symptoms = [];
+        
+        if (disease.details?.description) symptoms.push(disease.details.description);
+        
+        const treatments = [];
+        if (disease.details?.treatment?.biological) {
+          treatments.push(...disease.details.treatment.biological.map((t: string) => `BIOLOGICO: ${t}`));
+        }
+        if (disease.details?.treatment?.chemical) {
+          treatments.push(...disease.details.treatment.chemical.map((t: string) => `CHIMICO: ${t}`));
+        }
+        if (disease.details?.treatment?.prevention) {
+          treatments.push(...disease.details.treatment.prevention.map((t: string) => `PREVENZIONE: ${t}`));
         }
 
-        const treatments: string[] = [];
-        if (disease.treatment?.biological?.length > 0) {
-          disease.treatment.biological.forEach((t: any) => {
-            treatments.push(`BIOLOGICO: ${t}`);
-          });
-        }
-        if (disease.treatment?.chemical?.length > 0) {
-          disease.treatment.chemical.forEach((t: any) => {
-            treatments.push(`CHIMICO: ${t}`);
-          });
-        }
-        if (disease.treatment?.prevention?.length > 0) {
-          disease.treatment.prevention.forEach((t: any) => {
-            treatments.push(`PREVENZIONE: ${t}`);
-          });
-        }
-
-        const cause = disease.cause || disease.classification?.join(" - ") || "Analisi Plant.id";
-
-        return {
-          name: localName,
+        diseases.push({
+          name: diseaseName,
           scientificName: disease.entity_name || disease.name,
-          confidence: Math.round(disease.probability * 100) / 100, // Normalizza SEMPRE come decimale 0-1
+          confidence: Math.min(1, Math.max(0, disease.probability)),
           symptoms: symptoms.length > 0 ? symptoms : ["Consultare descrizione dettagliata"],
           treatments: treatments.length > 0 ? treatments : ["Consultare fitopatologo per trattamenti specifici"],
-          cause: cause,
+          cause: disease.details?.cause || "Analisi Plant.id",
           source: "Plant.id Health",
           severity: disease.probability > 0.7 ? "high" : disease.probability > 0.4 ? "medium" : "low",
           details: {
-            description: disease.description,
-            url: disease.url,
-            classification: disease.classification,
+            description: disease.details?.description,
+            url: disease.details?.url,
           }
-        };
-      }) ?? [];
-
-    console.log(`🔍 Malattie identificate da Plant.id Health: ${diseases.length}`);
-    if (diseases.length > 0) {
-      diseases.forEach((d: any, i: number) => {
-        console.log(`  ${i + 1}. ${d.name} (${Math.round(d.confidence * 100)}%) - Gravità: ${d.severity}`);
-      });
+        });
+      }
+      
+      console.log(`✅ ${diseases.length} malattie aggiunte da Plant.id Health`);
     } else {
-      console.log("⚠️ Nessuna malattia rilevata da Plant.id Health (soglia 1%)");
-      console.log("🔍 Risposta raw health_assessment:", JSON.stringify(data.health_assessment?.diseases?.slice(0, 5), null, 2));
+      console.log("⚠️ Nessuna malattia rilevata da Plant.id Health");
     }
 
     return diseases;
@@ -199,7 +195,10 @@ async function assessPlantHealth(imageBase64: string) {
 // Lovable AI (Gemini) analysis - sostituisce OpenAI
 async function analyzeWithAI(imageBase64: string) {
   const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-  if (!LOVABLE_API_KEY) return { plants: [], diseases: [] };
+  if (!LOVABLE_API_KEY) {
+    console.log("⚠️ LOVABLE_API_KEY non configurato");
+    return { plants: [], diseases: [] };
+  }
   
   return safeFetch(async () => {
     console.log("🤖 Chiamata Lovable AI (Gemini 2.5 Flash)...");
@@ -217,19 +216,19 @@ async function analyzeWithAI(imageBase64: string) {
         messages: [
           {
             role: "system",
-            content: `Sei un esperto fitopatologo. Analizza attentamente le immagini di piante per identificare QUALSIASI problema di salute, anche minimo.
+            content: `Sei un esperto fitopatologo. Analizza con ESTREMA attenzione le immagini di piante.
 
-IMPORTANTE: Anche se la pianta sembra sana, cerca attentamente:
-- Piccole macchie o decolorazioni sulle foglie
-- Bordi delle foglie secchi o arricciati  
-- Segni di stress idrico (foglie cadenti, secche)
-- Colorazione anomala (giallastro, marrone, rossastro)
-- Presenza di parassiti anche piccoli
-- Texture anomala delle foglie
-- Crescita irregolare
-- Puntini, buchi, striature
+IMPORTANTE: Cerca QUALSIASI segno di problema, anche minimo:
+- Macchie, punti, decolorazioni (anche piccole)
+- Bordi foglie secchi, arricciati, danneggiati
+- Stress idrico, foglie cadenti
+- Colorazione anomala (giallo, marrone, rossastro, pallido)
+- Presenza di insetti, uova, larve
+- Texture anomala, buchi, striature
+- Crescita irregolare, foglie deformi
+- Muffa, patina biancastra, residui
 
-Rispondi SEMPRE in formato JSON con questa struttura:
+Rispondi SEMPRE in formato JSON:
 {
   "pianta": {
     "nomeComune": "string",
@@ -238,30 +237,36 @@ Rispondi SEMPRE in formato JSON con questa struttura:
   },
   "malattie": [
     {
-      "nome": "nome malattia o problema",
+      "nome": "nome specifico malattia/problema",
       "confidenza": number 0-100,
-      "sintomi": ["sintomo1", "sintomo2"],
-      "trattamenti": ["trattamento1", "trattamento2"],
-      "causa": "string",
+      "sintomi": ["descrizione dettagliata sintomi visibili"],
+      "trattamenti": ["trattamento specifico"],
+      "causa": "causa identificata",
       "gravita": "low|medium|high"
     }
   ]
 }
 
-Se NON vedi assolutamente alcun problema (molto raro), malattie deve essere array vuoto []`
+Se davvero non vedi NESSUN problema (raro), usa malattie: []`
           },
           {
             role: "user",
             content: [
-              { type: "text", text: "Analizza questa immagine di pianta e identifica TUTTI i problemi visibili, anche minimi. Sii molto critico e attento ai dettagli. Cerca macchie, decolorazioni, segni di stress, parassiti." },
-              { type: "image_url", image_url: { url: `data:image/jpeg;base64,${cleanBase64}` } },
+              { 
+                type: "text", 
+                text: "Analizza questa immagine di pianta. Sii MOLTO critico: cerca QUALSIASI segno di malattia, stress, parassiti o danno. Anche problemi minimi vanno segnalati." 
+              },
+              { 
+                type: "image_url", 
+                image_url: { url: `data:image/jpeg;base64,${cleanBase64}` } 
+              },
             ],
           },
         ],
-        temperature: 0.2,
+        temperature: 0.3,
         max_tokens: 2000,
       }),
-      signal: AbortSignal.timeout(25000),
+      signal: AbortSignal.timeout(30000),
     });
     
     if (!res.ok) {
@@ -272,26 +277,41 @@ Se NON vedi assolutamente alcun problema (molto raro), malattie deve essere arra
     
     const data = await res.json();
     const content = data.choices[0]?.message?.content;
+    
+    if (!content) {
+      console.log("⚠️ Lovable AI: nessun contenuto nella risposta");
+      return { plants: [], diseases: [] };
+    }
+    
+    console.log("🤖 Lovable AI raw response:", content.substring(0, 500));
+    
     const parsed = safeJson(() => JSON.parse(content), {});
 
     const plants = parsed.pianta ? [{
       name: parsed.pianta.nomeComune,
       scientificName: parsed.pianta.nomeScientifico,
-      confidence: parsed.pianta.confidenza ?? 70,
+      confidence: Math.min(100, Math.max(0, parsed.pianta.confidenza ?? 70)),
       source: "Lovable AI (Gemini)",
     }] : [];
     
-    const diseases = parsed.malattie?.map((m: any) => ({
+    const diseases = (parsed.malattie || []).map((m: any) => ({
       name: m.nome,
-      confidence: Math.min(1, Math.max(0, (m.confidenza ?? 60) / 100)), // Normalizza SEMPRE 0-1
+      confidence: Math.min(1, Math.max(0, (m.confidenza ?? 60) / 100)),
       symptoms: m.sintomi ?? [],
       treatments: m.trattamenti ?? [],
       cause: m.causa ?? "Analisi AI",
       source: "Lovable AI (Gemini)",
       severity: m.gravita ?? "medium",
-    })) ?? [];
+    }));
 
     console.log(`✅ Lovable AI: ${plants.length} piante, ${diseases.length} malattie identificate`);
+    
+    if (diseases.length > 0) {
+      diseases.forEach((d: any, i: number) => {
+        console.log(`  ${i + 1}. ${d.name} (${Math.round(d.confidence * 100)}%)`);
+      });
+    }
+    
     return { plants, diseases };
   }, "Lovable AI");
 }
