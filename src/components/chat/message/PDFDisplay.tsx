@@ -81,25 +81,35 @@ const PDFDisplay: React.FC<PDFDisplayProps> = ({ pdfPath, fileName = 'documento.
 
       if (bucketIndex !== -1 && bucketIndex < urlParts.length - 1) {
         const filePath = urlParts.slice(bucketIndex + 1).join('/');
-        console.log('📁 PDFDisplay: Getting signed URL for bucket "pdfs", path:', filePath);
+        console.log('📁 PDFDisplay: Downloading PDF to view, path:', filePath);
 
-        const { data, error } = await supabase.storage.from('pdfs').createSignedUrl(filePath, 300);
+        // Scarica il PDF usando Supabase SDK (autenticato)
+        const { data, error } = await supabase.storage.from('pdfs').download(filePath);
 
         if (error) {
-          console.error('❌ PDFDisplay: Error creating signed URL:', error);
-          window.open(pdfPath, '_blank');
+          console.error('❌ PDFDisplay: Error downloading PDF:', error);
+          toast.error("Errore durante il caricamento del PDF");
           return;
         }
 
-        if (data?.signedUrl) {
-          console.log('✅ PDFDisplay: Opening with signed URL');
-          window.open(data.signedUrl, '_blank');
+        if (data) {
+          // Crea un URL blob locale e aprilo in una nuova tab
+          const url = URL.createObjectURL(data);
+          const newWindow = window.open(url, '_blank');
+          
+          console.log('✅ PDFDisplay: PDF opened in new tab via blob URL');
+          
+          // Pulisci l'URL dopo un po' di tempo per liberare memoria
+          setTimeout(() => {
+            URL.revokeObjectURL(url);
+          }, 60000); // 1 minuto
+          
           return;
         }
       }
 
-      // fallback: apri link diretto
-      window.open(pdfPath, '_blank');
+      // fallback: prova con signed URL
+      toast.error("Impossibile aprire il PDF");
     } catch (error) {
       console.error('❌ PDFDisplay: Error opening PDF:', error);
       toast.error("Errore durante l'apertura del PDF");
