@@ -43,92 +43,88 @@ serve(async (req) => {
 
     // Avvia la generazione PDF in background
     const pdfGenerationTask = (async () => {
-      try {
-        // Crea nuovo documento PDF
-        const doc = new jsPDF();
-        let yPosition = 20;
 
-        // Header del documento
-        doc.setFontSize(20);
-        doc.setFont("helvetica", "bold");
-        doc.text("Dr.Plant - Consulenza Professionale", 20, yPosition);
-        yPosition += 15;
+      // Header del documento
+      doc.setFontSize(20);
+      doc.setFont("helvetica", "bold");
+      doc.text("Dr.Plant - Consulenza Professionale", 20, yPosition);
+      yPosition += 15;
 
-        doc.setFontSize(12);
-        doc.setFont("helvetica", "normal");
-        doc.text(`Generato il: ${new Date().toLocaleDateString('it-IT')}`, 20, yPosition);
-        yPosition += 20;
+      doc.setFontSize(12);
+      doc.setFont("helvetica", "normal");
+      doc.text(`Generato il: ${new Date().toLocaleDateString('it-IT')}`, 20, yPosition);
+      yPosition += 20;
 
-        // Sezione dati personali
-        doc.setFontSize(16);
-        doc.setFont("helvetica", "bold");
-        doc.text("DATI PERSONALI DEL PAZIENTE", 20, yPosition);
-        yPosition += 10;
+      // Sezione dati personali
+      doc.setFontSize(16);
+      doc.setFont("helvetica", "bold");
+      doc.text("DATI PERSONALI DEL PAZIENTE", 20, yPosition);
+      yPosition += 10;
 
-        doc.setFontSize(12);
-        doc.setFont("helvetica", "normal");
-        
-        const firstName = userProfile?.firstName || userProfile?.first_name || "Non specificato";
-        const lastName = userProfile?.lastName || userProfile?.last_name || "Non specificato";
-        const email = userProfile?.email || "Non specificato";
-        const birthDate = userProfile?.birthDate || userProfile?.birth_date || "Non specificata";
-        const birthPlace = userProfile?.birthPlace || userProfile?.birth_place || "Non specificato";
-        const address = userProfile?.address || "Non specificato";
-        const phone = userProfile?.phone || "Non specificato";
+      doc.setFontSize(12);
+      doc.setFont("helvetica", "normal");
+      
+      const firstName = userProfile?.firstName || userProfile?.first_name || "Non specificato";
+      const lastName = userProfile?.lastName || userProfile?.last_name || "Non specificato";
+      const email = userProfile?.email || "Non specificato";
+      const birthDate = userProfile?.birthDate || userProfile?.birth_date || "Non specificata";
+      const birthPlace = userProfile?.birthPlace || userProfile?.birth_place || "Non specificato";
+      const address = userProfile?.address || "Non specificato";
+      const phone = userProfile?.phone || "Non specificato";
 
-        const personalData = [
-          `Nome completo: ${firstName} ${lastName}`,
-          `Email: ${email}`,
-          `Data di nascita: ${birthDate}`,
-          `Luogo di nascita: ${birthPlace}`,
-          `Indirizzo: ${address}`,
-          `Telefono: ${phone}`
-        ];
+      const personalData = [
+        `Nome completo: ${firstName} ${lastName}`,
+        `Email: ${email}`,
+        `Data di nascita: ${birthDate}`,
+        `Luogo di nascita: ${birthPlace}`,
+        `Indirizzo: ${address}`,
+        `Telefono: ${phone}`
+      ];
 
-        personalData.forEach(line => {
-          doc.text(line, 25, yPosition);
-          yPosition += 7;
-        });
+      personalData.forEach(line => {
+        doc.text(line, 25, yPosition);
+        yPosition += 7;
+      });
 
-        yPosition += 10;
+      yPosition += 10;
 
-        // Sezione informazioni pianta
-        doc.setFontSize(16);
-        doc.setFont("helvetica", "bold");
-        doc.text("INFORMAZIONI PIANTA IN CONSULENZA", 20, yPosition);
-        yPosition += 10;
+      // Sezione informazioni pianta
+      doc.setFontSize(16);
+      doc.setFont("helvetica", "bold");
+      doc.text("INFORMAZIONI PIANTA IN CONSULENZA", 20, yPosition);
+      yPosition += 10;
 
-        doc.setFontSize(12);
-        doc.setFont("helvetica", "normal");
+      doc.setFontSize(12);
+      doc.setFont("helvetica", "normal");
 
-        const plantName = plantData?.plantName || plantData?.plant_name || 'Specie da identificare';
-        const environment = plantData?.environment || 'Da specificare';
-        const sunExposure = plantData?.sunExposure || plantData?.sun_exposure || 'Da specificare';
-        const wateringFrequency = plantData?.wateringFrequency || plantData?.watering_frequency || 'Da specificare';
-        const symptoms = plantData?.symptoms || 'Da descrivere durante la consulenza';
-        const plantAge = plantData?.plantAge || plantData?.plant_age || 'Non specificata';
-        const fertilizer = plantData?.fertilizer || 'Non specificato';
-        const soilType = plantData?.soilType || plantData?.soil_type || 'Non specificato';
+      const plantName = plantData?.plantName || plantData?.plant_name || 'Specie da identificare';
+      const environment = plantData?.environment || 'Da specificare';
+      const sunExposure = plantData?.sunExposure || plantData?.sun_exposure || 'Da specificare';
+      const wateringFrequency = plantData?.wateringFrequency || plantData?.watering_frequency || 'Da specificare';
+      const symptoms = plantData?.symptoms || 'Da descrivere durante la consulenza';
+      const plantAge = plantData?.plantAge || plantData?.plant_age || 'Non specificata';
+      const fertilizer = plantData?.fertilizer || 'Non specificato';
+      const soilType = plantData?.soilType || plantData?.soil_type || 'Non specificato';
 
-        const plantInfo = [
-          `Nome/Tipo: ${plantName}`,
-          `Ambiente di coltivazione: ${environment}`,
-          `Esposizione alla luce solare: ${sunExposure}`,
-          `Frequenza di irrigazione: ${wateringFrequency}`,
-          `Età della pianta: ${plantAge}`,
-          `Tipo di fertilizzante: ${fertilizer}`,
-          `Tipo di terreno: ${soilType}`,
-          `Sintomi osservati: ${symptoms}`
-        ];
+      const plantInfo = [
+        `Nome/Tipo: ${plantName}`,
+        `Ambiente di coltivazione: ${environment}`,
+        `Esposizione alla luce solare: ${sunExposure}`,
+        `Frequenza di irrigazione: ${wateringFrequency}`,
+        `Età della pianta: ${plantAge}`,
+        `Tipo di fertilizzante: ${fertilizer}`,
+        `Tipo di terreno: ${soilType}`,
+        `Sintomi osservati: ${symptoms}`
+      ];
 
-        plantInfo.forEach(line => {
-          if (yPosition > 250) {
-            doc.addPage();
-            yPosition = 20;
-          }
-          doc.text(line, 25, yPosition);
-          yPosition += 7;
-        });
+      plantInfo.forEach(line => {
+        if (yPosition > 250) {
+          doc.addPage();
+          yPosition = 20;
+        }
+        doc.text(line, 25, yPosition);
+        yPosition += 7;
+      });
 
         yPosition += 10;
 
@@ -227,74 +223,94 @@ serve(async (req) => {
           }
         }
 
-        // Note per l'esperto
-        if (yPosition > 220) {
-          doc.addPage();
-          yPosition = 20;
-        }
+      // Note per l'esperto
+      if (yPosition > 230) {
+        doc.addPage();
+        yPosition = 20;
+      }
 
-        yPosition += 10;
-        doc.setFontSize(16);
-        doc.setFont("helvetica", "bold");
-        doc.text("NOTE PER L'ESPERTO", 20, yPosition);
-        yPosition += 10;
+      doc.setFontSize(16);
+      doc.setFont("helvetica", "bold");
+      doc.text("NOTE PER L'ESPERTO", 20, yPosition);
+      yPosition += 10;
 
-        doc.setFontSize(12);
-        doc.setFont("helvetica", "normal");
-        const expertNotes = [
-          "• Tutti i dati del paziente e della pianta sono stati raccolti automaticamente",
-          "• L'immagine della pianta è allegata alla conversazione",
-          "• Procedere con diagnosi professionale e consigli di trattamento personalizzati",
-          "• Verificare la compatibilità dei trattamenti con l'ambiente di coltivazione"
-        ];
+      doc.setFontSize(12);
+      doc.setFont("helvetica", "normal");
 
-        expertNotes.forEach(note => {
+      const expertNotes = [
+        "Questo documento contiene tutti i dati forniti dal paziente per la consulenza fitopatologo.",
+        "Si prega di procedere con la diagnosi professionale e fornire raccomandazioni di trattamento specifiche.",
+        "",
+        "I dati della diagnosi AI sono forniti a scopo informativo e richiedono validazione professionale."
+      ];
+
+      expertNotes.forEach(note => {
+        if (note === "") {
+          yPosition += 3;
+        } else {
           doc.text(note, 25, yPosition);
-          yPosition += 7;
+          yPosition += 6;
+        }
+      });
+
+      // Genera il PDF come blob
+      const pdfBlob = doc.output("blob");
+      const fileName = `consultation-${conversationId}-${Date.now()}.pdf`;
+
+      console.log("📄 Uploading PDF to storage...");
+
+      // Upload del PDF a Supabase Storage
+      const { data: uploadData, error: uploadError } = await supabaseAdmin
+        .storage
+        .from("pdfs")
+        .upload(fileName, pdfBlob, {
+          contentType: "application/pdf",
+          upsert: false,
         });
 
-        yPosition = 280;
-        doc.setFontSize(10);
-        doc.setFont("helvetica", "italic");
-        doc.text("Documento generato automaticamente da Dr.Plant - Sistema di Consulenza Professionale", 20, yPosition);
-
-        const pdfBuffer = doc.output('arraybuffer');
-        
-        const fileName = `consultation-${conversationId}-${Date.now()}.pdf`;
-        const { error: uploadError } = await supabaseClient.storage
-          .from('pdfs')
-          .upload(fileName, pdfBuffer, {
-            contentType: 'application/pdf',
-            upsert: false
-          });
-
-        if (uploadError) {
-          console.error('❌ Error uploading PDF:', uploadError);
-          return;
-        }
-
-        console.log('✅ PDF generated and uploaded successfully:', fileName);
-      } catch (error) {
-        console.error("❌ Error in background PDF generation:", error);
+      if (uploadError) {
+        console.error("❌ Upload error:", uploadError);
+        throw new Error(`Failed to upload PDF: ${uploadError.message}`);
       }
-    })();
 
-    // Usa waitUntil per eseguire in background
-    EdgeRuntime.waitUntil(pdfGenerationTask);
+      // Ottieni URL pubblico
+      const { data: publicUrlData } = supabaseAdmin
+        .storage
+        .from("pdfs")
+        .getPublicUrl(fileName);
 
-    // Rispondi immediatamente
+      const pdfUrl = publicUrlData.publicUrl;
+
+      console.log("✅ PDF generated and uploaded successfully:", fileName);
+      console.log("📎 Public URL:", pdfUrl);
+
+      // Risposta con success, pdfUrl e fileName
+      return new Response(JSON.stringify({
+        success: true,
+        pdfUrl: pdfUrl,
+        fileName: fileName,
+        message: "PDF generated successfully"
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200,
+      });
+
+    } catch (pdfError: any) {
+      console.error("❌ Error during PDF generation:", pdfError);
+      return new Response(JSON.stringify({
+        success: false,
+        error: pdfError.message || "Failed to generate PDF"
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 500,
+      });
+    }
+
+  } catch (error: any) {
+    console.error("❌ Error processing request:", error);
     return new Response(JSON.stringify({
-      success: true,
-      message: "PDF generation started"
-    }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: 200,
-    });
-
-  } catch (error) {
-    console.error("❌ Error starting PDF generation:", error);
-    return new Response(JSON.stringify({
-      error: error.message || "Failed to start PDF generation"
+      success: false,
+      error: error.message || "Failed to process request"
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 500,
