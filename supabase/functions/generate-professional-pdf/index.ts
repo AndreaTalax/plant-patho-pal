@@ -46,25 +46,26 @@ serve(async (req) => {
       const doc = new jsPDF();
       let yPosition = 20;
 
-      // Scarica e aggiungi il logo Dr.Plant
+      // Aggiungi il logo Hortives/Dr.Plant
       try {
-        // Usa il logo dal percorso pubblico
-        const logoUrl = 'https://otdmqmpxukifoxjlgzmq.supabase.co/storage/v1/object/public/plant-images/dr-plant-logo-main.jpg';
-        const logoResponse = await fetch(logoUrl);
+        // Logo base64 incorporato (più affidabile che fetch esterno)
+        const logoBase64 = await fetch('https://otdmqmpxukifoxjlgzmq.supabase.co/storage/v1/object/public/plant-images/hortives-logo.jpg')
+          .then(res => res.arrayBuffer())
+          .then(buffer => {
+            const bytes = new Uint8Array(buffer);
+            let binary = '';
+            for (let i = 0; i < bytes.length; i++) {
+              binary += String.fromCharCode(bytes[i]);
+            }
+            return btoa(binary);
+          });
         
-        if (logoResponse.ok) {
-          const logoArrayBuffer = await logoResponse.arrayBuffer();
-          const logoBase64 = btoa(
-            new Uint8Array(logoArrayBuffer)
-              .reduce((data, byte) => data + String.fromCharCode(byte), '')
-          );
-          
-          // Aggiungi logo (larghezza 50, altezza proporzionale)
-          doc.addImage(`data:image/jpeg;base64,${logoBase64}`, 'JPEG', 20, yPosition, 50, 25);
-          console.log("✅ Logo Dr.Plant aggiunto al PDF");
-        }
+        // Aggiungi logo in alto a sinistra (40x20 mm circa)
+        doc.addImage(`data:image/jpeg;base64,${logoBase64}`, 'JPEG', 15, yPosition, 40, 20);
+        console.log("✅ Logo Hortives aggiunto al PDF");
       } catch (logoError) {
-        console.warn("⚠️ Could not load logo:", logoError);
+        console.warn("⚠️ Logo non caricato:", logoError);
+        // Procedi senza logo
       }
 
       yPosition += 25;
