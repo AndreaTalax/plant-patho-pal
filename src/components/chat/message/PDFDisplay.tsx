@@ -16,41 +16,13 @@ const PDFDisplay: React.FC<PDFDisplayProps> = ({ pdfPath, fileName = 'documento.
     try {
       console.log('⬇️ PDFDisplay: Attempting to download PDF from:', pdfPath);
 
-      // Estrai bucket e percorso dal link
-      const urlParts = pdfPath.split('/');
-      const bucketIndex = urlParts.findIndex((part) => part === 'pdfs');
-
-      if (bucketIndex !== -1 && bucketIndex < urlParts.length - 1) {
-        const filePath = urlParts.slice(bucketIndex + 1).join('/');
-        console.log('📁 PDFDisplay: Downloading from bucket "pdfs", path:', filePath);
-
-        const { data, error } = await supabase.storage.from('pdfs').download(filePath);
-
-        if (error) {
-          console.error('❌ PDFDisplay: Supabase download error:', error);
-          throw error;
-        }
-
-        if (data) {
-          // ✅ usa direttamente il Blob restituito da Supabase
-          const url = URL.createObjectURL(data);
-          const link = document.createElement('a');
-          link.href = url;
-          link.download = fileName;
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-          URL.revokeObjectURL(url);
-
-          console.log('✅ PDFDisplay: Authenticated download completed successfully');
-          toast.success('Download PDF completato');
-          return;
-        }
-      }
-
-      // 🔄 fallback: fetch per PDF pubblici
-      console.log('🔄 PDFDisplay: Falling back to fetch download');
+      // Poiché il bucket è pubblico, usiamo direttamente fetch
       const response = await fetch(pdfPath);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);
 
@@ -62,12 +34,12 @@ const PDFDisplay: React.FC<PDFDisplayProps> = ({ pdfPath, fileName = 'documento.
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
 
-      console.log('✅ PDFDisplay: Public fetch download successful');
-      toast.success('Download PDF avviato');
+      console.log('✅ PDFDisplay: Download completed successfully');
+      toast.success('Download PDF completato');
     } catch (error) {
       console.error('❌ PDFDisplay: Error downloading PDF:', error);
       toast.error('Errore durante il download del PDF');
-      // ultima risorsa → apri in nuova tab
+      // Fallback: apri in nuova tab
       window.open(pdfPath, '_blank');
     }
   };
@@ -76,40 +48,9 @@ const PDFDisplay: React.FC<PDFDisplayProps> = ({ pdfPath, fileName = 'documento.
     try {
       console.log('👁️ PDFDisplay: Opening PDF in new tab:', pdfPath);
 
-      const urlParts = pdfPath.split('/');
-      const bucketIndex = urlParts.findIndex((part) => part === 'pdfs');
-
-      if (bucketIndex !== -1 && bucketIndex < urlParts.length - 1) {
-        const filePath = urlParts.slice(bucketIndex + 1).join('/');
-        console.log('📁 PDFDisplay: Downloading PDF to view, path:', filePath);
-
-        // Scarica il PDF usando Supabase SDK (autenticato)
-        const { data, error } = await supabase.storage.from('pdfs').download(filePath);
-
-        if (error) {
-          console.error('❌ PDFDisplay: Error downloading PDF:', error);
-          toast.error("Errore durante il caricamento del PDF");
-          return;
-        }
-
-        if (data) {
-          // Crea un URL blob locale e aprilo in una nuova tab
-          const url = URL.createObjectURL(data);
-          const newWindow = window.open(url, '_blank');
-          
-          console.log('✅ PDFDisplay: PDF opened in new tab via blob URL');
-          
-          // Pulisci l'URL dopo un po' di tempo per liberare memoria
-          setTimeout(() => {
-            URL.revokeObjectURL(url);
-          }, 60000); // 1 minuto
-          
-          return;
-        }
-      }
-
-      // fallback: prova con signed URL
-      toast.error("Impossibile aprire il PDF");
+      // Poiché il bucket è pubblico, apri direttamente l'URL
+      window.open(pdfPath, '_blank');
+      console.log('✅ PDFDisplay: PDF opened in new tab');
     } catch (error) {
       console.error('❌ PDFDisplay: Error opening PDF:', error);
       toast.error("Errore durante l'apertura del PDF");
