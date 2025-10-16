@@ -261,7 +261,10 @@ export const MessageContent = ({ message, onSendMessage }: MessageContentProps) 
     ));
 
   const isPDFMessage =
-    (message.image_url && message.image_url.toLowerCase().endsWith('.pdf'));
+    (message.image_url && (
+      message.image_url.toLowerCase().includes('.pdf') ||
+      message.image_url.toLowerCase().includes('/pdfs/')
+    ));
 
   const isImageMessage =
     (message.image_url && !isAudioMessage && !isPDFMessage);
