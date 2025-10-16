@@ -346,19 +346,6 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
                       </ul>
                     </div>
                   )}
-                  
-                  <div className="mt-3 pt-3 border-t border-gray-200 grid grid-cols-2 gap-2 text-xs">
-                    <div>
-                      <span className="font-semibold">Affidabilità analisi:</span>
-                      <span className="ml-1">{Math.round(resolvedConfidence)}%</span>
-                    </div>
-                    {analysisDetails.multiServiceInsights?.agreementScore && (
-                      <div>
-                        <span className="font-semibold">Concordanza AI:</span>
-                        <span className="ml-1">{Math.round(analysisDetails.multiServiceInsights.agreementScore * 100)}%</span>
-                      </div>
-                    )}
-                  </div>
                 </div>
               )}
               
@@ -390,18 +377,6 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
                       </li>
                     ))}
                   </ul>
-                  <div className="mt-3 pt-3 border-t border-gray-200 grid grid-cols-2 gap-2 text-xs">
-                    <div>
-                      <span className="font-semibold">Affidabilità analisi:</span>
-                      <span className="ml-1">{Math.round(resolvedConfidence)}%</span>
-                    </div>
-                    {analysisDetails.multiServiceInsights?.agreementScore && (
-                      <div>
-                        <span className="font-semibold">Concordanza AI:</span>
-                        <span className="ml-1">{Math.round(analysisDetails.multiServiceInsights.agreementScore * 100)}%</span>
-                      </div>
-                    )}
-                  </div>
                 </div>
               )}
               
