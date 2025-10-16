@@ -14,10 +14,10 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    // Logo Hortives in base64 (semplice per l'esempio - sostituire con logo reale)
-    const logoUrl = 'https://otdmqmpxukifoxjlgzmq.supabase.co/storage/v1/object/public/plant-images/dr-plant-logo-main.jpg';
+    // Logo Hortives - scarica dal public folder del progetto deployato
+    const logoUrl = 'https://plant-patho-pal.lovable.app/hortives-logo.jpg';
     
-    console.log('📥 Scaricamento logo da:', logoUrl);
+    console.log('📥 Scaricamento logo Hortives da:', logoUrl);
     
     const response = await fetch(logoUrl);
     if (!response.ok) {
