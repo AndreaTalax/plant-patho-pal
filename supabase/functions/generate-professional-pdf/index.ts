@@ -48,17 +48,20 @@ serve(async (req) => {
 
       // Scarica e aggiungi il logo Dr.Plant
       try {
-        const logoResponse = await fetch(`${Deno.env.get("SUPABASE_URL")}/storage/v1/object/public/pdfs/../dr-plant-logo.jpg`);
+        // Usa il logo dal percorso pubblico
+        const logoUrl = 'https://otdmqmpxukifoxjlgzmq.supabase.co/storage/v1/object/public/plant-images/dr-plant-logo-main.jpg';
+        const logoResponse = await fetch(logoUrl);
+        
         if (logoResponse.ok) {
-          const logoBlob = await logoResponse.blob();
-          const logoBase64 = await new Promise<string>((resolve) => {
-            const reader = new FileReader();
-            reader.onloadend = () => resolve(reader.result as string);
-            reader.readAsDataURL(logoBlob);
-          });
+          const logoArrayBuffer = await logoResponse.arrayBuffer();
+          const logoBase64 = btoa(
+            new Uint8Array(logoArrayBuffer)
+              .reduce((data, byte) => data + String.fromCharCode(byte), '')
+          );
           
-          // Aggiungi logo (larghezza 40, altezza proporzionale)
-          doc.addImage(logoBase64, 'JPEG', 20, yPosition, 40, 20);
+          // Aggiungi logo (larghezza 50, altezza proporzionale)
+          doc.addImage(`data:image/jpeg;base64,${logoBase64}`, 'JPEG', 20, yPosition, 50, 25);
+          console.log("✅ Logo Dr.Plant aggiunto al PDF");
         }
       } catch (logoError) {
         console.warn("⚠️ Could not load logo:", logoError);
