@@ -78,49 +78,37 @@ export const ChatInitializer: React.FC<ChatInitializerProps> = ({
           hasImage: !!plantData.imageUrl 
         });
 
-        // INVIO CON RETRY AUTOMATICO
+        // INVIO SINGOLO (senza retry per evitare duplicati)
         let success = false;
-        let attempts = 0;
-        const maxAttempts = 3;
-
-        while (!success && attempts < maxAttempts) {
-          attempts++;
-          console.log(`[CHAT-INIT] 📤 Tentativo invio ${attempts}/${maxAttempts}`);
+        
+        try {
+          console.log('[CHAT-INIT] 📤 Invio dati consultazione...');
           
-          try {
-            success = await ConsultationDataService.sendInitialConsultationData(
-              currentConversationId,
-              plantData,
-              userData,
-              plantInfo?.useAI || false,
-              (plantData as any)?.diagnosisResult || null
-            );
+          success = await ConsultationDataService.sendInitialConsultationData(
+            currentConversationId,
+            plantData,
+            userData,
+            plantInfo?.useAI || false,
+            (plantData as any)?.diagnosisResult || null
+          );
 
-            if (success) {
-              console.log('[CHAT-INIT] ✅ INVIO COMPLETATO CON SUCCESSO');
-              setAutoDataSent(true);
-              setRetryCount(0);
-              
-              toast.success('✅ Dati inviati automaticamente all\'esperto!', {
-                description: `Informazioni ${plantData.imageUrl ? 'e foto ' : ''}inviate a Marco Nigro`,
-                duration: 3000,
-              });
-              break;
-            }
-          } catch (error) {
-            console.error(`[CHAT-INIT] ❌ Tentativo ${attempts} fallito:`, error);
+          if (success) {
+            console.log('[CHAT-INIT] ✅ INVIO COMPLETATO CON SUCCESSO');
+            setAutoDataSent(true);
+            setRetryCount(0);
+            
+            toast.success('✅ Dati inviati automaticamente all\'esperto!', {
+              description: `Informazioni ${plantData.imageUrl ? 'e foto ' : ''}inviate a Marco Nigro`,
+              duration: 3000,
+            });
           }
-
-          // Attesa prima del prossimo tentativo
-          if (!success && attempts < maxAttempts) {
-            const delay = Math.min(1000 * attempts, 3000);
-            console.log(`[CHAT-INIT] ⏳ Attendo ${delay}ms prima del prossimo tentativo...`);
-            await new Promise(resolve => setTimeout(resolve, delay));
-          }
+        } catch (error) {
+          console.error('[CHAT-INIT] ❌ Errore durante invio:', error);
+          success = false;
         }
 
         if (!success) {
-          console.warn('[CHAT-INIT] ⚠️ Tutti i tentativi falliti, salvo per invio differito');
+          console.warn('[CHAT-INIT] ⚠️ Invio fallito, salvo per invio differito');
           setRetryCount(prev => prev + 1);
           
           // Salva dati per invio differito (localStorage come fallback)
