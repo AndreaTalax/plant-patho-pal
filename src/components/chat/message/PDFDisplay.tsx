@@ -2,27 +2,31 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Download, FileText, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
 
 interface PDFDisplayProps {
-  pdfPath: string;
+  pdfPath: string; // URL pubblico di Supabase (già generato via getPublicUrl)
   fileName?: string;
 }
 
 const PDFDisplay: React.FC<PDFDisplayProps> = ({ pdfPath, fileName = 'documento.pdf' }) => {
-  console.log('📄 PDFDisplay: Rendering PDF with path:', pdfPath);
+  // 🔍 Rileva se stiamo girando nel sandbox di Lovable (id-preview)
+  const isLovablePreview = typeof window !== 'undefined' && window.location.hostname.includes('id-preview');
 
   const handleDownload = async () => {
     try {
-      console.log('⬇️ PDFDisplay: Attempting to download PDF from:', pdfPath);
+      console.log('⬇️ Download PDF da:', pdfPath);
 
-      // Poiché il bucket è pubblico, usiamo direttamente fetch
-      const response = await fetch(pdfPath);
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      // In Lovable sandbox, forziamo apertura diretta
+      if (isLovablePreview) {
+        window.open(pdfPath, '_blank', 'noopener,noreferrer');
+        toast.info('Download aperto in nuova scheda (sandbox)');
+        return;
       }
-      
+
+      // Altrimenti esegui fetch normale
+      const response = await fetch(pdfPath);
+      if (!response.ok) throw new Error(`HTTP error ${response.status}`);
+
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);
 
@@ -34,25 +38,29 @@ const PDFDisplay: React.FC<PDFDisplayProps> = ({ pdfPath, fileName = 'documento.
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
 
-      console.log('✅ PDFDisplay: Download completed successfully');
-      toast.success('Download PDF completato');
+      toast.success('Download completato ✅');
     } catch (error) {
-      console.error('❌ PDFDisplay: Error downloading PDF:', error);
+      console.error('❌ Errore nel download del PDF:', error);
       toast.error('Errore durante il download del PDF');
-      // Fallback: apri in nuova tab
       window.open(pdfPath, '_blank');
     }
   };
 
-  const handleView = async () => {
+  const handleView = () => {
     try {
-      console.log('👁️ PDFDisplay: Opening PDF in new tab:', pdfPath);
+      console.log('👁️ Apertura PDF:', pdfPath);
 
-      // Poiché il bucket è pubblico, apri direttamente l'URL
+      // Se siamo nel sandbox Lovable, apri direttamente in nuova tab
+      if (isLovablePreview) {
+        window.open(pdfPath, '_blank', 'noopener,noreferrer');
+        toast.info('Apertura forzata in sandbox');
+        return;
+      }
+
+      // Normale apertura diretta
       window.open(pdfPath, '_blank');
-      console.log('✅ PDFDisplay: PDF opened in new tab');
     } catch (error) {
-      console.error('❌ PDFDisplay: Error opening PDF:', error);
+      console.error('❌ Errore durante la visualizzazione PDF:', error);
       toast.error("Errore durante l'apertura del PDF");
     }
   };
