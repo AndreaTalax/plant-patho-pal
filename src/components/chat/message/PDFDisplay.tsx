@@ -9,56 +9,28 @@ interface PDFDisplayProps {
 }
 
 const PDFDisplay: React.FC<PDFDisplayProps> = ({ pdfPath, fileName = 'documento.pdf' }) => {
-  // 🔍 Rileva se stiamo girando nel sandbox di Lovable (id-preview)
+  console.log('📄 PDFDisplay montato con URL:', pdfPath);
+  
   const isLovablePreview = typeof window !== 'undefined' && window.location.hostname.includes('id-preview');
 
   const handleDownload = async () => {
     try {
       console.log('⬇️ Download PDF da:', pdfPath);
 
-      // In Lovable sandbox, forziamo apertura diretta
-      if (isLovablePreview) {
-        window.open(pdfPath, '_blank', 'noopener,noreferrer');
-        toast.info('Download aperto in nuova scheda (sandbox)');
-        return;
-      }
-
-      // Altrimenti esegui fetch normale
-      const response = await fetch(pdfPath);
-      if (!response.ok) throw new Error(`HTTP error ${response.status}`);
-
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = fileName;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-
-      toast.success('Download completato ✅');
+      // Forza apertura diretta in tutti i casi (bucket pubblico)
+      window.open(pdfPath, '_blank', 'noopener,noreferrer');
+      toast.success('Apertura PDF in corso...');
+      
     } catch (error) {
-      console.error('❌ Errore nel download del PDF:', error);
-      toast.error('Errore durante il download del PDF');
-      window.open(pdfPath, '_blank');
+      console.error('❌ Errore durante l\'apertura del PDF:', error);
+      toast.error('Errore durante l\'apertura del PDF');
     }
   };
 
   const handleView = () => {
     try {
       console.log('👁️ Apertura PDF:', pdfPath);
-
-      // Se siamo nel sandbox Lovable, apri direttamente in nuova tab
-      if (isLovablePreview) {
-        window.open(pdfPath, '_blank', 'noopener,noreferrer');
-        toast.info('Apertura forzata in sandbox');
-        return;
-      }
-
-      // Normale apertura diretta
-      window.open(pdfPath, '_blank');
+      window.open(pdfPath, '_blank', 'noopener,noreferrer');
     } catch (error) {
       console.error('❌ Errore durante la visualizzazione PDF:', error);
       toast.error("Errore durante l'apertura del PDF");

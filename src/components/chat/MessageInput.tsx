@@ -93,7 +93,10 @@ const MessageInput: React.FC<MessageInputProps> = ({
 
       setIsUploading(true);
       try {
+        console.log('📤 Caricamento immagine su Supabase Storage...');
         const imageUrl = await uploadPlantImage(file, userProfile.id);
+        console.log('✅ URL immagine Supabase ottenuto:', imageUrl);
+        
         await onSendMessage('📸 Immagine allegata', imageUrl);
         
         // Feedback tattile per foto inviata
