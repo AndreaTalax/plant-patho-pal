@@ -48,8 +48,8 @@ serve(async (req) => {
 
       // Aggiungi il logo Hortives/Dr.Plant
       try {
-        // Logo base64 incorporato (più affidabile che fetch esterno)
-        const logoBase64 = await fetch('https://otdmqmpxukifoxjlgzmq.supabase.co/storage/v1/object/public/plant-images/hortives-logo.jpg')
+        // Carica il logo dal deployment pubblico di Lovable
+        const logoBase64 = await fetch('https://plant-patho-pal.lovable.app/hortives-logo.jpg')
           .then(res => res.arrayBuffer())
           .then(buffer => {
             const bytes = new Uint8Array(buffer);
