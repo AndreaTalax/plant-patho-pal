@@ -16,6 +16,13 @@ export interface CombinedAnalysisResult {
       weightedScore: number;
     }>;
   };
+  healthAssessment?: {
+    generalDiseaseCategory?: {
+      category: string;
+      confidence: number;
+      description: string;
+    };
+  };
   eppoData?: {
     plantMatch?: any;
     diseaseMatches?: any[];

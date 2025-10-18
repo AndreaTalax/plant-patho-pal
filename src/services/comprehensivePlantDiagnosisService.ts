@@ -19,6 +19,11 @@ export interface ComprehensivePlantDiagnosis {
   healthAssessment: {
     isHealthy: boolean;
     overallHealthScore: number;
+    generalDiseaseCategory?: {
+      category: string;
+      confidence: number;
+      description: string;
+    };
     diseases: any[];
     pests: any[];
   };
@@ -157,8 +162,10 @@ export const comprehensivePlantDiagnosisService = {
           healthAssessment: {
             isHealthy: diagnosis.healthAnalysis?.isHealthy ?? true,
             overallHealthScore: diagnosis.healthAnalysis?.overallScore || 70,
+            generalDiseaseCategory: diagnosis.healthAssessment?.generalDiseaseCategory,
             diseases: diagnosis.diseases?.map((disease: any) => ({
               name: disease.name,
+              scientificName: disease.scientificName,
               probability: disease.confidence / 100,
               description: disease.symptoms?.join('. ') || '',
               treatment: disease.treatments || [],
@@ -192,18 +199,20 @@ export const comprehensivePlantDiagnosisService = {
             genus: result.genus || '',
             source: 'Fallback Analysis'
           },
-          healthAssessment: {
-            isHealthy: result.isHealthy !== false,
-            overallHealthScore: result.isHealthy ? 0.9 : 0.5,
-            diseases: (result.diseases || []).map((disease: any) => ({
-              name: disease.name || 'Malattia sconosciuta',
-              probability: disease.probability || 0.7,
-              description: disease.description || '',
-              treatment: disease.treatment || {},
-              source: 'Fallback'
-            })),
-            pests: []
-          },
+            healthAssessment: {
+              isHealthy: result.isHealthy !== false,
+              overallHealthScore: result.isHealthy ? 0.9 : 0.5,
+              generalDiseaseCategory: result.generalDiseaseCategory,
+              diseases: (result.diseases || []).map((disease: any) => ({
+                name: disease.name || 'Malattia sconosciuta',
+                scientificName: disease.scientificName,
+                probability: disease.probability || 0.7,
+                description: disease.description || '',
+                treatment: disease.treatment || {},
+                source: 'Fallback'
+              })),
+              pests: []
+            },
           recommendations: result.recommendations || ['Consultare un esperto per maggiori informazioni'],
           sources: ['Fallback Analysis'],
           confidence: result.confidence || 0.5,

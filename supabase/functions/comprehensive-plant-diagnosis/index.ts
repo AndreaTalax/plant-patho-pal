@@ -19,6 +19,11 @@ interface DiagnosisResult {
   healthAssessment: {
     isHealthy: boolean;
     overallHealthScore: number;
+    generalDiseaseCategory?: {
+      category: string;
+      confidence: number;
+      description: string;
+    };
     diseases: Array<{
       name: string;
       scientificName?: string;
@@ -404,6 +409,77 @@ async function analyzeWithHuggingFace(imageBase64: string): Promise<any> {
   }
 }
 
+// Classify the general disease category based on symptoms and analysis
+function classifyDiseaseCategory(diseases: any[], symptoms: string[]): { category: string; confidence: number; description: string } | undefined {
+  if (diseases.length === 0) {
+    return undefined;
+  }
+
+  // Analyze disease names and symptoms to determine general category
+  const diseaseNames = diseases.map(d => d.name.toLowerCase()).join(' ');
+  const symptomText = symptoms.join(' ').toLowerCase();
+  const combinedText = `${diseaseNames} ${symptomText}`;
+
+  // Category detection patterns
+  const categories = [
+    {
+      category: "Attacco Parassitario",
+      keywords: ["insett", "parassit", "afid", "cocciniglia", "ragnetto", "mosca", "larva", "fori", "erosi", "mangiat", "morsicatura"],
+      description: "Probabile infestazione da insetti o altri parassiti fogliari"
+    },
+    {
+      category: "Malattia Fungina",
+      keywords: ["fungo", "fungina", "muffa", "oidio", "peronospora", "ruggine", "botrite", "macchie", "marciume", "antracnosi"],
+      description: "Probabile infezione causata da funghi patogeni"
+    },
+    {
+      category: "Malattia Batterica",
+      keywords: ["batter", "necrosi", "cancro", "marciume molle", "maculatura batterica"],
+      description: "Probabile infezione batterica"
+    },
+    {
+      category: "Carenza Nutrizionale",
+      keywords: ["carenza", "deficienza", "clorosi", "ingiallimento", "nutriente", "azoto", "ferro", "magnesio", "potassio"],
+      description: "Probabile carenza di nutrienti essenziali"
+    },
+    {
+      category: "Stress Ambientale",
+      keywords: ["stress", "bruciatura", "scottatura", "disidratazione", "eccesso", "irrigazione", "luce"],
+      description: "Probabile stress dovuto a condizioni ambientali non ottimali"
+    },
+    {
+      category: "Virus",
+      keywords: ["virus", "virale", "mosaico", "variegatura", "deformazione"],
+      description: "Probabile infezione virale"
+    }
+  ];
+
+  // Score each category
+  const scores = categories.map(cat => {
+    let score = 0;
+    cat.keywords.forEach(keyword => {
+      const regex = new RegExp(keyword, 'gi');
+      const matches = (combinedText.match(regex) || []).length;
+      score += matches;
+    });
+    return { ...cat, score };
+  });
+
+  // Sort by score
+  scores.sort((a, b) => b.score - a.score);
+
+  if (scores[0].score > 0) {
+    const confidence = Math.min(85, 50 + (scores[0].score * 10));
+    return {
+      category: scores[0].category,
+      confidence: confidence / 100,
+      description: scores[0].description
+    };
+  }
+
+  return undefined;
+}
+
 // Combine and process all results
 function processAllResults(plantIdResult: any, plantNetResult: any, eppoResult: any, huggingFaceResult: any): DiagnosisResult {
   logWithTimestamp('INFO', 'Processing all analysis results');
@@ -624,11 +700,16 @@ function processAllResults(plantIdResult: any, plantNetResult: any, eppoResult: 
   // Ensure confidence is never above 70%
   bestIdentification.confidence = Math.min(bestIdentification.confidence, 0.70);
 
+  // Classify general disease category if diseases detected
+  const allSymptoms = diseases.flatMap(d => d.description || []);
+  const generalCategory = !isHealthy ? classifyDiseaseCategory(diseases, allSymptoms) : undefined;
+
   const finalResult: DiagnosisResult = {
     plantIdentification: bestIdentification,
     healthAssessment: {
       isHealthy,
       overallHealthScore,
+      generalDiseaseCategory: generalCategory,
       diseases,
       pests
     },

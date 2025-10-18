@@ -167,11 +167,24 @@ export const DiagnosisResults: React.FC<DiagnosisResultsProps> = ({ results, isF
           <h4 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
             <AlertTriangle className="h-4 w-4 text-red-500" />
             {isFallback ? 'Possibili Problemi Comuni' : 'Problemi Identificati'}
+            {results.healthAssessment?.generalDiseaseCategory && (
+              <span className="text-sm font-normal text-red-600 ml-2">
+                (Probabile: {results.healthAssessment.generalDiseaseCategory.category})
+              </span>
+            )}
           </h4>
           {isFallback && (
             <p className="text-sm text-amber-700 mb-3 bg-amber-50 p-2 rounded">
               Questi sono problemi comuni delle piante d'appartamento. Osserva attentamente la tua pianta per verificare se presenta questi sintomi.
             </p>
+          )}
+          {results.healthAssessment?.generalDiseaseCategory && !isFallback && (
+            <div className="mb-3 bg-blue-50 border border-blue-200 p-3 rounded">
+              <p className="text-sm text-blue-800">
+                <span className="font-medium">Valutazione Generale:</span> {results.healthAssessment.generalDiseaseCategory.description}
+                {' '}(Confidenza: {Math.round(results.healthAssessment.generalDiseaseCategory.confidence * 100)}%)
+              </p>
+            </div>
           )}
           <div className="space-y-4">
             {results.diseaseDetection.map((disease, index) => (
