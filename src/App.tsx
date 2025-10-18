@@ -26,6 +26,7 @@ import { UserManagement } from "./components/admin/UserManagement";
 import { NotificationSettings } from "./components/notifications/NotificationSettings";
 import { NotificationProvider } from "./components/notifications/NotificationProvider";
 import { PushNotificationManager } from "./components/notifications/PushNotificationManager";
+import CookieConsent from "./components/CookieConsent";
 import TestDiagnosi from "./pages/TestDiagnosi";
 
 const queryClient = new QueryClient();
@@ -44,6 +45,7 @@ function App() {
         <AuthProvider>
           <NotificationProvider>
             <PushNotificationManager />
+            <CookieConsent />
             <AppWithPresence>
               <PlantInfoProvider>
                 <TooltipProvider>
