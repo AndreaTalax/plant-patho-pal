@@ -13,6 +13,7 @@ import { useTheme } from "@/context/ThemeContext";
 import ForgotPasswordModal from "@/components/auth/ForgotPasswordModal";
 import PrivacyPolicyTrigger from "@/components/PrivacyPolicyTrigger";
 import TermsOfServiceTrigger from "@/components/TermsOfServiceTrigger";
+import CookiePolicyTrigger from "@/components/CookiePolicyTrigger";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -229,8 +230,10 @@ const Login = () => {
         </Card>
 
         <div className="mt-8 text-center text-gray-600 text-sm space-y-2">
-          <div className="flex justify-center space-x-4 mb-2">
+          <div className="flex justify-center flex-wrap gap-2 items-center mb-2">
             <PrivacyPolicyTrigger />
+            <span className="text-gray-400">|</span>
+            <CookiePolicyTrigger />
             <span className="text-gray-400">|</span>
             <TermsOfServiceTrigger />
           </div>
