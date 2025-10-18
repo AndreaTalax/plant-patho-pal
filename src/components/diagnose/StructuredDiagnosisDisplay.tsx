@@ -134,7 +134,14 @@ export const StructuredDiagnosisDisplay: React.FC<StructuredDiagnosisDisplayProp
               {diagnosis.healthAssessment.problems.map((problem, index) => (
                 <div key={index} className="border rounded-lg p-4">
                   <div className="flex items-center justify-between mb-3">
-                    <h4 className="font-medium text-lg">{problem.name}</h4>
+                    <div>
+                      <h4 className="font-medium text-lg">{problem.name}</h4>
+                      {problem.scientificName && (
+                        <p className="text-sm text-gray-600 italic mt-1">
+                          {problem.scientificName}
+                        </p>
+                      )}
+                    </div>
                     <div className="flex items-center gap-2">
                       <Badge className={getSeverityColor(problem.severity)}>
                         {problem.severity.toUpperCase()}

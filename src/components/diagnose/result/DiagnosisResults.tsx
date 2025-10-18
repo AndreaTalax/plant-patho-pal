@@ -177,7 +177,14 @@ export const DiagnosisResults: React.FC<DiagnosisResultsProps> = ({ results, isF
             {results.diseaseDetection.map((disease, index) => (
               <div key={index} className="border-l-4 border-red-200 pl-4 bg-red-50 p-3 rounded-r">
                 <div className="flex justify-between items-start mb-2">
-                  <h5 className="font-medium text-red-800">{disease.disease}</h5>
+                  <div>
+                    <h5 className="font-medium text-red-800">{disease.disease}</h5>
+                    {disease.scientificName && (
+                      <p className="text-xs text-red-600 italic mt-1">
+                        {disease.scientificName}
+                      </p>
+                    )}
+                  </div>
                   <div className="flex items-center gap-2">
                     <ConfidenceBadge confidence={disease.confidence} />
                     <span className="text-xs text-gray-500">{disease.provider}</span>
@@ -329,7 +336,14 @@ export const DiagnosisResults: React.FC<DiagnosisResultsProps> = ({ results, isF
                 {results.cropHealthAnalysis.diseases.slice(0, 3).map((disease: any, index: number) => (
                   <div key={index} className="bg-red-50 border-l-4 border-red-300 p-3 rounded-r">
                     <div className="flex justify-between items-start mb-1">
-                      <span className="font-medium text-red-800">{disease.name}</span>
+                      <div>
+                        <span className="font-medium text-red-800">{disease.name}</span>
+                        {disease.scientificName && (
+                          <p className="text-xs text-red-600 italic mt-0.5">
+                            {disease.scientificName}
+                          </p>
+                        )}
+                      </div>
                       <span className={`px-2 py-1 rounded text-xs font-medium ${
                         disease.severity === 'high' 
                           ? 'bg-red-200 text-red-800'

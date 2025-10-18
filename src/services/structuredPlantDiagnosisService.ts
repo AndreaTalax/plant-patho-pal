@@ -25,6 +25,7 @@ export interface StructuredDiagnosisResult {
     confidence: number;
     problems: Array<{
       name: string;
+      scientificName?: string;
       severity: 'low' | 'medium' | 'high';
       confidence: number;
       symptoms: string[];
@@ -267,6 +268,7 @@ export class StructuredPlantDiagnosisService {
     if (visionAnalysis?.diseaseDetection?.length > 0) {
       const aiProblems = visionAnalysis.diseaseDetection.map((disease: any) => ({
         name: disease.disease,
+        scientificName: disease.scientificName,
         severity: disease.severity || 'medium',
         confidence: disease.confidence,
         symptoms: disease.symptoms || [],

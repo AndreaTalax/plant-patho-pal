@@ -21,6 +21,7 @@ interface DiagnosisResult {
     overallHealthScore: number;
     diseases: Array<{
       name: string;
+      scientificName?: string;
       probability: number;
       description: string;
       treatment: any;
@@ -28,6 +29,7 @@ interface DiagnosisResult {
     }>;
     pests: Array<{
       name: string;
+      scientificName?: string;
       probability: number;
       description: string;
       treatment: string;
@@ -452,6 +454,7 @@ function processAllResults(plantIdResult: any, plantNetResult: any, eppoResult: 
       if (disease.probability > 0.05) { // Lower threshold for better detection
         diseases.push({
           name: disease.name,
+          scientificName: disease.disease_details?.scientific_name || disease.disease_details?.latin_name || disease.entity_name || undefined,
           probability: Math.min(disease.probability, 0.70), // Limit to 70%
           description: disease.disease_details?.description || "",
           treatment: disease.disease_details?.treatment || {},

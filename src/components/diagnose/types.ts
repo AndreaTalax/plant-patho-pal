@@ -14,6 +14,7 @@ export interface PlantInfo {
 export interface DiagnosedDisease {
   id: string;
   name: string;
+  scientificName?: string;
   description: string;
   causes: string;
   symptoms: string[];
@@ -27,6 +28,7 @@ export interface DiagnosedDisease {
   label?: string;
   disease?: {
     name: string;
+    scientificName?: string;
   };
 }
 
