@@ -26,171 +26,139 @@ const PrivacyPolicyModal = ({ open, onOpenChange }: PrivacyPolicyModalProps) => 
   
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl">
+      <DialogContent className="max-w-3xl max-h-[90vh]">
         <DialogHeader>
-          <DialogTitle className="text-xl font-bold">{t("privacyPolicy")}</DialogTitle>
-          <DialogDescription>Last updated: May 5, 2025</DialogDescription>
+          <DialogTitle className="text-xl font-bold">Privacy Policy</DialogTitle>
+          <DialogDescription>Ultimo aggiornamento: 21 Maggio 2021</DialogDescription>
         </DialogHeader>
-        <ScrollArea className="h-[60vh] mt-4">
-          <div className="space-y-4 pr-4">
+        <ScrollArea className="h-[70vh] mt-4">
+          <div className="space-y-4 pr-4 text-sm">
             <section>
-              <h2 className="text-lg font-semibold mb-2">1. Introduzione</h2>
-              <p className="text-sm text-muted-foreground">
-                Plant Patho Pal ("noi", "nostro", o "ci") è impegnata a proteggere la vostra privacy. Questa Informativa sulla Privacy spiega come vengono raccolte, utilizzate e divulgate le vostre informazioni personali da Plant Patho Pal. Utilizzando il nostro servizio, accettate la raccolta, l'archiviazione, l'uso e la divulgazione delle vostre informazioni personali come descritto in questa Informativa sulla Privacy.
+              <h2 className="text-lg font-bold mb-3">PRIVACY POLICY ai sensi degli artt. 13 e 14 del Reg. UE 2016/679</h2>
+              <p className="text-muted-foreground mb-3">
+                Con il consenso alla seguente dichiarazione sulla protezione dei dati autorizzi <strong>Agr. Marco Nigro (ditta individuale), libero professionista iscritto al Collegio degli Agrotecnici e Agrotecnici Laureati di Milano n. 394</strong> – via Salsomaggiore, 12 – 20159 Milano (MI) a rilevare, elaborare ed utilizzare i tuoi dati personali nel rispetto delle leggi in materia di protezione dei dati e delle seguenti disposizioni.
+              </p>
+              <p className="text-muted-foreground mb-3">
+                Il D.Lgs. 30.06.2003 n. 196 ha la finalità di garantire che il trattamento dei dati personali si svolga nel rispetto dei diritti, delle libertà fondamentali, nonché della dignità delle persone fisiche, con particolare riferimento alla riservatezza e all'identità personale.
+              </p>
+              <p className="text-muted-foreground">
+                Agr. Marco Nigro (di seguito Marco Nigro), con sede operativa a Milano (MI) in via Salsomaggiore 12, P.Iva 08867900964, titolare del sito agrotecnicomarconigro.it, e dei servizi connessi, fornisce le informazioni riguardanti l'utilizzo dei dati personali forniti per l'acquisto dei prodotti in vendita sul sito in osservanza del Decreto Legislativo 30 giugno 2003 n. 196.
               </p>
             </section>
 
             <section>
-              <h2 className="text-lg font-semibold mb-2">2. Dati Personali che Raccogliamo</h2>
-              <div className="space-y-3">
-                <div>
-                  <h3 className="font-medium text-sm">Dati di Registrazione:</h3>
-                  <ul className="list-disc pl-5 mt-1 text-sm text-muted-foreground">
-                    <li>Nome e cognome</li>
-                    <li>Indirizzo email</li>
-                    <li>Username</li>
-                    <li>Password (criptata)</li>
-                    <li>Data di nascita</li>
-                    <li>Luogo di nascita</li>
-                    <li>Numero di telefono</li>
-                    <li>Indirizzo</li>
-                  </ul>
-                </div>
-                <div>
-                  <h3 className="font-medium text-sm">Dati di Utilizzo:</h3>
-                  <ul className="list-disc pl-5 mt-1 text-sm text-muted-foreground">
-                    <li>Foto di piante caricate</li>
-                    <li>Diagnosi effettuate</li>
-                    <li>Cronologia delle consultazioni</li>
-                    <li>Preferenze utente</li>
-                    <li>Messaggi nelle chat con esperti</li>
-                    <li>Ordini e acquisti effettuati</li>
-                  </ul>
-                </div>
-                <div>
-                  <h3 className="font-medium text-sm">Dati Tecnici:</h3>
-                  <ul className="list-disc pl-5 mt-1 text-sm text-muted-foreground">
-                    <li>Indirizzo IP</li>
-                    <li>Tipo di dispositivo e browser</li>
-                    <li>Sistema operativo</li>
-                    <li>Dati di geolocalizzazione (se autorizzata)</li>
-                    <li>Cookie e tecnologie simili</li>
-                    <li>Log di accesso e utilizzo</li>
-                  </ul>
-                </div>
+              <h2 className="text-lg font-semibold mb-2">INFORMATIVA</h2>
+              <p className="text-muted-foreground mb-3">
+                I dati personali raccolti saranno oggetto di trattamento (come definito dall'art. 11 e seguenti del Dlgs 196/2003), mediante archiviazione automatizzata nel sistema informatico di Marco Nigro, per finalità connesse alle attività del sito agrotecnicomarconigro.it quali:
+              </p>
+              <ol className="list-decimal pl-5 space-y-2 text-muted-foreground">
+                <li>per fornire assistenza all'uso del sito e ai Servizi del sito e, in generale, per la gestione del sito e dei Servizi del sito</li>
+                <li>per inviare comunicazioni relative alle modalità di utilizzo del sito e dei Servizi del sito a cui ti sei iscritto</li>
+                <li>per gestire opportunamente gli ordini del cliente in tutte le loro fasi</li>
+                <li>per comunicare ai partner di Marco Nigro che svolgono funzioni strettamente connesse e strumentali all'operatività del servizio quei dati necessari alla fornitura dei servizi richiesti, quali la gestione dei pagamenti e della consegna della merce acquistata</li>
+                <li>per finalità statistiche solo dopo analisi dei dati su base aggregata e mai individuale</li>
+              </ol>
+            </section>
+
+            <section>
+              <h2 className="text-lg font-semibold mb-2">CATEGORIE DI DATI PERSONALI</h2>
+              
+              <h3 className="font-semibold mt-4 mb-2">1. DATI PERSONALI RACCOLTI AUTOMATICAMENTE</h3>
+              <p className="text-muted-foreground mb-2">
+                <strong>Dati di navigazione:</strong> i sistemi informatici e le procedure software preposte al funzionamento di questo sito web acquisiscono, nel corso del loro normale esercizio, alcuni dati personali la cui trasmissione è implicita nell'uso dei protocolli di comunicazione di Internet.
+              </p>
+
+              <h3 className="font-semibold mt-4 mb-2">2. DATI PERSONALI DA LEI DIRETTAMENTE FORNITI</h3>
+              <p className="text-muted-foreground mb-2">
+                Per dati personali si intendono le indicazioni in merito a situazioni oggettive o personali di una specifica persona fisica o di una persona fisica identificabile. Si tratta per esempio del tuo nome, del tuo numero di telefono, del tuo indirizzo e di tutti i dati che ci comunichi all'atto della registrazione e quando apri il tuo conto cliente.
+              </p>
+
+              <h3 className="font-semibold mt-4 mb-2">3. FINALITÀ E BASE GIURIDICA DEL TRATTAMENTO</h3>
+              <p className="text-muted-foreground mb-2">
+                I dati personali sono raccolti e trattati con modalità telematiche, anche con l'ausilio di mezzi elettronici e informativi, secondo i principi di necessità, liceità, correttezza, proporzionalità e trasparenza per le finalità indicate nella presente informativa.
+              </p>
+            </section>
+
+            <section>
+              <h2 className="text-lg font-semibold mb-2">COOKIES</h2>
+              <p className="text-muted-foreground mb-3">
+                L'accettazione dei cookies non è una condizione necessaria al fine di visitare i nostri siti web. Ti avvisiamo, però, che l'utilizzo della funzione "carrello" e l'ordine di prodotti sono possibili soltanto se autorizzi l'utilizzo dei cookie.
+              </p>
+              
+              <h3 className="font-medium mt-3 mb-2">Cosa sono i cookies?</h3>
+              <p className="text-muted-foreground mb-3">
+                I cookies sono dei piccoli file che vengono salvati sul tuo dispositivo e che memorizzano impostazioni e dati specifici per lo scambio con il nostro sistema attraverso il tuo browser.
+              </p>
+
+              <h3 className="font-medium mt-3 mb-2">Quali cookies utilizza Agr. Marco Nigro?</h3>
+              <p className="text-muted-foreground mb-2">
+                La maggior parte dei cookies che utilizziamo al momento della chiusura del browser (fine sessione) sono cancellati automaticamente dal tuo disco rigido (session-cookies). Utilizziamo anche cookies temporanei o permanenti (durata da 1 mese a 10 anni) che restano sul tuo disco rigido.
+              </p>
+
+              <div className="mt-3 p-3 bg-muted rounded-md">
+                <p className="text-xs font-medium mb-2">Cookie utilizzati:</p>
+                <ul className="text-xs space-y-1 text-muted-foreground">
+                  <li>• _ga, _gid, _gat (Google Analytics)</li>
+                  <li>• LANG, x-pp-s, tsrce, ts, nsid (PayPal)</li>
+                  <li>• fr (Facebook)</li>
+                  <li>• _AVESTA_ENVIRONMENT (MailChimp)</li>
+                </ul>
               </div>
             </section>
 
             <section>
-              <h2 className="text-lg font-semibold mb-2">3. Come Utilizziamo i Vostri Dati</h2>
-              <ul className="list-disc pl-5 mt-2 text-sm text-muted-foreground space-y-1">
-                <li>Fornire e mantenere il servizio di diagnosi delle malattie delle piante</li>
-                <li>Elaborare e migliorare le diagnosi tramite intelligenza artificiale</li>
-                <li>Facilitare la comunicazione con esperti agronomi</li>
-                <li>Personalizzare l'esperienza utente</li>
-                <li>Elaborare ordini e pagamenti</li>
-                <li>Inviare notifiche di servizio e aggiornamenti</li>
-                <li>Condurre analisi per migliorare i nostri servizi</li>
-                <li>Garantire la sicurezza e prevenire frodi</li>
-                <li>Rispettare obblighi legali e normativi</li>
-              </ul>
-            </section>
-
-            <section>
-              <h2 className="text-lg font-semibold mb-2">4. Condivisione dei Dati con Terze Parti</h2>
-              <div className="space-y-3">
-                <div>
-                  <h3 className="font-medium text-sm">Servizi di Analytics:</h3>
-                  <p className="text-sm text-muted-foreground">Google Analytics, Firebase Analytics per analizzare l'utilizzo dell'app</p>
-                </div>
-                <div>
-                  <h3 className="font-medium text-sm">Servizi AI:</h3>
-                  <p className="text-sm text-muted-foreground">Fornitori di servizi di intelligenza artificiale per la diagnosi delle piante</p>
-                </div>
-                <div>
-                  <h3 className="font-medium text-sm">Processori di Pagamento:</h3>
-                  <p className="text-sm text-muted-foreground">Stripe, PayPal per elaborare i pagamenti</p>
-                </div>
-                <div>
-                  <h3 className="font-medium text-sm">Servizi Cloud:</h3>
-                  <p className="text-sm text-muted-foreground">Supabase per l'archiviazione sicura dei dati</p>
-                </div>
-              </div>
-            </section>
-
-            <section>
-              <h2 className="text-lg font-semibold mb-2">5. Conservazione dei Dati</h2>
-              <ul className="list-disc pl-5 mt-2 text-sm text-muted-foreground space-y-1">
-                <li><strong>Account attivi:</strong> Per tutta la durata dell'account</li>
-                <li><strong>Account cancellati:</strong> 90 giorni dopo la cancellazione</li>
-                <li><strong>Dati di diagnosi:</strong> 5 anni per ricerca scientifica (anonimizzati)</li>
-                <li><strong>Log di sistema:</strong> 2 anni per sicurezza</li>
-                <li><strong>Dati di fatturazione:</strong> 10 anni per obblighi fiscali</li>
-              </ul>
-            </section>
-
-            <section>
-              <h2 className="text-lg font-semibold mb-2">6. I Vostri Diritti (GDPR)</h2>
-              <ul className="list-disc pl-5 mt-2 text-sm text-muted-foreground space-y-1">
-                <li><strong>Accesso:</strong> Richiedere una copia dei vostri dati personali</li>
-                <li><strong>Rettifica:</strong> Correggere dati inaccurati o incompleti</li>
-                <li><strong>Cancellazione:</strong> Richiedere la cancellazione dei vostri dati ("diritto all'oblio")</li>
-                <li><strong>Limitazione:</strong> Limitare il trattamento dei vostri dati</li>
-                <li><strong>Portabilità:</strong> Ricevere i vostri dati in formato strutturato</li>
-                <li><strong>Opposizione:</strong> Opporsi al trattamento per motivi legittimi</li>
-                <li><strong>Revoca consenso:</strong> Revocare il consenso in qualsiasi momento</li>
-              </ul>
-            </section>
-
-            <section>
-              <h2 className="text-lg font-semibold mb-2">7. Protezione dei Minori (COPPA)</h2>
-              <p className="text-sm text-muted-foreground mb-2">
-                Il nostro servizio non è destinato a minori di 13 anni. Se scopriamo di aver raccolto dati personali da un minore di 13 anni:
-              </p>
-              <ul className="list-disc pl-5 mt-2 text-sm text-muted-foreground space-y-1">
-                <li>Cancelleremo immediatamente tali dati</li>
-                <li>Richiederemo il consenso verificabile dei genitori per utenti tra 13-16 anni</li>
-                <li>Limiteremo la raccolta dati ai soli dati necessari per il servizio</li>
-                <li>Non utilizzeremo dati di minori per marketing</li>
-              </ul>
-            </section>
-
-            <section>
-              <h2 className="text-lg font-semibold mb-2">8. Sicurezza dei Dati</h2>
-              <ul className="list-disc pl-5 mt-2 text-sm text-muted-foreground space-y-1">
-                <li>Crittografia end-to-end per dati sensibili</li>
-                <li>Autenticazione a due fattori disponibile</li>
-                <li>Monitoraggio continuo per attività sospette</li>
-                <li>Backup regolari e sicuri</li>
-                <li>Accesso limitato al personale autorizzato</li>
-                <li>Audit di sicurezza periodici</li>
-              </ul>
-            </section>
-
-            <section>
-              <h2 className="text-lg font-semibold mb-2">9. Violazioni dei Dati</h2>
-              <p className="text-sm text-muted-foreground">
-                In caso di violazione dei dati personali, notificheremo le autorità competenti entro 72 ore e informeremo gli utenti interessati entro le tempistiche previste dal GDPR, fornendo dettagli sulla natura della violazione e le misure adottate.
+              <h2 className="text-lg font-semibold mb-2">TRASFERIMENTO SICURO DEI DATI</h2>
+              <p className="text-muted-foreground">
+                Trasferiamo i tuoi dati personali in maniera sicura attraverso la codifica SSL (Secure Socket Layer). Proteggiamo i nostri siti web e altri sistemi con soluzioni tecniche ed organizzative per evitare la perdita, la distruzione, l'accesso, la modifica o la divulgazione dei tuoi dati da parte di persone non autorizzate.
               </p>
             </section>
 
             <section>
-              <h2 className="text-lg font-semibold mb-2">10. Trasferimenti Internazionali</h2>
-              <p className="text-sm text-muted-foreground">
-                I vostri dati possono essere trasferiti e conservati in paesi al di fuori dello Spazio Economico Europeo. Garantiamo che tali trasferimenti rispettino le decisioni di adeguatezza della Commissione Europea o siano protetti da clausole contrattuali standard approvate.
+              <h2 className="text-lg font-semibold mb-2">DESTINATARI DEI DATI PERSONALI</h2>
+              <p className="text-muted-foreground mb-3">
+                I tuoi dati personali saranno comunicati a terzi soltanto se questo è necessario per l'adempimento del contratto o la fatturazione o se hai preventivamente dato il tuo consenso. I nostri prestatori di servizio (trasportatori, ditte logistiche, banche) ricevono i dati necessari per l'adempimento dell'ordine e del contratto.
               </p>
             </section>
-            
+
             <section>
-              <h2 className="text-lg font-semibold mb-2">Contact Us</h2>
-              <p className="text-sm text-gray-600">
-                If you have any questions about this Privacy Policy, please contact us:
+              <h2 className="text-lg font-semibold mb-2">PERIODO DI CONSERVAZIONE</h2>
+              <p className="text-muted-foreground mb-2">
+                <strong>Agr. Marco Nigro</strong> conserva i Suoi dati personali per il tempo strettamente necessario al perseguimento delle finalità sopra indicate nel rispetto degli obblighi civilistici e fiscali di conservazione.
               </p>
-              <ul className="list-disc pl-5 mt-2 text-sm text-gray-600">
-                <li>By email: privacy@plantpathopal.com</li>
-                <li>By visiting this page on our website: www.plantpathopal.com/contact</li>
-                <li>By phone number: +123 456 7890</li>
+              <p className="text-muted-foreground">
+                I dati trattati per adempiere qualsiasi obbligazione contrattuale potranno essere conservati per tutta la durata del contratto oltre che per successivi 10 anni dal termine dell'anno fiscale seguente, per affrontare qualsiasi accertamento e/o controversia di natura fiscale.
+              </p>
+            </section>
+
+            <section>
+              <h2 className="text-lg font-semibold mb-2">I SUOI DIRITTI</h2>
+              <p className="text-muted-foreground mb-2">
+                In quanto interessato, ai sensi degli artt.15-21 del Regolamento Lei ha il diritto di:
+              </p>
+              <ul className="list-disc pl-5 space-y-1 text-muted-foreground">
+                <li>ricevere conferma dell'esistenza dei Suoi dati personali, accedere al loro contenuto e ottenerne copia (diritto di accesso)</li>
+                <li>aggiornare, modificare e/o correggere i Suoi dati personali (diritto di rettifica)</li>
+                <li>chiederne la cancellazione o la limitazione del trattamento dei dati (diritto alla cancellazione)</li>
+                <li>revocare il consenso in qualsiasi momento (diritto di revoca del consenso)</li>
+                <li>ricevere copia dei dati in formato strutturato (diritto alla portabilità dei dati)</li>
+                <li>opporsi al trattamento dei Suoi dati per finalità di marketing diretto (diritto di opposizione)</li>
               </ul>
+              <p className="text-muted-foreground mt-3">
+                Può esercitare i Suoi diritti scrivendo a: <a href="mailto:marco.nigro@hortives.it" className="text-primary hover:underline">marco.nigro@hortives.it</a> o inviando una lettera a: Via Salsomaggiore, 12 – 20159 Milano.
+              </p>
+              <p className="text-muted-foreground mt-2">
+                In qualunque momento può proporre reclamo all'Autorità di controllo: <a href="http://www.garanteprivacy.it" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">www.garanteprivacy.it</a>
+              </p>
+            </section>
+
+            <section className="pt-4 border-t">
+              <h2 className="text-lg font-semibold mb-2">TITOLARE DEL TRATTAMENTO</h2>
+              <p className="text-muted-foreground">
+                <strong>Agr. Marco Nigro (ditta individuale)</strong><br />
+                Via Salsomaggiore, 12 – 20159 Milano (MI) – Italia<br />
+                P.Iva: 08867900964<br />
+                Email: <a href="mailto:marco.nigro@hortives.it" className="text-primary hover:underline">marco.nigro@hortives.it</a>
+              </p>
             </section>
           </div>
         </ScrollArea>
