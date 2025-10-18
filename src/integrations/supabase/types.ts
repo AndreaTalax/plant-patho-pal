@@ -682,6 +682,14 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      cleanup_old_cdc_events: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      cleanup_old_notifications: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       get_user_identification_usage: {
         Args: { p_user_id: string }
         Returns: Json
