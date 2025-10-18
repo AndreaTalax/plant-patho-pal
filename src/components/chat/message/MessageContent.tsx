@@ -304,8 +304,6 @@ export const MessageContent = ({ message, onSendMessage }: MessageContentProps) 
       {message.products && message.products.length > 0 && (
         <ProductRecommendations products={message.products} />
       )}
-      
-      <SimpleMediaSender onSendMessage={onSendMessage} />
     </div>
   );
 };
