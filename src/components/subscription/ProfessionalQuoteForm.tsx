@@ -114,11 +114,7 @@ const ProfessionalQuoteForm = ({ onBack, onSubmit }: ProfessionalQuoteFormProps)
   const featureOptions = [
     { value: 'ai_diagnosis', label: language === 'it' ? 'Diagnosi AI Avanzata' : 'Advanced AI Diagnosis' },
     { value: 'expert_chat', label: language === 'it' ? 'Chat con Esperti' : 'Expert Chat' },
-    { value: 'batch_analysis', label: language === 'it' ? 'Analisi in Batch' : 'Batch Analysis' },
-    { value: 'api_integration', label: language === 'it' ? 'Integrazione API' : 'API Integration' },
-    { value: 'custom_reports', label: language === 'it' ? 'Report Personalizzati' : 'Custom Reports' },
-    { value: 'team_management', label: language === 'it' ? 'Gestione Team' : 'Team Management' },
-    { value: 'white_label', label: language === 'it' ? 'Soluzione White Label' : 'White Label Solution' }
+    { value: 'custom_reports', label: language === 'it' ? 'Report Personalizzati' : 'Custom Reports' }
   ];
 
   const budgets = [
@@ -315,42 +311,22 @@ const ProfessionalQuoteForm = ({ onBack, onSubmit }: ProfessionalQuoteFormProps)
               </div>
             </div>
 
-            <div className="grid md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="timeline">
-                  {language === 'it' ? 'Timeline Implementazione' : 'Implementation Timeline'}
-                </Label>
-                <Select onValueChange={(value) => handleInputChange('timeline', value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder={language === 'it' ? 'Seleziona...' : 'Select...'} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="immediate">{language === 'it' ? 'Immediata (entro 2 settimane)' : 'Immediate (within 2 weeks)'}</SelectItem>
-                    <SelectItem value="1-month">{language === 'it' ? 'Entro 1 mese' : 'Within 1 month'}</SelectItem>
-                    <SelectItem value="3-months">{language === 'it' ? 'Entro 3 mesi' : 'Within 3 months'}</SelectItem>
-                    <SelectItem value="6-months">{language === 'it' ? 'Entro 6 mesi' : 'Within 6 months'}</SelectItem>
-                    <SelectItem value="flexible">{language === 'it' ? 'Flessibile' : 'Flexible'}</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="budget">
-                  {language === 'it' ? 'Budget Indicativo' : 'Indicative Budget'}
-                </Label>
-                <Select onValueChange={(value) => handleInputChange('budget', value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder={language === 'it' ? 'Seleziona...' : 'Select...'} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {budgets.map((budget) => (
-                      <SelectItem key={budget.value} value={budget.value}>
-                        {budget.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="budget">
+                {language === 'it' ? 'Budget Indicativo' : 'Indicative Budget'}
+              </Label>
+              <Select onValueChange={(value) => handleInputChange('budget', value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder={language === 'it' ? 'Seleziona...' : 'Select...'} />
+                </SelectTrigger>
+                <SelectContent>
+                  {budgets.map((budget) => (
+                    <SelectItem key={budget.value} value={budget.value}>
+                      {budget.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             {/* Informazioni Aggiuntive */}
