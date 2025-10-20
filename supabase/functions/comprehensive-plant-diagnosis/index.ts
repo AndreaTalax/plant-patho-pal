@@ -6,6 +6,9 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+const EPPO_API_KEY = Deno.env.get('EPPO_API_KEY');
+const EPPO_AUTH_TOKEN = Deno.env.get('EPPO_AUTH_TOKEN');
+
 interface DiagnosisResult {
   plantIdentification: {
     name: string;
@@ -409,6 +412,131 @@ async function analyzeWithHuggingFace(imageBase64: string): Promise<any> {
   }
 }
 
+// Funzione per cercare nel database EPPO e arricchire i dati della malattia
+async function enrichDiseaseWithEPPO(
+  diseaseName: string,
+  plantName: string,
+  symptoms: string[]
+): Promise<{ eppoName?: string; eppoCode?: string; confidence: number }> {
+  if (!EPPO_API_KEY && !EPPO_AUTH_TOKEN) {
+    return { confidence: 0 };
+  }
+
+  try {
+    const searchTerms = [
+      diseaseName,
+      ...symptoms.slice(0, 3),
+      plantName
+    ].filter(Boolean);
+
+    const searchPromises = searchTerms.slice(0, 2).map(term => 
+      Promise.all([
+        searchEPPODiseases(term),
+        searchEPPOPests(term)
+      ])
+    );
+
+    const results = await Promise.all(searchPromises);
+    const allMatches: any[] = [];
+
+    results.forEach(([diseases, pests]) => {
+      if (diseases) allMatches.push(...diseases);
+      if (pests) allMatches.push(...pests);
+    });
+
+    if (allMatches.length === 0) {
+      return { confidence: 0 };
+    }
+
+    const bestMatch = allMatches.reduce((best, current) => {
+      const currentName = current.prefname || current.fullname || '';
+      const similarity = calculateNameSimilarity(diseaseName, currentName);
+      const currentConfidence = similarity * (current.status === 'preferred' ? 1.2 : 1.0);
+      
+      return currentConfidence > (best.confidence || 0) 
+        ? { ...current, confidence: currentConfidence }
+        : best;
+    }, { confidence: 0 });
+
+    if (bestMatch.confidence > 0.3) {
+      return {
+        eppoName: bestMatch.prefname || bestMatch.fullname,
+        eppoCode: bestMatch.eppocode,
+        confidence: Math.min(bestMatch.confidence, 1.0)
+      };
+    }
+
+    return { confidence: 0 };
+  } catch (error) {
+    logWithTimestamp('ERROR', 'Error enriching disease with EPPO', { error: error.message });
+    return { confidence: 0 };
+  }
+}
+
+async function searchEPPODiseases(searchTerm: string): Promise<any[] | null> {
+  try {
+    const authHeader = EPPO_AUTH_TOKEN 
+      ? `Bearer ${EPPO_AUTH_TOKEN}`
+      : EPPO_API_KEY;
+
+    const response = await fetch(
+      `https://data.eppo.int/api/rest/1.0/taxon/search?kw=${encodeURIComponent(searchTerm)}&searchfor=1`,
+      {
+        headers: {
+          'Authorization': authHeader,
+          'Accept': 'application/json'
+        },
+        signal: AbortSignal.timeout(10000),
+      }
+    );
+
+    if (!response.ok) return null;
+    return await response.json();
+  } catch (error) {
+    return null;
+  }
+}
+
+async function searchEPPOPests(searchTerm: string): Promise<any[] | null> {
+  try {
+    const authHeader = EPPO_AUTH_TOKEN 
+      ? `Bearer ${EPPO_AUTH_TOKEN}`
+      : EPPO_API_KEY;
+
+    const response = await fetch(
+      `https://data.eppo.int/api/rest/1.0/taxon/search?kw=${encodeURIComponent(searchTerm)}&searchfor=2`,
+      {
+        headers: {
+          'Authorization': authHeader,
+          'Accept': 'application/json'
+        },
+        signal: AbortSignal.timeout(10000),
+      }
+    );
+
+    if (!response.ok) return null;
+    return await response.json();
+  } catch (error) {
+    return null;
+  }
+}
+
+function calculateNameSimilarity(str1: string, str2: string): number {
+  const s1 = str1.toLowerCase().trim();
+  const s2 = str2.toLowerCase().trim();
+  
+  if (s1 === s2) return 1.0;
+  if (s1.includes(s2) || s2.includes(s1)) return 0.8;
+  
+  const words1 = s1.split(/\s+/);
+  const words2 = s2.split(/\s+/);
+  
+  const commonWords = words1.filter(w => words2.some(w2 => w === w2 || w.includes(w2) || w2.includes(w)));
+  const similarity = commonWords.length / Math.max(words1.length, words2.length);
+  
+  return similarity;
+}
+
 // Classify the general disease category based on symptoms and analysis
 function classifyDiseaseCategory(diseases: any[], symptoms: string[]): { category: string; confidence: number; description: string } | undefined {
   if (diseases.length === 0) {
@@ -524,27 +652,58 @@ function processAllResults(plantIdResult: any, plantNetResult: any, eppoResult: 
     sources.push("Plant.id");
   }
 
-  // Process Plant.id health assessment
+  // Process Plant.id health assessment with EPPO enrichment
   if (plantIdResult?.health?.health_assessment?.diseases) {
-    plantIdResult.health.health_assessment.diseases.forEach((disease: any) => {
-      if (disease.probability > 0.05) { // Lower threshold for better detection
-        diseases.push({
-          name: disease.name,
-          scientificName: disease.disease_details?.scientific_name || disease.disease_details?.latin_name || disease.entity_name || undefined,
-          probability: Math.min(disease.probability, 0.70), // Limit to 70%
-          description: disease.disease_details?.description || "",
-          treatment: disease.disease_details?.treatment || {},
-          source: "Plant.id",
-          affectedAreas: ["Foglie", "Steli"], // Default affected areas
-          recommendedProducts: [
-            "Fungicida Rame Biologico 500ml",
-            "Olio di Neem Puro 250ml",
-            "Propoli Spray Protettivo 200ml"
-          ]
-        });
-        hasVisualSymptoms = true;
-        overallHealthScore -= disease.probability * 0.4;
+    const plantScientificName = bestIdentification.scientificName || bestIdentification.name;
+    
+    // Collect all diseases first
+    const detectedDiseases = plantIdResult.health.health_assessment.diseases
+      .filter((disease: any) => disease.probability > 0.05)
+      .map((disease: any) => ({
+        name: disease.name,
+        scientificName: disease.disease_details?.scientific_name || disease.disease_details?.latin_name || disease.entity_name || undefined,
+        probability: Math.min(disease.probability, 0.70),
+        description: disease.disease_details?.description || "",
+        symptoms: disease.disease_details?.symptoms || [],
+        treatment: disease.disease_details?.treatment || {},
+        source: "Plant.id",
+        affectedAreas: ["Foglie", "Steli"],
+        recommendedProducts: [
+          "Fungicida Rame Biologico 500ml",
+          "Olio di Neem Puro 250ml",
+          "Propoli Spray Protettivo 200ml"
+        ]
+      }));
+
+    // Enrich each disease with EPPO data
+    const enrichmentPromises = detectedDiseases.map(async (disease) => {
+      const eppoData = await enrichDiseaseWithEPPO(
+        disease.name,
+        plantScientificName,
+        disease.symptoms
+      );
+
+      // If EPPO found a good match, use its name
+      if (eppoData.confidence > 0.5 && eppoData.eppoName) {
+        return {
+          ...disease,
+          name: eppoData.eppoName,
+          scientificName: disease.scientificName || eppoData.eppoName,
+          eppoCode: eppoData.eppoCode,
+          eppoConfidence: eppoData.confidence,
+          description: `${disease.description} (Validato EPPO: ${eppoData.eppoCode})`
+        };
       }
+
+      return disease;
+    });
+
+    const enrichedDiseases = await Promise.all(enrichmentPromises);
+    
+    enrichedDiseases.forEach((disease) => {
+      diseases.push(disease);
+      hasVisualSymptoms = true;
+      overallHealthScore -= disease.probability * 0.4;
     });
   }
 
