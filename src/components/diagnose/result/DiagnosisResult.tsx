@@ -53,6 +53,7 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
 
   // Funzione helper per estrarre il nome della malattia
   const getDiseaseName = (disease: any) =>
+    disease.disease ||  // Campo corretto dalla console
     disease.name ||
     disease.disease_name ||
     disease.label ||
@@ -85,8 +86,9 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
   , [rawDetectedDiseases]);
 
   // Malattia principale (massima confidenza)
-  const mainDisease = detectedDiseases
-    .sort((a, b) => (b.confidence || 0) - (a.confidence || 0))[0]?.name;
+  const mainDisease = detectedDiseases.length > 0
+    ? (detectedDiseases.sort((a: any, b: any) => (b.confidence || 0) - (a.confidence || 0))[0] as any)?.disease || (detectedDiseases[0] as any)?.disease
+    : null;
 
   const diagnosisData = {
     plantType: plantInfo?.name || effectiveDiagnosis?.name || 'Pianta non identificata',
@@ -282,10 +284,18 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
                   </div>
                 )}
                 
-                {disease.treatment && (
+                {(disease.treatment || disease.treatments) && (
                   <div className="mb-3">
-                    <h4 className="font-semibold text-sm text-gray-800 mb-1">Trattamento consigliato:</h4>
-                    <p className="text-sm text-gray-700">{disease.treatment}</p>
+                    <h4 className="font-semibold text-sm text-gray-800 mb-1">Trattamenti consigliati:</h4>
+                    {Array.isArray(disease.treatments) ? (
+                      <ul className="list-disc list-inside text-sm text-gray-600 space-y-1">
+                        {disease.treatments.map((treatment: string, idx: number) => (
+                          <li key={idx}>{treatment}</li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-sm text-gray-700">{disease.treatment}</p>
+                    )}
                   </div>
                 )}
               </div>
