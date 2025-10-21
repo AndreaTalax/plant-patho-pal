@@ -66,7 +66,12 @@ serve(async (req) => {
       .eq('id', recipientId)
       .single();
 
-    if (!recipientProfile?.email) {
+    // Se il destinatario è Marco Nigro, usa sempre l'email corretta
+    const recipientEmail = recipientId === MARCO_NIGRO_ID 
+      ? 'agrotecnicomarconigro@gmail.com' 
+      : recipientProfile?.email;
+
+    if (!recipientEmail) {
       console.log('⚠️ Recipient has no email, skipping email notification');
       return new Response(JSON.stringify({
         success: false,
@@ -188,11 +193,11 @@ serve(async (req) => {
     }
 
     // Invia email
-    console.log(`📧 Sending email to: ${recipientProfile.email}`);
+    console.log(`📧 Sending email to: ${recipientEmail}`);
     
     const { data: emailData, error: emailError } = await resend.emails.send({
       from: 'Dr.Plant <onboarding@resend.dev>',
-      to: [recipientProfile.email],
+      to: [recipientEmail],
       subject: emailSubject,
       html: emailBody,
     });
