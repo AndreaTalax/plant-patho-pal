@@ -409,23 +409,6 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
               )}
             </div>
 
-            {/* Analisi visiva */}
-            {analysisDetails.multiServiceInsights && (
-              <div className="bg-white p-4 rounded-lg border border-blue-200">
-                <h3 className="font-bold text-lg text-blue-700 mb-2">🔍 Analisi Visiva dell'Immagine</h3>
-                <div className="text-sm space-y-2">
-                  {analysisDetails.multiServiceInsights.plantName && (
-                    <p><span className="font-semibold">Pianta identificata:</span> {analysisDetails.multiServiceInsights.plantName}</p>
-                  )}
-                  {analysisDetails.multiServiceInsights.plantPart && (
-                    <p><span className="font-semibold">Parte analizzata:</span> {analysisDetails.multiServiceInsights.plantPart}</p>
-                  )}
-                  {analysisDetails.multiServiceInsights.description && (
-                    <p><span className="font-semibold">Osservazioni:</span> {analysisDetails.multiServiceInsights.description}</p>
-                  )}
-                </div>
-              </div>
-            )}
 
             {/* Raccomandazioni con prodotti */}
             <div className="bg-white p-4 rounded-lg border border-blue-200">
@@ -464,15 +447,12 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
                         </li>
                       ))
                     ) : detectedDiseases.length > 0 ? (
-                      detectedDiseases.slice(0, 3).map((disease: any, index: number) => {
-                        const diseaseName = disease.name || disease.label || disease.disease_name || disease.type;
-                        return (
-                          <li key={index} className="font-medium text-red-800">
-                            Possibile malattia da foto: <span className="font-bold">{diseaseName || 'Problema identificato'}</span>
-                            {disease.confidence && ` (${Math.round(disease.confidence * 100)}% accuratezza)`}
-                          </li>
-                        );
-                      })
+                      detectedDiseases.slice(0, 3).map((disease: any, index: number) => (
+                        <li key={index} className="font-medium text-red-800">
+                          Possibile malattia da foto: <span className="font-bold">{disease.name}</span>
+                          {disease.confidence && ` (${Math.round(disease.confidence * 100)}% accuratezza)`}
+                        </li>
+                      ))
                     ) : (
                       <li>Analisi foto in corso, dati in elaborazione...</li>
                     )}
