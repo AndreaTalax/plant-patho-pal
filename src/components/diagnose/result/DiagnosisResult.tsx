@@ -432,8 +432,23 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
                 <div className="space-y-3">
                   <p className="font-semibold text-red-700 text-sm">La pianta richiede attenzione immediata:</p>
                   <ul className="list-disc list-inside space-y-1 text-sm text-gray-700">
-                    {detectedDiseases.length > 0 && (
-                      <li>Rilevate {detectedDiseases.length} possibile/i malattia/e</li>
+                    {/* Mostra i nomi delle malattie rilevate */}
+                    {analysisDetails?.risultatiCompleti?.eppoInfo?.diseases && 
+                     analysisDetails.risultatiCompleti.eppoInfo.diseases.length > 0 ? (
+                      analysisDetails.risultatiCompleti.eppoInfo.diseases.slice(0, 3).map((disease: any, index: number) => (
+                        <li key={index} className="font-medium text-red-800">
+                          Rilevata: <span className="font-bold">{disease.name}</span>
+                          {disease.confidence && ` (${Math.round(disease.confidence * 100)}% accuratezza)`}
+                        </li>
+                      ))
+                    ) : detectedDiseases.length > 0 ? (
+                      detectedDiseases.slice(0, 3).map((disease: any, index: number) => (
+                        <li key={index} className="font-medium text-red-800">
+                          Possibile problema: <span className="font-bold">{disease.name || disease.label}</span>
+                        </li>
+                      ))
+                    ) : (
+                      <li>Rilevati alcuni problemi alla pianta</li>
                     )}
                     <li>Consulta i prodotti specifici consigliati qui sotto</li>
                     <li>Monitora l'evoluzione dei sintomi nei prossimi giorni</li>
