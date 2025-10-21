@@ -258,12 +258,6 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
                     <p className="text-sm text-gray-700">{disease.treatment}</p>
                   </div>
                 )}
-                
-                {/* Prodotti consigliati per questa malattia */}
-                <div className="mt-4 pt-4 border-t border-gray-200">
-                  <h4 className="font-semibold text-sm text-gray-800 mb-2">🛒 Prodotti consigliati:</h4>
-                  <ProductSuggestions diseaseName={disease.name || disease.label} maxItems={3} />
-                </div>
               </div>
             ))}
           </div>
@@ -432,23 +426,30 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
                 <div className="space-y-3">
                   <p className="font-semibold text-red-700 text-sm">La pianta richiede attenzione immediata:</p>
                   <ul className="list-disc list-inside space-y-1 text-sm text-gray-700">
-                    {/* Mostra i nomi delle malattie rilevate */}
+                    {/* Mostra possibile malattia basata sui sintomi inseriti */}
+                    {plantInfo?.symptoms && (
+                      <li className="font-medium text-orange-800">
+                        Sintomi inseriti: <span className="font-bold">{Array.isArray(plantInfo.symptoms) ? plantInfo.symptoms.join(', ') : plantInfo.symptoms}</span>
+                      </li>
+                    )}
+                    
+                    {/* Mostra i nomi delle malattie rilevate dall'analisi foto */}
                     {analysisDetails?.risultatiCompleti?.eppoInfo?.diseases && 
                      analysisDetails.risultatiCompleti.eppoInfo.diseases.length > 0 ? (
                       analysisDetails.risultatiCompleti.eppoInfo.diseases.slice(0, 3).map((disease: any, index: number) => (
                         <li key={index} className="font-medium text-red-800">
-                          Rilevata: <span className="font-bold">{disease.name}</span>
+                          Malattia rilevata da foto: <span className="font-bold">{disease.name}</span>
                           {disease.confidence && ` (${Math.round(disease.confidence * 100)}% accuratezza)`}
                         </li>
                       ))
                     ) : detectedDiseases.length > 0 ? (
                       detectedDiseases.slice(0, 3).map((disease: any, index: number) => (
                         <li key={index} className="font-medium text-red-800">
-                          Possibile problema: <span className="font-bold">{disease.name || disease.label}</span>
+                          Possibile malattia da foto: <span className="font-bold">{disease.name || disease.label}</span>
                         </li>
                       ))
                     ) : (
-                      <li>Rilevati alcuni problemi alla pianta</li>
+                      <li>Analisi foto: possibili problemi rilevati</li>
                     )}
                     <li>Consulta i prodotti specifici consigliati qui sotto</li>
                     <li>Monitora l'evoluzione dei sintomi nei prossimi giorni</li>
