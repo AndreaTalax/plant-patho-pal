@@ -64,6 +64,7 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
                            analysisDetails?.risultatiCompleti?.healthAssessment || {};
 
   const rawDetectedDiseases =
+    analysisDetails?.primaryDiseases ||  // AGGIUNTO: questa è la fonte corretta dalla console!
     healthAssessment?.diseases ||
     analysisDetails?.diseases ||
     analysisDetails?.risultatiCompleti?.detectedDiseases ||
@@ -201,6 +202,11 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
       plantInfo.diagnosisResult = { ...effectiveDiagnosis };
     }
   }, [effectiveDiagnosis, plantInfo]);
+
+  // DEBUG: log per verificare i dati
+  console.log('🔍 Debug detectedDiseases:', detectedDiseases);
+  console.log('🔍 Debug rawDetectedDiseases:', rawDetectedDiseases);
+  console.log('🔍 Debug analysisDetails?.primaryDiseases:', analysisDetails?.primaryDiseases);
 
   if (isAnalyzing) return <div className="text-center">Analisi in corso...</div>;
   if (!imageSrc) return <div className="text-center">Nessuna immagine da mostrare.</div>;
