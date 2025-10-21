@@ -94,23 +94,35 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
   if (isAnalyzing) return <div className="text-center">Analisi in corso...</div>;
   if (!imageSrc) return <div className="text-center">Nessuna immagine da mostrare.</div>;
 
-  // Cerca malattie in diverse possibili locazioni nella struttura dati
+  // Estrai malattie seguendo la struttura API corretta (health_assessment.diseases)
+  const healthAssessment = analysisDetails?.healthAssessment || 
+                           analysisDetails?.risultatiCompleti?.healthAssessment ||
+                           {};
+  
   const rawDetectedDiseases =
-    analysisDetails?.risultatiCompleti?.detectedDiseases ||
+    healthAssessment?.diseases ||  // Nuovo formato da API
     analysisDetails?.diseases ||
-    analysisDetails?.healthAssessment?.diseases ||
+    analysisDetails?.risultatiCompleti?.detectedDiseases ||
     plantInfo?.diagnosisResult?.diseases ||
     effectiveDiagnosis?.diseases ||
     [];
 
   console.log('🔍 Raw detected diseases:', rawDetectedDiseases);
+  console.log('🏥 Health assessment:', healthAssessment);
 
-  // Deduplica malattie basandosi sul nome
+  // Deduplica malattie basandosi sul nome, priorità a disease.name
   const detectedDiseases = Array.from(
     new Map(
       rawDetectedDiseases.map((disease: any) => {
-        // Estrai il nome da diverse possibili proprietà
-        const name = disease.name || disease.label || disease.disease_name || disease.type || 'Problema rilevato';
+        // Estrai il nome: priorità a disease.name come da API
+        const name = disease.name || 
+                     disease.disease_name || 
+                     disease.label || 
+                     disease.type || 
+                     'Problema identificato';
+        
+        console.log('🦠 Malattia:', name, 'confidence:', disease.confidence || disease.probability);
+        
         return [name.toLowerCase(), { ...disease, name }];
       })
     ).values()
