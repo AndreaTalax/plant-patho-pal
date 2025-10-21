@@ -89,16 +89,54 @@ const SimpleMediaSender = ({ onSendMessage }: { onSendMessage?: MessageContentPr
         audioChunks.push(event.data);
       };
 
-      recorder.onstop = () => {
+      recorder.onstop = async () => {
         const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-        const audioUrl = URL.createObjectURL(audioBlob);
         
-        onSendMessage?.({
-          text: '🎵 Messaggio vocale',
-          image_url: audioUrl,
-          type: 'audio',
-          audioBlob: audioBlob
-        });
+        // IMPORTANTE: Carica l'audio su Supabase Storage invece di creare URL blob
+        try {
+          console.log('📤 Caricamento audio su Supabase Storage...');
+          const { supabase } = await import('@/integrations/supabase/client');
+          const { data: { user } } = await supabase.auth.getUser();
+          
+          if (!user) {
+            alert('Devi essere autenticato per inviare audio');
+            stream.getTracks().forEach(track => track.stop());
+            return;
+          }
+
+          const fileName = `${user.id}/${Date.now()}.webm`;
+          
+          const { data, error } = await supabase.storage
+            .from('audio-messages')
+            .upload(fileName, audioBlob, {
+              cacheControl: '3600',
+              upsert: false,
+              contentType: 'audio/webm'
+            });
+
+          if (error) {
+            console.error('❌ Errore upload audio:', error);
+            alert('Errore nel caricamento dell\'audio');
+            stream.getTracks().forEach(track => track.stop());
+            return;
+          }
+
+          const { data: { publicUrl } } = supabase.storage
+            .from('audio-messages')
+            .getPublicUrl(fileName);
+
+          console.log('✅ Audio caricato, URL pubblico:', publicUrl);
+          
+          onSendMessage?.({
+            text: '🎵 Messaggio vocale',
+            image_url: publicUrl,  // <- URL pubblico di Supabase Storage
+            type: 'audio',
+            audioBlob: audioBlob
+          });
+        } catch (error) {
+          console.error('❌ Errore caricamento audio:', error);
+          alert('Errore nel caricamento dell\'audio');
+        }
 
         stream.getTracks().forEach(track => track.stop());
       };
@@ -120,7 +158,7 @@ const SimpleMediaSender = ({ onSendMessage }: { onSendMessage?: MessageContentPr
     }
   };
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>, fileType: 'image' | 'audio' | 'pdf') => {
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>, fileType: 'image' | 'audio' | 'pdf') => {
     const file = event.target.files?.[0];
     if (!file) return;
 
@@ -134,27 +172,66 @@ const SimpleMediaSender = ({ onSendMessage }: { onSendMessage?: MessageContentPr
       return;
     }
 
-    const fileUrl = URL.createObjectURL(file);
-    let messageText = '';
-    
-    switch (fileType) {
-      case 'image':
-        messageText = '🖼️ Immagine allegata';
-        break;
-      case 'audio':
-        messageText = '🎵 File audio allegato';
-        break;
-      case 'pdf':
-        messageText = `📄 PDF: ${file.name}`;
-        break;
-    }
+    // IMPORTANTE: Carica il file su Supabase Storage invece di creare URL blob
+    try {
+      console.log('📤 Caricamento file su Supabase Storage...');
+      const { supabase } = await import('@/integrations/supabase/client');
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        alert('Devi essere autenticato per caricare file');
+        return;
+      }
 
-    onSendMessage?.({
-      text: messageText,
-      image_url: fileUrl,
-      type: fileType,
-      fileData: file
-    });
+      const fileExt = file.name.split('.').pop() || 'jpg';
+      const bucketName = fileType === 'pdf' ? 'pdfs' : 'plant-images';
+      const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+      
+      console.log(`📤 Caricamento su bucket ${bucketName}: ${fileName}`);
+      
+      const { data, error } = await supabase.storage
+        .from(bucketName)
+        .upload(fileName, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
+
+      if (error) {
+        console.error('❌ Errore upload:', error);
+        alert('Errore nel caricamento del file');
+        return;
+      }
+
+      const { data: { publicUrl } } = supabase.storage
+        .from(bucketName)
+        .getPublicUrl(fileName);
+
+      console.log('✅ File caricato, URL pubblico:', publicUrl);
+
+      let messageText = '';
+      
+      switch (fileType) {
+        case 'image':
+          messageText = '📸 Foto della pianta in consulenza';
+          break;
+        case 'audio':
+          messageText = '🎵 File audio allegato';
+          break;
+        case 'pdf':
+          messageText = `📄 PDF: ${file.name}`;
+          break;
+      }
+
+      onSendMessage?.({
+        text: messageText,
+        image_url: publicUrl,  // <- URL pubblico di Supabase Storage
+        type: fileType,
+        fileData: file
+      });
+    } catch (error) {
+      console.error('❌ Errore caricamento file:', error);
+      alert('Errore nel caricamento del file');
+    }
 
     event.target.value = '';
   };
