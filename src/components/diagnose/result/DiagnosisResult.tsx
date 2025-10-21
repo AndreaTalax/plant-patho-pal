@@ -94,20 +94,29 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
   if (isAnalyzing) return <div className="text-center">Analisi in corso...</div>;
   if (!imageSrc) return <div className="text-center">Nessuna immagine da mostrare.</div>;
 
+  // Cerca malattie in diverse possibili locazioni nella struttura dati
   const rawDetectedDiseases =
     analysisDetails?.risultatiCompleti?.detectedDiseases ||
+    analysisDetails?.diseases ||
+    analysisDetails?.healthAssessment?.diseases ||
     plantInfo?.diagnosisResult?.diseases ||
+    effectiveDiagnosis?.diseases ||
     [];
+
+  console.log('🔍 Raw detected diseases:', rawDetectedDiseases);
 
   // Deduplica malattie basandosi sul nome
   const detectedDiseases = Array.from(
     new Map(
-      rawDetectedDiseases.map((disease: any) => [
-        disease.name?.toLowerCase() || disease.label?.toLowerCase(),
-        disease
-      ])
+      rawDetectedDiseases.map((disease: any) => {
+        // Estrai il nome da diverse possibili proprietà
+        const name = disease.name || disease.label || disease.disease_name || disease.type || 'Problema rilevato';
+        return [name.toLowerCase(), { ...disease, name }];
+      })
     ).values()
   );
+
+  console.log('✅ Processed detected diseases:', detectedDiseases.length, detectedDiseases);
 
   const diagnosisData = {
     plantType: plantInfo?.name || effectiveDiagnosis?.name || 'Pianta non identificata',
@@ -443,13 +452,17 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
                         </li>
                       ))
                     ) : detectedDiseases.length > 0 ? (
-                      detectedDiseases.slice(0, 3).map((disease: any, index: number) => (
-                        <li key={index} className="font-medium text-red-800">
-                          Possibile malattia da foto: <span className="font-bold">{disease.name || disease.label}</span>
-                        </li>
-                      ))
+                      detectedDiseases.slice(0, 3).map((disease: any, index: number) => {
+                        const diseaseName = disease.name || disease.label || disease.disease_name || disease.type;
+                        return (
+                          <li key={index} className="font-medium text-red-800">
+                            Possibile malattia da foto: <span className="font-bold">{diseaseName || 'Problema identificato'}</span>
+                            {disease.confidence && ` (${Math.round(disease.confidence * 100)}% accuratezza)`}
+                          </li>
+                        );
+                      })
                     ) : (
-                      <li>Analisi foto: possibili problemi rilevati</li>
+                      <li>Analisi foto in corso, dati in elaborazione...</li>
                     )}
                     <li>Consulta i prodotti specifici consigliati qui sotto</li>
                     <li>Monitora l'evoluzione dei sintomi nei prossimi giorni</li>
