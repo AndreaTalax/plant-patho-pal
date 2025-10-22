@@ -38,7 +38,10 @@ const renderMarkdownLinks = (text: string) => {
     const linkText = match[1];
     const linkUrl = match[2].trim(); // Rimuovi spazi
     
-    if (linkUrl.toLowerCase().endsWith('.pdf')) {
+    // Check if URL contains .pdf (before query params)
+    const isPdfLink = linkUrl.toLowerCase().includes('.pdf');
+    
+    if (isPdfLink) {
       parts.push(
         <div key={match.index} className="my-2">
           <PDFDisplay 
