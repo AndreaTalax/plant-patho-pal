@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -73,12 +72,9 @@ const Login = () => {
         });
         
         setTimeout(() => {
-          // Controlla se c'è un piano selezionato
           const planTypeFromState = location.state?.planType;
           const planTypeFromStorage = localStorage.getItem('selectedPlanType');
           const selectedPlanType = planTypeFromState || planTypeFromStorage;
-          
-          // test@gmail.com va sempre alla selezione piano per testare tutte le funzionalità
           const isTestAccount = emailLower === 'test@gmail.com';
           
           let redirectPath = "/";
@@ -86,7 +82,6 @@ const Login = () => {
           if (isTestAccount) {
             redirectPath = "/plan-selection";
           } else if (selectedPlanType && ['privati', 'business', 'professionisti'].includes(selectedPlanType)) {
-            // Se ha selezionato un piano, va alla sottoscrizione
             redirectPath = "/plan-subscription";
           } else if (isAdminEmail) {
             redirectPath = "/";
@@ -116,12 +111,14 @@ const Login = () => {
   };
 
   return (
-    <div className="h-screen w-full bg-gradient-to-b from-drplant-blue-light via-white to-drplant-green/10 flex flex-col items-center justify-center px-4">
+    <div className="relative h-screen w-full bg-gradient-to-b from-drplant-blue-light via-white to-drplant-green/10 flex flex-col items-center justify-center px-4 overflow-hidden">
+      {/* Elementi decorativi di sfondo */}
       <div className="absolute top-0 left-0 w-full h-64 bg-drplant-blue-light/30 -z-10 rounded-b-[50%]" />
       <div className="absolute bottom-0 right-0 w-full h-64 bg-drplant-green/20 -z-10 rounded-t-[30%]" />
 
-
-      <div className="w-full max-w-md">
+      {/* Contenitore principale con z-index positivo */}
+      <div className="relative z-10 w-full max-w-md">
+        {/* Logo e titolo */}
         <div className="text-center mb-10">
           <div className="inline-flex items-center justify-center p-6 bg-white/90 backdrop-blur-sm rounded-3xl shadow-xl mb-6">
             <img 
@@ -134,6 +131,7 @@ const Login = () => {
           <p className="text-gray-600 text-lg">{t("assistantMessage")}</p>
         </div>
 
+        {/* Card di login */}
         <Card className="border-none shadow-xl bg-white/80 backdrop-blur-sm">
           <CardHeader>
             <CardTitle className="text-2xl text-drplant-blue-dark text-center">{t("welcome")}</CardTitle>
@@ -229,6 +227,7 @@ const Login = () => {
           </CardFooter>
         </Card>
 
+        {/* Footer */}
         <div className="mt-8 text-center text-gray-600 text-sm space-y-2">
           <div className="flex justify-center flex-wrap gap-2 items-center mb-2">
             <PrivacyPolicyTrigger />
