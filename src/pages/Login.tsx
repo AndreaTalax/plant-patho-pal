@@ -123,14 +123,14 @@ const Login = () => {
 
       <div className="w-full max-w-md">
         <div className="text-center mb-10">
-          <div className="inline-flex items-center justify-center p-6 bg-white/90 backdrop-blur-sm rounded-3xl shadow-xl mb-6">
+          <div className="inline-flex items-center justify-center gap-4 p-6 bg-white/90 backdrop-blur-sm rounded-3xl shadow-xl mb-6">
             <img 
               src="/lovable-uploads/72d5a60c-404a-4167-9430-511af91c523b.png" 
               alt="Dr.Plant Logo" 
-              className="h-20 w-auto"
+              className="h-16 w-auto"
             />
+            <h1 className="text-4xl font-bold text-drplant-blue-dark">Dr.Plant</h1>
           </div>
-          <h1 className="text-4xl font-bold text-drplant-blue-dark mb-2">Dr.Plant</h1>
           <p className="text-gray-600 text-lg">{t("assistantMessage")}</p>
         </div>
 
