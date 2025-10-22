@@ -1,0 +1,42 @@
+{
+  "name": "Dr.Plant - Plant Disease Diagnosis",
+  "short_name": "Dr.Plant",
+  "description": "AI-powered plant disease diagnosis and expert consultation platform",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#22c55e",
+  "orientation": "portrait",
+  "scope": "/",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["agriculture", "health", "productivity"],
+  "shortcuts": [
+    {
+      "name": "Diagnose Plant",
+      "short_name": "Diagnose",
+      "description": "Take a photo to diagnose plant diseases",
+      "url": "/?action=diagnose",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Expert Chat",
+      "short_name": "Expert",
+      "description": "Chat with plant health experts",
+      "url": "/?action=expert",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}
