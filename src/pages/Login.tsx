@@ -118,24 +118,26 @@ const Login = () => {
 
       {/* Contenitore principale con z-index positivo */}
       <div className="relative z-10 w-full max-w-md">
-        {/* Logo e titolo */}
-        <div className="text-center mb-10">
-          <div className="inline-flex items-center justify-center p-6 bg-white/90 backdrop-blur-sm rounded-3xl shadow-xl mb-6">
-            <img 
-              src="/lovable-uploads/72d5a60c-404a-4167-9430-511af91c523b.png" 
-              alt="Dr.Plant Logo" 
-              className="h-20 w-auto"
-            />
-          </div>
-          <h1 className="text-4xl font-bold text-drplant-blue-dark mb-2">Dr.Plant</h1>
-          <p className="text-gray-600 text-lg">{t("assistantMessage")}</p>
-        </div>
-
-        {/* Card di login */}
+        {/* Card di login con logo integrato */}
         <Card className="border-none shadow-xl bg-white/80 backdrop-blur-sm">
-          <CardHeader>
-            <CardTitle className="text-2xl text-drplant-blue-dark text-center">{t("welcome")}</CardTitle>
-            <CardDescription className="text-center">
+          <CardHeader className="text-center pb-6">
+            {/* Logo + Titolo integrati */}
+            <div className="flex flex-col items-center gap-4 mb-2">
+              <div className="flex items-center gap-3">
+                <img 
+                  src="/lovable-uploads/72d5a60c-404a-4167-9430-511af91c523b.png" 
+                  alt="Dr.Plant Logo" 
+                  className="h-16 w-auto"
+                />
+                <div className="text-left">
+                  <h1 className="text-3xl font-bold text-drplant-blue-dark">Dr.Plant</h1>
+                  <p className="text-sm text-gray-600">{t("assistantMessage")}</p>
+                </div>
+              </div>
+            </div>
+            
+            <CardTitle className="text-2xl text-drplant-blue-dark mt-4">{t("welcome")}</CardTitle>
+            <CardDescription>
               {t("enterCredentials")}
             </CardDescription>
           </CardHeader>
@@ -228,7 +230,7 @@ const Login = () => {
         </Card>
 
         {/* Footer */}
-        <div className="mt-8 text-center text-gray-600 text-sm space-y-2">
+        <div className="mt-6 text-center text-gray-600 text-sm space-y-2">
           <div className="flex justify-center flex-wrap gap-2 items-center mb-2">
             <PrivacyPolicyTrigger />
             <span className="text-gray-400">|</span>
