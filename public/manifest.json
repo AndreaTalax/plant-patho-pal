@@ -1,8 +1,8 @@
 {
-  "name": "Dr.Plant - Plant Disease Diagnosis",
+  "name": "Dr.Plant",
   "short_name": "Dr.Plant",
   "description": "AI-powered plant disease diagnosis and expert consultation platform",
-  "start_url": "/",
+  "start_url": "https://plant-patho-pal.lovable.app/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#22c55e",
@@ -22,21 +22,37 @@
       "purpose": "any maskable"
     }
   ],
-  "categories": ["agriculture", "health", "productivity"],
+  "categories": [
+    "agriculture",
+    "health",
+    "productivity"
+  ],
   "shortcuts": [
     {
       "name": "Diagnose Plant",
       "short_name": "Diagnose",
       "description": "Take a photo to diagnose plant diseases",
       "url": "/?action=diagnose",
-      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+      "icons": [
+        {
+          "src": "/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
     },
     {
       "name": "Expert Chat",
       "short_name": "Expert",
       "description": "Chat with plant health experts",
       "url": "/?action=expert",
-      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+      "icons": [
+        {
+          "src": "/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
     }
-  ]
+  ],
+  "lang": "it",
+  "id": "https://plant-patho-pal.lovable.app/"
 }
