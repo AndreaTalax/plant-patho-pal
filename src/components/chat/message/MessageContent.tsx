@@ -10,18 +10,14 @@ interface MessageContentProps {
   onSendMessage?: (content: {
     text?: string;
     image_url?: string;
-    audioBlob?: Blob;
-    fileData?: File;
     type: 'text' | 'image' | 'audio' | 'pdf';
   }) => void;
 }
 
 // 🔗 Converte i link markdown in <a> o <PDFDisplay>
 const renderMarkdownLinks = (text: string) => {
-  // Rimuovi prima eventuali ** di grassetto che avvolgono i link
-  let cleanedText = text.replace(/\*\*\[/g, '[').replace(/\]\s*\([^)]+\)\*\*/g, (match) => {
-    return match.replace(/\*\*/g, '');
-  });
+  // Rimuovi ** di grassetto attorno ai link (gestisce tutti i casi)
+  let cleanedText = text.replace(/\*\*(\[.+?\]\(.+?\))\*\*/g, '$1');
   
   // Supporta link markdown anche con spazi/newline tra ] e (
   const markdownLinkRegex = /\[([^\]]+)\]\s*\(([^)]+)\)/g;
@@ -36,10 +32,17 @@ const renderMarkdownLinks = (text: string) => {
     }
     
     const linkText = match[1];
-    const linkUrl = match[2].trim(); // Rimuovi spazi
+    const linkUrl = match[2].trim();
     
-    // Check if URL contains .pdf (before query params)
-    const isPdfLink = linkUrl.toLowerCase().includes('.pdf');
+    // Check se è PDF guardando l'estensione nel pathname (non query params)
+    const isPdfLink = (() => {
+      try {
+        const url = new URL(linkUrl, window.location.origin);
+        return url.pathname.toLowerCase().endsWith('.pdf');
+      } catch {
+        return linkUrl.toLowerCase().endsWith('.pdf');
+      }
+    })();
     
     if (isPdfLink) {
       parts.push(
@@ -74,17 +77,37 @@ const renderMarkdownLinks = (text: string) => {
   return <>{parts}</>;
 };
 
-// 📎 Componente semplificato per invio media
+// 📎 Componente per invio media
 const SimpleMediaSender = ({ onSendMessage }: { onSendMessage?: MessageContentProps['onSendMessage'] }) => {
   const [isRecording, setIsRecording] = useState(false);
   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const audioInputRef = useRef<HTMLInputElement>(null);
   const pdfInputRef = useRef<HTMLInputElement>(null);
 
+  const cleanup = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+    setMediaRecorder(null);
+    setIsRecording(false);
+  };
+
   const startRecording = async () => {
     try {
+      const { supabase } = await import('@/integrations/supabase/client');
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        alert('Devi essere autenticato per inviare audio');
+        return;
+      }
+
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
+      
       const recorder = new MediaRecorder(stream);
       const audioChunks: Blob[] = [];
 
@@ -95,21 +118,10 @@ const SimpleMediaSender = ({ onSendMessage }: { onSendMessage?: MessageContentPr
       recorder.onstop = async () => {
         const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
         
-        // IMPORTANTE: Carica l'audio su Supabase Storage invece di creare URL blob
         try {
-          console.log('📤 Caricamento audio su Supabase Storage...');
-          const { supabase } = await import('@/integrations/supabase/client');
-          const { data: { user } } = await supabase.auth.getUser();
-          
-          if (!user) {
-            alert('Devi essere autenticato per inviare audio');
-            stream.getTracks().forEach(track => track.stop());
-            return;
-          }
-
           const fileName = `${user.id}/${Date.now()}.webm`;
           
-          const { data, error } = await supabase.storage
+          const { error } = await supabase.storage
             .from('audio-messages')
             .upload(fileName, audioBlob, {
               cacheControl: '3600',
@@ -117,31 +129,23 @@ const SimpleMediaSender = ({ onSendMessage }: { onSendMessage?: MessageContentPr
               contentType: 'audio/webm'
             });
 
-          if (error) {
-            console.error('❌ Errore upload audio:', error);
-            alert('Errore nel caricamento dell\'audio');
-            stream.getTracks().forEach(track => track.stop());
-            return;
-          }
+          if (error) throw error;
 
           const { data: { publicUrl } } = supabase.storage
             .from('audio-messages')
             .getPublicUrl(fileName);
 
-          console.log('✅ Audio caricato, URL pubblico:', publicUrl);
-          
           onSendMessage?.({
             text: '🎵 Messaggio vocale',
-            image_url: publicUrl,  // <- URL pubblico di Supabase Storage
-            type: 'audio',
-            audioBlob: audioBlob
+            image_url: publicUrl,
+            type: 'audio'
           });
         } catch (error) {
-          console.error('❌ Errore caricamento audio:', error);
+          console.error('❌ Errore upload audio:', error);
           alert('Errore nel caricamento dell\'audio');
+        } finally {
+          cleanup();
         }
-
-        stream.getTracks().forEach(track => track.stop());
       };
 
       recorder.start();
@@ -150,14 +154,13 @@ const SimpleMediaSender = ({ onSendMessage }: { onSendMessage?: MessageContentPr
     } catch (error) {
       console.error('❌ Errore registrazione:', error);
       alert('Impossibile accedere al microfono');
+      cleanup();
     }
   };
 
   const stopRecording = () => {
     if (mediaRecorder && mediaRecorder.state === 'recording') {
       mediaRecorder.stop();
-      setIsRecording(false);
-      setMediaRecorder(null);
     }
   };
 
@@ -175,9 +178,7 @@ const SimpleMediaSender = ({ onSendMessage }: { onSendMessage?: MessageContentPr
       return;
     }
 
-    // IMPORTANTE: Carica il file su Supabase Storage invece di creare URL blob
     try {
-      console.log('📤 Caricamento file su Supabase Storage...');
       const { supabase } = await import('@/integrations/supabase/client');
       const { data: { user } } = await supabase.auth.getUser();
       
@@ -190,53 +191,36 @@ const SimpleMediaSender = ({ onSendMessage }: { onSendMessage?: MessageContentPr
       const bucketName = fileType === 'pdf' ? 'pdfs' : 'plant-images';
       const fileName = `${user.id}/${Date.now()}.${fileExt}`;
       
-      console.log(`📤 Caricamento su bucket ${bucketName}: ${fileName}`);
-      
-      const { data, error } = await supabase.storage
+      const { error } = await supabase.storage
         .from(bucketName)
         .upload(fileName, file, {
           cacheControl: '3600',
           upsert: false
         });
 
-      if (error) {
-        console.error('❌ Errore upload:', error);
-        alert('Errore nel caricamento del file');
-        return;
-      }
+      if (error) throw error;
 
       const { data: { publicUrl } } = supabase.storage
         .from(bucketName)
         .getPublicUrl(fileName);
 
-      console.log('✅ File caricato, URL pubblico:', publicUrl);
-
-      let messageText = '';
-      
-      switch (fileType) {
-        case 'image':
-          messageText = '📸 Foto della pianta in consulenza';
-          break;
-        case 'audio':
-          messageText = '🎵 File audio allegato';
-          break;
-        case 'pdf':
-          messageText = `📄 PDF: ${file.name}`;
-          break;
-      }
+      const messageText = {
+        image: '📸 Foto della pianta in consulenza',
+        audio: '🎵 File audio allegato',
+        pdf: `📄 PDF: ${file.name}`
+      }[fileType];
 
       onSendMessage?.({
         text: messageText,
-        image_url: publicUrl,  // <- URL pubblico di Supabase Storage
-        type: fileType,
-        fileData: file
+        image_url: publicUrl,
+        type: fileType
       });
     } catch (error) {
-      console.error('❌ Errore caricamento file:', error);
+      console.error('❌ Errore upload file:', error);
       alert('Errore nel caricamento del file');
+    } finally {
+      event.target.value = '';
     }
-
-    event.target.value = '';
   };
 
   const sendEmoji = (emoji: string) => {
@@ -332,30 +316,19 @@ const SimpleMediaSender = ({ onSendMessage }: { onSendMessage?: MessageContentPr
 };
 
 export const MessageContent = ({ message, onSendMessage }: MessageContentProps) => {
-  const isAudioMessage =
-    (message.image_url && (
-      message.image_url.includes('audio') || 
-      message.image_url.endsWith('.webm') ||
-      message.image_url.endsWith('.mp3') ||
-      message.image_url.endsWith('.wav')
-    ));
+  const isAudioMessage = message.image_url && (
+    message.image_url.includes('audio') || 
+    message.image_url.endsWith('.webm') ||
+    message.image_url.endsWith('.mp3') ||
+    message.image_url.endsWith('.wav')
+  );
 
-  const isPDFMessage =
-    (message.image_url && (
-      message.image_url.toLowerCase().includes('.pdf') ||
-      message.image_url.toLowerCase().includes('/pdfs/')
-    ));
+  const isPDFMessage = message.image_url && (
+    message.image_url.toLowerCase().includes('.pdf') ||
+    message.image_url.toLowerCase().includes('/pdfs/')
+  );
 
-  const isImageMessage =
-    (message.image_url && !isAudioMessage && !isPDFMessage);
-
-  console.log('📝 Message Debug:', {
-    text: message.text,
-    hasImageUrl: !!message.image_url,
-    isAudio: isAudioMessage,
-    isPDF: isPDFMessage,
-    isImage: isImageMessage
-  });
+  const isImageMessage = message.image_url && !isAudioMessage && !isPDFMessage;
 
   return (
     <div className="space-y-3">
@@ -384,6 +357,9 @@ export const MessageContent = ({ message, onSendMessage }: MessageContentProps) 
       {message.products && message.products.length > 0 && (
         <ProductRecommendations products={message.products} />
       )}
+
+      {/* Media Sender (se onSendMessage è disponibile) */}
+      {onSendMessage && <SimpleMediaSender onSendMessage={onSendMessage} />}
     </div>
   );
 };
