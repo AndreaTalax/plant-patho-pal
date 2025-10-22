@@ -96,7 +96,7 @@ const ShopTab = () => {
       console.log('[ShopTab] Products loaded:', result.products);
     } catch (error) {
       console.error('Error fetching products:', error);
-      toast.error('Failed to load products');
+      toast.error('Errore nel caricamento dei prodotti');
     } finally {
       setLoading(false);
     }
@@ -126,7 +126,7 @@ const ShopTab = () => {
             : item
         );
       } else {
-        toast.success("Product added to cart");
+        toast.success("Prodotto aggiunto al carrello");
         return [...currentCart, {id: productId, quantity: 1}];
       }
     });
@@ -134,7 +134,7 @@ const ShopTab = () => {
 
   const removeFromCart = (productId: string) => {
     setCart(currentCart => currentCart.filter(item => item.id !== productId));
-    toast.success("Product removed from cart");
+    toast.success("Prodotto rimosso dal carrello");
   };
 
   /**
@@ -174,7 +174,7 @@ const ShopTab = () => {
 
   const handleCheckout = () => {
     if (!user) {
-      toast.error("Please login to continue");
+      toast.error("Effettua il login per continuare");
       return;
     }
     setIsCartOpen(false);
@@ -195,7 +195,7 @@ const ShopTab = () => {
    */
   const processPayment = async () => {
     if (!user) {
-      toast.error("Please login to continue");
+      toast.error("Effettua il login per continuare");
       return;
     }
 
@@ -231,7 +231,7 @@ const ShopTab = () => {
     } catch (error) {
       console.error('Payment error:', error);
       setPaymentStatus('error');
-      toast.error('Payment failed. Please try again.');
+      toast.error('Pagamento fallito. Riprova.');
     }
   };
 
@@ -274,7 +274,7 @@ const ShopTab = () => {
   return (
     <div className="flex flex-col pt-6 pb-24">
       <div className="px-4">
-        <h2 className="text-2xl font-bold mb-6 text-drplant-green">Phytosanitary Products</h2>
+        <h2 className="text-2xl font-bold mb-6 text-drplant-green">Prodotti per la Cura delle Piante</h2>
         
         {/* Search and filters */}
         <div className="mb-6 space-y-4">
@@ -282,7 +282,7 @@ const ShopTab = () => {
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
             <Input 
               className="pl-10 bg-white"
-              placeholder="Search products..."
+              placeholder="Cerca prodotti..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -293,7 +293,7 @@ const ShopTab = () => {
               onClick={() => setSelectedCategory(null)}
               className={`cursor-pointer ${selectedCategory === null ? 'bg-drplant-blue' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
             >
-              All
+              Tutti
             </Badge>
             {categories.map(category => (
               <Badge 
@@ -309,7 +309,7 @@ const ShopTab = () => {
 
         {/* Products grid */}
         {loading ? (
-          <div className="text-center py-8">Loading products...</div>
+          <div className="text-center py-8">Caricamento prodotti...</div>
         ) : (
           <>
             <div className="grid grid-cols-2 gap-4">
@@ -358,7 +358,7 @@ const ShopTab = () => {
 
             {products.length === 0 && (
               <div className="text-center py-8 text-gray-500">
-                <p>No products found matching your search</p>
+                <p>Nessun prodotto trovato</p>
               </div>
             )}
           </>
@@ -384,15 +384,15 @@ const ShopTab = () => {
       <Dialog open={isCartOpen} onOpenChange={setIsCartOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Your Cart</DialogTitle>
+            <DialogTitle>Il Tuo Carrello</DialogTitle>
             <DialogDescription>
-              Review your items before checkout
+              Controlla i tuoi articoli prima del checkout
             </DialogDescription>
           </DialogHeader>
           
           <div className="space-y-4 my-4">
             {cartItems.length === 0 ? (
-              <p className="text-center text-gray-500 py-4">Your cart is empty</p>
+              <p className="text-center text-gray-500 py-4">Il tuo carrello è vuoto</p>
             ) : (
               <>
                 {cartItems.map(item => (
@@ -442,15 +442,15 @@ const ShopTab = () => {
 
                 <div className="border-t pt-4">
                   <div className="flex justify-between mb-2">
-                    <span>Subtotal</span>
+                    <span>Subtotale</span>
                     <span>€{subtotal.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between mb-4">
-                    <span>Shipping</span>
-                    <span>Free</span>
+                    <span>Spedizione</span>
+                    <span>Gratuita</span>
                   </div>
                   <div className="flex justify-between font-bold text-lg">
-                    <span>Total</span>
+                    <span>Totale</span>
                     <span>€{subtotal.toFixed(2)}</span>
                   </div>
                 </div>
@@ -459,7 +459,7 @@ const ShopTab = () => {
                   className="w-full bg-drplant-green hover:bg-drplant-green-dark mt-4"
                   onClick={handleCheckout}
                 >
-                  Proceed to Checkout
+                  Procedi al Pagamento
                 </Button>
               </>
             )}
@@ -471,16 +471,16 @@ const ShopTab = () => {
       <Dialog open={isCheckoutOpen} onOpenChange={setIsCheckoutOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Checkout</DialogTitle>
+            <DialogTitle>Pagamento</DialogTitle>
             <DialogDescription>
-              Complete your order
+              Completa il tuo ordine
             </DialogDescription>
           </DialogHeader>
           
           {paymentStatus === 'idle' && (
             <div className="space-y-4 my-4">
               <div className="border rounded-md p-4">
-                <h3 className="font-medium mb-2">Order Summary</h3>
+                <h3 className="font-medium mb-2">Riepilogo Ordine</h3>
                 <div className="space-y-2">
                   {cartItems.map(item => (
                     <div key={item.id} className="flex justify-between text-sm">
@@ -489,7 +489,7 @@ const ShopTab = () => {
                     </div>
                   ))}
                   <div className="border-t pt-2 mt-2 font-bold flex justify-between">
-                    <span>Total</span>
+                    <span>Totale</span>
                     <span>€{subtotal.toFixed(2)}</span>
                   </div>
                 </div>
@@ -499,7 +499,7 @@ const ShopTab = () => {
                 className="w-full bg-drplant-green hover:bg-drplant-green-dark mt-4"
                 onClick={processPayment}
               >
-                <CreditCard className="mr-2 h-4 w-4" /> Pay with Stripe
+                <CreditCard className="mr-2 h-4 w-4" /> Paga con Stripe
               </Button>
             </div>
           )}
@@ -507,7 +507,7 @@ const ShopTab = () => {
           {paymentStatus === 'processing' && (
             <div className="py-8 flex flex-col items-center justify-center">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-drplant-green mb-4"></div>
-              <p className="text-center">Redirecting to payment...</p>
+              <p className="text-center">Reindirizzamento al pagamento...</p>
             </div>
           )}
           
@@ -518,8 +518,8 @@ const ShopTab = () => {
                   <path d="M5 13L9 17L19 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </div>
-              <h3 className="text-lg font-medium text-center">Redirected to Payment!</h3>
-              <p className="text-center text-gray-500 mt-2">Complete your payment in the new tab</p>
+              <h3 className="text-lg font-medium text-center">Reindirizzato al Pagamento!</h3>
+              <p className="text-center text-gray-500 mt-2">Completa il tuo pagamento nella nuova scheda</p>
             </div>
           )}
           
@@ -530,13 +530,13 @@ const ShopTab = () => {
                   <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </div>
-              <h3 className="text-lg font-medium text-center">Payment Failed</h3>
-              <p className="text-center text-gray-500 mt-2">There was an issue processing your payment</p>
+              <h3 className="text-lg font-medium text-center">Pagamento Fallito</h3>
+              <p className="text-center text-gray-500 mt-2">Si è verificato un problema durante il pagamento</p>
               <Button 
                 className="mt-4 bg-drplant-green hover:bg-drplant-green-dark"
                 onClick={() => setPaymentStatus('idle')}
               >
-                Try Again
+                Riprova
               </Button>
             </div>
           )}
@@ -584,9 +584,9 @@ const ShopTab = () => {
                   
                   <div className="mb-4">
                     <p className="text-sm text-gray-600">
-                      Stock: {selectedProduct.stock_quantity > 0 
-                        ? `${selectedProduct.stock_quantity} available` 
-                        : 'Out of stock'
+                      Scorte: {selectedProduct.stock_quantity > 0 
+                        ? `${selectedProduct.stock_quantity} disponibili` 
+                        : 'Esaurito'
                       }
                     </p>
                   </div>
@@ -600,7 +600,7 @@ const ShopTab = () => {
                     disabled={selectedProduct.stock_quantity === 0}
                   >
                     <ShoppingBag className="mr-2 h-4 w-4" />
-                    {selectedProduct.stock_quantity === 0 ? 'Out of Stock' : 'Add to Cart'}
+                    {selectedProduct.stock_quantity === 0 ? 'Esaurito' : 'Aggiungi al Carrello'}
                   </Button>
                 </div>
               </div>
