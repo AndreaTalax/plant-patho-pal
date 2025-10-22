@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, ShoppingBag, Filter, CreditCard, X } from 'lucide-react';
+import { Search, ShoppingBag, X } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -25,20 +25,6 @@ interface CartItem {
   product?: Product;
 }
 
-/**
- * Provides the main functionality for a shopping tab,
- * including product search, category selection, cart management, and checkout processing.
- * @example
- * ShopTab()
- * [JSX Element]
- * @param none
- * @returns {JSX.Element} Complete shopping interface component with all functionalities.
- * @description
- *   - Utilizes useState hooks to manage search term, selected category, cart items, cart visibility, checkout visibility, payment status, product list, and loading state.
- *   - Requests product data from a server using the Supabase cloud function 'get-products' based on search term and selected category.
- *   - Includes functions for adding, removing, and updating items in the cart, handling user authentication checks.
- *   - Facilitates payment via Stripe integration, managing payment status and user experience feedback.
- */
 const ShopTab = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -52,28 +38,28 @@ const ShopTab = () => {
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
 
-  // Fetch products
+  // Traduzioni categorie
+  const categoryTranslations: Record<string, string> = {
+    'Fungicides': 'Fungicidi',
+    'Insecticides': 'Insetticidi',
+    'Fertilizers': 'Fertilizzanti',
+    'Nutrients': 'Nutrienti',
+    'Biostimolanti': 'Biostimolanti',
+    'Fertilizzanti': 'Fertilizzanti',
+    'Tools': 'Attrezzi',
+    'Pest Control': 'Antiparassitari',
+    'Soil': 'Terricci',
+    'Seeds': 'Semi'
+  };
+
   useEffect(() => {
     fetchProducts();
   }, [selectedCategory, searchTerm]);
 
-  /**
-   * Fetches products based on selected category and search term.
-   * @example
-   * sync()
-   * No direct return value, but updates products and loading state.
-   * @param {void} - Does not take any direct arguments.
-   * @returns {void} No direct return value.
-   * @description
-   *   - Invokes 'get-products' function from Supabase to retrieve products.
-   *   - Throws an error if the products cannot be fetched.
-   *   - Updates loading and products state accordingly.
-   */
   const fetchProducts = async () => {
     try {
       setLoading(true);
       
-      // Use URL parameters instead of body for search and category
       const supabaseUrl = 'https://otdmqmpxukifoxjlgzmq.supabase.co';
       const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im90ZG1xbXB4dWtpZm94amxnem1xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDY2NDQ5ODksImV4cCI6MjA2MjIyMDk4OX0.re4vu-banv0K-hBFNRYZGy5VucPkk141Pa--x-QiGr4';
       
@@ -92,8 +78,21 @@ const ShopTab = () => {
       if (!response.ok) throw new Error('Failed to fetch products');
       
       const result = await response.json();
-      setProducts(result.products || []);
-      console.log('[ShopTab] Products loaded:', result.products);
+      
+      // Filtra solo prodotti per la cura delle piante
+      const plantCareProducts = (result.products || []).filter((p: Product) => {
+        const category = p.category?.toLowerCase() || '';
+        const name = p.name?.toLowerCase() || '';
+        
+        // Escludi categorie non pertinenti
+        const excludeKeywords = ['clothing', 'fashion', 'shoes', 'electronics', 'phone', 'computer', 'laptop'];
+        return !excludeKeywords.some(keyword => 
+          category.includes(keyword) || name.includes(keyword)
+        );
+      });
+      
+      setProducts(plantCareProducts);
+      console.log('[ShopTab] Products loaded:', plantCareProducts.length);
     } catch (error) {
       console.error('Error fetching products:', error);
       toast.error('Errore nel caricamento dei prodotti');
@@ -104,18 +103,6 @@ const ShopTab = () => {
 
   const categories = Array.from(new Set(products.map(p => p.category)));
 
-  /**
-  * Adds a product to the cart, updating quantity if it already exists.
-  * @example
-  * addToCart("12345")
-  * // Product added to cart
-  * @param {string} productId - The unique identifier of the product to add to the cart.
-  * @returns {void} Does not return a value.
-  * @description
-  *   - Uses a toast message to inform the user when a product is added to the cart for the first time.
-  *   - Updates the quantity of the product in the cart if the product already exists.
-  *   - This function is part of the ShopTab component in the src/components directory.
-  */
   const addToCart = (productId: string) => {
     setCart(currentCart => {
       const existingItem = currentCart.find(item => item.id === productId);
@@ -137,18 +124,6 @@ const ShopTab = () => {
     toast.success("Prodotto rimosso dal carrello");
   };
 
-  /**
-   * Updates product quantity in the shopping cart or removes it if the quantity is zero or less.
-   * @example
-   * updateProductQuantity("abc123", 5)
-   * Updates the product with ID "abc123" to quantity 5 in the cart.
-   * @param {string} productId - The ID of the product to update in the cart.
-   * @param {number} newQuantity - The new quantity for the product. If zero or less, the product is removed from the cart.
-   * @returns {void} Does not return any value.
-   * @description
-   *   - Automatically removes the product from the cart if the new quantity is zero or less.
-   *   - Updates the state of the cart using the `setCart` function.
-   */
   const updateQuantity = (productId: string, newQuantity: number) => {
     if (newQuantity <= 0) {
       removeFromCart(productId);
@@ -181,18 +156,6 @@ const ShopTab = () => {
     setIsCheckoutOpen(true);
   };
 
-  /**
-   * Initiates a payment process with user authentication and error handling.
-   * @example
-   * sync()
-   * // Initiates the payment process and redirects to Stripe if successful.
-   * @param {boolean} {user} - A boolean indicating whether the user is authenticated.
-   * @returns {void} Does not return anything.
-   * @description
-   *   - Redirects the user to Stripe checkout upon successful payment initiation.
-   *   - Updates and resets payment and cart status based on the success or failure of the operation.
-   *   - Displays error messages using toast notifications if the user is not logged in or if payment fails.
-   */
   const processPayment = async () => {
     if (!user) {
       toast.error("Effettua il login per continuare");
@@ -218,7 +181,6 @@ const ShopTab = () => {
 
       if (error) throw error;
 
-      // Redirect to Stripe checkout
       window.open(data.url, '_blank');
       
       setPaymentStatus('success');
@@ -235,35 +197,52 @@ const ShopTab = () => {
     }
   };
 
-  /** 
-   * Get a fallback image URL based on category or product name.
-   */
   const getProductFallbackImage = (product: Product) => {
     const category = product.category?.toLowerCase() || '';
     const name = product.name?.toLowerCase() || '';
 
-    if (name.includes('neem') || category.includes('fungicida') || name.includes('powdery mildew')) {
-      // Neem Oil / Fungicides
-      return 'https://images.unsplash.com/photo-1585687433492-9c648106f131?q=80&w=400&h=400&auto=format&fit=crop';
+    // Propoli / Biostimolanti
+    if (name.includes('propol') || name.includes('spray protettivo')) {
+      return 'https://images.unsplash.com/photo-1608571423902-eed4a5ad8108?q=80&w=400&h=400&auto=format&fit=crop';
     }
-    if (name.includes('vitality') || category.includes('vitality') || name.includes('immun') || category.includes('nutrient')) {
-      // Vitality/Immunity booster
-      return 'https://images.unsplash.com/photo-1625246333195-78d73c0c15b1?q=80&w=400&h=400&auto=format&fit=crop';
+    
+    // Concime / Fertilizzante organico
+    if (name.includes('concime') || name.includes('pellettato') || name.includes('organico') || category.includes('fertilizzanti')) {
+      return 'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?q=80&w=400&h=400&auto=format&fit=crop';
     }
-    if (name.includes('copper') || category.includes('rame')) {
-      // Copper fungicide
-      return 'https://images.unsplash.com/photo-1635348424978-142afa11e458?q=80&w=400&h=400&auto=format&fit=crop';
+    
+    // Olio di Neem / Fungicidi
+    if (name.includes('neem') || name.includes('fungicida') || name.includes('oidio')) {
+      return 'https://images.unsplash.com/photo-1556909212-d5b604d0c90d?q=80&w=400&h=400&auto=format&fit=crop';
     }
-    if (name.includes('insect') || name.includes('afid') || category.includes('insetticida')) {
-      // Insecticidi
-      return 'https://images.unsplash.com/photo-1588196749597-9ff075ee6b5b?q=80&w=400&h=400&auto=format&fit=crop';
+    
+    // Rame / Poltiglia bordolese
+    if (name.includes('rame') || name.includes('copper') || name.includes('bordolese')) {
+      return 'https://images.unsplash.com/photo-1530836369250-ef72a3f5cda8?q=80&w=400&h=400&auto=format&fit=crop';
     }
-    if (name.includes('ph') || name.includes('soil') || category.includes('suolo')) {
-      // Soil pH kit
-      return 'https://images.unsplash.com/photo-1603912699214-92627f304eb6?q=80&w=400&h=400&auto=format&fit=crop';
+    
+    // Insetticidi / Antiparassitari
+    if (name.includes('insett') || name.includes('afid') || name.includes('parassit') || category.includes('insetticid')) {
+      return 'https://images.unsplash.com/photo-1583324113626-70df0f4deaab?q=80&w=400&h=400&auto=format&fit=crop';
     }
-    // Default: plant in a pot
-    return 'https://images.unsplash.com/photo-1464983953574-0892a716854b?q=80&w=400&h=400&auto=format&fit=crop';
+    
+    // Kit pH / Test suolo
+    if (name.includes('ph') || name.includes('test') || name.includes('analisi')) {
+      return 'https://images.unsplash.com/photo-1530836369250-ef72a3f5cda8?q=80&w=400&h=400&auto=format&fit=crop';
+    }
+    
+    // Attrezzi da giardino
+    if (category.includes('attrezzi') || name.includes('vanga') || name.includes('rastrello')) {
+      return 'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?q=80&w=400&h=400&auto=format&fit=crop';
+    }
+    
+    // Terricci
+    if (category.includes('terricci') || name.includes('terreno') || name.includes('substrato')) {
+      return 'https://images.unsplash.com/photo-1585990418792-214fbb1f75f0?q=80&w=400&h=400&auto=format&fit=crop';
+    }
+    
+    // Default: pianta in vaso
+    return 'https://images.unsplash.com/photo-1459411552884-841db9b3cc2a?q=80&w=400&h=400&auto=format&fit=crop';
   };
 
   const openProductDetail = (product: Product) => {
@@ -271,10 +250,14 @@ const ShopTab = () => {
     setIsProductDetailOpen(true);
   };
 
+  const translateCategory = (category: string) => {
+    return categoryTranslations[category] || category;
+  };
+
   return (
     <div className="flex flex-col pt-6 pb-24">
       <div className="px-4">
-        <h2 className="text-2xl font-bold mb-6 text-drplant-green">Prodotti per la Cura delle Piante</h2>
+        <h2 className="text-2xl font-bold mb-6 text-drplant-green">🌱 Prodotti per la Cura delle Piante</h2>
         
         {/* Search and filters */}
         <div className="mb-6 space-y-4">
@@ -301,7 +284,7 @@ const ShopTab = () => {
                 onClick={() => setSelectedCategory(category)}
                 className={`cursor-pointer whitespace-nowrap ${selectedCategory === category ? 'bg-drplant-blue' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
               >
-                {category}
+                {translateCategory(category)}
               </Badge>
             ))}
           </div>
@@ -309,14 +292,17 @@ const ShopTab = () => {
 
         {/* Products grid */}
         {loading ? (
-          <div className="text-center py-8">Caricamento prodotti...</div>
+          <div className="text-center py-8">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-drplant-green mx-auto mb-4"></div>
+            <p>Caricamento prodotti...</p>
+          </div>
         ) : (
           <>
             <div className="grid grid-cols-2 gap-4">
               {products.map(product => (
-                <Card key={product.id} className="overflow-hidden">
+                <Card key={product.id} className="overflow-hidden hover:shadow-lg transition-shadow">
                   <div 
-                    className="aspect-square overflow-hidden cursor-pointer"
+                    className="aspect-square overflow-hidden cursor-pointer bg-gray-100"
                     onClick={() => openProductDetail(product)}
                   >
                     <img
@@ -334,14 +320,14 @@ const ShopTab = () => {
                   </div>
                   <div className="p-3">
                     <h3 
-                      className="font-medium text-sm line-clamp-1 cursor-pointer hover:text-drplant-green"
+                      className="font-medium text-sm line-clamp-2 cursor-pointer hover:text-drplant-green min-h-[2.5rem]"
                       onClick={() => openProductDetail(product)}
                     >
                       {product.name}
                     </h3>
-                    <p className="text-gray-500 text-xs mb-2">{product.category}</p>
+                    <p className="text-gray-500 text-xs mb-2">{translateCategory(product.category)}</p>
                     <div className="flex justify-between items-center">
-                      <span className="font-bold text-drplant-green">€{product.price.toFixed(2)}</span>
+                      <span className="font-bold text-drplant-green text-lg">€{product.price.toFixed(2)}</span>
                       <Button 
                         size="sm" 
                         className="h-8 w-8 p-0 rounded-full bg-drplant-blue hover:bg-drplant-blue-dark"
@@ -351,14 +337,19 @@ const ShopTab = () => {
                         <ShoppingBag size={16} />
                       </Button>
                     </div>
+                    {product.stock_quantity === 0 && (
+                      <p className="text-xs text-red-500 mt-1">Esaurito</p>
+                    )}
                   </div>
                 </Card>
               ))}
             </div>
 
-            {products.length === 0 && (
-              <div className="text-center py-8 text-gray-500">
-                <p>Nessun prodotto trovato</p>
+            {products.length === 0 && !loading && (
+              <div className="text-center py-12 text-gray-500">
+                <ShoppingBag className="h-16 w-16 mx-auto mb-4 opacity-30" />
+                <p className="text-lg font-medium">Nessun prodotto trovato</p>
+                <p className="text-sm mt-2">Prova a modificare i filtri di ricerca</p>
               </div>
             )}
           </>
@@ -367,7 +358,7 @@ const ShopTab = () => {
       
       {/* Cart button */}
       {totalCartItems > 0 && (
-        <div className="fixed bottom-20 right-4">
+        <div className="fixed bottom-20 right-4 z-50">
           <Button 
             className="h-14 w-14 rounded-full shadow-lg bg-drplant-green hover:bg-drplant-green-dark"
             onClick={() => setIsCartOpen(true)}
@@ -384,7 +375,7 @@ const ShopTab = () => {
       <Dialog open={isCartOpen} onOpenChange={setIsCartOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Il Tuo Carrello</DialogTitle>
+            <DialogTitle>🛒 Il Tuo Carrello</DialogTitle>
             <DialogDescription>
               Controlla i tuoi articoli prima del checkout
             </DialogDescription>
@@ -392,21 +383,24 @@ const ShopTab = () => {
           
           <div className="space-y-4 my-4">
             {cartItems.length === 0 ? (
-              <p className="text-center text-gray-500 py-4">Il tuo carrello è vuoto</p>
+              <div className="text-center py-8 text-gray-500">
+                <ShoppingBag className="h-12 w-12 mx-auto mb-3 opacity-30" />
+                <p>Il tuo carrello è vuoto</p>
+              </div>
             ) : (
               <>
                 {cartItems.map(item => (
                   <div key={item.id} className="flex gap-4 border-b pb-4">
                     <div className="w-16 h-16 bg-gray-100 rounded-md flex-shrink-0 overflow-hidden">
                       <img 
-                        src={item.product?.image_url} 
+                        src={item.product?.image_url || getProductFallbackImage(item.product!)} 
                         alt={item.product?.name} 
                         className="w-full h-full object-cover"
                       />
                     </div>
                     <div className="flex-1">
-                      <h4 className="font-medium">{item.product?.name}</h4>
-                      <p className="text-sm text-gray-500">€{item.product?.price.toFixed(2)} each</p>
+                      <h4 className="font-medium text-sm line-clamp-2">{item.product?.name}</h4>
+                      <p className="text-sm text-gray-500">€{item.product?.price.toFixed(2)} cad.</p>
                       <div className="flex justify-between items-center mt-2">
                         <div className="flex items-center border rounded-md">
                           <Button 
@@ -447,11 +441,11 @@ const ShopTab = () => {
                   </div>
                   <div className="flex justify-between mb-4">
                     <span>Spedizione</span>
-                    <span>Gratuita</span>
+                    <span className="text-green-600 font-medium">Gratuita</span>
                   </div>
                   <div className="flex justify-between font-bold text-lg">
                     <span>Totale</span>
-                    <span>€{subtotal.toFixed(2)}</span>
+                    <span className="text-drplant-green">€{subtotal.toFixed(2)}</span>
                   </div>
                 </div>
 
@@ -471,35 +465,35 @@ const ShopTab = () => {
       <Dialog open={isCheckoutOpen} onOpenChange={setIsCheckoutOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Pagamento</DialogTitle>
+            <DialogTitle>💳 Pagamento</DialogTitle>
             <DialogDescription>
-              Completa il tuo ordine
+              Completa il tuo ordine in modo sicuro
             </DialogDescription>
           </DialogHeader>
           
           {paymentStatus === 'idle' && (
             <div className="space-y-4 my-4">
-              <div className="border rounded-md p-4">
-                <h3 className="font-medium mb-2">Riepilogo Ordine</h3>
+              <div className="border rounded-lg p-4 bg-gray-50">
+                <h3 className="font-medium mb-3">📋 Riepilogo Ordine</h3>
                 <div className="space-y-2">
                   {cartItems.map(item => (
                     <div key={item.id} className="flex justify-between text-sm">
-                      <span>{item.product?.name} x {item.quantity}</span>
-                      <span>€{((item.product?.price || 0) * item.quantity).toFixed(2)}</span>
+                      <span className="text-gray-700">{item.product?.name} × {item.quantity}</span>
+                      <span className="font-medium">€{((item.product?.price || 0) * item.quantity).toFixed(2)}</span>
                     </div>
                   ))}
-                  <div className="border-t pt-2 mt-2 font-bold flex justify-between">
+                  <div className="border-t pt-2 mt-2 font-bold flex justify-between text-base">
                     <span>Totale</span>
-                    <span>€{subtotal.toFixed(2)}</span>
+                    <span className="text-drplant-green">€{subtotal.toFixed(2)}</span>
                   </div>
                 </div>
               </div>
               
               <Button 
-                className="w-full bg-drplant-green hover:bg-drplant-green-dark mt-4"
+                className="w-full bg-drplant-green hover:bg-drplant-green-dark h-12"
                 onClick={processPayment}
               >
-                <CreditCard className="mr-2 h-4 w-4" /> Paga con Stripe
+                <ShoppingBag className="mr-2 h-4 w-4" /> Paga con Stripe
               </Button>
             </div>
           )}
@@ -507,7 +501,8 @@ const ShopTab = () => {
           {paymentStatus === 'processing' && (
             <div className="py-8 flex flex-col items-center justify-center">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-drplant-green mb-4"></div>
-              <p className="text-center">Reindirizzamento al pagamento...</p>
+              <p className="text-center font-medium">Reindirizzamento al pagamento...</p>
+              <p className="text-sm text-gray-500 mt-2">Attendere prego</p>
             </div>
           )}
           
@@ -518,8 +513,8 @@ const ShopTab = () => {
                   <path d="M5 13L9 17L19 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </div>
-              <h3 className="text-lg font-medium text-center">Reindirizzato al Pagamento!</h3>
-              <p className="text-center text-gray-500 mt-2">Completa il tuo pagamento nella nuova scheda</p>
+              <h3 className="text-lg font-medium text-center">✅ Reindirizzato!</h3>
+              <p className="text-center text-gray-500 mt-2 text-sm">Completa il pagamento nella nuova scheda</p>
             </div>
           )}
           
@@ -530,8 +525,8 @@ const ShopTab = () => {
                   <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </div>
-              <h3 className="text-lg font-medium text-center">Pagamento Fallito</h3>
-              <p className="text-center text-gray-500 mt-2">Si è verificato un problema durante il pagamento</p>
+              <h3 className="text-lg font-medium text-center">❌ Pagamento Fallito</h3>
+              <p className="text-center text-gray-500 mt-2 text-sm">Si è verificato un problema</p>
               <Button 
                 className="mt-4 bg-drplant-green hover:bg-drplant-green-dark"
                 onClick={() => setPaymentStatus('idle')}
@@ -549,14 +544,14 @@ const ShopTab = () => {
           {selectedProduct && (
             <>
               <DialogHeader>
-                <DialogTitle>{selectedProduct.name}</DialogTitle>
+                <DialogTitle className="text-lg">{selectedProduct.name}</DialogTitle>
                 <DialogDescription>
-                  {selectedProduct.category}
+                  {translateCategory(selectedProduct.category)}
                 </DialogDescription>
               </DialogHeader>
               
               <div className="space-y-4 my-4">
-                <div className="aspect-square overflow-hidden rounded-lg">
+                <div className="aspect-square overflow-hidden rounded-lg bg-gray-100">
                   <img
                     src={
                       selectedProduct.image_url && selectedProduct.image_url.trim() !== ""
@@ -572,27 +567,26 @@ const ShopTab = () => {
                 </div>
                 
                 <div>
-                  <h3 className="font-semibold text-lg mb-2">{selectedProduct.name}</h3>
-                  <p className="text-gray-600 mb-4">{selectedProduct.description}</p>
+                  <p className="text-gray-600 mb-4 text-sm leading-relaxed">{selectedProduct.description}</p>
                   
-                  <div className="flex items-center justify-between mb-4">
-                    <Badge variant="outline">{selectedProduct.category}</Badge>
+                  <div className="flex items-center justify-between mb-4 p-3 bg-gray-50 rounded-lg">
+                    <Badge variant="outline" className="text-xs">{translateCategory(selectedProduct.category)}</Badge>
                     <span className="text-2xl font-bold text-drplant-green">
                       €{selectedProduct.price.toFixed(2)}
                     </span>
                   </div>
                   
-                  <div className="mb-4">
-                    <p className="text-sm text-gray-600">
-                      Scorte: {selectedProduct.stock_quantity > 0 
-                        ? `${selectedProduct.stock_quantity} disponibili` 
-                        : 'Esaurito'
+                  <div className="mb-4 text-sm">
+                    <p className={selectedProduct.stock_quantity > 0 ? 'text-green-600' : 'text-red-500'}>
+                      {selectedProduct.stock_quantity > 0 
+                        ? `✓ ${selectedProduct.stock_quantity} pezzi disponibili` 
+                        : '✗ Esaurito'
                       }
                     </p>
                   </div>
                   
                   <Button 
-                    className="w-full bg-drplant-green hover:bg-drplant-green-dark"
+                    className="w-full bg-drplant-green hover:bg-drplant-green-dark h-12"
                     onClick={() => {
                       addToCart(selectedProduct.id);
                       setIsProductDetailOpen(false);
@@ -600,7 +594,7 @@ const ShopTab = () => {
                     disabled={selectedProduct.stock_quantity === 0}
                   >
                     <ShoppingBag className="mr-2 h-4 w-4" />
-                    {selectedProduct.stock_quantity === 0 ? 'Esaurito' : 'Aggiungi al Carrello'}
+                    {selectedProduct.stock_quantity === 0 ? 'Non Disponibile' : 'Aggiungi al Carrello'}
                   </Button>
                 </div>
               </div>
