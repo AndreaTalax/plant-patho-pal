@@ -46,10 +46,10 @@ serve(async (req) => {
       const doc = new jsPDF();
       let yPosition = 20;
 
-      // Aggiungi il logo Hortives/Dr.Plant
+      // Aggiungi il logo Hortives
       try {
-        // Carica il logo dal deployment pubblico di Lovable
-        const logoBase64 = await fetch('https://plant-patho-pal.lovable.app/hortives-logo.jpg')
+        // Carica il logo specifico per PDF dal deployment pubblico
+        const logoBase64 = await fetch('https://plant-patho-pal.lovable.app/hortives-logo-pdf.jpg')
           .then(res => res.arrayBuffer())
           .then(buffer => {
             const bytes = new Uint8Array(buffer);
@@ -60,12 +60,12 @@ serve(async (req) => {
             return btoa(binary);
           });
         
-        // Aggiungi logo in alto a sinistra (40x20 mm circa)
-        doc.addImage(`data:image/jpeg;base64,${logoBase64}`, 'JPEG', 15, yPosition, 40, 20);
+        // Aggiungi logo Hortives centrato in alto (50x25 mm)
+        doc.addImage(`data:image/jpeg;base64,${logoBase64}`, 'JPEG', 80, yPosition, 50, 25);
         console.log("✅ Logo Hortives aggiunto al PDF");
       } catch (logoError) {
         console.warn("⚠️ Logo non caricato:", logoError);
-        // Procedi senza logo
+        // Procedi senza logo se non disponibile
       }
 
       yPosition += 25;
