@@ -142,9 +142,9 @@ const PlantInfoForm = ({ onComplete, initialData }: PlantInfoFormProps) => {
 
   return (
     <Card className="w-full max-w-2xl mx-auto">
-      <CardHeader>
-        <CardTitle className="text-2xl font-bold text-center">{t('plantInfoTitle')}</CardTitle>
-        <CardDescription className="text-center">
+      <CardHeader className="space-y-4">
+        <CardTitle className="text-3xl font-bold text-center text-drplant-blue-dark">{t('plantInfoTitle')}</CardTitle>
+        <CardDescription className="text-center text-base">
           {t('plantInfoDescription')}
         </CardDescription>
       </CardHeader>
