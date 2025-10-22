@@ -129,22 +129,21 @@ const PlantInfoForm = ({ onComplete, initialData }: PlantInfoFormProps) => {
   };
 
   const handleSwitchToLibrary = (symptomKey: string) => {
-    // Salva il sintomo per cui l'utente vuole aiuto
     localStorage.setItem('symptomHelpRequest', symptomKey);
-    // Naviga al tab libreria
     window.dispatchEvent(new CustomEvent('switchTab', { detail: 'library' }));
   };
 
   const isFormValid = () => {
-    // Deve esserci almeno un sintomo selezionato oltre ai campi obbligatori
     return formData.wateringFrequency && formData.lightExposure && formData.symptoms.length > 0;
   };
 
   return (
     <Card className="w-full max-w-2xl mx-auto">
-      <CardHeader className="space-y-4">
-        <CardTitle className="text-3xl font-bold text-center text-drplant-blue-dark">{t('plantInfoTitle')}</CardTitle>
-        <CardDescription className="text-center text-base">
+      <CardHeader className="space-y-3 pb-4">
+        <CardTitle className="text-2xl font-bold text-center text-drplant-blue-dark leading-tight">
+          🌿 Info Pianta
+        </CardTitle>
+        <CardDescription className="text-center text-sm">
           {t('plantInfoDescription')}
         </CardDescription>
       </CardHeader>
@@ -173,7 +172,6 @@ const PlantInfoForm = ({ onComplete, initialData }: PlantInfoFormProps) => {
               </SelectContent>
             </Select>
             
-            {/* Campo personalizzato per "altro" */}
             {showCustomPlantName && (
               <div className="space-y-2">
                 <Label htmlFor="customPlantName">{t('plantName')}</Label>
