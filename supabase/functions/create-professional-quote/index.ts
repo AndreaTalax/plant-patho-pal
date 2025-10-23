@@ -47,7 +47,7 @@ serve(async (req) => {
       .single();
 
     // ID dell'esperto (fitopatologo Marco Nigro)
-    const expertId = '7e4dd508-fa37-41b0-bef9-bf15c00a4aae';
+    const expertId = '07c7fe19-33c3-4782-b9a0-4e87c8aa7044';
 
     // 1. Crea una nuova conversazione di tipo "professional_quote"
     const { data: conversation, error: convError } = await supabaseClient
