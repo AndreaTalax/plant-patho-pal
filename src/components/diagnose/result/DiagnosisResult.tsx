@@ -89,7 +89,7 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
     return hasSymptoms && hasTreatments;
   };
 
-  // Deduplica, normalizza i nomi e filtra solo malattie con contenuti completi
+  // Deduplica, normalizza i nomi, filtra solo malattie con contenuti completi e limita a 3
   const detectedDiseases = useMemo(() => 
     Array.from(
       new Map(
@@ -98,7 +98,9 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
           return [name.toLowerCase(), { ...disease, name }];
         })
       ).values()
-    ).filter(hasValidContent)
+    )
+    .filter(hasValidContent)
+    .slice(0, 3)
   , [rawDetectedDiseases]);
 
   // Malattia principale (massima confidenza)
