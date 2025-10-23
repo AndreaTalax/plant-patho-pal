@@ -37,7 +37,7 @@ const handler = async (req: Request): Promise<Response> => {
     const { token_hash, email_action_type } = email_data;
     
     // Forza il redirect alla pagina corretta di reset password
-    const correctRedirectUrl = "https://plant-patho-pal.lovable.app/reset-password";
+    const correctRedirectUrl = "https://drplant.lovable.app/reset-password";
     const resetUrl = `${Deno.env.get('SUPABASE_URL')}/auth/v1/verify?token_hash=${token_hash}&type=${email_action_type}&redirect_to=${encodeURIComponent(correctRedirectUrl)}`;
     
     console.log("Reset URL:", resetUrl);

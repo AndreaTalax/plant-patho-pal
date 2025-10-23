@@ -34,7 +34,7 @@ const ForgotPasswordModal = ({ open, onOpenChange }: ForgotPasswordModalProps) =
 
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: 'https://plant-patho-pal.lovable.app/reset-password',
+        redirectTo: 'https://drplant.lovable.app/reset-password',
       });
 
       if (error) {

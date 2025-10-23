@@ -48,7 +48,7 @@ serve(async (req) => {
       logStep("Creating new customer");
     }
 
-    const origin = req.headers.get("origin") || "https://plant-patho-pal.lovable.app";
+    const origin = req.headers.get("origin") || "https://drplant.lovable.app";
     
     const session = await stripe.checkout.sessions.create({
       customer: customerId,

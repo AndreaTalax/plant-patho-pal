@@ -49,7 +49,7 @@ serve(async (req) => {
       // Aggiungi il logo Hortives
       try {
         // Carica il logo specifico per PDF dal deployment pubblico
-        const logoBase64 = await fetch('https://plant-patho-pal.lovable.app/hortives-logo-pdf.jpg')
+        const logoBase64 = await fetch('https://drplant.lovable.app/hortives-logo-pdf.jpg')
           .then(res => res.arrayBuffer())
           .then(buffer => {
             const bytes = new Uint8Array(buffer);

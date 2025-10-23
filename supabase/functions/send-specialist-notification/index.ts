@@ -75,7 +75,7 @@ serve(async (req) => {
     const emailBody = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="text-align: center; margin-bottom: 30px;">
-          <img src="https://plant-patho-pal.lovable.app/lovable-uploads/72d5a60c-404a-4167-9430-511af91c523b.png" alt="Dr.Plant Logo" style="height: 60px;">
+          <img src="https://drplant.lovable.app/lovable-uploads/72d5a60c-404a-4167-9430-511af91c523b.png" alt="Dr.Plant Logo" style="height: 60px;">
           <h1 style="color: #1e40af; margin: 10px 0;">Dr.Plant</h1>
         </div>
 
@@ -112,7 +112,7 @@ serve(async (req) => {
           </div>
           
           <div style="text-align: center; margin: 30px 0;">
-            <a href="https://plant-patho-pal.lovable.app/" 
+            <a href="https://drplant.lovable.app/" 
                style="display: inline-block; background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%); color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold;">
               Accedi alla Dashboard
             </a>
@@ -141,7 +141,7 @@ serve(async (req) => {
     } else {
       try {
         const emailResponse = await resend.emails.send({
-          from: 'Dr.Plant <noreply@plant-patho-pal.lovable.app>',
+          from: 'Dr.Plant <noreply@drplant.lovable.app>',
           to: [targetEmail],
           subject: emailSubject,
           html: emailBody,
