@@ -69,13 +69,13 @@ serve(async (req) => {
 
     console.log("✅ Conversation created:", conversation.id);
 
-    // 2. Genera il PDF del preventivo
+    // 2. Genera il PDF del preventivo professionale
     const doc = new jsPDF();
     let yPosition = 20;
 
     // Aggiungi il logo
     try {
-      const logoBase64 = await fetch('https://plant-patho-pal.lovable.app/hortives-logo-pdf.jpg')
+      const logoBase64 = await fetch('https://drplant.lovable.app/hortives-logo-pdf.jpg')
         .then(res => res.arrayBuffer())
         .then(buffer => {
           const bytes = new Uint8Array(buffer);
@@ -92,151 +92,227 @@ serve(async (req) => {
       console.warn("⚠️ Logo not loaded:", logoError);
     }
 
-    yPosition += 30;
+    yPosition += 35;
 
     // Header
-    doc.setFontSize(22);
+    doc.setFontSize(24);
     doc.setFont("helvetica", "bold");
-    doc.text("RICHIESTA DI PREVENTIVO", 20, yPosition);
-    yPosition += 10;
+    doc.text("RICHIESTA DI PREVENTIVO", 105, yPosition, { align: 'center' });
+    yPosition += 8;
     
-    doc.setFontSize(18);
+    doc.setFontSize(20);
     doc.setTextColor(34, 139, 34);
-    doc.text("Soluzione Professionale Dr.Plant", 20, yPosition);
+    doc.text("Soluzione Professionale Dr.Plant", 105, yPosition, { align: 'center' });
     doc.setTextColor(0, 0, 0);
     yPosition += 15;
 
-    doc.setFontSize(12);
+    doc.setFontSize(11);
     doc.setFont("helvetica", "normal");
-    doc.text(`Data: ${new Date().toLocaleDateString('it-IT')}`, 20, yPosition);
-    doc.text(`ID Richiesta: ${conversation.id.substring(0, 8)}`, 120, yPosition);
-    yPosition += 15;
+    doc.text(`Data richiesta: ${new Date().toLocaleDateString('it-IT')}`, 20, yPosition);
+    doc.text(`ID Richiesta: ${conversation.id.substring(0, 8)}`, 150, yPosition);
+    yPosition += 12;
+
+    // Linea separatrice
+    doc.setDrawColor(34, 139, 34);
+    doc.setLineWidth(0.5);
+    doc.line(20, yPosition, 190, yPosition);
+    yPosition += 12;
 
     // Informazioni aziendali
     doc.setFontSize(16);
     doc.setFont("helvetica", "bold");
-    doc.text("DATI AZIENDA", 20, yPosition);
+    doc.setTextColor(34, 139, 34);
+    doc.text("INFORMAZIONI AZIENDA", 20, yPosition);
+    doc.setTextColor(0, 0, 0);
     yPosition += 10;
 
-    doc.setFontSize(12);
+    doc.setFontSize(11);
     doc.setFont("helvetica", "normal");
     
     const companyInfo = [
-      `Nome Azienda: ${formData.companyName}`,
-      `Persona di Contatto: ${formData.contactPerson}`,
-      `Email: ${formData.email}`,
-      `Telefono: ${formData.phone}`,
-      `Tipo di Business: ${formData.businessType}`
+      { label: 'Nome Azienda:', value: formData.companyName },
+      { label: 'Persona di Contatto:', value: formData.contactPerson },
+      { label: 'Email:', value: formData.email },
+      { label: 'Telefono:', value: formData.phone },
+      { label: 'Tipo di Business:', value: formData.businessType }
     ];
 
-    companyInfo.forEach(line => {
-      doc.text(line, 25, yPosition);
-      yPosition += 7;
+    companyInfo.forEach(item => {
+      doc.setFont("helvetica", "bold");
+      doc.text(item.label, 25, yPosition);
+      doc.setFont("helvetica", "normal");
+      doc.text(item.value, 70, yPosition);
+      yPosition += 6;
     });
 
-    yPosition += 10;
+    yPosition += 8;
+
+    // Linea separatrice
+    doc.setDrawColor(200, 200, 200);
+    doc.setLineWidth(0.3);
+    doc.line(20, yPosition, 190, yPosition);
+    yPosition += 12;
 
     // Tipi di piante di interesse
     doc.setFontSize(16);
     doc.setFont("helvetica", "bold");
-    doc.text("TIPI DI PIANTE DI INTERESSE", 20, yPosition);
+    doc.setTextColor(34, 139, 34);
+    doc.text("PIANTE DI INTERESSE", 20, yPosition);
+    doc.setTextColor(0, 0, 0);
     yPosition += 10;
 
-    doc.setFontSize(12);
+    doc.setFontSize(11);
     doc.setFont("helvetica", "normal");
     const plantTypes = formData.plantTypes.join(', ');
-    doc.text(`Tipi: ${plantTypes}`, 25, yPosition);
-    yPosition += 15;
+    const plantTypeLines = doc.splitTextToSize(plantTypes, 165);
+    plantTypeLines.forEach((line: string) => {
+      doc.text(line, 25, yPosition);
+      yPosition += 6;
+    });
+    yPosition += 8;
+
+    // Linea separatrice
+    doc.line(20, yPosition, 190, yPosition);
+    yPosition += 12;
 
     // Sfide attuali
     if (formData.currentChallenges) {
       doc.setFontSize(16);
       doc.setFont("helvetica", "bold");
-      doc.text("SFIDE ATTUALI", 20, yPosition);
+      doc.setTextColor(34, 139, 34);
+      doc.text("SFIDE E PROBLEMATICHE ATTUALI", 20, yPosition);
+      doc.setTextColor(0, 0, 0);
       yPosition += 10;
 
-      doc.setFontSize(12);
+      doc.setFontSize(11);
       doc.setFont("helvetica", "normal");
-      const lines = doc.splitTextToSize(formData.currentChallenges, 170);
-      lines.forEach((line: string) => {
-        if (yPosition > 260) {
+      const challengeLines = doc.splitTextToSize(formData.currentChallenges, 165);
+      challengeLines.forEach((line: string) => {
+        if (yPosition > 270) {
           doc.addPage();
           yPosition = 20;
         }
         doc.text(line, 25, yPosition);
-        yPosition += 7;
+        yPosition += 6;
       });
-      yPosition += 10;
+      yPosition += 8;
+
+      // Linea separatrice
+      doc.setDrawColor(200, 200, 200);
+      doc.line(20, yPosition, 190, yPosition);
+      yPosition += 12;
     }
 
-    // Requisiti
-    if (yPosition > 220) {
+    // Requisiti e preferenze
+    if (yPosition > 230) {
       doc.addPage();
       yPosition = 20;
     }
 
     doc.setFontSize(16);
     doc.setFont("helvetica", "bold");
+    doc.setTextColor(34, 139, 34);
     doc.text("REQUISITI E PREFERENZE", 20, yPosition);
+    doc.setTextColor(0, 0, 0);
     yPosition += 10;
 
-    doc.setFontSize(12);
+    doc.setFontSize(11);
     doc.setFont("helvetica", "normal");
     
     if (formData.expectedVolume) {
-      doc.text(`Volume diagnosi previsto: ${formData.expectedVolume}`, 25, yPosition);
+      doc.setFont("helvetica", "bold");
+      doc.text("Volume diagnosi previsto:", 25, yPosition);
+      doc.setFont("helvetica", "normal");
+      doc.text(formData.expectedVolume, 80, yPosition);
       yPosition += 7;
     }
 
     if (formData.preferredFeatures && formData.preferredFeatures.length > 0) {
-      doc.text(`Funzionalità preferite: ${formData.preferredFeatures.join(', ')}`, 25, yPosition);
-      yPosition += 7;
+      doc.setFont("helvetica", "bold");
+      doc.text("Funzionalità richieste:", 25, yPosition);
+      yPosition += 6;
+      doc.setFont("helvetica", "normal");
+      const featuresText = formData.preferredFeatures.join(', ');
+      const featureLines = doc.splitTextToSize(featuresText, 160);
+      featureLines.forEach((line: string) => {
+        doc.text(line, 30, yPosition);
+        yPosition += 6;
+      });
+      yPosition += 1;
     }
 
     if (formData.budget) {
-      doc.text(`Budget indicativo: ${formData.budget}`, 25, yPosition);
+      doc.setFont("helvetica", "bold");
+      doc.text("Budget indicativo:", 25, yPosition);
+      doc.setFont("helvetica", "normal");
+      doc.text(formData.budget, 65, yPosition);
       yPosition += 7;
     }
 
-    yPosition += 10;
+    if (formData.timeline) {
+      doc.setFont("helvetica", "bold");
+      doc.text("Tempistiche:", 25, yPosition);
+      doc.setFont("helvetica", "normal");
+      doc.text(formData.timeline, 55, yPosition);
+      yPosition += 7;
+    }
+
+    yPosition += 8;
+
+    // Linea separatrice
+    doc.setDrawColor(200, 200, 200);
+    doc.line(20, yPosition, 190, yPosition);
+    yPosition += 12;
 
     // Informazioni aggiuntive
     if (formData.additionalInfo) {
-      if (yPosition > 220) {
+      if (yPosition > 230) {
         doc.addPage();
         yPosition = 20;
       }
 
       doc.setFontSize(16);
       doc.setFont("helvetica", "bold");
+      doc.setTextColor(34, 139, 34);
       doc.text("INFORMAZIONI AGGIUNTIVE", 20, yPosition);
+      doc.setTextColor(0, 0, 0);
       yPosition += 10;
 
-      doc.setFontSize(12);
+      doc.setFontSize(11);
       doc.setFont("helvetica", "normal");
-      const lines = doc.splitTextToSize(formData.additionalInfo, 170);
-      lines.forEach((line: string) => {
-        if (yPosition > 260) {
+      const additionalLines = doc.splitTextToSize(formData.additionalInfo, 165);
+      additionalLines.forEach((line: string) => {
+        if (yPosition > 270) {
           doc.addPage();
           yPosition = 20;
         }
         doc.text(line, 25, yPosition);
-        yPosition += 7;
+        yPosition += 6;
       });
+      yPosition += 8;
     }
 
     // Footer
-    if (yPosition > 240) {
+    if (yPosition > 250) {
       doc.addPage();
       yPosition = 20;
     }
 
-    yPosition += 20;
+    // Box informativo finale
+    doc.setFillColor(240, 248, 240);
+    doc.rect(15, yPosition, 180, 25, 'F');
+    
+    yPosition += 8;
     doc.setFontSize(10);
-    doc.setFont("helvetica", "italic");
-    doc.text("Questo documento verrà revisionato dal nostro team per fornirti un preventivo personalizzato.", 20, yPosition);
-    yPosition += 5;
-    doc.text("Riceverai una risposta dettagliata via email e tramite chat entro 2-3 giorni lavorativi.", 20, yPosition);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(34, 139, 34);
+    doc.text("Il nostro team analizzerà la vostra richiesta e vi contatterà entro 2-3 giorni lavorativi", 105, yPosition, { align: 'center' });
+    yPosition += 6;
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(80, 80, 80);
+    doc.text("con un preventivo personalizzato e dettagliato per le vostre esigenze aziendali.", 105, yPosition, { align: 'center' });
+    yPosition += 6;
+    doc.text("Riceverete una risposta via email e tramite la chat della piattaforma.", 105, yPosition, { align: 'center' });
 
     // Genera il PDF
     const pdfBlob = doc.output("blob");
