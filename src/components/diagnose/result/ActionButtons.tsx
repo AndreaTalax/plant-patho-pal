@@ -51,6 +51,8 @@ const ActionButtons = ({
     console.log("🔍 DEBUG: startChatWithExpert called", {
       isAuthenticated,
       hasExpertChatAccess,
+      userEmail: user?.email,
+      userProfileEmail: userProfile?.email,
       diagnosisData,
       userProfile
     });
@@ -61,8 +63,18 @@ const ActionButtons = ({
       return;
     }
 
+    // CRITICAL FIX: Usa direttamente user.email come fallback più affidabile
+    const effectiveEmail = userProfile?.email || user?.email;
+    console.log("📧 Effective email for premium check:", effectiveEmail);
+    
+    // Ri-controlla il premium access con email effettiva
+    const { PremiumService } = await import('@/services/premiumService');
+    const hasAccess = PremiumService.canUseExpertChat(effectiveEmail);
+    
+    console.log("🔐 Premium access check result:", hasAccess);
+
     // Controlla se l'utente ha accesso premium
-    if (!hasExpertChatAccess) {
+    if (!hasAccess) {
       console.log("❌ User does not have expert chat access - showing paywall");
       setShowPaywallModal(true);
       return;
