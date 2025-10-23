@@ -72,8 +72,16 @@ const ChatTab = () => {
           }
 
           setActiveConversations(list);
-          // Se c'è una sola conversazione, selezionala automaticamente
-          if (list.length === 1) {
+          
+          // Controlla se c'è una conversazione da aprire automaticamente (da preventivo professionale)
+          const openConvId = localStorage.getItem('openConversationId');
+          if (openConvId) {
+            console.log('📂 Opening conversation from professional quote:', openConvId);
+            setSelectedConversationId(openConvId);
+            localStorage.removeItem('openConversationId');
+          } 
+          // Se non c'è una conversazione da aprire e c'è una sola conversazione, selezionala
+          else if (list.length === 1) {
             setSelectedConversationId(list[0].id);
           }
         }
