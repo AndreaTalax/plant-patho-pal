@@ -54,14 +54,14 @@ self.addEventListener('notificationclick', (event) => {
 
   if (event.action === 'view') {
     event.waitUntil(
-      self.clients.openWindow('https://plant-patho-pal.lovable.app/')
+      self.clients.openWindow('https://drplant.lovable.app/')
     );
   } else if (event.action === 'dismiss') {
     // Non fare nulla, la notifica è già chiusa
   } else {
     // Click principale sulla notifica
     event.waitUntil(
-      self.clients.openWindow('https://plant-patho-pal.lovable.app/')
+      self.clients.openWindow('https://drplant.lovable.app/')
     );
   }
 });
