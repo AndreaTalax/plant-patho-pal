@@ -316,17 +316,22 @@ const SimpleMediaSender = ({ onSendMessage }: { onSendMessage?: MessageContentPr
 };
 
 export const MessageContent = ({ message, onSendMessage }: MessageContentProps) => {
-  const isAudioMessage = message.image_url && (
+  // Controlla se c'è un PDF in pdf_path o image_url
+  const pdfUrl = (message as any).pdf_path || (
+    message.image_url && (
+      message.image_url.toLowerCase().includes('.pdf') ||
+      message.image_url.toLowerCase().includes('/pdfs/')
+    ) ? message.image_url : null
+  );
+
+  const isAudioMessage = message.image_url && !pdfUrl && (
     message.image_url.includes('audio') || 
     message.image_url.endsWith('.webm') ||
     message.image_url.endsWith('.mp3') ||
     message.image_url.endsWith('.wav')
   );
 
-  const isPDFMessage = message.image_url && (
-    message.image_url.toLowerCase().includes('.pdf') ||
-    message.image_url.toLowerCase().includes('/pdfs/')
-  );
+  const isPDFMessage = !!pdfUrl;
 
   const isImageMessage = message.image_url && !isAudioMessage && !isPDFMessage;
 
@@ -340,16 +345,16 @@ export const MessageContent = ({ message, onSendMessage }: MessageContentProps) 
       )}
       
       {/* Media */}
-      {message.image_url && (
+      {(message.image_url || pdfUrl) && (
         <>
-          {isAudioMessage && <AudioMessage audioUrl={message.image_url} />}
-          {isPDFMessage && (
+          {isAudioMessage && <AudioMessage audioUrl={message.image_url!} />}
+          {isPDFMessage && pdfUrl && (
             <PDFDisplay 
-              pdfPath={message.image_url} 
+              pdfPath={pdfUrl} 
               fileName={message.text?.split(': ')[1] || 'documento.pdf'}
             />
           )}
-          {isImageMessage && <ImageDisplay imageUrl={message.image_url} />}
+          {isImageMessage && <ImageDisplay imageUrl={message.image_url!} />}
         </>
       )}
 

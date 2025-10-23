@@ -160,6 +160,7 @@ serve(async (req) => {
         content,
         text,
         image_url,
+        pdf_path,
         metadata,
         sent_at,
         created_at

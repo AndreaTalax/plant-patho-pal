@@ -35,6 +35,7 @@ export const convertToUIMessage = (dbMessage: DatabaseMessage): Message => {
       minute: '2-digit' 
     }),
     image_url: dbMessage.image_url || undefined,
+    pdf_path: dbMessage.pdf_path || undefined,
     products: dbMessage.products || undefined
   };
   

@@ -18,6 +18,7 @@ export interface Message {
   plantDetails?: any;
   userDetails?: any;
   image_url?: string; // Added image_url field for proper image handling
+  pdf_path?: string; // Added pdf_path field for PDF attachments
   reactions?: Reaction[]; // Added reactions field
 }
 
@@ -97,6 +98,7 @@ export interface DatabaseMessage {
   products?: any;
   metadata?: any;
   image_url?: string; // Added image_url field
+  pdf_path?: string; // Added pdf_path field for PDF attachments
 }
 
 export interface DatabaseConversation {
