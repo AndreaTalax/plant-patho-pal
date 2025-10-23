@@ -8,7 +8,7 @@ import ChatHeader from './user/ChatHeader';
 import { DatabaseMessage } from '@/services/chat/types';
 import { Message } from './types';
 import { Button } from '@/components/ui/button';
-import { RefreshCw, AlertCircle } from 'lucide-react';
+import { RefreshCw, AlertCircle, FileText } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { MARCO_NIGRO_ID } from '@/components/phytopathologist';
 
@@ -199,13 +199,15 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({
 
   return (
     <div className="flex flex-col h-full bg-gray-50">
-      {/* Inizializzatore dati automatico */}
-      <ChatInitializer
-        activeChat={activeChat}
-        currentConversationId={currentConversationId}
-        autoDataSent={autoDataSent}
-        setAutoDataSent={setAutoDataSent}
-      />
+      {/* Inizializzatore dati automatico - Non per chat professionali */}
+      {!isProfessionalChat && (
+        <ChatInitializer
+          activeChat={activeChat}
+          currentConversationId={currentConversationId}
+          autoDataSent={autoDataSent}
+          setAutoDataSent={setAutoDataSent}
+        />
+      )}
       
       {/* Header con pulsante indietro */}
       <div className="flex-shrink-0">
@@ -215,14 +217,40 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({
         />
       </div>
 
-      {/* Visualizzazione dati quando necessario */}
-      <div className="flex-shrink-0">
-        <ComprehensiveDataDisplay
-          isVisible={showComprehensiveData}
-          onToggle={() => setShowComprehensiveData(!showComprehensiveData)}
-          isProfessionalChat={isProfessionalChat}
-        />
-      </div>
+      {/* Messaggio informativo per chat professionali */}
+      {isProfessionalChat && (
+        <div className="flex-shrink-0 bg-blue-50 border-b border-blue-200 p-4">
+          <div className="max-w-4xl mx-auto">
+            <div className="flex items-start gap-3">
+              <FileText className="h-5 w-5 text-blue-600 mt-0.5" />
+              <div>
+                <h3 className="font-semibold text-blue-900 mb-1">
+                  Preventivo Professionale
+                </h3>
+                <p className="text-sm text-blue-700">
+                  Questa è una chat dedicata alla tua richiesta di preventivo professionale. 
+                  Il nostro team esaminerà la tua richiesta e ti risponderà con un'offerta personalizzata 
+                  entro 2-3 giorni lavorativi.
+                </p>
+                <p className="text-xs text-blue-600 mt-2">
+                  Il PDF con i dettagli della tua richiesta è stato inviato e allegato qui sotto.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Visualizzazione dati quando necessario - Non per chat professionali */}
+      {!isProfessionalChat && (
+        <div className="flex-shrink-0">
+          <ComprehensiveDataDisplay
+            isVisible={showComprehensiveData}
+            onToggle={() => setShowComprehensiveData(!showComprehensiveData)}
+            isProfessionalChat={isProfessionalChat}
+          />
+        </div>
+      )}
 
       {/* Area chat principale */}
       <div className="flex-1 overflow-hidden bg-white">
@@ -233,18 +261,32 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({
         />
       </div>
 
-      {/* Input messaggi */}
-      <div className="flex-shrink-0">
-        <MessageBoard
-          onSendMessage={handleSendMessage}
-          isSending={isSending}
-          isConnected={isConnected}
-          disabled={!isConnected && !activeChat}
-          conversationId={currentConversationId}
-          senderId={userId}
-          recipientId={MARCO_NIGRO_ID}
-        />
-      </div>
+      {/* Input messaggi - Nascosto per chat professionali */}
+      {!isProfessionalChat && (
+        <div className="flex-shrink-0">
+          <MessageBoard
+            onSendMessage={handleSendMessage}
+            isSending={isSending}
+            isConnected={isConnected}
+            disabled={!isConnected && !activeChat}
+            conversationId={currentConversationId}
+            senderId={userId}
+            recipientId={MARCO_NIGRO_ID}
+          />
+        </div>
+      )}
+
+      {/* Nota per chat professionali */}
+      {isProfessionalChat && (
+        <div className="flex-shrink-0 bg-gray-100 border-t p-4">
+          <div className="max-w-4xl mx-auto text-center">
+            <p className="text-sm text-gray-600">
+              💬 Riceverai una risposta via email e qui nella chat appena il nostro team 
+              avrà preparato il preventivo personalizzato per te.
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

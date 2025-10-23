@@ -88,6 +88,7 @@ export type Database = {
       }
       conversations: {
         Row: {
+          conversation_type: string | null
           created_at: string | null
           expert_id: string | null
           id: string
@@ -99,6 +100,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          conversation_type?: string | null
           created_at?: string | null
           expert_id?: string | null
           id?: string
@@ -110,6 +112,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          conversation_type?: string | null
           created_at?: string | null
           expert_id?: string | null
           id?: string
@@ -457,6 +460,80 @@ export type Database = {
         }
         Relationships: []
       }
+      professional_quotes: {
+        Row: {
+          additional_info: string | null
+          budget: string | null
+          business_type: string
+          company_name: string
+          contact_person: string
+          conversation_id: string | null
+          created_at: string | null
+          current_challenges: string | null
+          email: string
+          expected_volume: string | null
+          id: string
+          pdf_url: string | null
+          phone: string
+          plant_types: string[]
+          preferred_features: string[] | null
+          status: string | null
+          timeline: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          additional_info?: string | null
+          budget?: string | null
+          business_type: string
+          company_name: string
+          contact_person: string
+          conversation_id?: string | null
+          created_at?: string | null
+          current_challenges?: string | null
+          email: string
+          expected_volume?: string | null
+          id?: string
+          pdf_url?: string | null
+          phone: string
+          plant_types: string[]
+          preferred_features?: string[] | null
+          status?: string | null
+          timeline?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          additional_info?: string | null
+          budget?: string | null
+          business_type?: string
+          company_name?: string
+          contact_person?: string
+          conversation_id?: string | null
+          created_at?: string | null
+          current_challenges?: string | null
+          email?: string
+          expected_volume?: string | null
+          id?: string
+          pdf_url?: string | null
+          phone?: string
+          plant_types?: string[]
+          preferred_features?: string[] | null
+          status?: string | null
+          timeline?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "professional_quotes_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           address: string | null
@@ -678,18 +755,9 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      cleanup_expired_sessions: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
-      cleanup_old_cdc_events: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
-      cleanup_old_notifications: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
+      cleanup_expired_sessions: { Args: never; Returns: undefined }
+      cleanup_old_cdc_events: { Args: never; Returns: undefined }
+      cleanup_old_notifications: { Args: never; Returns: undefined }
       get_user_identification_usage: {
         Args: { p_user_id: string }
         Returns: Json

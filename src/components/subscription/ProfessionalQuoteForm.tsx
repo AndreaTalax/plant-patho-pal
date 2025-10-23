@@ -57,22 +57,25 @@ const ProfessionalQuoteForm = ({ onBack, onSubmit }: ProfessionalQuoteFormProps)
     setIsSubmitting(true);
     
     try {
-      // Genera PDF e invia email/chat
-      const { error } = await supabase.functions.invoke('generate-professional-pdf', {
+      // Crea la richiesta di preventivo professionale
+      const { data, error } = await supabase.functions.invoke('create-professional-quote', {
         body: { formData }
       });
 
       if (error) {
-        console.error('Error generating PDF:', error);
-        toast.error(language === 'it' ? 'Errore nella generazione del PDF' : 'Error generating PDF');
+        console.error('Error creating professional quote:', error);
+        toast.error(language === 'it' ? 'Errore nella creazione della richiesta' : 'Error creating quote request');
         return;
       }
 
       toast.success(
         language === 'it' 
-          ? '✅ Richiesta inviata! PDF generato e inviato al fitopatologo. Ti reindirizziamo alla chat...' 
-          : '✅ Request sent! PDF generated and sent to the phytopathologist. Redirecting you to chat...'
+          ? '✅ Richiesta inviata! PDF generato e conversazione creata. Ti reindirizziamo alla chat...' 
+          : '✅ Request sent! PDF generated and conversation created. Redirecting you to chat...'
       );
+
+      // Salva l'ID della conversazione per aprirla
+      localStorage.setItem('openConversationId', data.conversationId);
 
       // Reindirizza alla chat dopo 2 secondi
       setTimeout(() => {
