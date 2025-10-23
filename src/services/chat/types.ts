@@ -48,4 +48,5 @@ export interface DatabaseMessage {
   products?: any;
   metadata?: any;
   image_url?: string; // Added missing image_url property
+  pdf_path?: string; // Added missing pdf_path property for PDF attachments
 }
