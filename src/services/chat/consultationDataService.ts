@@ -59,18 +59,6 @@ export class ConsultationDataService {
         hasDiagnosis: !!diagnosisResult
       });
 
-      // Se c'è una diagnosi AI, invia sempre un nuovo PDF aggiornato
-      // Altrimenti controlla se i dati base sono già stati inviati
-      if (!diagnosisResult) {
-        const alreadySent = await this.isConsultationDataSent(conversationId);
-        if (alreadySent) {
-          console.log('ℹ️ Dati base già inviati, nessuna diagnosi AI da aggiungere');
-          return true;
-        }
-      } else {
-        console.log('🔄 Invio PDF con diagnosi AI aggiornata...');
-      }
-
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         console.error('❌ User non autenticato');
@@ -82,6 +70,35 @@ export class ConsultationDataService {
       if (!session) {
         console.error('❌ No active session');
         return false;
+      }
+
+      // IMPORTANTE: Verifica se questa è una conversazione di tipo "professional_quote"
+      // Se lo è, NON generare un PDF standard perché è già stato generato da create-professional-quote
+      const { data: conversation, error: convError } = await supabase
+        .from('conversations')
+        .select('conversation_type')
+        .eq('id', conversationId)
+        .single();
+
+      if (convError) {
+        console.error('❌ Errore recupero tipo conversazione:', convError);
+      }
+
+      if (conversation?.conversation_type === 'professional_quote') {
+        console.log('ℹ️ Questa è una conversazione professional_quote - PDF già generato, skip invio automatico');
+        return true; // Il PDF professionale è già stato inviato da create-professional-quote
+      }
+
+      // Se c'è una diagnosi AI, invia sempre un nuovo PDF aggiornato
+      // Altrimenti controlla se i dati base sono già stati inviati
+      if (!diagnosisResult) {
+        const alreadySent = await this.isConsultationDataSent(conversationId);
+        if (alreadySent) {
+          console.log('ℹ️ Dati base già inviati, nessuna diagnosi AI da aggiungere');
+          return true;
+        }
+      } else {
+        console.log('🔄 Invio PDF con diagnosi AI aggiornata...');
       }
 
       // Genera il PDF professionale
