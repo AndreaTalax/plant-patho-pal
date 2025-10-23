@@ -374,23 +374,37 @@ serve(async (req) => {
     // 4. Crea un messaggio nella conversazione con il PDF allegato
     const { error: messageError } = await supabaseClient
       .from('messages')
-      .insert({
-        conversation_id: conversation.id,
-        sender_id: user.id,
-        recipient_id: expertId,
-        content: `Richiesta di preventivo professionale per ${formData.companyName}`,
-        text: `Richiesta di preventivo professionale per ${formData.companyName}`,
-        pdf_path: pdfUrl,
-        metadata: {
-          type: 'professional_quote',
-          company_name: formData.companyName,
-          quote_id: conversation.id
+      .insert([
+        {
+          conversation_id: conversation.id,
+          sender_id: user.id,
+          recipient_id: expertId,
+          content: `📋 Richiesta di preventivo professionale per ${formData.companyName}\n\n📎 Il PDF con tutti i dettagli della richiesta è allegato qui sotto.`,
+          text: `📋 Richiesta di preventivo professionale per ${formData.companyName}\n\n📎 Il PDF con tutti i dettagli della richiesta è allegato qui sotto.`,
+          image_url: pdfUrl,
+          pdf_path: pdfUrl,
+          metadata: {
+            type: 'professional_quote',
+            company_name: formData.companyName,
+            quote_id: conversation.id
+          }
+        },
+        {
+          conversation_id: conversation.id,
+          sender_id: expertId,
+          recipient_id: user.id,
+          content: `👋 Grazie per la vostra richiesta di preventivo professionale!\n\n📋 Ho ricevuto il PDF con tutti i dettagli:\n• Azienda: ${formData.companyName}\n• Contatto: ${formData.contactPerson}\n• Tipo di business: ${formData.businessType}\n\n🔍 Il nostro team analizzerà attentamente la vostra richiesta e vi contatterà entro 2-3 giorni lavorativi con un'offerta personalizzata che soddisfi le vostre esigenze specifiche.\n\n💬 Nel frattempo, se avete domande o necessità urgenti, non esitate a scrivermi qui nella chat!`,
+          text: `👋 Grazie per la vostra richiesta di preventivo professionale!\n\n📋 Ho ricevuto il PDF con tutti i dettagli:\n• Azienda: ${formData.companyName}\n• Contatto: ${formData.contactPerson}\n• Tipo di business: ${formData.businessType}\n\n🔍 Il nostro team analizzerà attentamente la vostra richiesta e vi contatterà entro 2-3 giorni lavorativi con un'offerta personalizzata che soddisfi le vostre esigenze specifiche.\n\n💬 Nel frattempo, se avete domande o necessità urgenti, non esitate a scrivermi qui nella chat!`,
+          metadata: {
+            type: 'expert_response',
+            auto_reply: true
+          }
         }
-      });
+      ]);
 
     if (messageError) {
-      console.error("Error creating message:", messageError);
-      throw new Error("Failed to create message");
+      console.error("Error creating messages:", messageError);
+      throw new Error("Failed to create messages");
     }
 
     console.log("✅ Professional quote request completed successfully");
