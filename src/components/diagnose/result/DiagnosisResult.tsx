@@ -73,7 +73,23 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
     effectiveDiagnosis?.diseases ||
     [];
 
-  // Deduplica e normalizza i nomi
+  // Funzione helper per verificare se una malattia ha contenuti validi
+  const hasValidContent = (disease: any) => {
+    const hasSymptoms = disease.symptoms && 
+                        Array.isArray(disease.symptoms) && 
+                        disease.symptoms.length > 0 &&
+                        disease.symptoms.some((s: string) => s && s.trim().length > 10);
+    
+    const hasTreatments = (disease.treatments && 
+                           Array.isArray(disease.treatments) && 
+                           disease.treatments.length > 0 &&
+                           disease.treatments.some((t: string) => t && t.trim().length > 10)) ||
+                          (disease.treatment && disease.treatment.trim().length > 10);
+    
+    return hasSymptoms && hasTreatments;
+  };
+
+  // Deduplica, normalizza i nomi e filtra solo malattie con contenuti completi
   const detectedDiseases = useMemo(() => 
     Array.from(
       new Map(
@@ -82,7 +98,7 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
           return [name.toLowerCase(), { ...disease, name }];
         })
       ).values()
-    )
+    ).filter(hasValidContent)
   , [rawDetectedDiseases]);
 
   // Malattia principale (massima confidenza)
