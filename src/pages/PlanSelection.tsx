@@ -118,11 +118,11 @@ const PlanSelection = () => {
       <div className="w-full max-w-6xl">
         {/* Header */}
         <div className="text-center mb-12">
-          <div className="inline-flex items-center justify-center p-4 bg-white/80 backdrop-blur-sm rounded-full shadow-lg mb-6">
+          <div className="inline-flex items-center justify-center mb-6">
             <img 
               src="/lovable-uploads/72d5a60c-404a-4167-9430-511af91c523b.png" 
               alt="Dr.Plant Logo" 
-              className="h-16 w-auto"
+              className="h-20 w-auto drop-shadow-lg"
             />
           </div>
           <h1 className="text-4xl font-bold text-drplant-blue-dark mb-4">
