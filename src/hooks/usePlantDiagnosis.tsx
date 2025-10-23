@@ -8,7 +8,7 @@ import { toast } from 'sonner';
 import type { PlantInfo } from '@/components/diagnose/types';
 
 export const usePlantDiagnosis = () => {
-  const { user } = useAuth();
+  const { user, userProfile } = useAuth();
 
   // Nuovo hook analisi
   const { 
@@ -193,6 +193,58 @@ export const usePlantDiagnosis = () => {
         description: `${plant?.plantName || 'Pianta'} salvata nella tua cronologia`,
         duration: 3000
       });
+
+      // Se c'è una conversazione attiva con l'esperto, genera e invia il PDF automaticamente
+      console.log('🔍 Controllo conversazioni attive per invio PDF automatico...');
+      const { data: conversations } = await supabase
+        .from('conversations')
+        .select('id, conversation_type')
+        .eq('user_id', user.id)
+        .eq('status', 'active')
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (conversations && conversations.length > 0 && conversations[0].conversation_type !== 'professional_quote') {
+        console.log('📄 Trovata conversazione attiva, generazione PDF automatica...');
+        
+        const plantData = {
+          plantName: plant?.plantName || 'Pianta non identificata',
+          symptoms: diagnosedDisease?.symptoms?.join(', ') || 'Nessun sintomo rilevato',
+          environment: 'Da specificare',
+          wateringFrequency: 'Da specificare',
+          sunExposure: 'Da specificare',
+          imageUrl: permanentImageUrl,
+          diagnosisResult: {
+            confidence: Math.min(75, Math.round(plant?.confidence || 0)),
+            isHealthy: !disease,
+            disease: disease?.disease || null,
+            description: diagnosisResult || `Identificata come ${plant?.plantName || 'pianta sconosciuta'}`,
+          },
+          useAI: true
+        };
+
+        const userData = {
+          firstName: userProfile?.first_name || '',
+          lastName: userProfile?.last_name || '',
+          email: userProfile?.email || user.email || '',
+          birthDate: userProfile?.birth_date || 'Non specificata',
+          birthPlace: userProfile?.birth_place || 'Non specificato'
+        };
+
+        const { ConsultationDataService } = await import('@/services/chat/consultationDataService');
+        const pdfSent = await ConsultationDataService.sendInitialConsultationData(
+          conversations[0].id,
+          plantData,
+          userData,
+          true,
+          analysisDetails
+        );
+
+        if (pdfSent) {
+          console.log('✅ PDF diagnosi inviato automaticamente alla chat');
+          toast.success('PDF diagnosi inviato alla chat con l\'esperto!');
+        }
+      }
 
     } catch (error: any) {
       console.error('❌ Errore salvataggio diagnosi:', error);

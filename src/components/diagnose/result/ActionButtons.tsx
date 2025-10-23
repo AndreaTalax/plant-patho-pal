@@ -90,6 +90,9 @@ const ActionButtons = ({
 
       console.log("✅ Conversazione creata:", conversation.id);
 
+      // Salva l'ID della conversazione in localStorage per aprirla automaticamente
+      localStorage.setItem('openConversationId', conversation.id);
+
       // Trigger automatic PDF generation and sending
       if (diagnosisData && userProfile) {
         console.log("📄 GENERAZIONE PDF AUTOMATICA in corso...");
