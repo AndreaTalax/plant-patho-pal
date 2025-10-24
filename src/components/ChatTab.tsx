@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
+import { useTheme } from '@/context/ThemeContext';
 import { UserChatViewRealtime } from './chat/UserChatViewRealtime';
 import { ConnectionStatus } from './ConnectionStatus';
 import { MessageCircle, Crown, FileText, Trash2, Bell } from 'lucide-react';
@@ -24,6 +25,7 @@ interface ActiveConversation {
 
 const ChatTab = () => {
   const { isAuthenticated, user, userProfile } = useAuth();
+  const { t } = useTheme();
   const { hasExpertChatAccess } = usePremiumStatus();
   const [showPaywall, setShowPaywall] = useState(false);
   const [activeConversations, setActiveConversations] = useState<ActiveConversation[]>([]);
@@ -163,9 +165,9 @@ const ChatTab = () => {
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-2xl mx-auto text-center">
           <MessageCircle className="h-16 w-16 mx-auto mb-6 text-drplant-green" />
-          <h2 className="text-2xl font-bold mb-4">Accedi per utilizzare la chat</h2>
+          <h2 className="text-2xl font-bold mb-4">{t('accessToUseChat')}</h2>
           <p className="text-gray-600">
-            Effettua l'accesso per chattare con i nostri esperti di fitopatie
+            {t('accessDescription')}
           </p>
         </div>
       </div>
@@ -178,7 +180,7 @@ const ChatTab = () => {
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-2xl mx-auto text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-drplant-green mx-auto mb-4"></div>
-          <p className="text-gray-600">Caricamento chat...</p>
+          <p className="text-gray-600">{t('chatLoading')}</p>
         </div>
       </div>
     );
@@ -191,15 +193,14 @@ const ChatTab = () => {
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-2xl mx-auto text-center">
           <Crown className="h-16 w-16 mx-auto mb-6 text-amber-500" />
-          <h2 className="text-2xl font-bold mb-4">Chat Premium con Fitopatologo</h2>
+          <h2 className="text-2xl font-bold mb-4">{t('premiumChat')}</h2>
           <p className="text-gray-600 mb-6">
-            La chat diretta con il nostro esperto Marco Nigro è disponibile solo per gli utenti Premium
+            {t('premiumChatDescription')}
           </p>
           
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
             <p className="text-blue-800 text-sm">
-              💡 <strong>Ricorda:</strong> La diagnosi AI rimane sempre gratuita! 
-              Puoi utilizzarla dalla sezione "Diagnosi".
+              💡 <strong>{t('remember')}:</strong> {t('aiDiagnosisRemainsFree')}
             </p>
           </div>
           
@@ -209,7 +210,7 @@ const ChatTab = () => {
             size="lg"
           >
             <Crown className="h-5 w-5 mr-2" />
-            Passa a Premium
+            {t('upgradeToPremium')}
           </Button>
           
           <PremiumPaywallModal
@@ -247,9 +248,9 @@ const ChatTab = () => {
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto">
           <div className="mb-6">
-            <h2 className="text-2xl font-bold mb-2">Le tue conversazioni attive</h2>
+            <h2 className="text-2xl font-bold mb-2">{t('yourActiveConversations')}</h2>
             <p className="text-gray-600">
-              Continua le conversazioni con il fitopatologo Marco Nigro
+              {t('clickToViewDetails')}
             </p>
           </div>
           <div className="space-y-4">
@@ -263,7 +264,7 @@ const ChatTab = () => {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <CardTitle className="text-lg">
-                        Conversazione con Marco Nigro
+                        {t('conversationWithExpert')}
                       </CardTitle>
                       {conversation.unread_count && conversation.unread_count > 0 && (
                         <div className="relative">
@@ -282,7 +283,7 @@ const ChatTab = () => {
                         variant={conversation.status === 'active' ? 'default' : 'secondary'}
                         className="bg-green-100 text-green-800"
                       >
-                        Attiva
+                        {t('conversationActive')}
                       </Badge>
                       <Button
                         variant="ghost"
@@ -295,7 +296,7 @@ const ChatTab = () => {
                     </div>
                   </div>
                   <CardDescription>
-                    Iniziata il {new Date(conversation.created_at).toLocaleDateString('it-IT', {
+                    {t('startedOn')} {new Date(conversation.created_at).toLocaleDateString(t('language') === 'it' ? 'it-IT' : 'en-US', {
                       day: 'numeric',
                       month: 'long',
                       year: 'numeric'
@@ -305,7 +306,7 @@ const ChatTab = () => {
                 <CardContent>
                   {conversation.last_message_text && (
                     <div className="mb-3">
-                      <p className="text-sm text-gray-600 mb-1">Ultimo messaggio:</p>
+                      <p className="text-sm text-gray-600 mb-1">{t('lastMessage')}:</p>
                       <p className="text-sm bg-gray-50 p-2 rounded truncate">
                         {conversation.last_message_text.length > 100 
                           ? conversation.last_message_text.substring(0, 100) + '...'
@@ -316,7 +317,7 @@ const ChatTab = () => {
                   )}
                   {conversation.last_message_at && (
                     <p className="text-xs text-gray-500">
-                      Ultimo aggiornamento: {new Date(conversation.last_message_at).toLocaleString('it-IT')}
+                      {t('lastUpdate')}: {new Date(conversation.last_message_at).toLocaleString(t('language') === 'it' ? 'it-IT' : 'en-US')}
                     </p>
                   )}
                 </CardContent>
@@ -335,10 +336,10 @@ const ChatTab = () => {
                 size="lg"
               >
                 <FileText className="h-5 w-5 mr-3" />
-                Nuovo Preventivo Professionale
+                {t('newProfessionalQuote')}
               </Button>
               <p className="text-sm text-gray-600 mt-2">
-                Richiedi un preventivo personalizzato per la tua azienda
+                {t('requestCustomQuote')}
               </p>
             </div>
             
@@ -351,7 +352,7 @@ const ChatTab = () => {
                 variant="outline"
               >
                 <FileText className="h-4 w-4 mr-2" />
-                Nuova Diagnosi
+                {t('newDiagnosis')}
               </Button>
             </div>
           </div>
@@ -365,18 +366,15 @@ const ChatTab = () => {
     <div className="container mx-auto px-4 py-8">
       <div className="max-w-2xl mx-auto text-center">
         <MessageCircle className="h-16 w-16 mx-auto mb-6 text-drplant-green" />
-        <h2 className="text-2xl font-bold mb-4">Chat con il Fitopatologo</h2>
+        <h2 className="text-2xl font-bold mb-4">{t('chatWithPhytopathologist')}</h2>
         <p className="text-gray-600 mb-6">
-          Per iniziare una conversazione con il nostro esperto Marco Nigro, 
-          effettua prima una diagnosi dalla sezione "Diagnosi" e scegli la 
-          consulenza esperto.
+          {t('toStartConversation')}
         </p>
         
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
           <p className="text-blue-800 text-sm">
             <FileText className="inline h-4 w-4 mr-1" />
-            <strong>Come funziona:</strong> Fai una diagnosi, carica la foto della tua pianta, 
-            seleziona "Consulenza Esperto" e inizierai automaticamente la chat.
+            <strong>{t('howItWorks')}:</strong> {t('diagnosisProcess')}
           </p>
         </div>
         
@@ -389,7 +387,7 @@ const ChatTab = () => {
           size="lg"
         >
           <FileText className="h-5 w-5 mr-2" />
-          Vai alla Diagnosi
+          {t('goToDiagnosis')}
         </Button>
       </div>
     </div>
