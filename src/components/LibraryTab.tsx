@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Search, ChevronRight } from 'lucide-react';
 import { Card } from '@/components/ui/card';
+import { useTheme } from '@/context/ThemeContext';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -125,6 +126,7 @@ const symptomExplanations = {
 };
 
 const LibraryTab = () => {
+  const { t } = useTheme();
   const [searchTerm, setSearchTerm] = useState('');
   const [activeArticle, setActiveArticle] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('all');
@@ -259,14 +261,14 @@ const LibraryTab = () => {
     <div className="flex flex-col pt-6 pb-24">
       {!activeArticle ? (
         <div className="px-4">
-          <h2 className="text-2xl font-bold mb-6 text-drplant-green">Knowledge Library</h2>
+          <h2 className="text-2xl font-bold mb-6 text-drplant-green">{t('knowledgeLibrary')}</h2>
           
           {/* Search */}
           <div className="mb-6 relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
             <Input 
               className="pl-10 bg-white"
-              placeholder="Search articles..."
+              placeholder={t('searchArticles')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -434,7 +436,7 @@ const LibraryTab = () => {
               
               <div className="p-4 space-y-4">
                 <div>
-                  <h3 className="text-lg font-semibold text-drplant-green mb-2">Article Content</h3>
+                  <h3 className="text-lg font-semibold text-drplant-green mb-2">{t('articleContent')}</h3>
                   <div className="prose prose-sm max-w-none text-gray-700">
                     {(selectedArticle.content || selectedArticle.text || '').split('\n').map((paragraph, i) => (
                       <p key={i} className="mb-3">{paragraph}</p>
