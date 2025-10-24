@@ -10,6 +10,7 @@ import { AuthPageLayout } from "@/components/auth/AuthPageLayout";
 import { Link } from "react-router-dom";
 import { useTheme } from "@/context/ThemeContext";
 import { ArrowLeft } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 const SignUp = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -18,6 +19,29 @@ const SignUp = () => {
   const { register } = useAuth();
   const { t } = useTheme();
   const navigate = useNavigate();
+
+  const handleGoogleSignup = async () => {
+    try {
+      setIsLoading(true);
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/complete-profile`,
+        }
+      });
+      
+      if (error) {
+        throw error;
+      }
+    } catch (error: any) {
+      console.error('Google signup error:', error);
+      toast.error("Errore", {
+        description: "Impossibile registrarsi con Google. Riprova.",
+        dismissible: true
+      });
+      setIsLoading(false);
+    }
+  };
 
   const onSubmit = async (values: SignUpFormValues) => {
     setIsLoading(true);
@@ -124,7 +148,11 @@ const SignUp = () => {
       </div>
       
       <AuthPageLayout>
-        <SignUpForm isLoading={isLoading} onSubmit={onSubmit} />
+        <SignUpForm 
+          isLoading={isLoading} 
+          onSubmit={onSubmit}
+          onGoogleSignup={handleGoogleSignup}
+        />
       </AuthPageLayout>
     </div>
   );
