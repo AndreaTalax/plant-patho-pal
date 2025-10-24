@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,38 +6,23 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { LockKeyhole, Mail, Globe, Fingerprint } from "lucide-react";
+import { LockKeyhole, Mail, Globe } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/context/ThemeContext";
 import ForgotPasswordModal from "@/components/auth/ForgotPasswordModal";
 import PrivacyPolicyTrigger from "@/components/PrivacyPolicyTrigger";
 import TermsOfServiceTrigger from "@/components/TermsOfServiceTrigger";
 import CookiePolicyTrigger from "@/components/CookiePolicyTrigger";
-import { BiometricAuthService } from "@/services/biometricAuthService";
-import { supabase } from "@/integrations/supabase/client";
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [biometricAvailable, setBiometricAvailable] = useState(false);
-  const [biometricEnabled, setBiometricEnabled] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const { login } = useAuth();
   const { language, setLanguage, t } = useTheme();
   const [showForgotPassword, setShowForgotPassword] = useState(false);
-
-  // Controlla la disponibilità della biometria
-  useEffect(() => {
-    const checkBiometric = async () => {
-      const available = await BiometricAuthService.isAvailable();
-      const enabled = await BiometricAuthService.isEnabled();
-      setBiometricAvailable(available);
-      setBiometricEnabled(enabled);
-    };
-    checkBiometric();
-  }, []);
 
   const adminCredentials = {
     'agrotecnicomarconigro@gmail.com': 'marconigro93',
@@ -47,63 +32,6 @@ const Login = () => {
 
   const isAdminEmail = (email: string) => {
     return Object.keys(adminCredentials).includes(email.toLowerCase());
-  };
-
-  const handleBiometricLogin = async () => {
-    try {
-      setIsLoading(true);
-      const credentials = await BiometricAuthService.authenticate();
-      
-      if (credentials) {
-        setEmail(credentials.email);
-        setPassword(credentials.password);
-        
-        // Procedi con il login
-        const result = await login(credentials.email, credentials.password);
-        
-        if (result.success) {
-          toast.success(t("loginSuccessful"), {
-            description: "Accesso con impronta digitale completato",
-            dismissible: true
-          });
-          
-          setTimeout(() => {
-            navigate("/", { replace: true });
-          }, 500);
-        }
-      }
-    } catch (error) {
-      console.error('Biometric login error:', error);
-      toast.error("Errore", {
-        description: "Autenticazione biometrica fallita",
-        dismissible: true
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleGoogleLogin = async () => {
-    try {
-      setIsLoading(true);
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}/`,
-        }
-      });
-      
-      if (error) {
-        throw error;
-      }
-    } catch (error: any) {
-      console.error('Google login error:', error);
-      toast.error("Errore", {
-        description: "Impossibile accedere con Google. Riprova.",
-        dismissible: true
-      });
-      setIsLoading(false);
-    }
   };
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -138,16 +66,6 @@ const Login = () => {
       
       if (result.success) {
         console.log('Login successful');
-        
-        // Proponi di abilitare la biometria se disponibile e non ancora abilitata
-        if (biometricAvailable && !biometricEnabled) {
-          toast.info("Abilita l'impronta digitale", {
-            description: "Vuoi abilitare l'accesso rapido con impronta? Vai nelle impostazioni.",
-            duration: 5000,
-            dismissible: true
-          });
-        }
-        
         toast.success(t("loginSuccessful"), {
           description: isAdminEmail ? "Benvenuto, Amministratore!" : t("welcomeMessage"),
           dismissible: true
@@ -293,45 +211,6 @@ const Login = () => {
               >
                 {isLoading ? t("loginInProgress") : t("login")}
               </Button>
-
-              {/* Google Login */}
-              <div className="relative my-4">
-                <div className="absolute inset-0 flex items-center">
-                  <span className="w-full border-t" />
-                </div>
-                <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-white px-2 text-muted-foreground">
-                    oppure
-                  </span>
-                </div>
-              </div>
-
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full"
-                onClick={handleGoogleLogin}
-                disabled={isLoading}
-              >
-                <svg className="mr-2 h-4 w-4" aria-hidden="true" focusable="false" data-prefix="fab" data-icon="google" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 488 512">
-                  <path fill="currentColor" d="M488 261.8C488 403.3 391.1 504 248 504 110.8 504 0 393.2 0 256S110.8 8 248 8c66.8 0 123 24.5 166.3 64.9l-67.5 64.9C258.5 52.6 94.3 116.6 94.3 256c0 86.5 69.1 156.6 153.7 156.6 98.2 0 135-70.4 140.8-106.9H248v-85.3h236.1c2.3 12.7 3.9 24.9 3.9 41.4z"></path>
-                </svg>
-                Continua con Google
-              </Button>
-
-              {/* Biometric Login */}
-              {biometricAvailable && biometricEnabled && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full mt-2"
-                  onClick={handleBiometricLogin}
-                  disabled={isLoading}
-                >
-                  <Fingerprint className="mr-2 h-4 w-4" />
-                  Accedi con impronta digitale
-                </Button>
-              )}
             </form>
           </CardContent>
           <CardFooter className="flex flex-col space-y-4">
