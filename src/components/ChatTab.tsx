@@ -31,6 +31,7 @@ const ChatTab = () => {
   const [activeConversations, setActiveConversations] = useState<ActiveConversation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
+  const [subscriptionTier, setSubscriptionTier] = useState<string | null>(null);
 
   // Determina se si tratta di una chat professionale dalla conversazione selezionata
   const selectedConversation = activeConversations.find(c => c.id === selectedConversationId);
@@ -46,6 +47,18 @@ const ChatTab = () => {
 
       try {
         console.log('🔍 ChatTab: Controllo conversazioni per utente:', user.id);
+        
+        // Controlla il tier dell'abbonamento
+        const { data: subscriber } = await supabase
+          .from('subscribers')
+          .select('subscription_tier')
+          .eq('user_id', user.id)
+          .single();
+        
+        if (subscriber) {
+          console.log('📋 Subscription tier:', subscriber.subscription_tier);
+          setSubscriptionTier(subscriber.subscription_tier);
+        }
         const { data: conversations, error } = await supabase
           .from('conversations')
           .select('id, status, last_message_text, last_message_at, created_at, updated_at, conversation_type')
@@ -326,22 +339,24 @@ const ChatTab = () => {
           </div>
 
           <div className="mt-8 space-y-4">
-            {/* Pulsante per nuovo preventivo professionale */}
-            <div className="text-center">
-              <Button
-                onClick={() => {
-                  window.location.href = '/professional-quote';
-                }}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 text-lg font-semibold shadow-lg"
-                size="lg"
-              >
-                <FileText className="h-5 w-5 mr-3" />
-                {t('newProfessionalQuote')}
-              </Button>
-              <p className="text-sm text-gray-600 mt-2">
-                {t('requestCustomQuote')}
-              </p>
-            </div>
+            {/* Pulsante per nuovo preventivo professionale - Solo per utenti Professional */}
+            {subscriptionTier === 'professional' && (
+              <div className="text-center">
+                <Button
+                  onClick={() => {
+                    window.location.href = '/professional-quote';
+                  }}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 text-lg font-semibold shadow-lg"
+                  size="lg"
+                >
+                  <FileText className="h-5 w-5 mr-3" />
+                  {t('newProfessionalQuote')}
+                </Button>
+                <p className="text-sm text-gray-600 mt-2">
+                  {t('requestCustomQuote')}
+                </p>
+              </div>
+            )}
             
             <div className="text-center space-x-4">
               <Button
