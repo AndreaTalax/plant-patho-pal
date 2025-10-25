@@ -3,6 +3,8 @@
   "target": {
     "namespace": "android_app",
     "package_name": "app.lovable.drplant",
-    "sha256_cert_fingerprints": ["1D:CD:79:30:2A:1E:C2:5D:AB:E6:D4:A8:68:F9:3A:9F:BB:E6:B9:5E:88:F8:74:C6:55:33:7C:89:15:BB:D4:04"]
+    "sha256_cert_fingerprints": [
+      "67:50:B8:32:90:84:13:8A:7A:16:6D:0B:3A:E2:EC:B2:BA:2D:AF:5A:16:82:AE:B6:1D:A7:F1:7B:C5:64:39:F3:5D"
+    ]
   }
 }]
