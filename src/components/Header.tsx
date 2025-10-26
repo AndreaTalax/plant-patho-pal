@@ -69,7 +69,7 @@ const Header = () => {
             <img 
               src="/lovable-uploads/72d5a60c-404a-4167-9430-511af91c523b.png" 
               alt="Dr.Plant Logo" 
-              className="h-8 w-auto"
+              className="h-8 w-auto bg-background rounded-md p-1"
             />
             <span className="bg-gradient-to-r from-drplant-green to-drplant-blue bg-clip-text text-transparent">
               Dr.Plant

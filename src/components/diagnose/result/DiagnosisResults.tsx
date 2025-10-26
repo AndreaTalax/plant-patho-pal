@@ -216,7 +216,12 @@ export const DiagnosisResults: React.FC<DiagnosisResultsProps> = ({ results, isF
                 {disease.symptoms.length > 0 && (
                   <div className="mb-2">
                     <span className="text-sm font-medium text-gray-700">Sintomi: </span>
-                    <span className="text-sm text-gray-600">{disease.symptoms.join(', ')}</span>
+                    <span className="text-sm text-gray-600">
+                      {disease.symptoms.map((s: string) => {
+                        const { translateSymptom } = require('@/utils/symptomTranslations');
+                        return translateSymptom(s);
+                      }).join(', ')}
+                    </span>
                   </div>
                 )}
                 
