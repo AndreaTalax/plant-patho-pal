@@ -14,6 +14,7 @@ import { ensureStorageBuckets } from "@/utils/storageSetup";
 import { usePlantInfo } from "@/context/PlantInfoContext";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+
 const Index = () => {
   const { isMasterAccount, isAuthenticated, isProfileComplete, loading, userProfile } = useAuth();
   const { plantInfo } = usePlantInfo();
@@ -24,6 +25,10 @@ const Index = () => {
 
   const [activeTab, setActiveTab] = useState<string>(isMasterAccount ? "expert" : "diagnose");
   const suppressAutoOpenRef = useRef(false);
+  
+  // ✅ AGGIUNGI QUESTI STATE PER LA CHAT PROFESSIONALE
+  const [selectedConversationId, setSelectedConversationId] = useState<string | undefined>();
+  const [isProfessionalChat, setIsProfessionalChat] = useState(false);
 
   useEffect(() => {
     if (!loading && !isAuthenticated) {
@@ -73,9 +78,10 @@ const Index = () => {
     const autoOpenChatIfMessages = async () => {
       try {
         const params = new URLSearchParams(location.search);
-        if (params.get('tab')) return; // non sovrascrivere la scelta esplicita dell'utente (URL)
-        if (suppressAutoOpenRef.current) return; // non sovrascrivere la scelta manuale dell'utente
+        if (params.get('tab')) return;
+        if (suppressAutoOpenRef.current) return;
         if (isMasterAccount || !isAuthenticated || !userProfile?.id) return;
+        
         const { data, error } = await supabase
           .from('conversations' as any)
           .select('id,last_message_at,status')
@@ -83,6 +89,7 @@ const Index = () => {
           .eq('status', 'active')
           .order('last_message_at', { ascending: false })
           .limit(1);
+        
         if (!error && data && data.length > 0) {
           setActiveTab('chat');
         }
@@ -93,23 +100,39 @@ const Index = () => {
     autoOpenChatIfMessages();
   }, [isAuthenticated, userProfile?.id, isMasterAccount, activeTab, location.search]);
 
-  // Non forzare più il redirect; l'utente può navigare liberamente tra le tab
-  useEffect(() => {
-    // intentionally left blank
-  }, [canAccessTabs, activeTab, isMasterAccount]);
-
   useEffect(() => {
     const handleSwitchTab = (event: CustomEvent) => {
       console.log("🎧 Index.tsx - handleSwitchTab called");
-      console.log("🎧 Event received:", event);
       console.log("🎧 Event detail:", event.detail);
-      console.log("🎧 Event type:", event.type);
-      console.log("🎧 Current state - isMasterAccount:", isMasterAccount);
-      console.log("🎧 Current state - canAccessTabs:", canAccessTabs);
-      console.log("🎧 Current state - activeTab:", activeTab);
       
       const newTab = event.detail;
-      console.log("🎧 New tab requested:", newTab);
+      
+      // ✅ AGGIUNGI QUESTO BLOCCO PER GESTIRE L'APERTURA DELLA CHAT
+      if (newTab === 'chat') {
+        // Controlla se c'è una conversazione da aprire dal localStorage
+        const convId = localStorage.getItem('openConversationId');
+        const isProfessional = localStorage.getItem('isProfessionalChat') === 'true';
+        
+        console.log('🔍 Checking for conversation to open:', { convId, isProfessional });
+        
+        if (convId) {
+          console.log('✅ Opening specific conversation:', convId);
+          setSelectedConversationId(convId);
+          setIsProfessionalChat(isProfessional);
+          
+          // Pulisci localStorage
+          localStorage.removeItem('openConversationId');
+          localStorage.removeItem('isProfessionalChat');
+        } else {
+          // Reset se non c'è una conversazione specifica da aprire
+          setSelectedConversationId(undefined);
+          setIsProfessionalChat(false);
+        }
+        
+        suppressAutoOpenRef.current = false;
+        setActiveTab('chat');
+        return;
+      }
 
       // Handle professional quote request
       if (newTab === "professional-quote") {
@@ -124,28 +147,15 @@ const Index = () => {
         return;
       }
       
-      // Se l'utente chiede esplicitamente Diagnosi, non auto-aprire la chat
       if (newTab === "diagnose") {
         suppressAutoOpenRef.current = true;
         setActiveTab("diagnose");
         return;
       }
       
-      // Per utenti normali, la chat è sempre accessibile
-      if (newTab === "chat") {
-        console.log("🎧 Chat requested - allowing access");
-        suppressAutoOpenRef.current = false; // riabilita auto-open su prossimi caricamenti
-        setActiveTab("chat");
-        return;
-      }
-      
-      // Accesso aperto alle altre tab anche se canAccessTabs è false
-      // (nessun redirect automatico)
-      // Non auto-aprire la chat quando l'utente sceglie altre tab
       suppressAutoOpenRef.current = newTab === 'chat' ? false : true;
       console.log("🎧 Setting active tab to:", newTab);
       setActiveTab(newTab);
-      console.log("🎧 Tab switch completed");
     };
 
     console.log("🎧 Adding switchTab event listener");
@@ -155,19 +165,21 @@ const Index = () => {
       console.log("🎧 Removing switchTab event listener");
       window.removeEventListener('switchTab', handleSwitchTab as EventListener);
     };
-  }, [isMasterAccount, canAccessTabs, toast, t, activeTab]);
+  }, [isMasterAccount, canAccessTabs, toast, t, activeTab, navigate]);
 
   const handleSetActiveTab = (tab: string) => {
     if (isMasterAccount && tab === "diagnose") {
       setActiveTab("expert");
       return;
     }
-    // Consenti la navigazione a tutte le tab; nessun redirect forzato
 
     if (tab === 'chat') {
-      suppressAutoOpenRef.current = false; // riabilita auto-open
+      // ✅ AGGIUNGI QUESTO: Reset della conversazione quando apri la chat manualmente
+      setSelectedConversationId(undefined);
+      setIsProfessionalChat(false);
+      suppressAutoOpenRef.current = false;
     } else {
-      suppressAutoOpenRef.current = true; // non auto-aprire la chat su altre tab
+      suppressAutoOpenRef.current = true;
     }
     setActiveTab(tab);
   };
@@ -203,24 +215,40 @@ const Index = () => {
       }
     }
 
-    // Per professionisti, solo chat diretta con fitopatologo
     if (selectedPlan === 'professionisti') {
       switch (activeTab) {
         case "chat":
-          return <ChatTab />;
+          // ✅ MODIFICA QUI: Passa i parametri al ChatTab
+          return (
+            <ChatTab 
+              conversationId={selectedConversationId}
+              isProfessionalChat={isProfessionalChat}
+            />
+          );
         case "profile":
           return <ProfileTab />;
         default:
-          return <ChatTab />;
+          // ✅ MODIFICA QUI: Passa i parametri anche nel default
+          return (
+            <ChatTab 
+              conversationId={selectedConversationId}
+              isProfessionalChat={isProfessionalChat}
+            />
+          );
       }
     }
     
-    // Per privati e business: diagnosi AI + chat esperto
     switch (activeTab) {
       case "diagnose":
         return <DiagnoseTab />;
       case "chat":
-        return <ChatTab />;
+        // ✅ MODIFICA QUI: Passa i parametri al ChatTab
+        return (
+          <ChatTab 
+            conversationId={selectedConversationId}
+            isProfessionalChat={isProfessionalChat}
+          />
+        );
       case "library":
         return <LibraryTabWithLocation />;
       case "shop":
