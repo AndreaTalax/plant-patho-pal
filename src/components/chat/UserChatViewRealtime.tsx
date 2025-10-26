@@ -88,7 +88,9 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({
           day: '2-digit',
           month: '2-digit'
         }),
-        image_url: msg.image_url || undefined
+        image_url: msg.image_url || undefined,
+        pdf_path: msg.pdf_path || undefined,
+      products: msg.products || undefined,
       };
       
       console.log(`🎨 Formatting message ${index + 1}/${dbMessages.length}:`, {
