@@ -316,6 +316,16 @@ const SimpleMediaSender = ({ onSendMessage }: { onSendMessage?: MessageContentPr
 };
 
 export const MessageContent = ({ message, onSendMessage }: MessageContentProps) => {
+  // Log per debugging
+  console.log('📨 MessageContent rendering:', {
+    messageId: message.id,
+    hasText: !!message.text,
+    hasImageUrl: !!message.image_url,
+    hasPdfPath: !!(message as any).pdf_path,
+    imageUrl: message.image_url?.substring(0, 100),
+    pdfPath: (message as any).pdf_path?.substring(0, 100)
+  });
+
   // Controlla se c'è un PDF in pdf_path o image_url
   const pdfUrl = (message as any).pdf_path || (
     message.image_url && (
@@ -334,6 +344,13 @@ export const MessageContent = ({ message, onSendMessage }: MessageContentProps) 
   const isPDFMessage = !!pdfUrl;
 
   const isImageMessage = message.image_url && !isAudioMessage && !isPDFMessage;
+  
+  if (pdfUrl) {
+    console.log('📄 PDF Message detected:', pdfUrl.substring(0, 100));
+  }
+  if (isImageMessage) {
+    console.log('🖼️ Image Message detected:', message.image_url?.substring(0, 100));
+  }
 
   return (
     <div className="space-y-3">

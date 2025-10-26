@@ -1,29 +1,30 @@
-
 import { Message, DatabaseMessage } from '../types';
 import { MARCO_NIGRO_ID } from '@/components/phytopathologist';
 
 export const convertToUIMessage = (dbMessage: DatabaseMessage): Message => {
-  console.log('🔄 Conversione messaggio DB a UI:', dbMessage);
+  console.log('🔄 Conversione messaggio DB a UI:', {
+    id: dbMessage.id,
+    hasImageUrl: !!dbMessage.image_url,
+    hasPdfPath: !!dbMessage.pdf_path,
+    imageUrl: dbMessage.image_url?.substring(0, 100),
+    pdfPath: dbMessage.pdf_path?.substring(0, 100)
+  });
   
   // Use content field as primary, fallback to text for backward compatibility
   const messageText = dbMessage.content || dbMessage.text || '';
   
-  // Debug logging per messaggi PDF
-  if (dbMessage.content?.includes('Preventivo Professionale') || dbMessage.text?.includes('Preventivo Professionale')) {
-    console.log('🔍 PDF Message Conversion:', {
-      id: dbMessage.id,
-      content: dbMessage.content,
-      text: dbMessage.text,
-      finalText: messageText,
-      contentLength: dbMessage.content?.length,
-      textLength: dbMessage.text?.length,
-      hasMarkdownInContent: dbMessage.content?.includes('[') && dbMessage.content?.includes(']'),
-      hasMarkdownInText: dbMessage.text?.includes('[') && dbMessage.text?.includes(']')
-    });
+  // Verifica se image_url contiene un PDF
+  let imageUrl = dbMessage.image_url;
+  let pdfPath = dbMessage.pdf_path;
+  
+  if (imageUrl && (imageUrl.toLowerCase().includes('.pdf') || imageUrl.toLowerCase().includes('/pdfs/'))) {
+    console.log('📄 PDF rilevato in image_url, spostamento a pdf_path');
+    pdfPath = imageUrl;
+    imageUrl = undefined;
   }
   
-  if (!messageText && !dbMessage.image_url) {
-    console.warn('⚠️ Messaggio senza testo né immagine:', dbMessage);
+  if (!messageText && !imageUrl && !pdfPath) {
+    console.warn('⚠️ Messaggio senza contenuto:', dbMessage.id);
   }
   
   const converted: Message = {
@@ -34,11 +35,17 @@ export const convertToUIMessage = (dbMessage: DatabaseMessage): Message => {
       hour: '2-digit', 
       minute: '2-digit' 
     }),
-    image_url: dbMessage.image_url || undefined,
-    pdf_path: dbMessage.pdf_path || undefined,
+    image_url: imageUrl || undefined,
+    pdf_path: pdfPath || undefined,
     products: dbMessage.products || undefined
   };
   
-  console.log('✅ Messaggio convertito:', converted);
+  console.log('✅ Messaggio convertito:', {
+    id: converted.id,
+    hasImageUrl: !!converted.image_url,
+    hasPdfPath: !!converted.pdf_path,
+    sender: converted.sender
+  });
+  
   return converted;
 };
