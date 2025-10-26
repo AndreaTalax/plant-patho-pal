@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
@@ -23,19 +22,35 @@ interface ActiveConversation {
   conversation_type?: string;
 }
 
-const ChatTab = () => {
+// ✅ AGGIUNGI QUESTE PROPS
+interface ChatTabProps {
+  conversationId?: string;
+  isProfessionalChat?: boolean;
+}
+
+// ✅ MODIFICA LA FIRMA DELLA FUNZIONE
+const ChatTab = ({ conversationId: initialConversationId, isProfessionalChat: initialIsProfessionalChat = false }: ChatTabProps = {}) => {
   const { isAuthenticated, user, userProfile } = useAuth();
   const { t } = useTheme();
   const { hasExpertChatAccess } = usePremiumStatus();
   const [showPaywall, setShowPaywall] = useState(false);
   const [activeConversations, setActiveConversations] = useState<ActiveConversation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
+  const [selectedConversationId, setSelectedConversationId] = useState<string | null>(initialConversationId || null);
   const [subscriptionTier, setSubscriptionTier] = useState<string | null>(null);
 
   // Determina se si tratta di una chat professionale dalla conversazione selezionata
   const selectedConversation = activeConversations.find(c => c.id === selectedConversationId);
-  const isProfessionalChat = selectedConversation?.conversation_type === 'professional_quote';
+  const isProfessionalChat = initialIsProfessionalChat || selectedConversation?.conversation_type === 'professional_quote';
+
+  // ✅ AGGIUNGI QUESTO USEEFFECT PER GESTIRE I PROPS IN ARRIVO
+  useEffect(() => {
+    if (initialConversationId) {
+      console.log('🎯 ChatTab: Conversation ID ricevuto da props:', initialConversationId);
+      console.log('🎯 ChatTab: isProfessionalChat:', initialIsProfessionalChat);
+      setSelectedConversationId(initialConversationId);
+    }
+  }, [initialConversationId, initialIsProfessionalChat]);
 
   // Controlla le conversazioni attive dell'utente
   useEffect(() => {
@@ -59,12 +74,10 @@ const ChatTab = () => {
           console.log('📋 Subscription tier:', subscriber.subscription_tier);
           setSubscriptionTier(subscriber.subscription_tier);
         }
-        // Filtra le conversazioni in base al tier dell'abbonamento
-        // Gli utenti privati vedono solo conversazioni 'standard'
-        // Gli utenti professionali vedono tutte le conversazioni (standard E professional_quote)
+        
         const conversationTypeFilter = subscriber?.subscription_tier === 'professional' 
-          ? undefined // Non filtrare per tipo, vedi tutte
-          : 'standard'; // Solo conversazioni standard per utenti privati
+          ? undefined 
+          : 'standard';
         
         console.log('🔍 Filtraggio conversazioni per tipo:', conversationTypeFilter);
         
@@ -73,10 +86,9 @@ const ChatTab = () => {
           .select('id, status, last_message_text, last_message_at, created_at, updated_at, conversation_type')
           .eq('user_id', user.id)
           .eq('expert_id', MARCO_NIGRO_ID)
-          .eq('status', 'active') // Solo conversazioni attive
+          .eq('status', 'active')
           .order('last_message_at', { ascending: false });
         
-        // Applica il filtro per tipo solo se non è professional
         if (conversationTypeFilter) {
           query = query.eq('conversation_type', conversationTypeFilter);
         }
@@ -104,16 +116,19 @@ const ChatTab = () => {
 
           setActiveConversations(list);
           
-          // Controlla se c'è una conversazione da aprire automaticamente (da preventivo professionale)
-          const openConvId = localStorage.getItem('openConversationId');
-          if (openConvId) {
-            console.log('📂 Opening conversation from professional quote:', openConvId);
-            setSelectedConversationId(openConvId);
-            localStorage.removeItem('openConversationId');
-          } 
-          // Se non c'è una conversazione da aprire e c'è una sola conversazione, selezionala
-          else if (list.length === 1) {
-            setSelectedConversationId(list[0].id);
+          // ✅ MODIFICA QUESTA PARTE: Priorità ai props, poi localStorage, poi auto-select
+          if (initialConversationId) {
+            console.log('📂 Opening conversation from props:', initialConversationId);
+            setSelectedConversationId(initialConversationId);
+          } else {
+            const openConvId = localStorage.getItem('openConversationId');
+            if (openConvId) {
+              console.log('📂 Opening conversation from localStorage:', openConvId);
+              setSelectedConversationId(openConvId);
+              localStorage.removeItem('openConversationId');
+            } else if (list.length === 1) {
+              setSelectedConversationId(list[0].id);
+            }
           }
         }
       } catch (error) {
@@ -126,14 +141,12 @@ const ChatTab = () => {
 
     checkActiveConversations();
 
-    // Ascolta per aggiornamenti dopo la sincronizzazione dei dati della pianta
     const handlePlantDataSynced = () => {
       console.log('🔄 ChatTab: Ricontrollo conversazioni dopo sincronizzazione dati');
       setIsLoading(true);
       setTimeout(checkActiveConversations, 1000);
     };
 
-    // Ascolta quando viene fatto il switch al tab chat
     const handleTabSwitch = (event: CustomEvent) => {
       if (event.detail === 'chat') {
         console.log('🔄 ChatTab: Forzo ricontrollo conversazioni per switch tab');
@@ -149,11 +162,11 @@ const ChatTab = () => {
       window.removeEventListener('plantDataSynced', handlePlantDataSynced);
       window.removeEventListener('switchTab', handleTabSwitch as EventListener);
     };
-  }, [isAuthenticated, user?.id]);
+  }, [isAuthenticated, user?.id, initialConversationId]); // ✅ AGGIUNGI initialConversationId alle dipendenze
 
   // Funzione per eliminare una conversazione
   const handleDeleteConversation = async (conversationId: string, e: React.MouseEvent) => {
-    e.stopPropagation(); // Previeni l'apertura della conversazione
+    e.stopPropagation();
     
     if (!confirm('Sei sicuro di voler eliminare questa conversazione? Questa azione non può essere annullata.')) {
       return;
@@ -162,7 +175,6 @@ const ChatTab = () => {
     try {
       console.log('🗑️ Eliminazione conversazione:', conversationId);
       
-      // Usa la edge function per eliminare
       const { error } = await supabase.functions.invoke('delete-conversation', {
         body: { conversationId }
       });
@@ -173,10 +185,8 @@ const ChatTab = () => {
         return;
       }
 
-      // Rimuovi immediatamente dalla lista locale
       setActiveConversations(prev => prev.filter(c => c.id !== conversationId));
       
-      // Se era la conversazione selezionata, deselezionala
       if (selectedConversationId === conversationId) {
         setSelectedConversationId(null);
       }
@@ -187,7 +197,6 @@ const ChatTab = () => {
       alert('Errore nell\'eliminazione della conversazione');
     }
   };
-
 
   if (!isAuthenticated || !user) {
     return (
@@ -203,7 +212,6 @@ const ChatTab = () => {
     );
   }
 
-  // Mostra loading mentre controlla la conversazione
   if (isLoading) {
     return (
       <div className="container mx-auto px-4 py-8">
@@ -215,8 +223,6 @@ const ChatTab = () => {
     );
   }
 
-  // Se l'utente non ha accesso premium E non ha conversazioni attive, mostra paywall
-  // Le conversazioni esistenti (professionali o consulenze completate) bypassano il paywall
   if (!hasExpertChatAccess && activeConversations.length === 0) {
     return (
       <div className="container mx-auto px-4 py-8">
@@ -251,13 +257,14 @@ const ChatTab = () => {
     );
   }
 
-  // Se l'utente ha conversazioni attive, può accedere sempre (anche senza premium)
-  // Questo include richieste professionali e consulenze esperto completate
   if (activeConversations.length > 0) {
-    // Se è stata selezionata una conversazione specifica, mostra la chat
     if (selectedConversationId) {
-      const selectedConversation = activeConversations.find(c => c.id === selectedConversationId);
-      const isProfessionalChat = selectedConversation?.conversation_type === 'professional_quote';
+      // ✅ AGGIUNGI LOG DI DEBUG
+      console.log('🎨 Rendering UserChatViewRealtime con:', {
+        conversationId: selectedConversationId,
+        isProfessionalChat,
+        conversationType: selectedConversation?.conversation_type
+      });
 
       return (
         <div className="h-[calc(100vh-8rem)]">
@@ -272,7 +279,6 @@ const ChatTab = () => {
       );
     }
 
-    // Mostra la lista delle conversazioni attive
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto">
@@ -293,7 +299,10 @@ const ChatTab = () => {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <CardTitle className="text-lg">
-                        {t('conversationWithExpert')}
+                        {conversation.conversation_type === 'professional_quote' 
+                          ? t('professionalQuoteConversation') || 'Preventivo Professionale'
+                          : t('conversationWithExpert')
+                        }
                       </CardTitle>
                       {conversation.unread_count && conversation.unread_count > 0 && (
                         <div className="relative">
@@ -308,12 +317,19 @@ const ChatTab = () => {
                       )}
                     </div>
                     <div className="flex items-center gap-2">
-                      <Badge 
-                        variant={conversation.status === 'active' ? 'default' : 'secondary'}
-                        className="bg-green-100 text-green-800"
-                      >
-                        {t('conversationActive')}
-                      </Badge>
+                      {/* ✅ BADGE DIVERSO PER CHAT PROFESSIONALI */}
+                      {conversation.conversation_type === 'professional_quote' ? (
+                        <Badge variant="default" className="bg-blue-600">
+                          {t('professionalQuote') || 'Preventivo'}
+                        </Badge>
+                      ) : (
+                        <Badge 
+                          variant={conversation.status === 'active' ? 'default' : 'secondary'}
+                          className="bg-green-100 text-green-800"
+                        >
+                          {t('conversationActive')}
+                        </Badge>
+                      )}
                       <Button
                         variant="ghost"
                         size="icon"
@@ -355,7 +371,6 @@ const ChatTab = () => {
           </div>
 
           <div className="mt-8 space-y-4">
-            {/* Pulsante per nuovo preventivo professionale - Solo per utenti Professional */}
             {subscriptionTier === 'professional' && (
               <div className="text-center">
                 <Button
@@ -392,7 +407,6 @@ const ChatTab = () => {
     );
   }
 
-  // Se l'utente ha accesso premium ma non ha conversazioni attive, suggerisci diagnosi
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="max-w-2xl mx-auto text-center">
@@ -426,3 +440,5 @@ const ChatTab = () => {
 };
 
 export default ChatTab;
+```
+
