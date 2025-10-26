@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState } from 'react'; 
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { 
@@ -7,9 +6,6 @@ import {
   X, 
   User, 
   LogOut,
-  MessageSquare,
-  BookOpen,
-  ShoppingCart,
   Home,
   Info,
   Briefcase,
@@ -27,7 +23,6 @@ const Header = () => {
     try {
       setIsMenuOpen(false);
       await logout();
-      // Il reindirizzamento è gestito nell'AuthContext
     } catch (error) {
       console.error('Errore durante il logout:', error);
       toast.error('Errore durante il logout');
@@ -50,10 +45,9 @@ const Header = () => {
     { name: 'Contatti', icon: Phone, path: '/contact', isTabSwitch: false },
   ];
 
-  const handleMenuClick = (item: typeof menuItems[0]) => {
+  const handleMenuClick = (item) => {
     setIsMenuOpen(false);
     if (item.isTabSwitch) {
-      // Per Home, usa navigate con replace per forzare il cambio anche se sei già su /
       navigate('/?tab=diagnose', { replace: true });
     } else {
       navigate(item.path);
@@ -64,12 +58,16 @@ const Header = () => {
     <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border/50 shadow-sm">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
+
           {/* Logo */}
-          <Link to="/?tab=diagnose" className="flex items-center space-x-2 font-bold text-xl text-drplant-green">
+          <Link 
+            to="/?tab=diagnose" 
+            className="flex items-center space-x-2 font-bold text-xl text-drplant-green"
+          >
             <img 
               src="/lovable-uploads/72d5a60c-404a-4167-9430-511af91c523b.png" 
               alt="Dr.Plant Logo" 
-              className="h-8 w-auto bg-background rounded-md p-1"
+              className="h-8 w-auto select-none"
             />
             <span className="bg-gradient-to-r from-drplant-green to-drplant-blue bg-clip-text text-transparent">
               Dr.Plant
@@ -78,7 +76,7 @@ const Header = () => {
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center space-x-6">
-            {menuItems.map((item) => (
+            {menuItems.map((item) =>
               item.isTabSwitch ? (
                 <button
                   key={item.name}
@@ -98,7 +96,7 @@ const Header = () => {
                   <span>{item.name}</span>
                 </Link>
               )
-            ))}
+            )}
           </nav>
 
           {/* User Actions */}
@@ -148,7 +146,7 @@ const Header = () => {
         <div className="md:hidden bg-white border-t border-gray-200 shadow-lg">
           <div className="container mx-auto px-4 py-4">
             <nav className="flex flex-col space-y-4">
-              {menuItems.map((item) => (
+              {menuItems.map((item) =>
                 item.isTabSwitch ? (
                   <button
                     key={item.name}
@@ -169,9 +167,8 @@ const Header = () => {
                     <span>{item.name}</span>
                   </Link>
                 )
-              ))}
-              
-              
+              )}
+
               <div className="border-t border-gray-200 pt-4">
                 {isAuthenticated ? (
                   <div className="space-y-3">
