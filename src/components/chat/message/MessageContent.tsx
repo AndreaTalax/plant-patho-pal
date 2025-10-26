@@ -327,12 +327,14 @@ export const MessageContent = ({ message, onSendMessage }: MessageContentProps) 
   });
 
   // Controlla se c'è un PDF in pdf_path o image_url
-  const pdfUrl = (message as any).pdf_path || (
-    message.image_url && (
-      message.image_url.toLowerCase().includes('.pdf') ||
-      message.image_url.toLowerCase().includes('/pdfs/')
-    ) ? message.image_url : null
-  );
+ const pdfUrl = (message as any).pdf_path || (
+  message.image_url && (
+    message.image_url.toLowerCase().endsWith('.pdf') ||
+    message.image_url.toLowerCase().includes('/pdfs/') ||
+    message.image_url.toLowerCase().includes('/professional-quotes/')
+  ) ? message.image_url : null
+);
+
 
   const isAudioMessage = message.image_url && !pdfUrl && (
     message.image_url.includes('audio') || 
