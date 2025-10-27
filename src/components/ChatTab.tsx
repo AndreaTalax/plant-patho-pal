@@ -12,55 +12,6 @@ import { MARCO_NIGRO_ID } from '@/components/phytopathologist';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 
-// Aggiungi questo useEffect SEPARATO subito dopo gli import
-useEffect(() => {
-  // Se c'è un conversationId specifico nei props, caricalo direttamente
-  if (initialConversationId && user?.id) {
-    console.log('🎯 ChatTab: Caricamento diretto conversazione da props:', initialConversationId);
-    
-    const loadSpecificConversation = async () => {
-      try {
-        const { data: conversation, error } = await supabase
-          .from('conversations')
-          .select('id, status, last_message_text, last_message_at, created_at, updated_at, conversation_type')
-          .eq('id', initialConversationId)
-          .eq('user_id', user.id)
-          .single();
-
-        if (!error && conversation) {
-          console.log('✅ Conversazione caricata:', conversation);
-          
-          // Conta messaggi non letti
-          const { count } = await supabase
-            .from('messages')
-            .select('*', { count: 'exact', head: true })
-            .eq('conversation_id', conversation.id)
-            .eq('recipient_id', user.id)
-            .eq('read', false);
-          
-          const conv: ActiveConversation = {
-            ...conversation,
-            unread_count: count || 0
-          };
-          
-          // Aggiungi alla lista se non c'è già
-          setActiveConversations(prev => {
-            const exists = prev.find(c => c.id === conversation.id);
-            if (exists) return prev;
-            return [conv, ...prev];
-          });
-          
-          setSelectedConversationId(initialConversationId);
-        }
-      } catch (error) {
-        console.error('❌ Errore caricamento conversazione specifica:', error);
-      }
-    };
-
-    loadSpecificConversation();
-  }
-}, [initialConversationId, user?.id]);
-
 interface ActiveConversation {
   id: string;
   status: 'active' | 'archived';
@@ -100,6 +51,56 @@ const ChatTab = ({ conversationId: initialConversationId, isProfessionalChat: in
       setSelectedConversationId(initialConversationId);
     }
   }, [initialConversationId, initialIsProfessionalChat]);
+
+  // Carica conversazione specifica se passata nei props
+  useEffect(() => {
+    // Se c'è un conversationId specifico nei props, caricalo direttamente
+    if (initialConversationId && user?.id) {
+      console.log('🎯 ChatTab: Caricamento diretto conversazione da props:', initialConversationId);
+      
+      const loadSpecificConversation = async () => {
+        try {
+          const { data: conversation, error } = await supabase
+            .from('conversations')
+            .select('id, status, last_message_text, last_message_at, created_at, updated_at, conversation_type')
+            .eq('id', initialConversationId)
+            .eq('user_id', user.id)
+            .single();
+
+          if (!error && conversation) {
+            console.log('✅ Conversazione caricata:', conversation);
+            
+            // Conta messaggi non letti
+            const { count } = await supabase
+              .from('messages')
+              .select('*', { count: 'exact', head: true })
+              .eq('conversation_id', conversation.id)
+              .eq('recipient_id', user.id)
+              .eq('read', false);
+            
+            const conv: ActiveConversation = {
+              ...conversation,
+              status: conversation.status as 'active' | 'archived',
+              unread_count: count || 0
+            };
+            
+            // Aggiungi alla lista se non c'è già
+            setActiveConversations(prev => {
+              const exists = prev.find(c => c.id === conversation.id);
+              if (exists) return prev;
+              return [conv, ...prev];
+            });
+            
+            setSelectedConversationId(initialConversationId);
+          }
+        } catch (error) {
+          console.error('❌ Errore caricamento conversazione specifica:', error);
+        }
+      };
+
+      loadSpecificConversation();
+    }
+  }, [initialConversationId, user?.id]);
 
   // Controlla le conversazioni attive dell'utente
   useEffect(() => {
@@ -489,5 +490,3 @@ const ChatTab = ({ conversationId: initialConversationId, isProfessionalChat: in
 };
 
 export default ChatTab;
-```
-
