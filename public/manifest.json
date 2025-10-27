@@ -93,32 +93,6 @@
     "health",
     "productivity"
   ],
-  "shortcuts": [
-    {
-      "name": "Diagnose Plant",
-      "short_name": "Diagnose",
-      "description": "Take a photo to diagnose plant diseases",
-      "url": "/?action=diagnose",
-      "icons": [
-        {
-          "src": "/icon-192.png",
-          "sizes": "192x192"
-        }
-      ]
-    },
-    {
-      "name": "Expert Chat",
-      "short_name": "Expert",
-      "description": "Chat with plant health experts",
-      "url": "/?action=expert",
-      "icons": [
-        {
-          "src": "/icon-192.png",
-          "sizes": "192x192"
-        }
-      ]
-    }
-  ],
   "lang": "it",
   "id": "/"
 }
