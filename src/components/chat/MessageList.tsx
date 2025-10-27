@@ -1,8 +1,7 @@
-
 import { useRef, useEffect } from 'react';
 import ChatMessage from './ChatMessage';
 import { Message } from './types';
-import { MessageCircle, Sparkles } from 'lucide-react';
+import { MessageCircle, Sparkles, FileText } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { TypingIndicator } from '@/components/ui/typing-animation';
 
@@ -13,13 +12,20 @@ interface MessageListProps {
   typingUser?: string;
 }
 
-const MessageList = ({ messages, isExpertView = false, isTyping = false, typingUser }: MessageListProps) => {
+const MessageList = ({
+  messages,
+  isExpertView = false,
+  isTyping = false,
+  typingUser,
+}: MessageListProps) => {
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     if (scrollAreaRef.current) {
-      const scrollContainer = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]');
+      const scrollContainer = scrollAreaRef.current.querySelector(
+        '[data-radix-scroll-area-viewport]'
+      );
       if (scrollContainer) {
         scrollContainer.scrollTop = scrollContainer.scrollHeight;
       }
@@ -31,18 +37,19 @@ const MessageList = ({ messages, isExpertView = false, isTyping = false, typingU
     console.log('📋 MessageList - Messaggi ricevuti con timestamp:', {
       count: messages.length,
       timestamp: new Date().toISOString(),
-      messages: messages.map(m => ({ 
-        id: m.id, 
-        text: m.text.substring(0, 100), 
+      messages: messages.map((m) => ({
+        id: m.id,
+        text: m.text.substring(0, 100),
         time: m.time,
-        sender: m.sender 
-      }))
+        sender: m.sender,
+        pdf_path: m.pdf_path,
+      })),
     });
   }, [messages]);
 
   return (
     <div className="flex-1 h-full relative">
-      <ScrollArea 
+      <ScrollArea
         ref={scrollAreaRef}
         className="h-full w-full bg-gradient-to-br from-gray-50/50 via-white/30 to-drplant-green/5"
       >
@@ -76,7 +83,9 @@ const MessageList = ({ messages, isExpertView = false, isTyping = false, typingU
                         <Sparkles className="w-4 w-4 text-drplant-green" />
                       </div>
                       <h4 className="font-semibold text-gray-800 mb-2">Consigli personalizzati</h4>
-                      <p className="text-sm text-gray-600">Soluzioni su misura per le tue piante</p>
+                      <p className="text-sm text-gray-600">
+                        Soluzioni su misura per le tue piante
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -88,18 +97,37 @@ const MessageList = ({ messages, isExpertView = false, isTyping = false, typingU
                     id: message.id,
                     text: message.text.substring(0, 100),
                     time: message.time,
-                    sender: message.sender
+                    sender: message.sender,
+                    pdf_path: message.pdf_path,
                   });
+
                   return (
-                    <div key={message.id} className="w-full">
-                      <ChatMessage 
-                        message={message}
-                        isExpertView={isExpertView}
-                      />
+                    <div key={message.id} className="w-full space-y-1">
+                      {/* Messaggio base */}
+                      <ChatMessage message={message} isExpertView={isExpertView} />
+
+                      {/* PDF allegato */}
+                      {message.pdf_path && (
+                        <div
+                          className={`flex ${
+                            message.sender === 'user' ? 'justify-end' : 'justify-start'
+                          }`}
+                        >
+                          <a
+                            href={message.pdf_path}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center text-blue-600 hover:underline text-sm font-medium bg-white/80 backdrop-blur-sm border border-blue-100 rounded-xl px-3 py-2 shadow-sm"
+                          >
+                            <FileText className="w-4 h-4 mr-2 text-blue-600" />
+                            Visualizza PDF allegato
+                          </a>
+                        </div>
+                      )}
                     </div>
                   );
                 })}
-                
+
                 {/* Typing Indicator */}
                 {isTyping && (
                   <div className="w-full flex justify-start">
@@ -110,8 +138,8 @@ const MessageList = ({ messages, isExpertView = false, isTyping = false, typingU
                             {typingUser ? typingUser.charAt(0).toUpperCase() : 'E'}
                           </span>
                         </div>
-                        <TypingIndicator 
-                          show={true} 
+                        <TypingIndicator
+                          show={true}
                           message={typingUser ? `${typingUser} sta scrivendo` : 'Sta scrivendo'}
                         />
                       </div>
