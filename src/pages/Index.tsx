@@ -63,6 +63,22 @@ const Index = () => {
         setActiveTab('expert');
       } else {
         setActiveTab(tabParam);
+        
+        // Se è la tab chat, controlla se c'è una conversazione da aprire
+        if (tabParam === 'chat') {
+          const convId = localStorage.getItem('openConversationId');
+          const isProfessional = localStorage.getItem('isProfessionalChat') === 'true';
+          
+          if (convId) {
+            console.log('✅ Opening conversation from URL:', convId);
+            setSelectedConversationId(convId);
+            setIsProfessionalChat(isProfessional);
+            
+            // Pulisci localStorage
+            localStorage.removeItem('openConversationId');
+            localStorage.removeItem('isProfessionalChat');
+          }
+        }
       }
     }
   }, [location.search, isMasterAccount]);

@@ -77,13 +77,10 @@ const ProfessionalQuoteForm = ({ onBack, onSubmit }: ProfessionalQuoteFormProps)
       // Salva l'ID della conversazione per aprirla
       localStorage.setItem('openConversationId', data.conversationId);
 
-      // Reindirizza alla chat dopo 2 secondi
-      setTimeout(() => {
-        const event = new CustomEvent('switchTab', { detail: 'chat' });
-        window.dispatchEvent(event);
-      }, 2000);
-
       onSubmit(formData);
+
+      // Reindirizza alla home page che caricherà automaticamente la chat
+      window.location.href = '/?tab=chat';
     } catch (error) {
       console.error('Error submitting form:', error);
       toast.error(language === 'it' ? 'Errore nell\'invio della richiesta' : 'Error submitting request');
