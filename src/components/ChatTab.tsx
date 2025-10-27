@@ -59,29 +59,13 @@ const ChatTab = () => {
           console.log('📋 Subscription tier:', subscriber.subscription_tier);
           setSubscriptionTier(subscriber.subscription_tier);
         }
-        // Filtra le conversazioni in base al tier dell'abbonamento
-        // Gli utenti privati vedono solo conversazioni 'standard'
-        // Gli utenti professionali vedono tutte le conversazioni (standard E professional_quote)
-        const conversationTypeFilter = subscriber?.subscription_tier === 'professional' 
-          ? undefined // Non filtrare per tipo, vedi tutte
-          : 'standard'; // Solo conversazioni standard per utenti privati
-        
-        console.log('🔍 Filtraggio conversazioni per tipo:', conversationTypeFilter);
-        
-        let query = supabase
+        const { data: conversations, error } = await supabase
           .from('conversations')
           .select('id, status, last_message_text, last_message_at, created_at, updated_at, conversation_type')
           .eq('user_id', user.id)
           .eq('expert_id', MARCO_NIGRO_ID)
           .eq('status', 'active') // Solo conversazioni attive
           .order('last_message_at', { ascending: false });
-        
-        // Applica il filtro per tipo solo se non è professional
-        if (conversationTypeFilter) {
-          query = query.eq('conversation_type', conversationTypeFilter);
-        }
-        
-        const { data: conversations, error } = await query;
 
         if (error) {
           console.error('❌ ChatTab: Errore nel controllo conversazioni:', error);
