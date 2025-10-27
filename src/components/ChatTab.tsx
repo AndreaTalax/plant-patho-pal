@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
@@ -22,85 +23,19 @@ interface ActiveConversation {
   conversation_type?: string;
 }
 
-// ✅ AGGIUNGI QUESTE PROPS
-interface ChatTabProps {
-  conversationId?: string;
-  isProfessionalChat?: boolean;
-}
-
-// ✅ MODIFICA LA FIRMA DELLA FUNZIONE
-const ChatTab = ({ conversationId: initialConversationId, isProfessionalChat: initialIsProfessionalChat = false }: ChatTabProps = {}) => {
+const ChatTab = () => {
   const { isAuthenticated, user, userProfile } = useAuth();
   const { t } = useTheme();
   const { hasExpertChatAccess } = usePremiumStatus();
   const [showPaywall, setShowPaywall] = useState(false);
   const [activeConversations, setActiveConversations] = useState<ActiveConversation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedConversationId, setSelectedConversationId] = useState<string | null>(initialConversationId || null);
+  const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const [subscriptionTier, setSubscriptionTier] = useState<string | null>(null);
 
   // Determina se si tratta di una chat professionale dalla conversazione selezionata
   const selectedConversation = activeConversations.find(c => c.id === selectedConversationId);
-  const isProfessionalChat = initialIsProfessionalChat || selectedConversation?.conversation_type === 'professional_quote';
-
-  // ✅ AGGIUNGI QUESTO USEEFFECT PER GESTIRE I PROPS IN ARRIVO
-  useEffect(() => {
-    if (initialConversationId) {
-      console.log('🎯 ChatTab: Conversation ID ricevuto da props:', initialConversationId);
-      console.log('🎯 ChatTab: isProfessionalChat:', initialIsProfessionalChat);
-      setSelectedConversationId(initialConversationId);
-    }
-  }, [initialConversationId, initialIsProfessionalChat]);
-
-  // Carica conversazione specifica se passata nei props
-  useEffect(() => {
-    // Se c'è un conversationId specifico nei props, caricalo direttamente
-    if (initialConversationId && user?.id) {
-      console.log('🎯 ChatTab: Caricamento diretto conversazione da props:', initialConversationId);
-      
-      const loadSpecificConversation = async () => {
-        try {
-          const { data: conversation, error } = await supabase
-            .from('conversations')
-            .select('id, status, last_message_text, last_message_at, created_at, updated_at, conversation_type')
-            .eq('id', initialConversationId)
-            .eq('user_id', user.id)
-            .single();
-
-          if (!error && conversation) {
-            console.log('✅ Conversazione caricata:', conversation);
-            
-            // Conta messaggi non letti
-            const { count } = await supabase
-              .from('messages')
-              .select('*', { count: 'exact', head: true })
-              .eq('conversation_id', conversation.id)
-              .eq('recipient_id', user.id)
-              .eq('read', false);
-            
-            const conv: ActiveConversation = {
-              ...conversation,
-              status: conversation.status as 'active' | 'archived',
-              unread_count: count || 0
-            };
-            
-            // Aggiungi alla lista se non c'è già
-            setActiveConversations(prev => {
-              const exists = prev.find(c => c.id === conversation.id);
-              if (exists) return prev;
-              return [conv, ...prev];
-            });
-            
-            setSelectedConversationId(initialConversationId);
-          }
-        } catch (error) {
-          console.error('❌ Errore caricamento conversazione specifica:', error);
-        }
-      };
-
-      loadSpecificConversation();
-    }
-  }, [initialConversationId, user?.id]);
+  const isProfessionalChat = selectedConversation?.conversation_type === 'professional_quote';
 
   // Controlla le conversazioni attive dell'utente
   useEffect(() => {
@@ -124,10 +59,12 @@ const ChatTab = ({ conversationId: initialConversationId, isProfessionalChat: in
           console.log('📋 Subscription tier:', subscriber.subscription_tier);
           setSubscriptionTier(subscriber.subscription_tier);
         }
-        
+        // Filtra le conversazioni in base al tier dell'abbonamento
+        // Gli utenti privati vedono solo conversazioni 'standard'
+        // Gli utenti professionali vedono tutte le conversazioni (standard E professional_quote)
         const conversationTypeFilter = subscriber?.subscription_tier === 'professional' 
-          ? undefined 
-          : 'standard';
+          ? undefined // Non filtrare per tipo, vedi tutte
+          : 'standard'; // Solo conversazioni standard per utenti privati
         
         console.log('🔍 Filtraggio conversazioni per tipo:', conversationTypeFilter);
         
@@ -136,9 +73,10 @@ const ChatTab = ({ conversationId: initialConversationId, isProfessionalChat: in
           .select('id, status, last_message_text, last_message_at, created_at, updated_at, conversation_type')
           .eq('user_id', user.id)
           .eq('expert_id', MARCO_NIGRO_ID)
-          .eq('status', 'active')
+          .eq('status', 'active') // Solo conversazioni attive
           .order('last_message_at', { ascending: false });
         
+        // Applica il filtro per tipo solo se non è professional
         if (conversationTypeFilter) {
           query = query.eq('conversation_type', conversationTypeFilter);
         }
@@ -166,19 +104,16 @@ const ChatTab = ({ conversationId: initialConversationId, isProfessionalChat: in
 
           setActiveConversations(list);
           
-          // ✅ MODIFICA QUESTA PARTE: Priorità ai props, poi localStorage, poi auto-select
-          if (initialConversationId) {
-            console.log('📂 Opening conversation from props:', initialConversationId);
-            setSelectedConversationId(initialConversationId);
-          } else {
-            const openConvId = localStorage.getItem('openConversationId');
-            if (openConvId) {
-              console.log('📂 Opening conversation from localStorage:', openConvId);
-              setSelectedConversationId(openConvId);
-              localStorage.removeItem('openConversationId');
-            } else if (list.length === 1) {
-              setSelectedConversationId(list[0].id);
-            }
+          // Controlla se c'è una conversazione da aprire automaticamente (da preventivo professionale)
+          const openConvId = localStorage.getItem('openConversationId');
+          if (openConvId) {
+            console.log('📂 Opening conversation from professional quote:', openConvId);
+            setSelectedConversationId(openConvId);
+            localStorage.removeItem('openConversationId');
+          } 
+          // Se non c'è una conversazione da aprire e c'è una sola conversazione, selezionala
+          else if (list.length === 1) {
+            setSelectedConversationId(list[0].id);
           }
         }
       } catch (error) {
@@ -191,12 +126,14 @@ const ChatTab = ({ conversationId: initialConversationId, isProfessionalChat: in
 
     checkActiveConversations();
 
+    // Ascolta per aggiornamenti dopo la sincronizzazione dei dati della pianta
     const handlePlantDataSynced = () => {
       console.log('🔄 ChatTab: Ricontrollo conversazioni dopo sincronizzazione dati');
       setIsLoading(true);
       setTimeout(checkActiveConversations, 1000);
     };
 
+    // Ascolta quando viene fatto il switch al tab chat
     const handleTabSwitch = (event: CustomEvent) => {
       if (event.detail === 'chat') {
         console.log('🔄 ChatTab: Forzo ricontrollo conversazioni per switch tab');
@@ -212,11 +149,11 @@ const ChatTab = ({ conversationId: initialConversationId, isProfessionalChat: in
       window.removeEventListener('plantDataSynced', handlePlantDataSynced);
       window.removeEventListener('switchTab', handleTabSwitch as EventListener);
     };
-  }, [isAuthenticated, user?.id, initialConversationId]); // ✅ AGGIUNGI initialConversationId alle dipendenze
+  }, [isAuthenticated, user?.id]);
 
   // Funzione per eliminare una conversazione
   const handleDeleteConversation = async (conversationId: string, e: React.MouseEvent) => {
-    e.stopPropagation();
+    e.stopPropagation(); // Previeni l'apertura della conversazione
     
     if (!confirm('Sei sicuro di voler eliminare questa conversazione? Questa azione non può essere annullata.')) {
       return;
@@ -225,6 +162,7 @@ const ChatTab = ({ conversationId: initialConversationId, isProfessionalChat: in
     try {
       console.log('🗑️ Eliminazione conversazione:', conversationId);
       
+      // Usa la edge function per eliminare
       const { error } = await supabase.functions.invoke('delete-conversation', {
         body: { conversationId }
       });
@@ -235,8 +173,10 @@ const ChatTab = ({ conversationId: initialConversationId, isProfessionalChat: in
         return;
       }
 
+      // Rimuovi immediatamente dalla lista locale
       setActiveConversations(prev => prev.filter(c => c.id !== conversationId));
       
+      // Se era la conversazione selezionata, deselezionala
       if (selectedConversationId === conversationId) {
         setSelectedConversationId(null);
       }
@@ -247,6 +187,7 @@ const ChatTab = ({ conversationId: initialConversationId, isProfessionalChat: in
       alert('Errore nell\'eliminazione della conversazione');
     }
   };
+
 
   if (!isAuthenticated || !user) {
     return (
@@ -262,6 +203,7 @@ const ChatTab = ({ conversationId: initialConversationId, isProfessionalChat: in
     );
   }
 
+  // Mostra loading mentre controlla la conversazione
   if (isLoading) {
     return (
       <div className="container mx-auto px-4 py-8">
@@ -273,6 +215,8 @@ const ChatTab = ({ conversationId: initialConversationId, isProfessionalChat: in
     );
   }
 
+  // Se l'utente non ha accesso premium E non ha conversazioni attive, mostra paywall
+  // Le conversazioni esistenti (professionali o consulenze completate) bypassano il paywall
   if (!hasExpertChatAccess && activeConversations.length === 0) {
     return (
       <div className="container mx-auto px-4 py-8">
@@ -307,14 +251,13 @@ const ChatTab = ({ conversationId: initialConversationId, isProfessionalChat: in
     );
   }
 
+  // Se l'utente ha conversazioni attive, può accedere sempre (anche senza premium)
+  // Questo include richieste professionali e consulenze esperto completate
   if (activeConversations.length > 0) {
+    // Se è stata selezionata una conversazione specifica, mostra la chat
     if (selectedConversationId) {
-      // ✅ AGGIUNGI LOG DI DEBUG
-      console.log('🎨 Rendering UserChatViewRealtime con:', {
-        conversationId: selectedConversationId,
-        isProfessionalChat,
-        conversationType: selectedConversation?.conversation_type
-      });
+      const selectedConversation = activeConversations.find(c => c.id === selectedConversationId);
+      const isProfessionalChat = selectedConversation?.conversation_type === 'professional_quote';
 
       return (
         <div className="h-[calc(100vh-8rem)]">
@@ -329,6 +272,7 @@ const ChatTab = ({ conversationId: initialConversationId, isProfessionalChat: in
       );
     }
 
+    // Mostra la lista delle conversazioni attive
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto">
@@ -349,10 +293,7 @@ const ChatTab = ({ conversationId: initialConversationId, isProfessionalChat: in
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <CardTitle className="text-lg">
-                        {conversation.conversation_type === 'professional_quote' 
-                          ? t('professionalQuoteConversation') || 'Preventivo Professionale'
-                          : t('conversationWithExpert')
-                        }
+                        {t('conversationWithExpert')}
                       </CardTitle>
                       {conversation.unread_count && conversation.unread_count > 0 && (
                         <div className="relative">
@@ -367,19 +308,12 @@ const ChatTab = ({ conversationId: initialConversationId, isProfessionalChat: in
                       )}
                     </div>
                     <div className="flex items-center gap-2">
-                      {/* ✅ BADGE DIVERSO PER CHAT PROFESSIONALI */}
-                      {conversation.conversation_type === 'professional_quote' ? (
-                        <Badge variant="default" className="bg-blue-600">
-                          {t('professionalQuote') || 'Preventivo'}
-                        </Badge>
-                      ) : (
-                        <Badge 
-                          variant={conversation.status === 'active' ? 'default' : 'secondary'}
-                          className="bg-green-100 text-green-800"
-                        >
-                          {t('conversationActive')}
-                        </Badge>
-                      )}
+                      <Badge 
+                        variant={conversation.status === 'active' ? 'default' : 'secondary'}
+                        className="bg-green-100 text-green-800"
+                      >
+                        {t('conversationActive')}
+                      </Badge>
                       <Button
                         variant="ghost"
                         size="icon"
@@ -421,6 +355,7 @@ const ChatTab = ({ conversationId: initialConversationId, isProfessionalChat: in
           </div>
 
           <div className="mt-8 space-y-4">
+            {/* Pulsante per nuovo preventivo professionale - Solo per utenti Professional */}
             {subscriptionTier === 'professional' && (
               <div className="text-center">
                 <Button
@@ -457,6 +392,7 @@ const ChatTab = ({ conversationId: initialConversationId, isProfessionalChat: in
     );
   }
 
+  // Se l'utente ha accesso premium ma non ha conversazioni attive, suggerisci diagnosi
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="max-w-2xl mx-auto text-center">

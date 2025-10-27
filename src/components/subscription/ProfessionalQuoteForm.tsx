@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Building2, Mail, Phone, Users, Briefcase, Loader2, Download, FileText } from "lucide-react";
+import { Building2, Mail, Phone, Users, Briefcase, Loader2, CheckCircle, FileText } from "lucide-react";
 import { useTheme } from "@/context/ThemeContext";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -42,30 +42,6 @@ const ProfessionalQuoteForm = ({ onBack, onSubmit }: ProfessionalQuoteFormProps)
     }));
   };
 
-  const downloadPdf = async (pdfUrl: string, fileName: string) => {
-    try {
-      const response = await fetch(pdfUrl);
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = fileName;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      window.URL.revokeObjectURL(url);
-      
-      toast.success(
-        language === 'it' 
-          ? '📥 PDF scaricato con successo!' 
-          : '📥 PDF downloaded successfully!'
-      );
-    } catch (error) {
-      console.error('Error downloading PDF:', error);
-      toast.error(language === 'it' ? 'Errore nel download del PDF' : 'Error downloading PDF');
-    }
-  };
-
   const handleSubmit = async () => {
     // Validazione base
     if (!formData.companyName || !formData.contactPerson || !formData.email || !formData.phone) {
@@ -81,54 +57,35 @@ const ProfessionalQuoteForm = ({ onBack, onSubmit }: ProfessionalQuoteFormProps)
     setIsSubmitting(true);
     
     try {
-      // Debug: verifica autenticazione
-      const { data: { user } } = await supabase.auth.getUser();
-      console.log('🔐 Current user:', user?.id, user?.email);
-
       // Crea la richiesta di preventivo professionale
       const { data, error } = await supabase.functions.invoke('create-professional-quote', {
         body: { formData }
       });
 
       if (error) {
-        console.error('❌ Error creating professional quote:', error);
+        console.error('Error creating professional quote:', error);
         toast.error(language === 'it' ? 'Errore nella creazione della richiesta' : 'Error creating quote request');
-        return;
-      }
-
-      // Verifica risposta
-      console.log('✅ Response data:', data);
-
-      if (!data || !data.conversationId || !data.pdfUrl) {
-        console.error('❌ Missing data from response:', data);
-        toast.error(language === 'it' ? 'Risposta incompleta dal server' : 'Incomplete response from server');
         return;
       }
 
       toast.success(
         language === 'it' 
-          ? '✅ Richiesta inviata! PDF generato e conversazione creata.' 
-          : '✅ Request sent! PDF generated and conversation created.'
+          ? '✅ Richiesta inviata! PDF generato e conversazione creata. Ti reindirizziamo alla chat...' 
+          : '✅ Request sent! PDF generated and conversation created. Redirecting you to chat...'
       );
 
-      // Download automatico del PDF
-      await downloadPdf(data.pdfUrl, data.fileName || 'preventivo.pdf');
-
-      // Salva i dati per aprire la conversazione
-      console.log('💾 Saving conversation ID to localStorage:', data.conversationId);
+      // Salva l'ID della conversazione per aprirla
       localStorage.setItem('openConversationId', data.conversationId);
-      localStorage.setItem('isProfessionalChat', 'true');
+
+      // Reindirizza alla chat dopo 2 secondi
+      setTimeout(() => {
+        const event = new CustomEvent('switchTab', { detail: 'chat' });
+        window.dispatchEvent(event);
+      }, 2000);
 
       onSubmit(formData);
-
-      // Piccolo delay per permettere il download, poi reindirizza
-      setTimeout(() => {
-        console.log('🔄 Redirecting to chat...');
-        window.location.href = '/?tab=chat';
-      }, 1500);
-
     } catch (error) {
-      console.error('❌ Error submitting form:', error);
+      console.error('Error submitting form:', error);
       toast.error(language === 'it' ? 'Errore nell\'invio della richiesta' : 'Error submitting request');
     } finally {
       setIsSubmitting(false);
@@ -433,7 +390,7 @@ const ProfessionalQuoteForm = ({ onBack, onSubmit }: ProfessionalQuoteFormProps)
             </>
           ) : (
             <>
-              <Download className="w-4 h-4 mr-2" />
+              <CheckCircle className="w-4 h-4 mr-2" />
               {language === 'it' ? 'Genera PDF e Invia' : 'Generate PDF and Send'}
             </>
           )}
