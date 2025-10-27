@@ -28,6 +28,12 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({
   const [autoDataSent, setAutoDataSent] = useState(false);
   const [showComprehensiveData, setShowComprehensiveData] = useState(false);
   
+  console.log('🔵 UserChatViewRealtime render:', { 
+    userId, 
+    conversationId, 
+    isProfessionalChat 
+  });
+
   const {
     activeChat,
     messages,
@@ -39,15 +45,15 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({
     initializationError,
     resetChat,
     isInitializing
-  } = useUserChatRealtime(userId);
+  } = useUserChatRealtime(userId, conversationId);
 
-  // Auto-avvio chat quando il componente si monta
+  // Auto-avvio chat quando il componente si monta SOLO se non c'è conversationId
   useEffect(() => {
-    if (!activeChat && !initializationError && !isInitializing) {
+    if (!conversationId && !activeChat && !initializationError && !isInitializing) {
       console.log('🚀 UserChatViewRealtime: Avvio automatico chat');
       startChatWithExpert();
     }
-  }, [activeChat, startChatWithExpert, initializationError, isInitializing]);
+  }, [conversationId, activeChat, startChatWithExpert, initializationError, isInitializing]);
 
   // Reset dati automatici quando cambia conversazione
   useEffect(() => {
@@ -74,7 +80,6 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({
       } else if (msg.sender_id === MARCO_NIGRO_ID) {
         sender = 'expert';
       } else {
-        // Fallback per messaggi dove l'ID del sender non corrisponde
         sender = msg.sender_id === userId ? 'user' : 'expert';
       }
       
@@ -90,12 +95,14 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({
         }),
         image_url: msg.image_url || undefined,
         pdf_path: msg.pdf_path || undefined,
-      products: msg.products || undefined,
+        products: msg.products || undefined,
       };
       
       console.log(`🎨 Formatting message ${index + 1}/${dbMessages.length}:`, {
         id: formattedMessage.id,
         sender: formattedMessage.sender,
+        hasPdf: !!formattedMessage.pdf_path,
+        pdfPath: formattedMessage.pdf_path,
         text: formattedMessage.text.substring(0, 50),
         senderId: msg.sender_id,
         userId: userId,
@@ -128,15 +135,26 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({
   // Log per debug dei messaggi formattati
   useEffect(() => {
     const formattedMessages = formatMessagesForDisplay(messages);
+    const messagesWithPdf = formattedMessages.filter(m => m.pdf_path);
     console.log('📊 Messages debug info:', {
       totalMessages: messages.length,
       formattedMessages: formattedMessages.length,
+      messagesWithPdf: messagesWithPdf.length,
       userMessages: formattedMessages.filter(m => m.sender === 'user').length,
       expertMessages: formattedMessages.filter(m => m.sender === 'expert').length,
       userId: userId,
-      marcoId: MARCO_NIGRO_ID
+      marcoId: MARCO_NIGRO_ID,
+      isProfessionalChat: isProfessionalChat
     });
-  }, [messages, userId]);
+    
+    if (messagesWithPdf.length > 0) {
+      console.log('📄 Messaggi con PDF trovati:', messagesWithPdf.map(m => ({
+        id: m.id,
+        sender: m.sender,
+        pdf_path: m.pdf_path
+      })));
+    }
+  }, [messages, userId, isProfessionalChat]);
 
   // Stato di errore con opzioni di recupero
   if (initializationError) {
@@ -179,7 +197,7 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({
   }
 
   // Stato di caricamento
-  if (isInitializing || !activeChat) {
+  if (isInitializing || (!activeChat && !conversationId)) {
     return (
       <div className="flex flex-col h-full">
         <ChatHeader 
@@ -198,6 +216,8 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({
       </div>
     );
   }
+
+  const formattedMessages = formatMessagesForDisplay(messages);
 
   return (
     <div className="flex flex-col h-full bg-gray-50">
@@ -235,7 +255,7 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({
                   entro 2-3 giorni lavorativi.
                 </p>
                 <p className="text-xs text-blue-600 mt-2">
-                  Il PDF con i dettagli della tua richiesta è stato inviato e allegato qui sotto.
+                  📎 Il PDF con i dettagli della tua richiesta è stato inviato e dovresti vederlo nei messaggi qui sotto.
                 </p>
               </div>
             </div>
@@ -257,34 +277,31 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({
       {/* Area chat principale */}
       <div className="flex-1 overflow-hidden bg-white">
         <MessageList 
-          messages={formatMessagesForDisplay(messages)}
+          messages={formattedMessages}
           isTyping={isSending}
           typingUser="Esperto"
         />
       </div>
 
-      {/* Input messaggi - Nascosto per chat professionali */}
-      {!isProfessionalChat && (
-        <div className="flex-shrink-0">
-          <MessageBoard
-            onSendMessage={handleSendMessage}
-            isSending={isSending}
-            isConnected={isConnected}
-            disabled={!isConnected && !activeChat}
-            conversationId={currentConversationId}
-            senderId={userId}
-            recipientId={MARCO_NIGRO_ID}
-          />
-        </div>
-      )}
+      {/* Input messaggi - Visibile anche per chat professionali per continuare la conversazione */}
+      <div className="flex-shrink-0">
+        <MessageBoard
+          onSendMessage={handleSendMessage}
+          isSending={isSending}
+          isConnected={isConnected}
+          disabled={!isConnected && !activeChat}
+          conversationId={currentConversationId}
+          senderId={userId}
+          recipientId={MARCO_NIGRO_ID}
+        />
+      </div>
 
       {/* Nota per chat professionali */}
       {isProfessionalChat && (
-        <div className="flex-shrink-0 bg-gray-100 border-t p-4">
+        <div className="flex-shrink-0 bg-blue-50 border-t border-blue-200 p-3">
           <div className="max-w-4xl mx-auto text-center">
-            <p className="text-sm text-gray-600">
-              💬 Riceverai una risposta via email e qui nella chat appena il nostro team 
-              avrà preparato il preventivo personalizzato per te.
+            <p className="text-xs text-blue-700">
+              💬 Il nostro team risponderà alla tua richiesta via email e qui nella chat entro 2-3 giorni lavorativi
             </p>
           </div>
         </div>
