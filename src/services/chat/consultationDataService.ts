@@ -1,5 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 import { MARCO_NIGRO_ID } from '@/components/phytopathologist';
+import { MessageService } from './messageService';
 
 /**
  * Formatta i dati di consultazione come messaggio leggibile per la chat
@@ -55,8 +56,7 @@ export class ConsultationDataService {
         plantData: plantData?.plantName,
         hasImage: !!plantData?.imageUrl,
         fromAIDiagnosis,
-        hasDiagnosis: !!diagnosisResult,
-        diagnosisResult
+        hasDiagnosis: !!diagnosisResult
       });
 
       const { data: { user } } = await supabase.auth.getUser();
@@ -73,6 +73,7 @@ export class ConsultationDataService {
       }
 
       // IMPORTANTE: Verifica se questa è una conversazione di tipo "professional_quote"
+      // Se lo è, NON generare un PDF standard perché è già stato generato da create-professional-quote
       const { data: conversation, error: convError } = await supabase
         .from('conversations')
         .select('conversation_type')
@@ -85,10 +86,11 @@ export class ConsultationDataService {
 
       if (conversation?.conversation_type === 'professional_quote') {
         console.log('ℹ️ Questa è una conversazione professional_quote - PDF già generato, skip invio automatico');
-        return true;
+        return true; // Il PDF professionale è già stato inviato da create-professional-quote
       }
 
       // Se c'è una diagnosi AI, invia sempre un nuovo PDF aggiornato
+      // Altrimenti controlla se i dati base sono già stati inviati
       if (!diagnosisResult) {
         const alreadySent = await this.isConsultationDataSent(conversationId);
         if (alreadySent) {
@@ -99,8 +101,8 @@ export class ConsultationDataService {
         console.log('🔄 Invio PDF con diagnosi AI aggiornata...');
       }
 
-      // Chiama generate-professional-pdf (la funzione esistente aggiornata)
-      console.log('📄 Chiamata a generate-professional-pdf con dati:', {
+      // Genera il PDF professionale
+      console.log('📄 Generazione PDF in corso...', {
         plantData,
         userProfile,
         diagnosisResult,
@@ -119,12 +121,7 @@ export class ConsultationDataService {
         },
       });
 
-      console.log('📄 Risposta generate-consultation-pdf:', { 
-        success: pdfResult?.success,
-        pdfUrl: pdfResult?.pdfUrl,
-        message: pdfResult?.message,
-        error: pdfError 
-      });
+      console.log('📄 Risposta PDF function:', { pdfResult, pdfError });
 
       if (pdfError) {
         console.error('❌ Errore generazione PDF:', pdfError);
@@ -132,29 +129,67 @@ export class ConsultationDataService {
         return await this.sendTextualConsultationData(conversationId, plantData, userProfile, diagnosisResult);
       }
 
-      if (!pdfResult?.success) {
-        console.error('❌ PDF function returned no success:', pdfResult);
+      if (!pdfResult?.success || !pdfResult?.pdfUrl) {
+        console.error('❌ PDF function returned no success or no pdfUrl:', pdfResult);
         // Fallback: invia i dati come messaggio testuale
         return await this.sendTextualConsultationData(conversationId, plantData, userProfile, diagnosisResult);
       }
 
-      console.log('✅ PDF generato e inserito in chat con successo!');
-      console.log('📎 URL PDF:', pdfResult.pdfUrl);
+      console.log('✅ PDF generato con successo:', pdfResult.fileName);
+      console.log('📎 URL PDF generato:', pdfResult.pdfUrl);
 
-      // Se c'è un'immagine della pianta, inviala come messaggio separato
+      // Invia il messaggio principale con PDF allegato
+      const pdfMessage = [
+        "📋 **CONSULENZA PROFESSIONALE - DATI COMPLETI**",
+        "",
+        "Ho preparato un documento PDF completo con tutti i dati della consulenza:",
+        "",
+        "• Dati personali del paziente",
+        "• Informazioni dettagliate della pianta", 
+        "• Risultati della diagnosi AI (se disponibili)",
+        "• Foto della pianta (se presente)",
+        "",
+        "Il documento è pronto per la revisione professionale."
+      ].join('\n');
+
+      console.log('📋 Messaggio PDF che verrà inviato:');
+      console.log(pdfMessage);
+
+      // Invia il messaggio con il PDF come image_url per attivare il PDFDisplay
+      const { data: messageResult, error: messageError } = await supabase.functions.invoke('send-message', {
+        body: {
+          conversationId,
+          recipientId: MARCO_NIGRO_ID,
+          text: pdfMessage,
+          imageUrl: pdfResult.pdfUrl, // Il PDF viene passato come imageUrl per essere rilevato
+          products: null
+        },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+
+      if (messageError || !messageResult?.success) {
+        console.error('❌ Errore invio messaggio PDF:', messageError);
+        // Fallback con link diretto
+        return await this.sendPDFLinkMessage(conversationId, pdfResult.pdfUrl, pdfResult.fileName);
+      }
+
+      // Se c'è un'immagine, inviala come messaggio separato
       if (plantData?.imageUrl) {
         console.log('📸 Invio immagine pianta...');
-        
-        // Inserisci direttamente in chat_messages invece di usare send-message
-        const { error: imageError } = await supabase
-          .from('chat_messages')
-          .insert({
-            conversation_id: conversationId,
-            sender: 'user',
+        const { data: imageResult, error: imageError } = await supabase.functions.invoke('send-message', {
+          body: {
+            conversationId,
+            recipientId: MARCO_NIGRO_ID,
             text: '📸 Foto della pianta in consulenza',
-            image_url: plantData.imageUrl,
-            created_at: new Date().toISOString()
-          });
+            imageUrl: plantData.imageUrl,
+            products: null
+          },
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+        });
 
         if (imageError) {
           console.error('⚠️ Warning: Errore invio immagine:', imageError);
@@ -174,6 +209,48 @@ export class ConsultationDataService {
   }
 
   /**
+   * Fallback method: invia il PDF come link diretto
+   */
+  private static async sendPDFLinkMessage(
+    conversationId: string, 
+    pdfUrl: string, 
+    fileName?: string
+  ): Promise<boolean> {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return false;
+
+      const linkMessage = [
+        "📋 **CONSULENZA PROFESSIONALE - PDF GENERATO**",
+        "",
+        "I dati della consulenza sono stati compilati in un documento PDF professionale.",
+        "",
+        `📎 **[Scarica ${fileName || 'Consulenza Completa'}](${pdfUrl})**`,
+        "",
+        "Il documento contiene tutti i dettagli necessari per la diagnosi professionale."
+      ].join('\n');
+
+      const { data: result, error } = await supabase.functions.invoke('send-message', {
+        body: {
+          conversationId,
+          recipientId: MARCO_NIGRO_ID,
+          text: linkMessage,
+          imageUrl: null,
+          products: null
+        },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+
+      return !error && result?.success;
+    } catch (error) {
+      console.error('❌ Errore invio link PDF:', error);
+      return false;
+    }
+  }
+
+  /**
    * Fallback method: invia i dati come messaggio testuale formattato
    */
   private static async sendTextualConsultationData(
@@ -185,42 +262,41 @@ export class ConsultationDataService {
     try {
       console.log('📝 Invio dati consultazione come testo (fallback)');
       
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return false;
+
       const textualMessage = formatConsultationMessage(plantData, userProfile);
       
       // Aggiungi i risultati della diagnosi AI se disponibili
       let fullMessage = textualMessage;
       if (diagnosisResult) {
-        const diseases = diagnosisResult.diseases || diagnosisResult.primaryDiseases || [];
-        if (diseases.length > 0) {
-          fullMessage += "\n\n🤖 **RISULTATI DIAGNOSI AI:**\n";
-          diseases.forEach((disease: any, index: number) => {
-            const name = disease.disease || disease.name || 'Non identificata';
-            const confidence = disease.confidence ? `${Math.round(disease.confidence * 100)}%` : 'N/A';
-            fullMessage += `\n${index + 1}. ${name} (Confidenza: ${confidence})`;
-            
-            if (disease.treatments && disease.treatments.length > 0) {
-              fullMessage += `\n   Trattamenti: ${disease.treatments.slice(0, 2).join(', ')}`;
-            }
-          });
-        }
+        fullMessage += [
+          "",
+          "🤖 **RISULTATI DIAGNOSI AI:**",
+          `• Malattia identificata: ${diagnosisResult.disease || 'Non identificata'}`,
+          `• Confidenza: ${diagnosisResult.confidence || 'N/A'}%`,
+          `• Trattamento suggerito: ${diagnosisResult.treatment || 'Da definire'}`,
+        ].join('\n');
       }
 
-      // Inserisci direttamente in chat_messages
-      const { error } = await supabase
-        .from('chat_messages')
-        .insert({
-          conversation_id: conversationId,
-          sender: 'system',
+      const { data: result, error } = await supabase.functions.invoke('send-message', {
+        body: {
+          conversationId,
+          recipientId: MARCO_NIGRO_ID,
           text: fullMessage,
-          created_at: new Date().toISOString()
-        });
+          imageUrl: null,
+          products: null
+        },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
 
-      if (!error) {
+      if (!error && result?.success) {
         console.log('✅ Dati consultazione inviati come testo');
         return true;
       }
       
-      console.error('❌ Errore invio messaggio testuale:', error);
       return false;
     } catch (error) {
       console.error('❌ Errore invio dati testuali:', error);
@@ -232,12 +308,11 @@ export class ConsultationDataService {
     try {
       console.log('🔍 Verifica rapida dati consultazione per:', conversationId);
       
-      // Controlla nella tabella corretta: chat_messages
       const { data: messages, error } = await supabase
-        .from('chat_messages')
+        .from('messages')
         .select('id')
         .eq('conversation_id', conversationId)
-        .or('text.ilike.%CONSULENZA PROFESSIONALE%,text.ilike.%DATI PERSONALI DEL PAZIENTE%,pdf_url.not.is.null')
+        .or('text.ilike.%CONSULENZA PROFESSIONALE - DATI COMPLETI%,text.ilike.%DATI PERSONALI DEL PAZIENTE%')
         .limit(1);
 
       if (error) {

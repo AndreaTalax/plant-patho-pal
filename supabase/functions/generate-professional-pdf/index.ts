@@ -1,6 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
+
+// Importa jsPDF per generare PDF
 import { jsPDF } from "https://esm.sh/jspdf@2.5.1";
 
 serve(async (req) => {
@@ -9,13 +11,10 @@ serve(async (req) => {
   }
 
   if (req.method !== "POST") {
-    return new Response(
-      JSON.stringify({ error: "Method not allowed" }),
-      {
-        status: 405,
-        headers: { ...corsHeaders, "Content-Type": "application/json" }
-      }
-    );
+    return new Response(JSON.stringify({ error: "Method not allowed" }), {
+      status: 405,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 
   try {
@@ -24,312 +23,323 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    const authHeader = req.headers.get("Authorization");
-    const token = authHeader?.replace("Bearer ", "");
-    const { data: authData, error: authError } = await supabaseClient.auth.getUser(token);
-
-    if (authError || !authData?.user) {
-      throw new Error("Utente non autenticato");
+    const authHeader = req.headers.get("Authorization")!;
+    const token = authHeader.replace("Bearer ", "");
+    
+    // Verifica autenticazione
+    const regularClient = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_ANON_KEY") ?? ""
+    );
+    
+    const { data: { user } } = await regularClient.auth.getUser(token);
+    if (!user) {
+      throw new Error("User not authenticated");
     }
-
-    const user = authData.user;
-
-    const { data: profileData, error: profileError } = await supabaseClient
-      .from("profiles")
-      .select("subscription_type")
-      .eq("id", user.id)
-      .single();
-
-    if (profileError) throw profileError;
-
-    const isProfessional = profileData?.subscription_type === "professional";
-    console.log("👤 Utente:", user.id, "Abbonamento:", profileData?.subscription_type);
 
     const { plantData, userProfile, diagnosisResult, conversationId } = await req.json();
 
-    console.log("📄 Generazione PDF iniziata per conversazione:", conversationId);
-    console.log("🔍 diagnosisResult ricevuto:", JSON.stringify(diagnosisResult, null, 2));
+    console.log("📄 Starting PDF generation for:", user.id);
 
-    // Estrai le malattie da tutte le possibili strutture
-    let diseases = [];
-    
-    if (diagnosisResult) {
-      // Prova tutti i possibili percorsi dove potrebbero essere le malattie
-      diseases = diagnosisResult.diseases || 
-                 diagnosisResult.primaryDiseases || 
-                 diagnosisResult.healthAssessment?.diseases ||
-                 diagnosisResult.detectedDiseases ||
-                 [];
-      
-      console.log("🦠 Malattie estratte:", diseases.length, "malattie trovate");
-    }
-
-    // Crea documento PDF
-    const doc = new jsPDF();
-    let y = 20;
-
-    // Logo
     try {
-      const logoArrayBuffer = await fetch("https://drplant.lovable.app/hortives-logo-pdf.jpg")
-        .then((r) => r.arrayBuffer());
-      const logoBase64 = btoa(
-        new Uint8Array(logoArrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), "")
-      );
-      doc.addImage(`data:image/jpeg;base64,${logoBase64}`, "JPEG", 80, y, 50, 25);
-      y += 30;
-    } catch (err) {
-      console.warn("⚠️ Impossibile caricare il logo:", err);
-      y += 10;
-    }
+      // Inizializza jsPDF
+      const doc = new jsPDF();
+      let yPosition = 20;
 
-    // Titolo
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(20);
-    doc.text("Dr.Plant - Consulenza Professionale", 20, y);
-    y += 15;
+      // Aggiungi il logo Hortives
+      try {
+        // Carica il logo specifico per PDF dal deployment pubblico
+        const logoBase64 = await fetch('https://drplant.lovable.app/hortives-logo-pdf.jpg')
+          .then(res => res.arrayBuffer())
+          .then(buffer => {
+            const bytes = new Uint8Array(buffer);
+            let binary = '';
+            for (let i = 0; i < bytes.length; i++) {
+              binary += String.fromCharCode(bytes[i]);
+            }
+            return btoa(binary);
+          });
+        
+        // Aggiungi logo Hortives centrato in alto (50x25 mm)
+        doc.addImage(`data:image/jpeg;base64,${logoBase64}`, 'JPEG', 80, yPosition, 50, 25);
+        console.log("✅ Logo Hortives aggiunto al PDF");
+      } catch (logoError) {
+        console.warn("⚠️ Logo non caricato:", logoError);
+        // Procedi senza logo se non disponibile
+      }
 
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(12);
-    doc.text(`Generato il: ${new Date().toLocaleDateString("it-IT")}`, 20, y);
-    y += 20;
+      yPosition += 25;
 
-    // Dati personali (solo per utenti non professional)
-    if (!isProfessional) {
-      doc.setFontSize(16);
+      // Header del documento
+      doc.setFontSize(20);
       doc.setFont("helvetica", "bold");
-      doc.text("DATI PERSONALI DEL PAZIENTE", 20, y);
-      y += 10;
+      doc.text("Dr.Plant - Consulenza Professionale", 20, yPosition);
+      yPosition += 15;
 
       doc.setFontSize(12);
       doc.setFont("helvetica", "normal");
+      doc.text(`Generato il: ${new Date().toLocaleDateString('it-IT')}`, 20, yPosition);
+      yPosition += 20;
+
+      // Sezione dati personali
+      doc.setFontSize(16);
+      doc.setFont("helvetica", "bold");
+      doc.text("DATI PERSONALI DEL PAZIENTE", 20, yPosition);
+      yPosition += 10;
+
+      doc.setFontSize(12);
+      doc.setFont("helvetica", "normal");
+      
+      const firstName = userProfile?.firstName || userProfile?.first_name || "Non specificato";
+      const lastName = userProfile?.lastName || userProfile?.last_name || "Non specificato";
+      const email = userProfile?.email || "Non specificato";
+      const birthDate = userProfile?.birthDate || userProfile?.birth_date || "Non specificata";
+      const birthPlace = userProfile?.birthPlace || userProfile?.birth_place || "Non specificato";
+      const address = userProfile?.address || "Non specificato";
+      const phone = userProfile?.phone || "Non specificato";
 
       const personalData = [
-        `Nome completo: ${userProfile?.firstName || ""} ${userProfile?.lastName || ""}`,
-        `Email: ${userProfile?.email || "Non specificata"}`,
-        `Data di nascita: ${userProfile?.birthDate || "Non specificata"}`,
-        `Luogo di nascita: ${userProfile?.birthPlace || "Non specificato"}`,
-        `Indirizzo: ${userProfile?.address || "Non specificato"}`,
-        `Telefono: ${userProfile?.phone || "Non specificato"}`
+        `Nome completo: ${firstName} ${lastName}`,
+        `Email: ${email}`,
+        `Data di nascita: ${birthDate}`,
+        `Luogo di nascita: ${birthPlace}`,
+        `Indirizzo: ${address}`,
+        `Telefono: ${phone}`
       ];
 
-      personalData.forEach((line) => {
-        doc.text(line, 25, y);
-        y += 7;
+      personalData.forEach(line => {
+        doc.text(line, 25, yPosition);
+        yPosition += 7;
       });
-      y += 10;
 
-      // Informazioni pianta
+      yPosition += 10;
+
+      // Sezione informazioni pianta
       doc.setFontSize(16);
       doc.setFont("helvetica", "bold");
-      doc.text("INFORMAZIONI PIANTA IN CONSULENZA", 20, y);
-      y += 10;
+      doc.text("INFORMAZIONI PIANTA IN CONSULENZA", 20, yPosition);
+      yPosition += 10;
 
       doc.setFontSize(12);
       doc.setFont("helvetica", "normal");
+
+      const plantName = plantData?.plantName || plantData?.plant_name || 'Specie da identificare';
+      const environment = plantData?.environment || 'Da specificare';
+      const sunExposure = plantData?.sunExposure || plantData?.sun_exposure || 'Da specificare';
+      const wateringFrequency = plantData?.wateringFrequency || plantData?.watering_frequency || 'Da specificare';
+      const symptoms = plantData?.symptoms || 'Da descrivere durante la consulenza';
+      const plantAge = plantData?.plantAge || plantData?.plant_age || 'Non specificata';
+      const fertilizer = plantData?.fertilizer || 'Non specificato';
+      const soilType = plantData?.soilType || plantData?.soil_type || 'Non specificato';
 
       const plantInfo = [
-        `Nome/Tipo: ${plantData?.plantName || "Specie non specificata"}`,
-        `Ambiente: ${plantData?.environment || "Non specificato"}`,
-        `Esposizione solare: ${plantData?.sunExposure || "Non specificata"}`,
-        `Irrigazione: ${plantData?.wateringFrequency || "Non specificata"}`,
-        `Età: ${plantData?.plantAge || "Non specificata"}`,
-        `Terreno: ${plantData?.soilType || "Non specificato"}`,
-        `Fertilizzante: ${plantData?.fertilizer || "Non specificato"}`,
-        `Sintomi: ${plantData?.symptoms || "Non descritti"}`
+        `Nome/Tipo: ${plantName}`,
+        `Ambiente di coltivazione: ${environment}`,
+        `Esposizione alla luce solare: ${sunExposure}`,
+        `Frequenza di irrigazione: ${wateringFrequency}`,
+        `Età della pianta: ${plantAge}`,
+        `Tipo di fertilizzante: ${fertilizer}`,
+        `Tipo di terreno: ${soilType}`,
+        `Sintomi osservati: ${symptoms}`
       ];
 
-      plantInfo.forEach((line) => {
-        if (y > 270) {
+      plantInfo.forEach(line => {
+        if (yPosition > 250) {
           doc.addPage();
-          y = 20;
+          yPosition = 20;
         }
-        doc.text(line, 25, y);
-        y += 7;
+        doc.text(line, 25, yPosition);
+        yPosition += 7;
       });
-      y += 10;
-    }
 
-    // Diagnosi AI - SEZIONE MIGLIORATA
-    if (diseases.length > 0) {
-      if (y > 240) {
+        yPosition += 10;
+
+        // Sezione diagnosi AI (se disponibile)
+        if (diagnosisResult) {
+          if (yPosition > 220) {
+            doc.addPage();
+            yPosition = 20;
+          }
+
+          doc.setFontSize(16);
+          doc.setFont("helvetica", "bold");
+          doc.text("RISULTATI DIAGNOSI AI", 20, yPosition);
+          yPosition += 10;
+
+          doc.setFontSize(12);
+          doc.setFont("helvetica", "normal");
+
+          const diseases = diagnosisResult.diseases || [];
+          
+          if (diseases && diseases.length > 0) {
+            doc.text("Malattie e problemi identificati:", 25, yPosition);
+            yPosition += 7;
+
+            diseases.forEach((disease: any, index: number) => {
+              if (yPosition > 260) {
+                doc.addPage();
+                yPosition = 20;
+              }
+              
+              const diseaseName = disease.disease || disease.name || 'Malattia sconosciuta';
+              const confidence = disease.confidence ? `(${Math.round(disease.confidence)}% confidenza)` : '';
+              
+              doc.setFont("helvetica", "bold");
+              doc.text(`${index + 1}. ${diseaseName} ${confidence}`, 30, yPosition);
+              yPosition += 7;
+              
+              doc.setFont("helvetica", "normal");
+
+              if (disease.symptoms && disease.symptoms.length > 0) {
+                doc.text(`   Sintomi: ${disease.symptoms.slice(0, 3).join(', ')}`, 30, yPosition);
+                yPosition += 7;
+              }
+
+              if (disease.treatments && disease.treatments.length > 0) {
+                doc.text(`   Trattamenti suggeriti:`, 30, yPosition);
+                yPosition += 7;
+                disease.treatments.slice(0, 2).forEach((treatment: any) => {
+                  if (yPosition > 270) {
+                    doc.addPage();
+                    yPosition = 20;
+                  }
+                  const treatmentText = typeof treatment === 'string' ? treatment : treatment.name || treatment.description || '';
+                  if (treatmentText) {
+                    doc.text(`     - ${treatmentText.substring(0, 60)}`, 30, yPosition);
+                    yPosition += 6;
+                  }
+                });
+              }
+
+              if (disease.severity) {
+                const severityLabel = disease.severity === 'high' ? 'Alta' : disease.severity === 'medium' ? 'Media' : 'Bassa';
+                doc.text(`   Gravita: ${severityLabel}`, 30, yPosition);
+                yPosition += 7;
+              }
+
+              yPosition += 3;
+            });
+          }
+
+          if (diagnosisResult.healthAssessment) {
+            yPosition += 5;
+            doc.setFont("helvetica", "bold");
+            doc.text(`Valutazione generale: ${diagnosisResult.healthAssessment}`, 25, yPosition);
+            yPosition += 7;
+            doc.setFont("helvetica", "normal");
+          }
+
+          if (diagnosisResult.plantIdentification) {
+            yPosition += 5;
+            doc.text(`Identificazione pianta: ${diagnosisResult.plantIdentification}`, 25, yPosition);
+            yPosition += 7;
+          }
+
+          if (diagnosisResult.primaryDisease && diagnosisResult.primaryDisease.name) {
+            yPosition += 5;
+            doc.setFont("helvetica", "bold");
+            doc.text(`Problema principale: ${diagnosisResult.primaryDisease.name}`, 25, yPosition);
+            yPosition += 7;
+            doc.setFont("helvetica", "normal");
+            
+            if (diagnosisResult.primaryDisease.confidence) {
+              doc.text(`Confidenza: ${diagnosisResult.primaryDisease.confidence}%`, 25, yPosition);
+              yPosition += 7;
+            }
+          }
+        }
+
+      // Note per l'esperto
+      if (yPosition > 230) {
         doc.addPage();
-        y = 20;
+        yPosition = 20;
       }
 
-      doc.setFont("helvetica", "bold");
       doc.setFontSize(16);
-      doc.text("RISULTATI DIAGNOSI AI", 20, y);
-      y += 10;
+      doc.setFont("helvetica", "bold");
+      doc.text("NOTE PER L'ESPERTO", 20, yPosition);
+      yPosition += 10;
 
-      doc.setFont("helvetica", "normal");
       doc.setFontSize(12);
+      doc.setFont("helvetica", "normal");
 
-      diseases.forEach((disease, index) => {
-        // Estrai il nome della malattia
-        const name = disease.disease || disease.name || disease.disease_name || "Malattia sconosciuta";
-        const confidence = disease.confidence 
-          ? ` (Confidenza: ${Math.round(disease.confidence * 100)}%)`
-          : "";
+      const expertNotes = [
+        "Questo documento contiene tutti i dati forniti dal paziente per la consulenza fitopatologo.",
+        "Si prega di procedere con la diagnosi professionale e fornire raccomandazioni di trattamento specifiche.",
+        "",
+        "I dati della diagnosi AI sono forniti a scopo informativo e richiedono validazione professionale."
+      ];
 
-        // Nome malattia
-        doc.setFont("helvetica", "bold");
-        doc.text(`${index + 1}. ${name}${confidence}`, 25, y);
-        y += 7;
-        doc.setFont("helvetica", "normal");
-
-        // Descrizione
-        if (disease.description) {
-          const descLines = doc.splitTextToSize(`${disease.description}`, 160);
-          descLines.forEach((line) => {
-            if (y > 270) {
-              doc.addPage();
-              y = 20;
-            }
-            doc.text(line, 30, y);
-            y += 6;
-          });
-          y += 3;
+      expertNotes.forEach(note => {
+        if (note === "") {
+          yPosition += 3;
+        } else {
+          doc.text(note, 25, yPosition);
+          yPosition += 6;
         }
-
-        // Sintomi
-        if (disease.symptoms && Array.isArray(disease.symptoms) && disease.symptoms.length > 0) {
-          doc.text("Sintomi:", 30, y);
-          y += 6;
-          disease.symptoms.forEach((symptom) => {
-            if (y > 270) {
-              doc.addPage();
-              y = 20;
-            }
-            const symptomLines = doc.splitTextToSize(`• ${symptom}`, 155);
-            symptomLines.forEach((line) => {
-              doc.text(line, 35, y);
-              y += 6;
-            });
-          });
-          y += 3;
-        }
-
-        // Trattamenti
-        if (disease.treatments && Array.isArray(disease.treatments) && disease.treatments.length > 0) {
-          doc.text("Trattamenti consigliati:", 30, y);
-          y += 6;
-          disease.treatments.forEach((treatment) => {
-            if (y > 270) {
-              doc.addPage();
-              y = 20;
-            }
-            const treatmentLines = doc.splitTextToSize(`• ${treatment}`, 155);
-            treatmentLines.forEach((line) => {
-              doc.text(line, 35, y);
-              y += 6;
-            });
-          });
-          y += 3;
-        } else if (disease.treatment) {
-          // Trattamento singolo (non array)
-          doc.text("Trattamento consigliato:", 30, y);
-          y += 6;
-          const treatmentLines = doc.splitTextToSize(`• ${disease.treatment}`, 155);
-          treatmentLines.forEach((line) => {
-            if (y > 270) {
-              doc.addPage();
-              y = 20;
-            }
-            doc.text(line, 35, y);
-            y += 6;
-          });
-          y += 3;
-        }
-
-        y += 5; // Spazio tra malattie
-      });
-    }
-
-    // Note finali
-    if (y > 240) {
-      doc.addPage();
-      y = 20;
-    }
-
-    y += 10;
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(16);
-    doc.text("NOTE PER L'ESPERTO", 20, y);
-    y += 10;
-
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(12);
-    const notes = [
-      "Questo documento riassume la consulenza Dr.Plant.",
-      "I risultati della diagnosi AI sono informativi e richiedono validazione professionale.",
-      "Si raccomanda una visita in loco per una diagnosi definitiva."
-    ];
-    notes.forEach((note) => {
-      const lines = doc.splitTextToSize(note, 160);
-      lines.forEach((line) => {
-        if (y > 270) {
-          doc.addPage();
-          y = 20;
-        }
-        doc.text(line, 25, y);
-        y += 6;
-      });
-    });
-
-    // Upload PDF
-    const pdfBlob = doc.output("blob");
-    const fileName = `consultation-${conversationId}-${Date.now()}.pdf`;
-
-    console.log("📤 Upload PDF:", fileName);
-
-    const { error: uploadError } = await supabaseClient.storage
-      .from("pdfs")
-      .upload(fileName, pdfBlob, { contentType: "application/pdf" });
-
-    if (uploadError) throw uploadError;
-
-    const { data: publicUrl } = supabaseClient.storage.from("pdfs").getPublicUrl(fileName);
-
-    console.log("✅ PDF caricato:", publicUrl.publicUrl);
-
-    // Inserisci messaggio nella chat con PDF
-    const { error: chatError } = await supabaseClient
-      .from("chat_messages")
-      .insert({
-        conversation_id: conversationId,
-        sender: "system",
-        text: "📄 Diagnosi AI completa — scarica il PDF allegato qui sotto.",
-        pdf_url: publicUrl.publicUrl,
-        created_at: new Date().toISOString()
       });
 
-    if (chatError) {
-      console.error("❌ Errore inserimento messaggio chat:", chatError);
-      throw chatError;
-    }
+      // Genera il PDF come blob
+      const pdfBlob = doc.output("blob");
+      const fileName = `consultation-${conversationId}-${Date.now()}.pdf`;
 
-    console.log("✅ Messaggio PDF inserito in chat con successo!");
+      console.log("📄 Uploading PDF to storage...");
 
-    return new Response(
-      JSON.stringify({
+      // Upload del PDF a Supabase Storage
+      const { data: uploadData, error: uploadError } = await supabaseClient
+        .storage
+        .from("pdfs")
+        .upload(fileName, pdfBlob, {
+          contentType: "application/pdf",
+          upsert: false,
+        });
+
+      if (uploadError) {
+        console.error("❌ Upload error:", uploadError);
+        throw new Error(`Failed to upload PDF: ${uploadError.message}`);
+      }
+
+      // Ottieni URL pubblico
+      const { data: publicUrlData } = supabaseClient
+        .storage
+        .from("pdfs")
+        .getPublicUrl(fileName);
+
+      const pdfUrl = publicUrlData.publicUrl;
+
+      console.log("✅ PDF generated and uploaded successfully:", fileName);
+      console.log("📎 Public URL:", pdfUrl);
+
+      // Risposta con success, pdfUrl e fileName
+      return new Response(JSON.stringify({
         success: true,
-        pdfUrl: publicUrl.publicUrl,
+        pdfUrl: pdfUrl,
         fileName: fileName,
-        message: "PDF generato e inviato in chat con successo"
-      }),
-      {
+        message: "PDF generated successfully"
+      }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 200
-      }
-    );
-  } catch (error) {
-    console.error("❌ Errore:", error);
-    return new Response(
-      JSON.stringify({ success: false, error: error.message }),
-      {
+        status: 200,
+      });
+
+    } catch (pdfError: any) {
+      console.error("❌ Error during PDF generation:", pdfError);
+      return new Response(JSON.stringify({
+        success: false,
+        error: pdfError.message || "Failed to generate PDF"
+      }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 500
-      }
-    );
+        status: 500,
+      });
+    }
+
+  } catch (error: any) {
+    console.error("❌ Error processing request:", error);
+    return new Response(JSON.stringify({
+      success: false,
+      error: error.message || "Failed to process request"
+    }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 500,
+    });
   }
 });
