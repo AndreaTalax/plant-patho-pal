@@ -98,9 +98,7 @@ const DiagnosisResult: React.FC<DiagnosisResultProps> = ({
           return [name.toLowerCase(), { ...disease, name }];
         })
       ).values()
-    )
-    .filter(hasValidContent)
-    .slice(0, 3)
+    ).filter(hasValidContent)   
   , [rawDetectedDiseases]);
 
   // Malattia principale (massima confidenza)
