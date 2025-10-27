@@ -381,7 +381,6 @@ serve(async (req) => {
           recipient_id: expertId,
           content: `📋 Richiesta di preventivo professionale per ${formData.companyName}\n\n📎 Il PDF con tutti i dettagli della richiesta è allegato qui sotto.`,
           text: `📋 Richiesta di preventivo professionale per ${formData.companyName}\n\n📎 Il PDF con tutti i dettagli della richiesta è allegato qui sotto.`,
-          image_url: pdfUrl,
           pdf_path: pdfUrl,
           metadata: {
             type: 'professional_quote',

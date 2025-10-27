@@ -9,7 +9,11 @@ export const convertToUIMessage = (dbMessage: DatabaseMessage): Message => {
   let imageUrl = dbMessage.image_url;
   let pdfPath = dbMessage.pdf_path;
   
-  if (imageUrl && (imageUrl.toLowerCase().includes('.pdf') || imageUrl.toLowerCase().includes('/pdfs/'))) {
+  if (imageUrl && (
+    imageUrl.toLowerCase().includes('.pdf') || 
+    imageUrl.toLowerCase().includes('/pdfs/') ||
+    imageUrl.toLowerCase().includes('/professional-quotes/')
+  )) {
     pdfPath = imageUrl;
     imageUrl = undefined;
   }
