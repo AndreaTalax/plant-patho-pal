@@ -23,33 +23,29 @@ serve(async (req) => {
 
     const authHeader = req.headers.get("Authorization")!;
     const token = authHeader.replace("Bearer ", "");
-    
+
     // Verifica autenticazione
     const regularClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_ANON_KEY") ?? ""
     );
-    
+
     const { data: { user } } = await regularClient.auth.getUser(token);
-    if (!user) {
-      throw new Error("User not authenticated");
-    }
+    if (!user) throw new Error("User not authenticated");
 
     const { formData } = await req.json();
-
     console.log("📋 Creating professional quote for user:", user.id);
 
-    // Ottieni il profilo dell'utente per le email
+    // Ottieni profilo utente
     const { data: profile } = await supabaseClient
       .from('profiles')
       .select('*')
       .eq('id', user.id)
       .single();
 
-    // ID dell'esperto (fitopatologo Marco Nigro)
     const expertId = '07c7fe19-33c3-4782-b9a0-4e87c8aa7044';
 
-    // 1. Crea una nuova conversazione di tipo "professional_quote"
+    // 1. Crea conversazione
     const { data: conversation, error: convError } = await supabaseClient
       .from('conversations')
       .insert({
@@ -62,44 +58,35 @@ serve(async (req) => {
       .select()
       .single();
 
-    if (convError) {
-      console.error("Error creating conversation:", convError);
-      throw new Error("Failed to create conversation");
-    }
-
+    if (convError) throw convError;
     console.log("✅ Conversation created:", conversation.id);
 
-    // 2. Genera il PDF del preventivo professionale
+    // 2. Genera PDF
     const doc = new jsPDF();
     let yPosition = 20;
 
-    // Aggiungi il logo
+    // Aggiungi logo
     try {
       const logoBase64 = await fetch('https://drplant.lovable.app/hortives-logo-pdf.jpg')
         .then(res => res.arrayBuffer())
         .then(buffer => {
           const bytes = new Uint8Array(buffer);
           let binary = '';
-          for (let i = 0; i < bytes.length; i++) {
-            binary += String.fromCharCode(bytes[i]);
-          }
+          for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
           return btoa(binary);
         });
-      
+
       doc.addImage(`data:image/jpeg;base64,${logoBase64}`, 'JPEG', 80, yPosition, 50, 25);
-      console.log("✅ Logo added to PDF");
-    } catch (logoError) {
-      console.warn("⚠️ Logo not loaded:", logoError);
+    } catch (e) {
+      console.warn("⚠️ Logo not loaded:", e);
     }
 
     yPosition += 35;
-
-    // Header
     doc.setFontSize(24);
     doc.setFont("helvetica", "bold");
     doc.text("RICHIESTA DI PREVENTIVO", 105, yPosition, { align: 'center' });
     yPosition += 8;
-    
+
     doc.setFontSize(20);
     doc.setTextColor(34, 139, 34);
     doc.text("Soluzione Professionale Dr.Plant", 105, yPosition, { align: 'center' });
@@ -112,13 +99,12 @@ serve(async (req) => {
     doc.text(`ID Richiesta: ${conversation.id.substring(0, 8)}`, 150, yPosition);
     yPosition += 12;
 
-    // Linea separatrice
     doc.setDrawColor(34, 139, 34);
     doc.setLineWidth(0.5);
     doc.line(20, yPosition, 190, yPosition);
     yPosition += 12;
 
-    // Informazioni aziendali
+    // Informazioni azienda
     doc.setFontSize(16);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(34, 139, 34);
@@ -126,9 +112,6 @@ serve(async (req) => {
     doc.setTextColor(0, 0, 0);
     yPosition += 10;
 
-    doc.setFontSize(11);
-    doc.setFont("helvetica", "normal");
-    
     const companyInfo = [
       { label: 'Nome Azienda:', value: formData.companyName },
       { label: 'Persona di Contatto:', value: formData.contactPerson },
@@ -146,14 +129,12 @@ serve(async (req) => {
     });
 
     yPosition += 8;
-
-    // Linea separatrice
     doc.setDrawColor(200, 200, 200);
     doc.setLineWidth(0.3);
     doc.line(20, yPosition, 190, yPosition);
     yPosition += 12;
 
-    // Tipi di piante di interesse
+    // Piante di interesse
     doc.setFontSize(16);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(34, 139, 34);
@@ -164,16 +145,11 @@ serve(async (req) => {
     doc.setFontSize(11);
     doc.setFont("helvetica", "normal");
     const plantTypes = formData.plantTypes.join(', ');
-    const plantTypeLines = doc.splitTextToSize(plantTypes, 165);
-    plantTypeLines.forEach((line: string) => {
+    doc.splitTextToSize(plantTypes, 165).forEach(line => {
       doc.text(line, 25, yPosition);
       yPosition += 6;
     });
     yPosition += 8;
-
-    // Linea separatrice
-    doc.line(20, yPosition, 190, yPosition);
-    yPosition += 12;
 
     // Sfide attuali
     if (formData.currentChallenges) {
@@ -186,29 +162,19 @@ serve(async (req) => {
 
       doc.setFontSize(11);
       doc.setFont("helvetica", "normal");
-      const challengeLines = doc.splitTextToSize(formData.currentChallenges, 165);
-      challengeLines.forEach((line: string) => {
-        if (yPosition > 270) {
-          doc.addPage();
-          yPosition = 20;
-        }
+      doc.splitTextToSize(formData.currentChallenges, 165).forEach(line => {
+        if (yPosition > 270) { doc.addPage(); yPosition = 20; }
         doc.text(line, 25, yPosition);
         yPosition += 6;
       });
       yPosition += 8;
-
-      // Linea separatrice
       doc.setDrawColor(200, 200, 200);
       doc.line(20, yPosition, 190, yPosition);
       yPosition += 12;
     }
 
     // Requisiti e preferenze
-    if (yPosition > 230) {
-      doc.addPage();
-      yPosition = 20;
-    }
-
+    if (yPosition > 230) { doc.addPage(); yPosition = 20; }
     doc.setFontSize(16);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(34, 139, 34);
@@ -218,7 +184,6 @@ serve(async (req) => {
 
     doc.setFontSize(11);
     doc.setFont("helvetica", "normal");
-    
     if (formData.expectedVolume) {
       doc.setFont("helvetica", "bold");
       doc.text("Volume diagnosi previsto:", 25, yPosition);
@@ -227,14 +192,12 @@ serve(async (req) => {
       yPosition += 7;
     }
 
-    if (formData.preferredFeatures && formData.preferredFeatures.length > 0) {
+    if (formData.preferredFeatures?.length) {
       doc.setFont("helvetica", "bold");
       doc.text("Funzionalità richieste:", 25, yPosition);
       yPosition += 6;
       doc.setFont("helvetica", "normal");
-      const featuresText = formData.preferredFeatures.join(', ');
-      const featureLines = doc.splitTextToSize(featuresText, 160);
-      featureLines.forEach((line: string) => {
+      doc.splitTextToSize(formData.preferredFeatures.join(', '), 160).forEach(line => {
         doc.text(line, 30, yPosition);
         yPosition += 6;
       });
@@ -258,19 +221,12 @@ serve(async (req) => {
     }
 
     yPosition += 8;
-
-    // Linea separatrice
     doc.setDrawColor(200, 200, 200);
     doc.line(20, yPosition, 190, yPosition);
     yPosition += 12;
 
-    // Informazioni aggiuntive
     if (formData.additionalInfo) {
-      if (yPosition > 230) {
-        doc.addPage();
-        yPosition = 20;
-      }
-
+      if (yPosition > 230) { doc.addPage(); yPosition = 20; }
       doc.setFontSize(16);
       doc.setFont("helvetica", "bold");
       doc.setTextColor(34, 139, 34);
@@ -280,28 +236,17 @@ serve(async (req) => {
 
       doc.setFontSize(11);
       doc.setFont("helvetica", "normal");
-      const additionalLines = doc.splitTextToSize(formData.additionalInfo, 165);
-      additionalLines.forEach((line: string) => {
-        if (yPosition > 270) {
-          doc.addPage();
-          yPosition = 20;
-        }
+      doc.splitTextToSize(formData.additionalInfo, 165).forEach(line => {
+        if (yPosition > 270) { doc.addPage(); yPosition = 20; }
         doc.text(line, 25, yPosition);
         yPosition += 6;
       });
       yPosition += 8;
     }
 
-    // Footer
-    if (yPosition > 250) {
-      doc.addPage();
-      yPosition = 20;
-    }
-
-    // Box informativo finale
+    if (yPosition > 250) { doc.addPage(); yPosition = 20; }
     doc.setFillColor(240, 248, 240);
     doc.rect(15, yPosition, 180, 25, 'F');
-    
     yPosition += 8;
     doc.setFontSize(10);
     doc.setFont("helvetica", "bold");
@@ -314,37 +259,26 @@ serve(async (req) => {
     yPosition += 6;
     doc.text("Riceverete una risposta via email e tramite la chat della piattaforma.", 105, yPosition, { align: 'center' });
 
-    // Genera il PDF
-    const pdfBlob = doc.output("blob");
+    // ✅ Convert PDF in Uint8Array per Supabase Storage
+    const pdfBytes = new Uint8Array(await doc.output("arraybuffer"));
     const fileName = `professional-quote-${conversation.id}-${Date.now()}.pdf`;
 
-    console.log("📄 Uploading PDF to storage...");
-
-    // Upload del PDF
     const { data: uploadData, error: uploadError } = await supabaseClient
       .storage
       .from("professional-quotes")
-      .upload(fileName, pdfBlob, {
-        contentType: "application/pdf",
-        upsert: false,
-      });
+      .upload(fileName, pdfBytes, { contentType: "application/pdf", upsert: false });
 
-    if (uploadError) {
-      console.error("❌ Upload error:", uploadError);
-      throw new Error(`Failed to upload PDF: ${uploadError.message}`);
-    }
+    if (uploadError) throw uploadError;
 
-    // Ottieni URL pubblico
     const { data: publicUrlData } = supabaseClient
       .storage
       .from("professional-quotes")
       .getPublicUrl(fileName);
 
     const pdfUrl = publicUrlData.publicUrl;
-
     console.log("✅ PDF uploaded:", pdfUrl);
 
-    // 3. Salva la richiesta di preventivo nel database
+    // 3. Salva richiesta di preventivo
     const { error: quoteError } = await supabaseClient
       .from('professional_quotes')
       .insert({
@@ -366,12 +300,9 @@ serve(async (req) => {
         status: 'pending'
       });
 
-    if (quoteError) {
-      console.error("Error saving quote:", quoteError);
-      throw new Error("Failed to save quote");
-    }
+    if (quoteError) throw quoteError;
 
-    // 4. Crea un messaggio nella conversazione con il PDF allegato
+    // 4. Inserisci messaggi nella conversazione
     const { error: messageError } = await supabaseClient
       .from('messages')
       .insert([
@@ -381,7 +312,7 @@ serve(async (req) => {
           recipient_id: expertId,
           content: `📋 Richiesta di preventivo professionale per ${formData.companyName}\n\n📎 Il PDF con tutti i dettagli della richiesta è allegato qui sotto.`,
           text: `📋 Richiesta di preventivo professionale per ${formData.companyName}\n\n📎 Il PDF con tutti i dettagli della richiesta è allegato qui sotto.`,
-          pdf_path: pdfUrl,
+          pdf_path: pdfUrl,  // ora viene salvato correttamente
           image_url: null,
           metadata: {
             type: 'professional_quote',
@@ -393,47 +324,37 @@ serve(async (req) => {
           conversation_id: conversation.id,
           sender_id: expertId,
           recipient_id: user.id,
-          content: `👋 Grazie per la vostra richiesta di preventivo professionale!\n\n📋 Ho ricevuto il PDF con tutti i dettagli:\n• Azienda: ${formData.companyName}\n• Contatto: ${formData.contactPerson}\n• Tipo di business: ${formData.businessType}\n\n🔍 Il nostro team analizzerà attentamente la vostra richiesta e vi contatterà entro 2-3 giorni lavorativi con un'offerta personalizzata che soddisfi le vostre esigenze specifiche.\n\n💬 Nel frattempo, se avete domande o necessità urgenti, non esitate a scrivermi qui nella chat!`,
-          text: `👋 Grazie per la vostra richiesta di preventivo professionale!\n\n📋 Ho ricevuto il PDF con tutti i dettagli:\n• Azienda: ${formData.companyName}\n• Contatto: ${formData.contactPerson}\n• Tipo di business: ${formData.businessType}\n\n🔍 Il nostro team analizzerà attentamente la vostra richiesta e vi contatterà entro 2-3 giorni lavorativi con un'offerta personalizzata che soddisfi le vostre esigenze specifiche.\n\n💬 Nel frattempo, se avete domande o necessità urgenti, non esitate a scrivermi qui nella chat!`,
+          content: `👋 Grazie per la vostra richiesta di preventivo professionale!\n\n📋 Ho ricevuto il PDF con tutti i dettagli.`,
+          text: `👋 Grazie per la vostra richiesta di preventivo professionale!\n\n📋 Ho ricevuto il PDF con tutti i dettagli.`,
           pdf_path: null,
           image_url: null,
-          metadata: {
-            type: 'expert_response',
-            auto_reply: true
-          }
+          metadata: { type: 'expert_response', auto_reply: true }
         }
       ]);
 
-    if (messageError) {
-      console.error("Error creating messages:", messageError);
-      throw new Error("Failed to create messages");
-    }
+    if (messageError) throw messageError;
 
-    console.log("✅ Professional quote request completed successfully");
-
-    // 5. Invia notifica all'esperto con PDF
+    // 5. Notifica esperto
     try {
       await supabaseClient.functions.invoke('notify-expert', {
         body: {
           conversationId: conversation.id,
           message: `Nuova richiesta di preventivo professionale da ${formData.companyName}`,
           isProfessionalQuote: true,
-          pdfUrl: pdfUrl,
+          pdfUrl,
           companyName: formData.companyName,
           contactPerson: formData.contactPerson,
           userId: user.id
         }
       });
-      console.log("✅ Expert notified with email");
     } catch (notifyError) {
       console.warn("⚠️ Failed to notify expert:", notifyError);
-      // Non bloccare la richiesta se la notifica fallisce
     }
 
     return new Response(JSON.stringify({
       success: true,
       conversationId: conversation.id,
-      pdfUrl: pdfUrl,
+      pdfUrl,
       message: "Professional quote request created successfully"
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
