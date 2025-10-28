@@ -155,52 +155,50 @@ export class ConsultationDataService {
       console.log('📋 Messaggio PDF che verrà inviato:');
       console.log(pdfMessage);
 
-      // Invia il messaggio con il PDF nel campo pdf_path, non in image_url
-      const { data: messageResult, error: messageError } = await supabase
-        .from('messages')
-        .insert({
-          conversation_id: conversationId,
-          sender_id: user.id,
-          recipient_id: MARCO_NIGRO_ID,
-          content: pdfMessage,
+      // Invia il messaggio con il PDF usando la funzione send-message
+      const { data: messageResult, error: messageError } = await supabase.functions.invoke('send-message', {
+        body: {
+          conversationId,
+          recipientId: MARCO_NIGRO_ID,
           text: pdfMessage,
-          pdf_path: pdfResult.pdfUrl,
-          image_url: null,
+          imageUrl: null,
+          pdfPath: pdfResult.pdfUrl,
           products: null
-        })
-        .select()
-        .single();
+        },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
 
-      if (messageError || !messageResult) {
-        console.error('❌ Errore inserimento messaggio chat:', messageError);
+      if (messageError || !messageResult?.success) {
+        console.error('❌ Errore invio messaggio PDF:', messageError);
         // Fallback con link diretto
         return await this.sendPDFLinkMessage(conversationId, pdfResult.pdfUrl, pdfResult.fileName);
       }
 
-      console.log('✅ Messaggio PDF inserito nel database:', messageResult.id);
+      console.log('✅ Messaggio PDF inviato con successo');
 
       // Se c'è un'immagine, inviala come messaggio separato
       if (plantData?.imageUrl) {
         console.log('📸 Invio immagine pianta...');
-        const { data: imageResult, error: imageError } = await supabase
-          .from('messages')
-          .insert({
-            conversation_id: conversationId,
-            sender_id: user.id,
-            recipient_id: MARCO_NIGRO_ID,
-            content: '📸 Foto della pianta in consulenza',
+        const { data: imageResult, error: imageError } = await supabase.functions.invoke('send-message', {
+          body: {
+            conversationId,
+            recipientId: MARCO_NIGRO_ID,
             text: '📸 Foto della pianta in consulenza',
-            image_url: plantData.imageUrl,
-            pdf_path: null,
+            imageUrl: plantData.imageUrl,
+            pdfPath: null,
             products: null
-          })
-          .select()
-          .single();
+          },
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+        });
 
-        if (imageError) {
+        if (imageError || !imageResult?.success) {
           console.error('⚠️ Warning: Errore invio immagine:', imageError);
         } else {
-          console.log('✅ Immagine inviata con successo:', imageResult.id);
+          console.log('✅ Immagine inviata con successo');
         }
       }
 

@@ -39,13 +39,14 @@ serve(async (req) => {
       throw new Error("User not authenticated");
     }
 
-    const { conversationId, recipientId, text, imageUrl, products, attachments } = await req.json();
+    const { conversationId, recipientId, text, imageUrl, pdfPath, products, attachments } = await req.json();
 
     console.log("📤 Received message data:", {
       conversationId,
       recipientId,
       textLength: text?.length || 0,
       hasImage: !!imageUrl,
+      hasPdf: !!pdfPath,
       hasProducts: !!products,
       hasAttachments: !!attachments,
       senderId: user.id
@@ -102,10 +103,11 @@ serve(async (req) => {
       content: text,
       text: text,
       image_url: imageUrl || null,
+      pdf_path: pdfPath || null,
       products: products || null,
       metadata: {
         timestamp: new Date().toISOString(),
-        messageType: imageUrl ? 'image' : (attachments ? 'attachment' : 'text'),
+        messageType: pdfPath ? 'pdf' : (imageUrl ? 'image' : (attachments ? 'attachment' : 'text')),
         attachments: attachments || null
       }
     };
