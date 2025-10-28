@@ -381,8 +381,8 @@ serve(async (req) => {
           recipient_id: expertId,
           content: `📋 Richiesta di preventivo professionale per ${formData.companyName}\n\n📎 Il PDF con tutti i dettagli della richiesta è allegato qui sotto.`,
           text: `📋 Richiesta di preventivo professionale per ${formData.companyName}\n\n📎 Il PDF con tutti i dettagli della richiesta è allegato qui sotto.`,
-          image_url: pdfUrl,
           pdf_path: pdfUrl,
+          image_url: null,
           metadata: {
             type: 'professional_quote',
             company_name: formData.companyName,
@@ -395,6 +395,8 @@ serve(async (req) => {
           recipient_id: user.id,
           content: `👋 Grazie per la vostra richiesta di preventivo professionale!\n\n📋 Ho ricevuto il PDF con tutti i dettagli:\n• Azienda: ${formData.companyName}\n• Contatto: ${formData.contactPerson}\n• Tipo di business: ${formData.businessType}\n\n🔍 Il nostro team analizzerà attentamente la vostra richiesta e vi contatterà entro 2-3 giorni lavorativi con un'offerta personalizzata che soddisfi le vostre esigenze specifiche.\n\n💬 Nel frattempo, se avete domande o necessità urgenti, non esitate a scrivermi qui nella chat!`,
           text: `👋 Grazie per la vostra richiesta di preventivo professionale!\n\n📋 Ho ricevuto il PDF con tutti i dettagli:\n• Azienda: ${formData.companyName}\n• Contatto: ${formData.contactPerson}\n• Tipo di business: ${formData.businessType}\n\n🔍 Il nostro team analizzerà attentamente la vostra richiesta e vi contatterà entro 2-3 giorni lavorativi con un'offerta personalizzata che soddisfi le vostre esigenze specifiche.\n\n💬 Nel frattempo, se avete domande o necessità urgenti, non esitate a scrivermi qui nella chat!`,
+          pdf_path: null,
+          image_url: null,
           metadata: {
             type: 'expert_response',
             auto_reply: true
@@ -409,14 +411,20 @@ serve(async (req) => {
 
     console.log("✅ Professional quote request completed successfully");
 
-    // 5. Invia notifica all'esperto
+    // 5. Invia notifica all'esperto con PDF
     try {
       await supabaseClient.functions.invoke('notify-expert', {
         body: {
           conversationId: conversation.id,
-          message: `Nuova richiesta di preventivo professionale da ${formData.companyName}`
+          message: `Nuova richiesta di preventivo professionale da ${formData.companyName}`,
+          isProfessionalQuote: true,
+          pdfUrl: pdfUrl,
+          companyName: formData.companyName,
+          contactPerson: formData.contactPerson,
+          userId: user.id
         }
       });
+      console.log("✅ Expert notified with email");
     } catch (notifyError) {
       console.warn("⚠️ Failed to notify expert:", notifyError);
       // Non bloccare la richiesta se la notifica fallisce
