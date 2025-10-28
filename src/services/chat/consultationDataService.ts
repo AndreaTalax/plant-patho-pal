@@ -155,46 +155,52 @@ export class ConsultationDataService {
       console.log('📋 Messaggio PDF che verrà inviato:');
       console.log(pdfMessage);
 
-      // Invia il messaggio con il PDF come image_url per attivare il PDFDisplay
-      const { data: messageResult, error: messageError } = await supabase.functions.invoke('send-message', {
-        body: {
-          conversationId,
-          recipientId: MARCO_NIGRO_ID,
+      // Invia il messaggio con il PDF nel campo pdf_path, non in image_url
+      const { data: messageResult, error: messageError } = await supabase
+        .from('messages')
+        .insert({
+          conversation_id: conversationId,
+          sender_id: user.id,
+          recipient_id: MARCO_NIGRO_ID,
+          content: pdfMessage,
           text: pdfMessage,
-          imageUrl: pdfResult.pdfUrl, // Il PDF viene passato come imageUrl per essere rilevato
+          pdf_path: pdfResult.pdfUrl,
+          image_url: null,
           products: null
-        },
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      });
+        })
+        .select()
+        .single();
 
-      if (messageError || !messageResult?.success) {
-        console.error('❌ Errore invio messaggio PDF:', messageError);
+      if (messageError || !messageResult) {
+        console.error('❌ Errore inserimento messaggio chat:', messageError);
         // Fallback con link diretto
         return await this.sendPDFLinkMessage(conversationId, pdfResult.pdfUrl, pdfResult.fileName);
       }
 
+      console.log('✅ Messaggio PDF inserito nel database:', messageResult.id);
+
       // Se c'è un'immagine, inviala come messaggio separato
       if (plantData?.imageUrl) {
         console.log('📸 Invio immagine pianta...');
-        const { data: imageResult, error: imageError } = await supabase.functions.invoke('send-message', {
-          body: {
-            conversationId,
-            recipientId: MARCO_NIGRO_ID,
+        const { data: imageResult, error: imageError } = await supabase
+          .from('messages')
+          .insert({
+            conversation_id: conversationId,
+            sender_id: user.id,
+            recipient_id: MARCO_NIGRO_ID,
+            content: '📸 Foto della pianta in consulenza',
             text: '📸 Foto della pianta in consulenza',
-            imageUrl: plantData.imageUrl,
+            image_url: plantData.imageUrl,
+            pdf_path: null,
             products: null
-          },
-          headers: {
-            Authorization: `Bearer ${session.access_token}`,
-          },
-        });
+          })
+          .select()
+          .single();
 
         if (imageError) {
           console.error('⚠️ Warning: Errore invio immagine:', imageError);
         } else {
-          console.log('✅ Immagine inviata con successo');
+          console.log('✅ Immagine inviata con successo:', imageResult.id);
         }
       }
 
