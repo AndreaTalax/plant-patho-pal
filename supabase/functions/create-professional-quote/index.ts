@@ -32,7 +32,7 @@ serve(async (req) => {
     const { formData } = await req.json();
     console.log("📋 Creating private/business quote for user:", user.id);
 
-    // 1️⃣ Crea conversazione (o diagnosi)
+    // 1️⃣ Crea conversazione
     const { data: conversation, error: convError } = await supabaseClient
       .from('conversations')
       .insert({
@@ -110,18 +110,21 @@ serve(async (req) => {
 
     if (diagnosisError) throw diagnosisError;
 
-    // 5️⃣ Inserisci messaggio con pdf_path popolato
+    // 5️⃣ Inserisci UN SOLO messaggio con solo foto + PDF (senza testo)
     const { error: messageError } = await supabaseClient
       .from('messages')
       .insert([{
         conversation_id: conversation.id,
         sender_id: user.id,
-        recipient_id: null, // eventualmente l'admin o il sistema
-        content: `📋 Richiesta inviata con PDF allegato.`,
-        text: `📋 Richiesta inviata con PDF allegato.`,
+        recipient_id: null,
+        content: null,
+        text: null,
+        image_url: formData.imageUrl || null,
         pdf_path: pdfUrl,
-        image_url: null,
-        metadata: { type: 'user_request', auto_generated: true }
+        metadata: { 
+          type: 'user_request', 
+          auto_generated: true
+        }
       }]);
 
     if (messageError) throw messageError;
