@@ -110,15 +110,22 @@ serve(async (req) => {
 
     if (diagnosisError) throw diagnosisError;
 
-    // 5️⃣ Inserisci UN SOLO messaggio con solo foto + PDF (senza testo)
+    // 5️⃣ Ottieni l'ID dell'admin/esperto per recipient_id
+    const { data: adminUser } = await supabaseClient
+      .from('profiles')
+      .select('id')
+      .eq('role', 'admin')
+      .single();
+
+    // 6️⃣ Inserisci UN SOLO messaggio con solo foto + PDF
     const { error: messageError } = await supabaseClient
       .from('messages')
       .insert([{
         conversation_id: conversation.id,
         sender_id: user.id,
-        recipient_id: null,
-        content: null,
-        text: null,
+        recipient_id: adminUser?.id || user.id, // Admin o fallback al sender
+        content: ' ', // Spazio singolo (NOT NULL requirement)
+        text: '', // Vuoto (ha default)
         image_url: formData.imageUrl || null,
         pdf_path: pdfUrl,
         metadata: { 
