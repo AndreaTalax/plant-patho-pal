@@ -214,14 +214,25 @@ export const usePlantDiagnosis = () => {
           wateringFrequency: 'Da specificare',
           sunExposure: 'Da specificare',
           imageUrl: permanentImageUrl,
-          diagnosisResult: {
-            confidence: Math.min(75, Math.round(plant?.confidence || 0)),
-            isHealthy: !disease,
-            disease: disease?.disease || null,
-            description: diagnosisResult || `Identificata come ${plant?.plantName || 'pianta sconosciuta'}`,
-          },
           useAI: true
         };
+
+        // Prepara diagnosisResult nel formato corretto per il PDF
+        const pdfDiagnosisResult = diagnosedDisease ? {
+          diseases: [{
+            disease: diagnosedDisease.name,
+            confidence: diagnosedDisease.confidence,
+            symptoms: diagnosedDisease.symptoms || [],
+            treatments: diagnosedDisease.treatments || [],
+            severity: diagnosedDisease.label || 'unknown'
+          }],
+          healthAssessment: diagnosedDisease.healthy ? 'Pianta sana' : 'Problemi rilevati',
+          plantIdentification: `${plant?.plantName || 'Sconosciuta'}${plant?.scientificName ? ` (${plant.scientificName})` : ''}`,
+          primaryDisease: {
+            name: diagnosedDisease.name,
+            confidence: diagnosedDisease.confidence
+          }
+        } : null;
 
         const userData = {
           firstName: userProfile?.first_name || '',
@@ -237,7 +248,7 @@ export const usePlantDiagnosis = () => {
           plantData,
           userData,
           true,
-          analysisDetails
+          pdfDiagnosisResult
         );
 
         if (pdfSent) {
@@ -275,14 +286,25 @@ export const usePlantDiagnosis = () => {
             wateringFrequency: 'Da specificare',
             sunExposure: 'Da specificare',
             imageUrl: permanentImageUrl,
-            diagnosisResult: {
-              confidence: Math.min(75, Math.round(plant?.confidence || 0)),
-              isHealthy: !disease,
-              disease: disease?.disease || null,
-              description: diagnosisResult || `Identificata come ${plant?.plantName || 'pianta sconosciuta'}`,
-            },
             useAI: true
           };
+
+          // Prepara diagnosisResult nel formato corretto per il PDF
+          const newPdfDiagnosisResult = diagnosedDisease ? {
+            diseases: [{
+              disease: diagnosedDisease.name,
+              confidence: diagnosedDisease.confidence,
+              symptoms: diagnosedDisease.symptoms || [],
+              treatments: diagnosedDisease.treatments || [],
+              severity: diagnosedDisease.label || 'unknown'
+            }],
+            healthAssessment: diagnosedDisease.healthy ? 'Pianta sana' : 'Problemi rilevati',
+            plantIdentification: `${plant?.plantName || 'Sconosciuta'}${plant?.scientificName ? ` (${plant.scientificName})` : ''}`,
+            primaryDisease: {
+              name: diagnosedDisease.name,
+              confidence: diagnosedDisease.confidence
+            }
+          } : null;
 
           const userData = {
             firstName: userProfile?.first_name || '',
@@ -298,7 +320,7 @@ export const usePlantDiagnosis = () => {
             plantData,
             userData,
             true,
-            analysisDetails
+            newPdfDiagnosisResult
           );
 
           if (pdfSent) {
