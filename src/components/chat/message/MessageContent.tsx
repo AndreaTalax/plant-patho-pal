@@ -331,26 +331,14 @@ export const MessageContent = ({ message, onSendMessage }: MessageContentProps) 
     message.image_url.endsWith('.wav')
   );
 
-  const isPDFMessage = !!pdfUrl;
-
-  const isImageMessage = message.image_url && !isAudioMessage && !isPDFMessage;
+  // 🔥 FIX: Controlla se image_url è un'immagine vera (non audio, non PDF)
+  const isImageMessage = message.image_url && 
+    !isAudioMessage && 
+    !message.image_url.toLowerCase().includes('.pdf') &&
+    !message.image_url.toLowerCase().includes('/pdfs/');
 
   // 🔥 FIX: Mostra testo solo se non è vuoto DOPO trim
   const hasText = message.text && message.text.trim() !== '';
-
-  // 🔍 DEBUG: Log per vedere cosa viene rilevato
-  console.log('📊 MessageContent render:', {
-    messageId: message.id,
-    hasText,
-    hasImageUrl: !!message.image_url,
-    imageUrl: message.image_url?.substring(0, 50),
-    hasPdfPath: !!(message as any).pdf_path,
-    pdfPath: (message as any).pdf_path?.substring(0, 50),
-    pdfUrl: pdfUrl?.substring(0, 50),
-    isAudioMessage,
-    isPDFMessage,
-    isImageMessage
-  });
 
   return (
     <div className="space-y-3">
