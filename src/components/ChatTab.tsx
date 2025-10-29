@@ -31,6 +31,7 @@ const ChatTab = () => {
   const [activeConversations, setActiveConversations] = useState<ActiveConversation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
+  const [subscriptionTier, setSubscriptionTier] = useState<string | null>(null);
 
   // Determina se si tratta di una chat professionale dalla conversazione selezionata
   const selectedConversation = activeConversations.find(c => c.id === selectedConversationId);
@@ -46,13 +47,41 @@ const ChatTab = () => {
 
       try {
         console.log('🔍 ChatTab: Controllo conversazioni per utente:', user.id);
-        const { data: conversations, error } = await supabase
+        
+        // Controlla il tier dell'abbonamento
+        const { data: subscriber } = await supabase
+          .from('subscribers')
+          .select('subscription_tier')
+          .eq('user_id', user.id)
+          .single();
+        
+        if (subscriber) {
+          console.log('📋 Subscription tier:', subscriber.subscription_tier);
+          setSubscriptionTier(subscriber.subscription_tier);
+        }
+        // Filtra le conversazioni in base al tier dell'abbonamento
+        // Gli utenti privati vedono solo conversazioni 'standard'
+        // Gli utenti professionali vedono tutte le conversazioni (standard E professional_quote)
+        const conversationTypeFilter = subscriber?.subscription_tier === 'professional' 
+          ? undefined // Non filtrare per tipo, vedi tutte
+          : 'standard'; // Solo conversazioni standard per utenti privati
+        
+        console.log('🔍 Filtraggio conversazioni per tipo:', conversationTypeFilter);
+        
+        let query = supabase
           .from('conversations')
           .select('id, status, last_message_text, last_message_at, created_at, updated_at, conversation_type')
           .eq('user_id', user.id)
           .eq('expert_id', MARCO_NIGRO_ID)
           .eq('status', 'active') // Solo conversazioni attive
           .order('last_message_at', { ascending: false });
+        
+        // Applica il filtro per tipo solo se non è professional
+        if (conversationTypeFilter) {
+          query = query.eq('conversation_type', conversationTypeFilter);
+        }
+        
+        const { data: conversations, error } = await query;
 
         if (error) {
           console.error('❌ ChatTab: Errore nel controllo conversazioni:', error);
@@ -326,22 +355,24 @@ const ChatTab = () => {
           </div>
 
           <div className="mt-8 space-y-4">
-            {/* Pulsante per nuovo preventivo professionale */}
-            <div className="text-center">
-              <Button
-                onClick={() => {
-                  window.location.href = '/professional-quote';
-                }}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 text-lg font-semibold shadow-lg"
-                size="lg"
-              >
-                <FileText className="h-5 w-5 mr-3" />
-                {t('newProfessionalQuote')}
-              </Button>
-              <p className="text-sm text-gray-600 mt-2">
-                {t('requestCustomQuote')}
-              </p>
-            </div>
+            {/* Pulsante per nuovo preventivo professionale - Solo per utenti Professional */}
+            {subscriptionTier === 'professional' && (
+              <div className="text-center">
+                <Button
+                  onClick={() => {
+                    window.location.href = '/professional-quote';
+                  }}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 text-lg font-semibold shadow-lg"
+                  size="lg"
+                >
+                  <FileText className="h-5 w-5 mr-3" />
+                  {t('newProfessionalQuote')}
+                </Button>
+                <p className="text-sm text-gray-600 mt-2">
+                  {t('requestCustomQuote')}
+                </p>
+              </div>
+            )}
             
             <div className="text-center space-x-4">
               <Button

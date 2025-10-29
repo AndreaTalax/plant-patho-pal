@@ -32,7 +32,7 @@ export const useUserChatRealtime = (userId: string) => {
 
       if (!userId || !MARCO_NIGRO_ID) throw new Error('ID utente o esperto mancanti');
 
-      const conversation = await ConversationService.findOrCreateConversation(userId);
+      const conversation = await ConversationService.findOrCreateConversation(userId, 'standard');
       if (!conversation) throw new Error('Impossibile creare o trovare la conversazione');
 
       setActiveChat(conversation);

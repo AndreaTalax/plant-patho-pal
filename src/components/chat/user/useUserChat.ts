@@ -34,8 +34,8 @@ export const useUserChat = (userId: string) => {
       try {
         console.log("🔄 Initializing expert chat for user:", userId);
         
-        // Get or create conversation with expert
-        const conversation = await findOrCreateConversation(userId);
+        // Get or create conversation with expert (always standard type for user chat)
+        const conversation = await findOrCreateConversation(userId, 'standard');
         if (!conversation) {
           console.error("❌ Could not start conversation with expert");
           return;
@@ -263,7 +263,7 @@ export const useUserChat = (userId: string) => {
       let conversation = currentDbConversation;
       if (!conversation) {
         console.log("🔄 No conversation found, creating new one...");
-        conversation = await findOrCreateConversation(userId);
+        conversation = await findOrCreateConversation(userId, 'standard');
         if (!conversation) {
           toast.error("Impossibile creare la conversazione");
           return;
