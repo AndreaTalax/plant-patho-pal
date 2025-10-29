@@ -6,11 +6,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Building2, Mail, Phone, Users, Briefcase, Loader2, CheckCircle, FileText, Upload, Image as ImageIcon } from "lucide-react";
+import { Building2, Mail, Phone, Users, Briefcase, Loader2, CheckCircle, FileText } from "lucide-react";
 import { useTheme } from "@/context/ThemeContext";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { uploadPlantImage } from "@/utils/imageStorage";
 
 interface ProfessionalQuoteFormProps {
   onBack: () => void;
@@ -20,8 +19,6 @@ interface ProfessionalQuoteFormProps {
 const ProfessionalQuoteForm = ({ onBack, onSubmit }: ProfessionalQuoteFormProps) => {
   const { language } = useTheme();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [selectedImage, setSelectedImage] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     companyName: '',
     contactPerson: '',
@@ -35,8 +32,7 @@ const ProfessionalQuoteForm = ({ onBack, onSubmit }: ProfessionalQuoteFormProps)
     budget: '',
     timeline: '',
     additionalInfo: '',
-    privacyAccepted: false,
-    imageUrl: '' // ✅ Aggiunto campo per l'immagine caricata
+    privacyAccepted: false
   });
 
   const handleInputChange = (field: string, value: string | boolean | string[]) => {
@@ -44,30 +40,6 @@ const ProfessionalQuoteForm = ({ onBack, onSubmit }: ProfessionalQuoteFormProps)
       ...prev,
       [field]: value
     }));
-  };
-
-  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (!file.type.startsWith('image/')) {
-        toast.error(language === 'it' ? 'Seleziona un file immagine valido' : 'Please select a valid image file');
-        return;
-      }
-      
-      if (file.size > 10 * 1024 * 1024) { // 10MB limit
-        toast.error(language === 'it' ? 'L\'immagine deve essere inferiore a 10MB' : 'Image must be less than 10MB');
-        return;
-      }
-
-      setSelectedImage(file);
-      
-      // Genera anteprima
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
   };
 
   const handleSubmit = async () => {
@@ -85,39 +57,9 @@ const ProfessionalQuoteForm = ({ onBack, onSubmit }: ProfessionalQuoteFormProps)
     setIsSubmitting(true);
     
     try {
-      // ✅ PRIMO: Carica l'immagine su storage SE presente
-      let uploadedImageUrl = '';
-      if (selectedImage) {
-        console.log('📸 Caricamento immagine su storage...');
-        toast.loading(language === 'it' ? 'Caricamento immagine...' : 'Uploading image...');
-        
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-          toast.error(language === 'it' ? 'Utente non autenticato' : 'User not authenticated');
-          setIsSubmitting(false);
-          return;
-        }
-
-        try {
-          uploadedImageUrl = await uploadPlantImage(selectedImage, user.id);
-          console.log('✅ Immagine caricata:', uploadedImageUrl);
-          toast.dismiss();
-        } catch (uploadError) {
-          console.error('❌ Errore caricamento immagine:', uploadError);
-          toast.error(language === 'it' ? 'Errore caricamento immagine' : 'Image upload failed');
-          setIsSubmitting(false);
-          return;
-        }
-      }
-
-      // ✅ SECONDO: Passa imageUrl nel body della funzione edge
+      // Crea la richiesta di preventivo professionale
       const { data, error } = await supabase.functions.invoke('create-professional-quote', {
-        body: { 
-          formData: {
-            ...formData,
-            imageUrl: uploadedImageUrl // ✅ URL dell'immagine caricata
-          }
-        }
+        body: { formData }
       });
 
       if (error) {
@@ -126,17 +68,16 @@ const ProfessionalQuoteForm = ({ onBack, onSubmit }: ProfessionalQuoteFormProps)
         return;
       }
 
-      // ✅ Toast di successo
       toast.success(
         language === 'it' 
           ? '✅ Richiesta inviata! PDF generato e conversazione creata. Ti reindirizziamo alla chat...' 
           : '✅ Request sent! PDF generated and conversation created. Redirecting you to chat...'
       );
 
-      // ✅ Salva conversationId in localStorage
+      // Salva l'ID della conversazione per aprirla
       localStorage.setItem('openConversationId', data.conversationId);
 
-      // ✅ Trigger evento switchTab e redirect dopo 2 secondi
+      // Reindirizza alla chat dopo 2 secondi
       setTimeout(() => {
         const event = new CustomEvent('switchTab', { detail: 'chat' });
         window.dispatchEvent(event);
@@ -391,85 +332,23 @@ const ProfessionalQuoteForm = ({ onBack, onSubmit }: ProfessionalQuoteFormProps)
               </Select>
             </div>
 
-          {/* Informazioni Aggiuntive */}
-          <div className="space-y-2">
-            <Label htmlFor="additionalInfo">
-              {language === 'it' ? 'Informazioni Aggiuntive' : 'Additional Information'}
-            </Label>
-            <Textarea
-              id="additionalInfo"
-              placeholder={language === 'it' 
-                ? 'Aggiungi qualsiasi altra informazione che ritieni utile per la valutazione...'
-                : 'Add any other information you think useful for the evaluation...'
-              }
-              value={formData.additionalInfo}
-              onChange={(e) => handleInputChange('additionalInfo', e.target.value)}
-              rows={3}
-            />
-          </div>
-
-          {/* ✅ Upload Immagine Pianta */}
-          <div className="space-y-2">
-            <Label htmlFor="plantImage" className="flex items-center gap-2">
-              <ImageIcon className="h-4 w-4" />
-              {language === 'it' ? 'Foto della Pianta (opzionale)' : 'Plant Photo (optional)'}
-            </Label>
-            <div className="flex flex-col gap-3">
-              <div className="flex items-center gap-3">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => document.getElementById('plantImage')?.click()}
-                  disabled={isSubmitting}
-                  className="w-full"
-                >
-                  <Upload className="h-4 w-4 mr-2" />
-                  {selectedImage 
-                    ? (language === 'it' ? 'Cambia Immagine' : 'Change Image')
-                    : (language === 'it' ? 'Carica Immagine' : 'Upload Image')
-                  }
-                </Button>
-                <input
-                  id="plantImage"
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageSelect}
-                  className="hidden"
-                />
-              </div>
-              
-              {imagePreview && (
-                <div className="relative w-full h-48 rounded-lg overflow-hidden border-2 border-drplant-green">
-                  <img 
-                    src={imagePreview} 
-                    alt="Plant preview" 
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute top-2 right-2">
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => {
-                        setSelectedImage(null);
-                        setImagePreview(null);
-                      }}
-                    >
-                      ✕
-                    </Button>
-                  </div>
-                </div>
-              )}
-              
-              <p className="text-xs text-gray-500">
-                {language === 'it' 
-                  ? 'Formato: JPG, PNG, WEBP. Dimensione massima: 10MB'
-                  : 'Format: JPG, PNG, WEBP. Max size: 10MB'
+            {/* Informazioni Aggiuntive */}
+            <div className="space-y-2">
+              <Label htmlFor="additionalInfo">
+                {language === 'it' ? 'Informazioni Aggiuntive' : 'Additional Information'}
+              </Label>
+              <Textarea
+                id="additionalInfo"
+                placeholder={language === 'it' 
+                  ? 'Aggiungi qualsiasi altra informazione che ritieni utile per la valutazione...'
+                  : 'Add any other information you think useful for the evaluation...'
                 }
-              </p>
+                value={formData.additionalInfo}
+                onChange={(e) => handleInputChange('additionalInfo', e.target.value)}
+                rows={3}
+              />
             </div>
           </div>
-        </div>
 
           {/* Privacy */}
           <div className="border-t pt-6">
