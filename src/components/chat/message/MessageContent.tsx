@@ -335,16 +335,19 @@ export const MessageContent = ({ message, onSendMessage }: MessageContentProps) 
 
   const isImageMessage = message.image_url && !isAudioMessage && !isPDFMessage;
 
+  // 🔥 FIX: Mostra testo solo se non è vuoto DOPO trim
+  const hasText = message.text && message.text.trim() !== '';
+
   return (
     <div className="space-y-3">
-      {/* Testo + parsing link */}
-      {message.text && (
+      {/* Testo + parsing link - SOLO SE C'È TESTO VERO */}
+      {hasText && (
         <div className="whitespace-pre-wrap leading-relaxed">
           {renderMarkdownLinks(message.text)}
         </div>
       )}
       
-      {/* Media */}
+      {/* Media - SEMPRE MOSTRATI SE PRESENTI */}
       {(message.image_url || pdfUrl) && (
         <>
           {isAudioMessage && <AudioMessage audioUrl={message.image_url!} />}
