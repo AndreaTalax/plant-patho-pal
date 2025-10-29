@@ -80,14 +80,14 @@ serve(async (req) => {
 
     const { data: uploadData, error: uploadError } = await supabaseClient
       .storage
-      .from("user-diagnosis-pdfs")
+      .from("pdfs")
       .upload(fileName, pdfBytes, { contentType: "application/pdf", upsert: true });
 
     if (uploadError) throw uploadError;
 
     const { data: publicUrlData } = supabaseClient
       .storage
-      .from("user-diagnosis-pdfs")
+      .from("pdfs")
       .getPublicUrl(fileName);
 
     const pdfUrl = publicUrlData.publicUrl;
