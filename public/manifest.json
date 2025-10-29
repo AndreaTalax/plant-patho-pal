@@ -2,7 +2,7 @@
   "name": "Dr.Plant",
   "short_name": "Dr.Plant",
   "description": "AI-powered plant disease diagnosis and expert consultation platform",
-  "start_url": "/",
+  "start_url": "https://drplant.lovable.app/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#22c55e",
@@ -93,6 +93,32 @@
     "health",
     "productivity"
   ],
+  "shortcuts": [
+    {
+      "name": "Diagnose Plant",
+      "short_name": "Diagnose",
+      "description": "Take a photo to diagnose plant diseases",
+      "url": "/?action=diagnose",
+      "icons": [
+        {
+          "src": "/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Expert Chat",
+      "short_name": "Expert",
+      "description": "Chat with plant health experts",
+      "url": "/?action=expert",
+      "icons": [
+        {
+          "src": "/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
+  ],
   "lang": "it",
-  "id": "/"
+  "id": "https://drplant.lovable.app/"
 }

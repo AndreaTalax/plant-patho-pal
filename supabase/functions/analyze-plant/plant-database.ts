@@ -1,3 +1,30 @@
+import { createContext, useContext, useState, useEffect } from 'react';
+
+// -------------------------
+// Theme and Language Context
+// -------------------------
+interface ThemeContextProps {
+  mode: 'light' | 'dark';
+  setMode: (mode: 'light' | 'dark') => void;
+  language: 'it' | 'en';
+  setLanguage: (language: 'it' | 'en') => void;
+  t: (key: string) => string;
+}
+
+const ThemeContext = createContext<ThemeContextProps | undefined>(undefined);
+
+interface ThemeProviderProps {
+  children: React.ReactNode;
+}
+
+// -------------------------
+// Translations
+// -------------------------
+const translations = {
+  it: { /* Inserisci qui tutte le traduzioni in italiano */ },
+  en: { /* Inserisci qui tutte le traduzioni in inglese */ }
+};
+
 // -------------------------
 // Plant & Disease Databases
 // -------------------------
@@ -149,3 +176,41 @@ export async function verifyPlantImage(file: File): Promise<boolean> {
   }
 }
 
+// -------------------------
+// ThemeProvider Implementation
+// -------------------------
+export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
+  const [mode, setMode] = useState<'light' | 'dark'>('light');
+  const [language, setLanguage] = useState<'it' | 'en'>('it');
+
+  useEffect(() => {
+    const storedMode = localStorage.getItem('themeMode') as 'light' | 'dark' | null;
+    const storedLanguage = localStorage.getItem('language') as 'it' | 'en' | null;
+    
+    if (storedMode) setMode(storedMode);
+    if (storedLanguage) setLanguage(storedLanguage);
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('themeMode', mode);
+    document.documentElement.classList.toggle('dark', mode === 'dark');
+  }, [mode]);
+
+  useEffect(() => {
+    localStorage.setItem('language', language);
+  }, [language]);
+
+  const t = (key: string) => translations[language][key] || key;
+
+  return (
+    <ThemeContext.Provider value={{ mode, setMode, language, setLanguage, t }}>
+      {children}
+    </ThemeContext.Provider>
+  );
+};
+
+export const useTheme = () => {
+  const context = useContext(ThemeContext);
+  if (!context) throw new Error('useTheme must be used within ThemeProvider');
+  return context;
+};

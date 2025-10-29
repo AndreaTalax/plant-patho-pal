@@ -1,3 +1,4 @@
+
 import { Message, DatabaseMessage } from '../types';
 import { MARCO_NIGRO_ID } from '@/components/phytopathologist';
 
@@ -5,14 +6,7 @@ export const convertToUIMessage = (dbMessage: DatabaseMessage): Message => {
   console.log('🔄 Conversione messaggio DB a UI:', dbMessage);
   
   // Use content field as primary, fallback to text for backward compatibility
-  let messageText = dbMessage.content || dbMessage.text || '';
-  
-  // 🔥 FIX: Se il testo è solo spazio E c'è foto/PDF, usa stringa vuota
-  // In questo modo il messaggio viene mostrato con solo media
-  if (messageText.trim() === '' && (dbMessage.image_url || dbMessage.pdf_path)) {
-    messageText = ''; // Stringa vuota invece di spazio
-    console.log('📸 Messaggio con solo media (foto/PDF), testo rimosso');
-  }
+  const messageText = dbMessage.content || dbMessage.text || '';
   
   // Debug logging per messaggi PDF
   if (dbMessage.content?.includes('Preventivo Professionale') || dbMessage.text?.includes('Preventivo Professionale')) {
@@ -28,9 +22,8 @@ export const convertToUIMessage = (dbMessage: DatabaseMessage): Message => {
     });
   }
   
-  // Ora warning solo se manca tutto
-  if (!messageText && !dbMessage.image_url && !dbMessage.pdf_path) {
-    console.warn('⚠️ Messaggio completamente vuoto:', dbMessage);
+  if (!messageText && !dbMessage.image_url) {
+    console.warn('⚠️ Messaggio senza testo né immagine:', dbMessage);
   }
   
   const converted: Message = {
