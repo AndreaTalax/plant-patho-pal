@@ -4,21 +4,17 @@ import { MARCO_NIGRO_ID } from '@/components/phytopathologist';
 import { DatabaseConversation } from './types';
 
 export class ConversationService {
-  static async findOrCreateConversation(
-    userId: string, 
-    conversationType: string = 'standard'
-  ): Promise<DatabaseConversation | null> {
+  static async findOrCreateConversation(userId: string): Promise<DatabaseConversation | null> {
     try {
-      console.log('🔍 ConversationService: Ricerca conversazione per utente:', userId, 'tipo:', conversationType);
+      console.log('🔍 ConversationService: Ricerca conversazione per utente:', userId);
 
-      // Ricerca conversazione esistente per questo utente CON LO STESSO TIPO
+      // Ricerca QUALSIASI conversazione esistente per questo utente (attiva o finita)
       // Se esiste una conversazione finita, la riattiviamo invece di crearne una nuova
       const { data: existing, error: findError } = await supabase
         .from('conversations')
         .select('*')
         .eq('user_id', userId)
         .eq('expert_id', MARCO_NIGRO_ID)
-        .eq('conversation_type', conversationType)
         .order('updated_at', { ascending: false })
         .limit(1)
         .maybeSingle();
@@ -57,17 +53,14 @@ export class ConversationService {
       }
 
       // Creazione nuova conversazione con fallback
-      console.log('🆕 ConversationService: Creazione nuova conversazione tipo:', conversationType);
+      console.log('🆕 ConversationService: Creazione nuova conversazione...');
       const { data: newConversation, error: createError } = await supabase
         .from('conversations')
         .insert({
           user_id: userId,
           expert_id: MARCO_NIGRO_ID,
-          title: conversationType === 'professional_quote' 
-            ? 'Preventivo Professionale - Marco Nigro' 
-            : 'Consulenza con Marco Nigro',
-          status: 'active',
-          conversation_type: conversationType
+          title: 'Consulenza con Marco Nigro',
+          status: 'active'
         })
         .select()
         .single();

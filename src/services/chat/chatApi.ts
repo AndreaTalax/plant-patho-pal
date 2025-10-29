@@ -130,21 +130,16 @@ export class ChatApi {
   /**
    * Finds an existing conversation or creates a new one between a user and an expert.
    */
-  static async findOrCreateConversation(
-    userId: string, 
-    expertId: string,
-    conversationType: string = 'standard'
-  ): Promise<string | null> {
+  static async findOrCreateConversation(userId: string, expertId: string): Promise<string | null> {
     try {
-      console.log('Finding or creating conversation:', { userId, expertId, conversationType });
+      console.log('Finding or creating conversation:', { userId, expertId });
       
-      // Check if conversation already exists with the same type
+      // Check if conversation already exists
       const { data: existingConversations, error: searchError } = await supabase
         .from('conversations')
         .select('id')
         .eq('user_id', userId)
-        .eq('expert_id', expertId)
-        .eq('conversation_type', conversationType);
+        .eq('expert_id', expertId);
 
       if (searchError) {
         console.error('Error searching for existing conversation:', searchError);
@@ -163,11 +158,8 @@ export class ChatApi {
         .insert({
           user_id: userId,
           expert_id: expertId,
-          title: conversationType === 'professional_quote' 
-            ? 'Preventivo Professionale' 
-            : 'Consulenza esperto',
-          status: 'active',
-          conversation_type: conversationType
+          title: 'Consulenza esperto',
+          status: 'active'
         })
         .select()
         .single();

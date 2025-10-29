@@ -96,11 +96,7 @@ export class ChatConversationService {
     }
   }
 
-  static async findOrCreateConversation(
-    userId: string, 
-    expertId?: string,
-    conversationType: string = 'standard'
-  ): Promise<DatabaseConversation | null> {
+  static async findOrCreateConversation(userId: string, expertId?: string): Promise<DatabaseConversation | null> {
     try {
       const targetExpertId = expertId || (await import('@/integrations/supabase/client')).EXPERT_ID;
       
@@ -109,20 +105,19 @@ export class ChatConversationService {
         throw new Error('Rate limited - too many requests');
       }
 
-      console.log('🔍 Finding or creating conversation:', { userId, expertId: targetExpertId, conversationType });
+      console.log('🔍 Finding or creating conversation:', { userId, expertId: targetExpertId });
 
       // Add request timeout using Promise.race
       const timeoutPromise = new Promise<never>((_, reject) => {
         setTimeout(() => reject(new Error('Request timeout')), 8000);
       });
 
-      // First, try to find existing conversation with the same type
+      // First, try to find existing conversation
       const findQueryPromise = supabase
         .from('conversations')
         .select('*')
         .eq('user_id', userId)
         .eq('expert_id', targetExpertId)
-        .eq('conversation_type', conversationType)
         .eq('status', 'active')
         .single();
 
@@ -148,11 +143,8 @@ export class ChatConversationService {
         .insert({
           user_id: userId,
           expert_id: targetExpertId,
-          title: conversationType === 'professional_quote' 
-            ? 'Preventivo Professionale' 
-            : 'Consulenza esperto',
-          status: 'active',
-          conversation_type: conversationType
+          title: 'Consulenza esperto',
+          status: 'active'
         })
         .select()
         .single();
