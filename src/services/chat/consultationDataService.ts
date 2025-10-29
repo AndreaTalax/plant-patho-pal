@@ -155,13 +155,13 @@ export class ConsultationDataService {
       console.log('📋 Messaggio PDF che verrà inviato:');
       console.log(pdfMessage);
 
-      // Invia il messaggio con il PDF usando la funzione send-message
+      // Invia UN SOLO messaggio con PDF e immagine insieme
       const { data: messageResult, error: messageError } = await supabase.functions.invoke('send-message', {
         body: {
           conversationId,
           recipientId: MARCO_NIGRO_ID,
           text: pdfMessage,
-          imageUrl: null,
+          imageUrl: plantData?.imageUrl || null,
           pdfPath: pdfResult.pdfUrl,
           products: null
         },
@@ -171,36 +171,12 @@ export class ConsultationDataService {
       });
 
       if (messageError || !messageResult?.success) {
-        console.error('❌ Errore invio messaggio PDF:', messageError);
+        console.error('❌ Errore invio messaggio PDF e immagine:', messageError);
         // Fallback con link diretto
         return await this.sendPDFLinkMessage(conversationId, pdfResult.pdfUrl, pdfResult.fileName);
       }
 
-      console.log('✅ Messaggio PDF inviato con successo');
-
-      // Se c'è un'immagine, inviala come messaggio separato
-      if (plantData?.imageUrl) {
-        console.log('📸 Invio immagine pianta...');
-        const { data: imageResult, error: imageError } = await supabase.functions.invoke('send-message', {
-          body: {
-            conversationId,
-            recipientId: MARCO_NIGRO_ID,
-            text: '📸 Foto della pianta in consulenza',
-            imageUrl: plantData.imageUrl,
-            pdfPath: null,
-            products: null
-          },
-          headers: {
-            Authorization: `Bearer ${session.access_token}`,
-          },
-        });
-
-        if (imageError || !imageResult?.success) {
-          console.error('⚠️ Warning: Errore invio immagine:', imageError);
-        } else {
-          console.log('✅ Immagine inviata con successo');
-        }
-      }
+      console.log('✅ Messaggio PDF e immagine inviati con successo');
 
       console.log('✅ INVIO PDF CONSULTAZIONE - COMPLETATO CON SUCCESSO');
       return true;
