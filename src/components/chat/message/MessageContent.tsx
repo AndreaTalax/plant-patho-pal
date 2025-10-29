@@ -316,26 +316,20 @@ const SimpleMediaSender = ({ onSendMessage }: { onSendMessage?: MessageContentPr
 };
 
 export const MessageContent = ({ message, onSendMessage }: MessageContentProps) => {
-  // Controlla se c'è un PDF in pdf_path o image_url
-  const pdfUrl = (message as any).pdf_path || (
-    message.image_url && (
-      message.image_url.toLowerCase().includes('.pdf') ||
-      message.image_url.toLowerCase().includes('/pdfs/')
-    ) ? message.image_url : null
-  );
-
-  const isAudioMessage = message.image_url && !pdfUrl && (
+  // 🔥 Logica semplificata come nel vecchio codice
+  const isAudioMessage = (message.image_url && (
     message.image_url.includes('audio') || 
     message.image_url.endsWith('.webm') ||
     message.image_url.endsWith('.mp3') ||
     message.image_url.endsWith('.wav')
-  );
+  ));
 
-  // 🔥 FIX: Controlla se image_url è un'immagine vera (non audio, non PDF)
-  const isImageMessage = message.image_url && 
-    !isAudioMessage && 
-    !message.image_url.toLowerCase().includes('.pdf') &&
-    !message.image_url.toLowerCase().includes('/pdfs/');
+  const isPDFMessage = (message.image_url && message.image_url.toLowerCase().endsWith('.pdf'));
+
+  const isImageMessage = (message.image_url && !isAudioMessage && !isPDFMessage);
+  
+  // 🔥 Supporto per pdf_path separato (nuovo campo)
+  const pdfUrl = (message as any).pdf_path;
 
   // 🔥 FIX: Mostra testo solo se non è vuoto DOPO trim
   const hasText = message.text && message.text.trim() !== '';
@@ -348,18 +342,26 @@ export const MessageContent = ({ message, onSendMessage }: MessageContentProps) 
           {renderMarkdownLinks(message.text)}
         </div>
       )}
+
+      {/* Media */}
+      {message.image_url && (
+        <>
+          {isAudioMessage && <AudioMessage audioUrl={message.image_url} />}
+          {isPDFMessage && (
+            <PDFDisplay 
+              pdfPath={message.image_url}
+              fileName={message.text?.split(': ')[1] || 'documento.pdf'}
+            />
+          )}
+          {isImageMessage && <ImageDisplay imageUrl={message.image_url} />}
+        </>
+      )}
       
-      {/* Audio */}
-      {isAudioMessage && <AudioMessage audioUrl={message.image_url!} />}
-      
-      {/* Immagine (non audio, non PDF in image_url) */}
-      {isImageMessage && <ImageDisplay imageUrl={message.image_url!} />}
-      
-      {/* PDF - può essere in pdf_path O in image_url */}
-      {pdfUrl && (
+      {/* 🔥 PDF separato in pdf_path (nuovo supporto) */}
+      {pdfUrl && !isPDFMessage && (
         <PDFDisplay 
-          pdfPath={pdfUrl} 
-          fileName={message.text?.split(': ')[1] || 'documento.pdf'}
+          pdfPath={pdfUrl}
+          fileName="Consulenza Completa.pdf"
         />
       )}
 
