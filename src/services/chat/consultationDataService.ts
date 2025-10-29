@@ -1,6 +1,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import { MARCO_NIGRO_ID } from '@/components/phytopathologist';
 import { MessageService } from './messageService';
+import { uploadBase64Image } from '@/utils/imageStorage';
 
 /**
  * Formatta i dati di consultazione come messaggio leggibile per la chat
@@ -155,13 +156,36 @@ export class ConsultationDataService {
       console.log('📋 Messaggio PDF che verrà inviato:');
       console.log(pdfMessage);
 
+      // Carica l'immagine su storage se è un blob URL o base64
+      let uploadedImageUrl = null;
+      if (plantData?.imageUrl) {
+        console.log('📸 Verifica e caricamento immagine su storage...');
+        const imageUrl = plantData.imageUrl;
+        
+        // Verifica se è un blob URL o base64
+        if (imageUrl.startsWith('blob:') || imageUrl.startsWith('data:')) {
+          try {
+            console.log('🔄 Caricamento immagine blob/base64 su storage...');
+            uploadedImageUrl = await uploadBase64Image(imageUrl, user.id);
+            console.log('✅ Immagine caricata su storage:', uploadedImageUrl);
+          } catch (uploadError) {
+            console.error('⚠️ Errore caricamento immagine su storage:', uploadError);
+            // Continua senza immagine se il caricamento fallisce
+          }
+        } else {
+          // È già un URL pubblico
+          uploadedImageUrl = imageUrl;
+          console.log('✅ Immagine già su storage:', uploadedImageUrl);
+        }
+      }
+
       // Invia UN SOLO messaggio con PDF e immagine insieme
       const { data: messageResult, error: messageError } = await supabase.functions.invoke('send-message', {
         body: {
           conversationId,
           recipientId: MARCO_NIGRO_ID,
           text: pdfMessage,
-          imageUrl: plantData?.imageUrl || null,
+          imageUrl: uploadedImageUrl,
           pdfPath: pdfResult.pdfUrl,
           products: null
         },
