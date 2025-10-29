@@ -347,18 +347,18 @@ export const MessageContent = ({ message, onSendMessage }: MessageContentProps) 
         </div>
       )}
       
-      {/* Media - SEMPRE MOSTRATI SE PRESENTI */}
-      {(message.image_url || pdfUrl) && (
-        <>
-          {isAudioMessage && <AudioMessage audioUrl={message.image_url!} />}
-          {isPDFMessage && pdfUrl && (
-            <PDFDisplay 
-              pdfPath={pdfUrl} 
-              fileName={message.text?.split(': ')[1] || 'documento.pdf'}
-            />
-          )}
-          {isImageMessage && <ImageDisplay imageUrl={message.image_url!} />}
-        </>
+      {/* Audio */}
+      {isAudioMessage && <AudioMessage audioUrl={message.image_url!} />}
+      
+      {/* Immagine (non audio, non PDF in image_url) */}
+      {isImageMessage && <ImageDisplay imageUrl={message.image_url!} />}
+      
+      {/* PDF - può essere in pdf_path O in image_url */}
+      {pdfUrl && (
+        <PDFDisplay 
+          pdfPath={pdfUrl} 
+          fileName={message.text?.split(': ')[1] || 'documento.pdf'}
+        />
       )}
 
       {/* Prodotti */}
