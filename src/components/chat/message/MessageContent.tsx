@@ -338,6 +338,20 @@ export const MessageContent = ({ message, onSendMessage }: MessageContentProps) 
   // 🔥 FIX: Mostra testo solo se non è vuoto DOPO trim
   const hasText = message.text && message.text.trim() !== '';
 
+  // 🔍 DEBUG: Log per vedere cosa viene rilevato
+  console.log('📊 MessageContent render:', {
+    messageId: message.id,
+    hasText,
+    hasImageUrl: !!message.image_url,
+    imageUrl: message.image_url?.substring(0, 50),
+    hasPdfPath: !!(message as any).pdf_path,
+    pdfPath: (message as any).pdf_path?.substring(0, 50),
+    pdfUrl: pdfUrl?.substring(0, 50),
+    isAudioMessage,
+    isPDFMessage,
+    isImageMessage
+  });
+
   return (
     <div className="space-y-3">
       {/* Testo + parsing link - SOLO SE C'È TESTO VERO */}
