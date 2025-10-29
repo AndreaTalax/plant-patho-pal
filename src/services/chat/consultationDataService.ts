@@ -73,8 +73,7 @@ export class ConsultationDataService {
         return false;
       }
 
-      // IMPORTANTE: Verifica se questa è una conversazione di tipo "professional_quote"
-      // Se lo è, NON generare un PDF standard perché è già stato generato da create-professional-quote
+      // IMPORTANTE: Verifica il tipo di conversazione
       const { data: conversation, error: convError } = await supabase
         .from('conversations')
         .select('conversation_type')
@@ -83,11 +82,6 @@ export class ConsultationDataService {
 
       if (convError) {
         console.error('❌ Errore recupero tipo conversazione:', convError);
-      }
-
-      if (conversation?.conversation_type === 'professional_quote') {
-        console.log('ℹ️ Questa è una conversazione professional_quote - PDF già generato, skip invio automatico');
-        return true; // Il PDF professionale è già stato inviato da create-professional-quote
       }
 
       // Se c'è una diagnosi AI, invia sempre un nuovo PDF aggiornato
@@ -139,23 +133,6 @@ export class ConsultationDataService {
       console.log('✅ PDF generato con successo:', pdfResult.fileName);
       console.log('📎 URL PDF generato:', pdfResult.pdfUrl);
 
-      // Invia il messaggio principale con PDF allegato
-      const pdfMessage = [
-        "📋 **CONSULENZA PROFESSIONALE - DATI COMPLETI**",
-        "",
-        "Ho preparato un documento PDF completo con tutti i dati della consulenza:",
-        "",
-        "• Dati personali del paziente",
-        "• Informazioni dettagliate della pianta", 
-        "• Risultati della diagnosi AI (se disponibili)",
-        "• Foto della pianta (se presente)",
-        "",
-        "Il documento è pronto per la revisione professionale."
-      ].join('\n');
-
-      console.log('📋 Messaggio PDF che verrà inviato:');
-      console.log(pdfMessage);
-
       // Carica l'immagine su storage se è un blob URL o base64
       let uploadedImageUrl = null;
       if (plantData?.imageUrl) {
@@ -179,29 +156,67 @@ export class ConsultationDataService {
         }
       }
 
-      // Invia UN SOLO messaggio con PDF e immagine insieme
-      const { data: messageResult, error: messageError } = await supabase.functions.invoke('send-message', {
-        body: {
-          conversationId,
-          recipientId: MARCO_NIGRO_ID,
-          text: pdfMessage,
-          imageUrl: uploadedImageUrl,
-          pdfPath: pdfResult.pdfUrl,
-          products: null
-        },
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      });
+      // 🔥 LOGICA DIFFERENZIATA PER TIPO CONVERSAZIONE
+      if (conversation?.conversation_type === 'professional_quote') {
+        // PROFESSIONISTI: Testo + PDF (senza foto)
+        console.log('📋 Invio messaggio PROFESSIONAL_QUOTE: testo + PDF');
+        
+        const professionalMessage = [
+          "📋 **CONSULENZA PROFESSIONALE - DATI COMPLETI**",
+          "",
+          "Ho preparato un documento PDF completo con tutti i dati della consulenza:",
+          "",
+          "• Dati personali del paziente",
+          "• Informazioni dettagliate della pianta", 
+          "• Risultati della diagnosi AI (se disponibili)",
+          "",
+          "Il documento è pronto per la revisione professionale."
+        ].join('\n');
 
-      if (messageError || !messageResult?.success) {
-        console.error('❌ Errore invio messaggio PDF e immagine:', messageError);
-        // Fallback con link diretto
-        return await this.sendPDFLinkMessage(conversationId, pdfResult.pdfUrl, pdfResult.fileName);
+        const { data: messageResult, error: messageError } = await supabase.functions.invoke('send-message', {
+          body: {
+            conversationId,
+            recipientId: MARCO_NIGRO_ID,
+            text: professionalMessage,
+            imageUrl: null, // NO foto per professionisti
+            pdfPath: pdfResult.pdfUrl,
+            products: null
+          },
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+        });
+
+        if (messageError || !messageResult?.success) {
+          console.error('❌ Errore invio messaggio professionale:', messageError);
+          return await this.sendPDFLinkMessage(conversationId, pdfResult.pdfUrl, pdfResult.fileName);
+        }
+
+      } else {
+        // PRIVATI/BUSINESS: Solo foto + PDF (NO testo)
+        console.log('📸 Invio messaggio PRIVATE/BUSINESS: foto + PDF (senza testo)');
+
+        const { data: messageResult, error: messageError } = await supabase.functions.invoke('send-message', {
+          body: {
+            conversationId,
+            recipientId: MARCO_NIGRO_ID,
+            text: ' ', // Spazio singolo (campo obbligatorio)
+            imageUrl: uploadedImageUrl, // Foto della pianta
+            pdfPath: pdfResult.pdfUrl,  // PDF con dati
+            products: null
+          },
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+        });
+
+        if (messageError || !messageResult?.success) {
+          console.error('❌ Errore invio messaggio private/business:', messageError);
+          return await this.sendPDFLinkMessage(conversationId, pdfResult.pdfUrl, pdfResult.fileName);
+        }
       }
 
-      console.log('✅ Messaggio PDF e immagine inviati con successo');
-
+      console.log('✅ Messaggio inviato con successo');
       console.log('✅ INVIO PDF CONSULTAZIONE - COMPLETATO CON SUCCESSO');
       return true;
 
