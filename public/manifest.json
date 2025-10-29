@@ -2,7 +2,7 @@
   "name": "Dr.Plant",
   "short_name": "Dr.Plant",
   "description": "AI-powered plant disease diagnosis and expert consultation platform",
-  "start_url": "https://drplant.lovable.app/",
+  "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#22c55e",
@@ -120,5 +120,5 @@
     }
   ],
   "lang": "it",
-  "id": "https://drplant.lovable.app/"
+  "id": "/"
 }

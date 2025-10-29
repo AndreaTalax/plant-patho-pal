@@ -305,6 +305,10 @@ const translations = {
     nextStepDescription: "Dopo aver salvato queste informazioni, dovrai scattare una foto o caricare un'immagine della tua pianta per procedere con la diagnosi.",
     continueToPhoto: "Continua alla Foto",
     unidentifiedPlant: "Pianta non identificata",
+    // Library translations
+    knowledgeLibrary: "Biblioteca della Conoscenza",
+    searchArticles: "Cerca articoli...",
+    articleContent: "Contenuto dell'Articolo",
     // About Us page
     aboutUs: "Chi Siamo",
     ourMission: "La Nostra Missione",
@@ -686,6 +690,10 @@ const translations = {
     nextStepDescription: "After saving this information, you will need to take a photo or upload an image of your plant to proceed with the diagnosis.",
     continueToPhoto: "Continue to Photo",
     unidentifiedPlant: "Unidentified plant",
+    // Library translations
+    knowledgeLibrary: "Knowledge Library",
+    searchArticles: "Search articles...",
+    articleContent: "Article Content",
     // About Us page
     aboutUs: "About Us",
     ourMission: "Our Mission",
