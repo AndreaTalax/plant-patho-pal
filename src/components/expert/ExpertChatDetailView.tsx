@@ -1,10 +1,9 @@
-
 import React, { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { DatabaseMessage } from "@/services/chat/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Loader2, Send, AlertCircle, RefreshCw, MessageCircleOff } from "lucide-react";
+import { ArrowLeft, Loader2, Send, AlertCircle, RefreshCw, MessageCircleOff, ImageIcon } from "lucide-react";
 import { toast } from "sonner";
 import { useRealtimeChat } from "@/hooks/useRealtimeChat";
 import { MARCO_NIGRO_ID } from "@/components/phytopathologist";
@@ -93,6 +92,17 @@ const ExpertChatDetailView = ({ conversation, onBack }: {
 
         if (messagesData && messagesData.length > 0) {
           console.log('✅ Messages loaded:', messagesData.length);
+          // Debug: controlla se ci sono allegati
+          messagesData.forEach(msg => {
+            if (msg.image_url || msg.attachment_url || msg.attachments) {
+              console.log('📎 Message with attachment:', {
+                id: msg.id,
+                image_url: msg.image_url,
+                attachment_url: msg.attachment_url,
+                attachments: msg.attachments
+              });
+            }
+          });
           setMessages(messagesData);
         } else {
           console.log('📭 No messages found');
@@ -176,6 +186,15 @@ const ExpertChatDetailView = ({ conversation, onBack }: {
     console.log('🔙 Going back to conversations list');
     onBack();
   }, [onBack]);
+
+  // Funzione helper per ottenere l'URL dell'allegato
+  const getAttachmentUrl = (message: DatabaseMessage): string | null => {
+    // Controlla tutti i possibili campi dove potrebbe essere l'allegato
+    return message.image_url || 
+           message.attachment_url || 
+           (message.attachments && message.attachments.length > 0 ? message.attachments[0] : null) ||
+           null;
+  };
 
   // Se non abbiamo un ID conversazione valido
   if (!conversation?.id) {
@@ -280,6 +299,7 @@ const ExpertChatDetailView = ({ conversation, onBack }: {
             {messages.length > 0 ? messages.map(m => {
               const isExpertMessage = m.sender_id === MARCO_NIGRO_ID;
               const isUserMessage = m.sender_id === conversation.user_id;
+              const attachmentUrl = getAttachmentUrl(m);
               
               return (
                 <div key={m.id} className="w-full">
@@ -298,14 +318,26 @@ const ExpertChatDetailView = ({ conversation, onBack }: {
                           minute: '2-digit' 
                         })}
                       </span>
+                      {attachmentUrl && (
+                        <span className="ml-2">
+                          <ImageIcon className="inline h-3 w-3" />
+                        </span>
+                      )}
                     </div>
                     <div className="font-medium">{m.text || m.content}</div>
-                    {m.image_url && (
-                      <img 
-                        src={m.image_url} 
-                        alt="Allegato" 
-                        className="mt-2 max-h-32 max-w-full rounded-lg object-cover" 
-                      />
+                    {attachmentUrl && (
+                      <div className="mt-2">
+                        <img 
+                          src={attachmentUrl} 
+                          alt="Allegato" 
+                          className="max-h-48 max-w-full rounded-lg object-contain border border-gray-200 cursor-pointer hover:opacity-90 transition-opacity" 
+                          onClick={() => window.open(attachmentUrl, '_blank')}
+                          onError={(e) => {
+                            console.error('❌ Error loading image:', attachmentUrl);
+                            e.currentTarget.style.display = 'none';
+                          }}
+                        />
+                      </div>
                     )}
                   </div>
                 </div>
