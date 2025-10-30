@@ -43,9 +43,9 @@ const handler = async (req: Request): Promise<Response> => {
     console.log("Reset URL:", resetUrl);
 
     const emailResponse = await resend.emails.send({
-      from: "Plant Patho Pal <noreply@resend.dev>",
+      from: "Dr.Plant <noreply@resend.dev>",
       to: [user.email],
-      subject: "Reset della Password - Plant Patho Pal",
+      subject: "Reset della Password - Dr.Plant",
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9;">
           <div style="background-color: white; border-radius: 10px; padding: 30px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
@@ -56,7 +56,7 @@ const handler = async (req: Request): Promise<Response> => {
             <h2 style="color: #333; margin-bottom: 20px;">Reset della Password</h2>
             
             <p style="color: #666; line-height: 1.6; margin-bottom: 25px;">
-              Ciao! Abbiamo ricevuto una richiesta per reimpostare la password del tuo account Plant Patho Pal.
+              Ciao! Abbiamo ricevuto una richiesta per reimpostare la password del tuo account sull'applicazione mobile Dr.Plant.
             </p>
             
             <div style="text-align: center; margin: 30px 0;">
