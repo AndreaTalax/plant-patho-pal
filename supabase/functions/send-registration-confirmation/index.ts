@@ -15,7 +15,7 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "
 
 // Email configuration - using Resend for better deliverability
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
-const EMAIL_FROM = "Dr.Plant <onboarding@resend.dev>"; // Using verified Resend domain
+const EMAIL_FROM = "Dr.Plant <info@agrotecnicomarconigro.it>"; // Using verified Resend domain
 const APP_URL = Deno.env.get("APP_URL") || "https://drplant.lovable.app";
 
 // Debug log di tutti i parametri di configurazione
