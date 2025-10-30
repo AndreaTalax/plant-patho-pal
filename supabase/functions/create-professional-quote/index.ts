@@ -43,6 +43,7 @@ serve(async (req) => {
       .single();
 
     const expertId = '07c7fe19-33c3-4782-b9a0-4e87c8aa7044';
+    const fileName = `quote-${user.id}-${Date.now()}.pdf`;
 
     // CREA CONVERSAZIONE, PDF, UPLOAD ecc... (tutta la tua parte invariata)
     // ⬇️ (Mantieni fino alla parte dove invii l'email)
