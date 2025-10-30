@@ -98,9 +98,9 @@ export const StructuredDiagnosisDisplay: React.FC<StructuredDiagnosisDisplayProp
       const { ConsultationDataService } = await import('@/services/chat/consultationDataService');
       const success = await ConsultationDataService.sendInitialConsultationData(
         conversation.id,
-        plantData,
+        { ...plantData, imageUrl: uploadedImage },
         userData,
-        true, // fromAIDiagnosis
+        true, 
         diagnosis
       );
 
