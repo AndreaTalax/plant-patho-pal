@@ -98,18 +98,21 @@ export const StructuredDiagnosisDisplay: React.FC<StructuredDiagnosisDisplayProp
       const { ConsultationDataService } = await import('@/services/chat/consultationDataService');
       const success = await ConsultationDataService.sendInitialConsultationData(
         conversation.id,
-        { ...plantData, imageUrl: uploadedImage },
+        { ...plantData, imageUrl },
         userData,
         true, 
         diagnosis
       );
 
-      if (success) {
-        console.log('✅ PDF INVIATO AUTOMATICAMENTE!');
-        toast.success('PDF con diagnosi inviato al fitopatologo!');
-      } else {
-        console.warn('⚠️ Errore invio PDF automatico');
-      }
+      try {
+  const success = await ConsultationDataService.sendInitialConsultationData(...);
+  if (success) toast.success('PDF con diagnosi inviato al fitopatologo!');
+  else toast.warning('PDF non inviato automaticamente, puoi comunque scrivere in chat.');
+} catch (pdfError) {
+  console.error('Errore invio PDF:', pdfError);
+  toast.error('Errore durante l\'invio del PDF.');
+}
+
 
       // Apri chat
       navigate('/');
