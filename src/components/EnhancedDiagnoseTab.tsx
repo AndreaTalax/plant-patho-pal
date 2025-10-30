@@ -296,6 +296,8 @@ const EnhancedDiagnoseTab = () => {
               onStartNew={handleStartNew}
               onSaveDiagnosis={handleSaveDiagnosis}
               saveLoading={isSaving}
+              imageUrl={uploadedImage || undefined}
+              plantInfo={plantInfo}
             />
           ) : results ? (
             <DiagnosisResult 
@@ -304,6 +306,8 @@ const EnhancedDiagnoseTab = () => {
               imageSrc={uploadedImage || ''}
               onStartNewAnalysis={handleStartNew}
               isAnalyzing={false}
+              analysisDetails={results}
+              analysisData={results}
             />
           ) : (
             <Card>

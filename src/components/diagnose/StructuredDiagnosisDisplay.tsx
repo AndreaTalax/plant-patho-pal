@@ -19,28 +19,111 @@ import {
 } from 'lucide-react';
 import { StructuredDiagnosisResult } from '@/services/structuredPlantDiagnosisService';
 import { useNavigate } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/context/AuthContext';
+import { MARCO_NIGRO_ID } from '@/components/phytopathologist';
+import { toast } from 'sonner';
 
 interface StructuredDiagnosisDisplayProps {
   diagnosis: StructuredDiagnosisResult;
   onStartNew: () => void;
   onSaveDiagnosis?: () => void;
   saveLoading?: boolean;
+  imageUrl?: string;
+  plantInfo?: any;
 }
 
 export const StructuredDiagnosisDisplay: React.FC<StructuredDiagnosisDisplayProps> = ({
   diagnosis,
   onStartNew,
   onSaveDiagnosis,
-  saveLoading = false
+  saveLoading = false,
+  imageUrl,
+  plantInfo
 }) => {
   const navigate = useNavigate();
+  const { user, userProfile } = useAuth();
+  const [isCreatingChat, setIsCreatingChat] = React.useState(false);
 
-  const goToExpertChat = () => {
-    navigate('/');
-    setTimeout(() => {
-      const event = new CustomEvent('switchTab', { detail: 'chat' });
-      window.dispatchEvent(event);
-    }, 100);
+  const goToExpertChat = async () => {
+    if (!user) {
+      toast.error('Devi essere autenticato per contattare il fitopatologo');
+      return;
+    }
+
+    setIsCreatingChat(true);
+    try {
+      console.log('🚀 CREAZIONE CONVERSAZIONE DA DIAGNOSI STRUTTURATA');
+      
+      // Crea conversazione
+      const { data: conversation, error: convError } = await supabase
+        .from('conversations')
+        .insert({
+          user_id: user.id,
+          expert_id: MARCO_NIGRO_ID,
+          title: `Consulenza Fitopatologo`,
+          status: 'active'
+        })
+        .select()
+        .single();
+
+      if (convError) throw convError;
+
+      console.log('✅ Conversazione creata:', conversation.id);
+      localStorage.setItem('openConversationId', conversation.id);
+
+      // Prepara dati per PDF
+      const plantData = {
+        plantName: diagnosis.plantIdentification.name || 'Pianta non identificata',
+        symptoms: diagnosis.healthAssessment.problems.map(p => p.name).join(', ') || 'Nessun sintomo specifico',
+        environment: plantInfo?.environment || 'Non specificato',
+        wateringFrequency: diagnosis.careRecommendations.watering.frequency || 'Non specificata',
+        sunExposure: diagnosis.careRecommendations.lighting.requirements || 'Non specificata',
+        imageUrl: imageUrl,
+        diagnosisResult: diagnosis,
+        useAI: true
+      };
+
+      const userData = {
+        firstName: userProfile?.first_name || '',
+        lastName: userProfile?.last_name || '',
+        email: userProfile?.email || user.email,
+        birthDate: userProfile?.birth_date || 'Non specificata',
+        birthPlace: userProfile?.birth_place || 'Non specificato'
+      };
+
+      console.log('📊 Invio PDF con dati:', { plantData, userData });
+
+      // Invia PDF automaticamente
+      const { ConsultationDataService } = await import('@/services/chat/consultationDataService');
+      const success = await ConsultationDataService.sendInitialConsultationData(
+        conversation.id,
+        plantData,
+        userData,
+        true, // fromAIDiagnosis
+        diagnosis
+      );
+
+      if (success) {
+        console.log('✅ PDF INVIATO AUTOMATICAMENTE!');
+        toast.success('PDF con diagnosi inviato al fitopatologo!');
+      } else {
+        console.warn('⚠️ Errore invio PDF automatico');
+      }
+
+      // Apri chat
+      navigate('/');
+      setTimeout(() => {
+        const event = new CustomEvent('switchTab', { detail: 'chat' });
+        window.dispatchEvent(event);
+      }, 100);
+
+    } catch (error) {
+      console.error('❌ Errore creazione chat:', error);
+      toast.error('Errore nella creazione della chat');
+    } finally {
+      setIsCreatingChat(false);
+    }
   };
 
   const getConfidenceColor = (confidence: number) => {
@@ -327,9 +410,22 @@ export const StructuredDiagnosisDisplay: React.FC<StructuredDiagnosisDisplayProp
               Nuova Diagnosi
             </Button>
             
-            <Button onClick={goToExpertChat} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700">
-              <MessageCircle className="h-4 w-4" />
-              Consulta Esperto
+            <Button 
+              onClick={goToExpertChat} 
+              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700"
+              disabled={isCreatingChat}
+            >
+              {isCreatingChat ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Preparando chat...
+                </>
+              ) : (
+                <>
+                  <MessageCircle className="h-4 w-4" />
+                  Consulta Esperto
+                </>
+              )}
             </Button>
           </div>
         </CardContent>
