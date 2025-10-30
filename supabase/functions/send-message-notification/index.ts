@@ -111,7 +111,7 @@ serve(async (req) => {
             <h2 style="color: #1f2937;">Ciao ${recipientName}!</h2>
             
             <p style="color: #4b5563; font-size: 16px; line-height: 1.6;">
-              ${isExpert ? 'L\'esperto' : 'L\'utente'} <strong>${senderName}</strong> ti ha inviato un documento PDF nella consulenza.
+              ${isExpert ? 'L\'esperto' : 'L\'utente'} <strong>${senderName}</strong> ti ha inviato un documento PDF.
             </p>
 
             ${message.text ? `
