@@ -43,7 +43,7 @@ const handler = async (req: Request): Promise<Response> => {
     console.log("Reset URL:", resetUrl);
 
     const emailResponse = await resend.emails.send({
-      from: "Dr.Plant <noreply@resend.dev>",
+      from: "Dr.Plant <info@agrotecnicomarconigro.it>",
       to: [user.email],
       subject: "Reset della Password - Dr.Plant",
       html: `
