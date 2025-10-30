@@ -2,7 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
 import { jsPDF } from "https://esm.sh/jspdf@2.5.1";
-import { Resend } from "npm:resend@4.0.0";
+// Nota: ho rimosso l'import di Resend perché usiamo EmailJS REST API
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -410,106 +410,57 @@ serve(async (req) => {
 
     console.log("✅ Professional quote request completed successfully");
 
-    // 5. Invia email con PDF allegato
+    // 5. Invia email all'esperto con EmailJS (REST API)
     try {
-      console.log("📧 Sending email with PDF attachment...");
-      
-      const resend = new Resend(Deno.env.get('RESEND_API_KEY'));
-      
-      // Scarica il PDF blob per l'allegato
-      const { data: pdfData, error: downloadError } = await supabaseClient
-        .storage
-        .from("professional-quotes")
-        .download(fileName);
+      console.log("📧 Sending email to expert via EmailJS...");
 
-      if (downloadError) {
-        console.error("❌ Error downloading PDF for email:", downloadError);
-        throw downloadError;
-      }
+      const EMAILJS_SERVICE_ID = Deno.env.get("EMAILJS_SERVICE_ID") ?? "";
+      const EMAILJS_TEMPLATE_ID = Deno.env.get("EMAILJS_TEMPLATE_ID") ?? "";
+      const EMAILJS_USER_ID = Deno.env.get("EMAILJS_USER_ID") ?? ""; // public user id
 
-      // Converti blob in base64
-      const arrayBuffer = await pdfData.arrayBuffer();
-      const base64Content = btoa(
-        new Uint8Array(arrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
-      );
-
-      const emailHtml = `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <div style="background: linear-gradient(135deg, #228B22 0%, #32CD32 100%); padding: 30px; text-align: center;">
-            <h1 style="color: white; margin: 0;">Dr.Plant - Nuova Richiesta Preventivo</h1>
-          </div>
-          
-          <div style="padding: 30px; background-color: #f9f9f9;">
-            <h2 style="color: #228B22;">Richiesta di Preventivo Professionale</h2>
-            
-            <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0;">
-              <h3 style="color: #333; margin-top: 0;">Informazioni Azienda</h3>
-              <p><strong>Azienda:</strong> ${formData.companyName}</p>
-              <p><strong>Contatto:</strong> ${formData.contactPerson}</p>
-              <p><strong>Email:</strong> ${formData.email}</p>
-              <p><strong>Telefono:</strong> ${formData.phone}</p>
-              <p><strong>Tipo di Business:</strong> ${formData.businessType}</p>
-            </div>
-
-            <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0;">
-              <h3 style="color: #333; margin-top: 0;">Piante di Interesse</h3>
-              <p>${formData.plantTypes.join(', ')}</p>
-            </div>
-
-            ${formData.currentChallenges ? `
-            <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0;">
-              <h3 style="color: #333; margin-top: 0;">Sfide Attuali</h3>
-              <p>${formData.currentChallenges}</p>
-            </div>
-            ` : ''}
-
-            <div style="background: #e8f5e9; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #228B22;">
-              <p style="margin: 0; color: #333;">
-                <strong>📎 Il PDF completo con tutti i dettagli è allegato a questa email.</strong>
-              </p>
-              <p style="margin: 10px 0 0 0; color: #666; font-size: 14px;">
-                Puoi anche visualizzare la richiesta nella chat della piattaforma Dr.Plant.
-              </p>
-            </div>
-
-            <div style="background: #fff3cd; padding: 15px; border-radius: 8px; margin: 20px 0;">
-              <p style="margin: 0; color: #856404; font-size: 14px;">
-                ⏰ <strong>Promemoria:</strong> Rispondi entro 2-3 giorni lavorativi
-              </p>
-            </div>
-          </div>
-
-          <div style="background: #333; padding: 20px; text-align: center; color: white; font-size: 12px;">
-            <p>Dr.Plant - Soluzione Professionale per Fitopatologo</p>
-            <p style="margin: 5px 0;">ID Richiesta: ${conversation.id.substring(0, 8)}</p>
-          </div>
-        </div>
-      `;
-
-      const { data: emailData, error: emailError } = await resend.emails.send({
-        from: 'Dr.Plant <onboarding@resend.dev>',
-        to: ['agrotecnicomarconigro@gmail.com'],
-        subject: `🌱 Nuova Richiesta Preventivo da ${formData.companyName}`,
-        html: emailHtml,
-        attachments: [
-          {
-            filename: fileName,
-            content: base64Content,
-          },
-        ],
-      });
-
-      if (emailError) {
-        console.error("❌ Error sending email:", emailError);
+      if (!EMAILJS_SERVICE_ID || !EMAILJS_TEMPLATE_ID || !EMAILJS_USER_ID) {
+        console.warn("⚠️ EmailJS env vars not fully set. Skipping EmailJS send.");
       } else {
-        console.log("✅ Email sent successfully:", emailData);
+        const emailjsPayload = {
+          service_id: EMAILJS_SERVICE_ID,
+          template_id: EMAILJS_TEMPLATE_ID,
+          user_id: EMAILJS_USER_ID,
+          template_params: {
+            expert_email: "agrotecnicomarconigro@gmail.com",
+            company_name: formData.companyName,
+            contact_person: formData.contactPerson,
+            contact_email: formData.email,
+            contact_phone: formData.phone,
+            business_type: formData.businessType,
+            plant_types: formData.plantTypes.join(', '),
+            current_challenges: formData.currentChallenges ?? "",
+            pdf_link: pdfUrl,
+            request_id_short: conversation.id.substring(0,8),
+            full_request_id: conversation.id
+          }
+        };
+
+        const emailjsResp = await fetch("https://api.emailjs.com/api/v1.0/email/send", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(emailjsPayload),
+        });
+
+        if (!emailjsResp.ok) {
+          const text = await emailjsResp.text();
+          console.error("❌ EmailJS error response:", emailjsResp.status, text);
+        } else {
+          console.log("✅ Email to expert sent via EmailJS (status):", emailjsResp.status);
+        }
       }
     } catch (emailError) {
-      console.error("❌ Failed to send email:", emailError);
-      // Non bloccare la richiesta se l'email fallisce
+      console.error("❌ Failed to send email via EmailJS:", emailError);
+      // Non blocchiamo la richiesta se l'email fallisce
     }
 
-    // 6. Invia notifica all'esperto
+    // 6. Invia notifica all'esperto (funzione interna)
     try {
       await supabaseClient.functions.invoke('notify-expert', {
         body: {
