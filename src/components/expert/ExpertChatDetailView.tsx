@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { DatabaseMessage } from "@/services/chat/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Loader2, Send, AlertCircle, RefreshCw, MessageCircleOff, ImageIcon } from "lucide-react";
+import { ArrowLeft, Loader2, Send, AlertCircle, RefreshCw, MessageCircleOff, ImageIcon, FileText, Download, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import { useRealtimeChat } from "@/hooks/useRealtimeChat";
 import { MARCO_NIGRO_ID } from "@/components/phytopathologist";
@@ -196,6 +196,36 @@ const ExpertChatDetailView = ({ conversation, onBack }: {
            null;
   };
 
+  // Funzione helper per determinare il tipo di allegato
+  const getAttachmentType = (url: string | null): 'image' | 'pdf' | 'other' | null => {
+    if (!url) return null;
+    
+    const lowerUrl = url.toLowerCase();
+    
+    if (lowerUrl.endsWith('.pdf')) {
+      return 'pdf';
+    } else if (lowerUrl.match(/\.(jpg|jpeg|png|gif|webp|bmp|svg)$/)) {
+      return 'image';
+    } else if (lowerUrl.includes('/storage/') && lowerUrl.includes('image')) {
+      return 'image';
+    } else if (lowerUrl.includes('.pdf') || lowerUrl.includes('pdf')) {
+      return 'pdf';
+    }
+    
+    return 'other';
+  };
+
+  // Estrae il nome del file dall'URL
+  const getFileName = (url: string): string => {
+    try {
+      const parts = url.split('/');
+      const fileName = parts[parts.length - 1];
+      return decodeURIComponent(fileName);
+    } catch {
+      return 'Allegato';
+    }
+  };
+
   // Se non abbiamo un ID conversazione valido
   if (!conversation?.id) {
     return (
@@ -300,6 +330,7 @@ const ExpertChatDetailView = ({ conversation, onBack }: {
               const isExpertMessage = m.sender_id === MARCO_NIGRO_ID;
               const isUserMessage = m.sender_id === conversation.user_id;
               const attachmentUrl = getAttachmentUrl(m);
+              const attachmentType = getAttachmentType(attachmentUrl);
               
               return (
                 <div key={m.id} className="w-full">
@@ -320,23 +351,79 @@ const ExpertChatDetailView = ({ conversation, onBack }: {
                       </span>
                       {attachmentUrl && (
                         <span className="ml-2">
-                          <ImageIcon className="inline h-3 w-3" />
+                          {attachmentType === 'pdf' ? (
+                            <FileText className="inline h-3 w-3" />
+                          ) : (
+                            <ImageIcon className="inline h-3 w-3" />
+                          )}
                         </span>
                       )}
                     </div>
                     <div className="font-medium">{m.text || m.content}</div>
+                    
+                    {/* Visualizzazione allegati */}
                     {attachmentUrl && (
                       <div className="mt-2">
-                        <img 
-                          src={attachmentUrl} 
-                          alt="Allegato" 
-                          className="max-h-48 max-w-full rounded-lg object-contain border border-gray-200 cursor-pointer hover:opacity-90 transition-opacity" 
-                          onClick={() => window.open(attachmentUrl, '_blank')}
-                          onError={(e) => {
-                            console.error('❌ Error loading image:', attachmentUrl);
-                            e.currentTarget.style.display = 'none';
-                          }}
-                        />
+                        {attachmentType === 'image' ? (
+                          // Immagine
+                          <img 
+                            src={attachmentUrl} 
+                            alt="Allegato immagine" 
+                            className="max-h-48 max-w-full rounded-lg object-contain border border-gray-200 cursor-pointer hover:opacity-90 transition-opacity" 
+                            onClick={() => window.open(attachmentUrl, '_blank')}
+                            onError={(e) => {
+                              console.error('❌ Error loading image:', attachmentUrl);
+                              e.currentTarget.style.display = 'none';
+                            }}
+                          />
+                        ) : attachmentType === 'pdf' ? (
+                          // PDF - Pulsante per aprire/scaricare
+                          <div className="border border-gray-300 rounded-lg p-3 bg-gray-50 hover:bg-gray-100 transition-colors">
+                            <div className="flex items-center gap-2 mb-2">
+                              <FileText className="h-5 w-5 text-red-600" />
+                              <span className="text-sm font-medium text-gray-700 flex-1 truncate">
+                                {getFileName(attachmentUrl)}
+                              </span>
+                            </div>
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="flex-1"
+                                onClick={() => window.open(attachmentUrl, '_blank')}
+                              >
+                                <ExternalLink className="h-3 w-3 mr-1" />
+                                Apri
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  const link = document.createElement('a');
+                                  link.href = attachmentUrl;
+                                  link.download = getFileName(attachmentUrl);
+                                  link.click();
+                                }}
+                              >
+                                <Download className="h-3 w-3 mr-1" />
+                                Scarica
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          // Altri tipi di file
+                          <div className="border border-gray-300 rounded-lg p-3 bg-gray-50">
+                            <a 
+                              href={attachmentUrl} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="text-blue-600 hover:underline flex items-center gap-2"
+                            >
+                              <Download className="h-4 w-4" />
+                              {getFileName(attachmentUrl)}
+                            </a>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
