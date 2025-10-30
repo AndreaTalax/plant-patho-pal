@@ -196,7 +196,7 @@ serve(async (req) => {
     console.log(`📧 Sending email to: ${recipientEmail}`);
     
     const { data: emailData, error: emailError } = await resend.emails.send({
-      from: 'Dr.Plant <onboarding@resend.dev>',
+      from: 'Dr.Plant <info@agrotecnicomarconigro.it>',
       to: [recipientEmail],
       subject: emailSubject,
       html: emailBody,
