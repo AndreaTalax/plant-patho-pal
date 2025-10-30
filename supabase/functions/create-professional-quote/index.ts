@@ -487,17 +487,18 @@ serve(async (req) => {
       `;
 
       const { data: emailData, error: emailError } = await resend.emails.send({
-        from: 'Dr.Plant <onboarding@resend.dev>',
-        to: ['agrotecnicomarconigro@gmail.com'],
-        subject: `🌱 Nuova Richiesta Preventivo da ${formData.companyName}`,
-        html: emailHtml,
-        attachments: [
-          {
-            filename: fileName,
-            content: base64Content,
-          },
-        ],
-      });
+  from: "Dr.Plant <no-reply@email.agrotecnicomarconigro.it>",
+  to: ["agrotecnicomarconigro@gmail.com"],
+  subject: `🌱 Nuova richiesta preventivo da ${formData.companyName}`,
+  html: emailHtml,
+  attachments: [
+    {
+      filename: fileName,
+      content: base64Content,
+    },
+  ],
+});
+
 
       if (emailError) {
         console.error("❌ Error sending email:", emailError);
