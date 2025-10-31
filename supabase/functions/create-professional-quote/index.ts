@@ -552,4 +552,4 @@ serve(async (req) => {
     });
   }
 });
-serve(handler);
+serve();
