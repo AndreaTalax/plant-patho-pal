@@ -2,7 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
 import { jsPDF } from "https://esm.sh/jspdf@2.5.1";
-import { Resend } from "npm:resend@4.0.0";
+import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -410,11 +410,9 @@ serve(async (req) => {
 
     console.log("✅ Professional quote request completed successfully");
 
-    // 5. Invia email con PDF allegato
+    // 5. Invia email con PDF allegato usando SMTP Google
     try {
-      console.log("📧 Sending email with PDF attachment...");
-      
-      const resend = new Resend(Deno.env.get('RESEND_API_KEY'));
+      console.log("📧 Invio email con PDF allegato tramite SMTP Google...");
       
       // Scarica il PDF blob per l'allegato
       const { data: pdfData, error: downloadError } = await supabaseClient
@@ -427,11 +425,9 @@ serve(async (req) => {
         throw downloadError;
       }
 
-      // Converti blob in base64
+      // Converti blob in Uint8Array per l'allegato
       const arrayBuffer = await pdfData.arrayBuffer();
-      const base64Content = btoa(
-        new Uint8Array(arrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
-      );
+      const pdfUint8Array = new Uint8Array(arrayBuffer);
 
       const emailHtml = `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -486,27 +482,38 @@ serve(async (req) => {
         </div>
       `;
 
-      const { data: emailData, error: emailError } = await resend.emails.send({
-  from: "Dr.Plant <no-reply@email.agrotecnicomarconigro.it>",
-  to: ["agrotecnicomarconigro@gmail.com"],
-  subject: `🌱 Nuova richiesta preventivo da ${formData.companyName}`,
-  html: emailHtml,
-  attachments: [
-    {
-      filename: fileName,
-      content: base64Content,
-    },
-  ],
-});
+      // Configura e invia email con SMTP
+      const smtpClient = new SMTPClient({
+        connection: {
+          hostname: Deno.env.get("SMTP_HOSTNAME") ?? "smtp.gmail.com",
+          port: Number(Deno.env.get("SMTP_PORT") ?? "587"),
+          tls: true,
+          auth: {
+            username: Deno.env.get("SMTP_USERNAME") ?? "",
+            password: Deno.env.get("SMTP_PASSWORD") ?? "",
+          },
+        },
+      });
 
+      await smtpClient.send({
+        from: Deno.env.get("SMTP_USERNAME") ?? "noreply@drplant.it",
+        to: "agrotecnicomarconigro@gmail.com",
+        subject: `🌱 Nuova richiesta preventivo da ${formData.companyName}`,
+        html: emailHtml,
+        attachments: [
+          {
+            filename: fileName,
+            content: pdfUint8Array,
+            contentType: "application/pdf",
+          },
+        ],
+      });
 
-      if (emailError) {
-        console.error("❌ Error sending email:", emailError);
-      } else {
-        console.log("✅ Email sent successfully:", emailData);
-      }
+      await smtpClient.close();
+      console.log("✅ Email inviata con successo via SMTP Google");
+      
     } catch (emailError) {
-      console.error("❌ Failed to send email:", emailError);
+      console.error("❌ Errore invio email:", emailError);
       // Non bloccare la richiesta se l'email fallisce
     }
 
