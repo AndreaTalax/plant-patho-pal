@@ -489,8 +489,8 @@ serve(async (req) => {
           port: Number(Deno.env.get("SMTP_PORT") ?? "587"),
           tls: true,
           auth: {
-            username: Deno.env.get("SMTP_USERNAME") ?? "",
-            password: Deno.env.get("SMTP_PASSWORD") ?? "",
+            username: Deno.env.get("SMTP_USER") ?? "",
+            password: Deno.env.get("SMTP_PASS") ?? "",
           },
         },
       });
@@ -498,7 +498,7 @@ serve(async (req) => {
       await smtpClient.send({
         from: Deno.env.get("SMTP_USERNAME") ?? "talaiaandrea@gmail.com",
         replyTo: formData.email,
-        to: "agrotecnicomarconigro@gmail.com",
+        to: "andre90t@gmail.com",
         subject: `🌱 Nuova richiesta preventivo da ${formData.companyName}`,
         html: emailHtml,
         attachments: [
