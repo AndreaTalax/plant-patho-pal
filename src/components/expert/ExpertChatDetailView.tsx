@@ -189,11 +189,8 @@ const ExpertChatDetailView = ({ conversation, onBack }: {
 
   // Funzione helper per ottenere l'URL dell'allegato
   const getAttachmentUrl = (message: DatabaseMessage): string | null => {
-    // Controlla tutti i possibili campi dove potrebbe essere l'allegato
-    return message.image_url || 
-           message.attachment_url || 
-           (message.attachments && message.attachments.length > 0 ? message.attachments[0] : null) ||
-           null;
+    // Controlla i campi disponibili per allegati
+    return message.image_url || message.pdf_path || null;
   };
 
   // Funzione helper per determinare il tipo di allegato

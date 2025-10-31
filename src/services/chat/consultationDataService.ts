@@ -178,7 +178,7 @@ export class ConsultationDataService {
       // Se c'è un'immagine, inviala come messaggio separato
       if (plantData?.imageUrl) {
         console.log('📸 Invio immagine pianta...');
-        await supabase.functions.invoke('send-message', {
+        const { error: imageError } = await supabase.functions.invoke('send-message', {
           body: {
             conversationId,
             recipientId: MARCO_NIGRO_ID,

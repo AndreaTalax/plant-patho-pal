@@ -104,14 +104,11 @@ export const StructuredDiagnosisDisplay: React.FC<StructuredDiagnosisDisplayProp
         diagnosis
       );
 
-      try {
-  const success = await ConsultationDataService.sendInitialConsultationData(...);
-  if (success) toast.success('PDF con diagnosi inviato al fitopatologo!');
-  else toast.warning('PDF non inviato automaticamente, puoi comunque scrivere in chat.');
-} catch (pdfError) {
-  console.error('Errore invio PDF:', pdfError);
-  toast.error('Errore durante l\'invio del PDF.');
-}
+      if (success) {
+        toast.success('PDF con diagnosi inviato al fitopatologo!');
+      } else {
+        toast.warning('PDF non inviato automaticamente, puoi comunque scrivere in chat.');
+      }
 
 
       // Apri chat
