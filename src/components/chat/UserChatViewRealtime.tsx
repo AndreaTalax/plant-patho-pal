@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useUserChatRealtime } from '@/hooks/useUserChatRealtime';
 import MessageList from './MessageList';
 import { ChatInitializer } from './user/ChatInitializer';
@@ -12,7 +11,6 @@ import { Button } from '@/components/ui/button';
 import { RefreshCw, AlertCircle, FileText } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { MARCO_NIGRO_ID } from '@/components/phytopathologist';
-import { useTheme } from '@/context/ThemeContext';
 
 interface UserChatViewRealtimeProps {
   userId: string;
@@ -27,8 +25,6 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({
   onBackToList,
   isProfessionalChat = false 
 }) => {
-  const navigate = useNavigate();
-  const { language } = useTheme();
   const [autoDataSent, setAutoDataSent] = useState(false);
   const [showComprehensiveData, setShowComprehensiveData] = useState(false);
   
@@ -226,45 +222,19 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({
         <div className="flex-shrink-0 bg-blue-50 border-b border-blue-200 p-4">
           <div className="max-w-4xl mx-auto">
             <div className="flex items-start gap-3">
-              <FileText className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
-              <div className="flex-1 space-y-3">
-                <div>
-                  <h3 className="font-semibold text-blue-900 mb-1">
-                    {language === 'it' ? 'Preventivo Professionale' : 'Professional Quote'}
-                  </h3>
-                  <p className="text-sm text-blue-700">
-                    {language === 'it' 
-                      ? 'Questa è una chat dedicata alla tua richiesta di preventivo professionale. Il nostro team esaminerà la tua richiesta e ti risponderà con un\'offerta personalizzata entro 2-3 giorni lavorativi.'
-                      : 'This is a chat dedicated to your professional quote request. Our team will review your request and respond with a personalized offer within 2-3 business days.'
-                    }
-                  </p>
-                  <p className="text-xs text-blue-600 mt-2">
-                    {language === 'it'
-                      ? 'Il PDF con i dettagli della tua richiesta è stato inviato e allegato qui sotto.'
-                      : 'The PDF with the details of your request has been sent and attached below.'
-                    }
-                  </p>
-                </div>
-                
-                {/* Pulsanti di navigazione */}
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => navigate('/professional-quote')}
-                    className="text-xs bg-white hover:bg-blue-100"
-                  >
-                    {language === 'it' ? '📝 Nuovo Preventivo' : '📝 New Quote'}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => navigate('/plan-subscription')}
-                    className="text-xs bg-white hover:bg-blue-100"
-                  >
-                    {language === 'it' ? '💼 Vedi Abbonamenti' : '💼 View Plans'}
-                  </Button>
-                </div>
+              <FileText className="h-5 w-5 text-blue-600 mt-0.5" />
+              <div>
+                <h3 className="font-semibold text-blue-900 mb-1">
+                  Preventivo Professionale
+                </h3>
+                <p className="text-sm text-blue-700">
+                  Questa è una chat dedicata alla tua richiesta di preventivo professionale. 
+                  Il nostro team esaminerà la tua richiesta e ti risponderà con un'offerta personalizzata 
+                  entro 2-3 giorni lavorativi.
+                </p>
+                <p className="text-xs text-blue-600 mt-2">
+                  Il PDF con i dettagli della tua richiesta è stato inviato e allegato qui sotto.
+                </p>
               </div>
             </div>
           </div>
