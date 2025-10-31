@@ -496,7 +496,8 @@ serve(async (req) => {
       });
 
       await smtpClient.send({
-        from: Deno.env.get("SMTP_USERNAME") ?? "noreply@drplant.it",
+        from: Deno.env.get("SMTP_USERNAME") ?? "talaiaandrea@gmail.com",
+        replyTo: formData.email,
         to: "agrotecnicomarconigro@gmail.com",
         subject: `🌱 Nuova richiesta preventivo da ${formData.companyName}`,
         html: emailHtml,
