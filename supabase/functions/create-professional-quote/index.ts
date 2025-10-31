@@ -486,7 +486,7 @@ serve(async (req) => {
       const smtpClient = new SMTPClient({
         connection: {
           hostname: Deno.env.get("SMTP_HOSTNAME") ?? "smtp.gmail.com",
-          port: Number(Deno.env.get("SMTP_PORT") ?? "587"),
+          port: 587,
           starttls: true,
           auth: {
             username: Deno.env.get("SMTP_USER") ?? "",
