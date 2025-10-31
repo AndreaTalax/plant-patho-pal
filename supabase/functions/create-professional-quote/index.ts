@@ -552,4 +552,3 @@ serve(async (req) => {
     });
   }
 });
-serve();
