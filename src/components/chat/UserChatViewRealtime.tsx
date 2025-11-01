@@ -252,7 +252,7 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => navigate('/plan-subscription')}
+                    onClick={() => navigate('/plan-selection')}
                     className="bg-white hover:bg-blue-50 text-blue-700 border-blue-300"
                   >
                     <ArrowLeft className="h-4 w-4 mr-2" />
