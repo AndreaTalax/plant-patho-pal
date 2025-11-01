@@ -56,7 +56,7 @@ function App() {
                     <Route path="/" element={<Index />} />
                     <Route path="/login" element={<Login />} />
                     <Route path="/plan-selection" element={<PlanSelection />} />
-                    <Route path="/plan-subscription-selection" element={<PlanSubscriptionSelection />} />
+                    <Route path="/plan-subscription" element={<PlanSubscriptionSelection />} />
                     <Route path="/professional-quote" element={<ProfessionalQuote />} />
                     <Route path="/plant-identification" element={<PlantIdentification />} />
                     <Route path="/signup" element={<SignUp />} />
