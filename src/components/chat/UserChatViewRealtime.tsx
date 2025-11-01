@@ -8,10 +8,9 @@ import ChatHeader from './user/ChatHeader';
 import { DatabaseMessage } from '@/services/chat/types';
 import { Message } from './types';
 import { Button } from '@/components/ui/button';
-import { RefreshCw, AlertCircle, FileText, ArrowLeft, Receipt } from 'lucide-react';
+import { RefreshCw, AlertCircle, FileText } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { MARCO_NIGRO_ID } from '@/components/phytopathologist';
-import { useNavigate } from 'react-router-dom';
 
 interface UserChatViewRealtimeProps {
   userId: string;
@@ -26,7 +25,6 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({
   onBackToList,
   isProfessionalChat = false 
 }) => {
-  const navigate = useNavigate();
   const [autoDataSent, setAutoDataSent] = useState(false);
   const [showComprehensiveData, setShowComprehensiveData] = useState(false);
   
@@ -224,8 +222,8 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({
         <div className="flex-shrink-0 bg-blue-50 border-b border-blue-200 p-4">
           <div className="max-w-4xl mx-auto">
             <div className="flex items-start gap-3">
-              <FileText className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
-              <div className="flex-1">
+              <FileText className="h-5 w-5 text-blue-600 mt-0.5" />
+              <div>
                 <h3 className="font-semibold text-blue-900 mb-1">
                   Preventivo Professionale
                 </h3>
@@ -234,31 +232,9 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({
                   Il nostro team esaminerà la tua richiesta e ti risponderà con un'offerta personalizzata 
                   entro 2-3 giorni lavorativi.
                 </p>
-                <p className="text-xs text-blue-600 mt-2 mb-3">
+                <p className="text-xs text-blue-600 mt-2">
                   Il PDF con i dettagli della tua richiesta è stato inviato e allegato qui sotto.
                 </p>
-                
-                {/* Pulsanti di navigazione */}
-                <div className="flex flex-wrap gap-2 mt-3">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => navigate('/professional-quote')}
-                    className="bg-white hover:bg-blue-50 text-blue-700 border-blue-300"
-                  >
-                    <Receipt className="h-4 w-4 mr-2" />
-                    Nuovo Preventivo
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => navigate('/plan-subscription-selection')}
-                    className="bg-white hover:bg-blue-50 text-blue-700 border-blue-300"
-                  >
-                    <ArrowLeft className="h-4 w-4 mr-2" />
-                    Vedi Altri Piani
-                  </Button>
-                </div>
               </div>
             </div>
           </div>

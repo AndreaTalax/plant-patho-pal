@@ -28,7 +28,6 @@ import { NotificationProvider } from "./components/notifications/NotificationPro
 import { PushNotificationManager } from "./components/notifications/PushNotificationManager";
 import CookieConsent from "./components/CookieConsent";
 import TestDiagnosi from "./pages/TestDiagnosi";
-import ProfessionalQuote from "./pages/ProfessionalQuote";
 
 const queryClient = new QueryClient();
 
@@ -56,8 +55,7 @@ function App() {
                     <Route path="/" element={<Index />} />
                     <Route path="/login" element={<Login />} />
                     <Route path="/plan-selection" element={<PlanSelection />} />
-                    <Route path="/plan-subscription-selection" element={<PlanSubscriptionSelection />} />
-                    <Route path="/professional-quote" element={<ProfessionalQuote />} />
+                    <Route path="/plan-subscription" element={<PlanSubscriptionSelection />} />
                     <Route path="/plant-identification" element={<PlantIdentification />} />
                     <Route path="/signup" element={<SignUp />} />
                     <Route path="/complete-profile" element={<CompleteProfile />} />
