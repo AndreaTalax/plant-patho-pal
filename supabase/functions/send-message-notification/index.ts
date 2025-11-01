@@ -195,12 +195,28 @@ serve(async (req) => {
     // Invia email
     console.log(`📧 Sending email to: ${recipientEmail}`);
     
-    const { data: emailData, error: emailError } = await resend.emails.send({
-      from: 'Dr.Plant <agrotecnicomarconigro@gmail.com>',
-      to: [recipientEmail],
-      subject: emailSubject,
-      html: emailBody,
-    });
+   import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
+
+const smtpClient = new SMTPClient({
+  connection: {
+    hostname: Deno.env.get("SMTP_HOSTNAME") ?? "smtp.gmail.com",
+    port: 465,
+    tls: true,
+    auth: {
+      username: Deno.env.get("SMTP_USER"),
+      password: Deno.env.get("SMTP_PASS"),
+    },
+  },
+});
+
+await smtpClient.send({
+  from: `Dr.Plant <${Deno.env.get("SMTP_USER")}>`,
+  to: recipientEmail,
+  subject: emailSubject,
+  html: emailBody,
+});
+
+await smtpClient.close();
 
     if (emailError) {
       console.error('❌ Error sending email:', emailError);
