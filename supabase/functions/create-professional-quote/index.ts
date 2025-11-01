@@ -39,6 +39,41 @@ serve(async (req) => {
     const { formData } = await req.json();
 
     console.log("📋 Creating professional quote for user:", user.id);
+    console.log("📋 Form data received:", JSON.stringify(formData, null, 2));
+
+    // Mappe di traduzione per i valori
+    const businessTypeLabels: Record<string, string> = {
+      'nursery': 'Vivaio',
+      'farm': 'Azienda Agricola',
+      'research': 'Centro di Ricerca',
+      'consulting': 'Consulenza Agronomica',
+      'education': 'Istituto Formativo',
+      'government': 'Ente Pubblico',
+      'cooperative': 'Cooperativa',
+      'other': 'Altro'
+    };
+
+    const plantTypeLabels: Record<string, string> = {
+      'ornamental': 'Piante Ornamentali',
+      'vegetables': 'Ortaggi',
+      'fruits': 'Frutta',
+      'cereals': 'Cereali',
+      'vines': 'Vite',
+      'olives': 'Olivo',
+      'greenhouse': 'Piante da Serra',
+      'forest': 'Piante Forestali'
+    };
+
+    const featureLabels: Record<string, string> = {
+      'ai_diagnosis': 'Diagnosi AI Avanzata',
+      'expert_chat': 'Chat con Esperti',
+      'custom_reports': 'Report Personalizzati'
+    };
+
+    // Traduci i valori per l'uso nel PDF e nell'email
+    const businessTypeItalian = businessTypeLabels[formData.businessType] || formData.businessType;
+    const plantTypesItalian = formData.plantTypes.map((type: string) => plantTypeLabels[type] || type);
+    const featuresItalian = formData.preferredFeatures?.map((feat: string) => featureLabels[feat] || feat) || [];
 
     // Ottieni il profilo dell'utente per le email
     const { data: profile } = await supabaseClient
@@ -135,7 +170,7 @@ serve(async (req) => {
       { label: 'Persona di Contatto:', value: formData.contactPerson },
       { label: 'Email:', value: formData.email },
       { label: 'Telefono:', value: formData.phone },
-      { label: 'Tipo di Business:', value: formData.businessType }
+      { label: 'Tipo di Business:', value: businessTypeItalian }
     ];
 
     companyInfo.forEach(item => {
@@ -164,7 +199,7 @@ serve(async (req) => {
 
     doc.setFontSize(11);
     doc.setFont("helvetica", "normal");
-    const plantTypes = formData.plantTypes.join(', ');
+    const plantTypes = plantTypesItalian.join(', ');
     const plantTypeLines = doc.splitTextToSize(plantTypes, 165);
     plantTypeLines.forEach((line: string) => {
       doc.text(line, 25, yPosition);
@@ -228,12 +263,12 @@ serve(async (req) => {
       yPosition += 7;
     }
 
-    if (formData.preferredFeatures && formData.preferredFeatures.length > 0) {
+    if (featuresItalian && featuresItalian.length > 0) {
       doc.setFont("helvetica", "bold");
       doc.text("Funzionalità richieste:", 25, yPosition);
       yPosition += 6;
       doc.setFont("helvetica", "normal");
-      const featuresText = formData.preferredFeatures.join(', ');
+      const featuresText = featuresItalian.join(', ');
       const featureLines = doc.splitTextToSize(featuresText, 160);
       featureLines.forEach((line: string) => {
         doc.text(line, 30, yPosition);
@@ -394,8 +429,8 @@ serve(async (req) => {
           conversation_id: conversation.id,
           sender_id: expertId,
           recipient_id: user.id,
-          content: `👋 Grazie per la vostra richiesta di preventivo professionale!\n\n📋 Ho ricevuto il PDF con tutti i dettagli:\n• Azienda: ${formData.companyName}\n• Contatto: ${formData.contactPerson}\n• Tipo di business: ${formData.businessType}\n\n🔍 Il nostro team analizzerà attentamente la vostra richiesta e vi contatterà entro 2-3 giorni lavorativi con un'offerta personalizzata che soddisfi le vostre esigenze specifiche.\n\n💬 Nel frattempo, se avete domande o necessità urgenti, non esitate a scrivermi qui nella chat!`,
-          text: `👋 Grazie per la vostra richiesta di preventivo professionale!\n\n📋 Ho ricevuto il PDF con tutti i dettagli:\n• Azienda: ${formData.companyName}\n• Contatto: ${formData.contactPerson}\n• Tipo di business: ${formData.businessType}\n\n🔍 Il nostro team analizzerà attentamente la vostra richiesta e vi contatterà entro 2-3 giorni lavorativi con un'offerta personalizzata che soddisfi le vostre esigenze specifiche.\n\n💬 Nel frattempo, se avete domande o necessità urgenti, non esitate a scrivermi qui nella chat!`,
+          content: `👋 Grazie per la vostra richiesta di preventivo professionale!\n\n📋 Ho ricevuto il PDF con tutti i dettagli:\n• Azienda: ${formData.companyName}\n• Contatto: ${formData.contactPerson}\n• Tipo di business: ${businessTypeItalian}\n\n🔍 Il nostro team analizzerà attentamente la vostra richiesta e vi contatterà entro 2-3 giorni lavorativi con un'offerta personalizzata che soddisfi le vostre esigenze specifiche.\n\n💬 Nel frattempo, se avete domande o necessità urgenti, non esitate a scrivermi qui nella chat!`,
+          text: `👋 Grazie per la vostra richiesta di preventivo professionale!\n\n📋 Ho ricevuto il PDF con tutti i dettagli:\n• Azienda: ${formData.companyName}\n• Contatto: ${formData.contactPerson}\n• Tipo di business: ${businessTypeItalian}\n\n🔍 Il nostro team analizzerà attentamente la vostra richiesta e vi contatterà entro 2-3 giorni lavorativi con un'offerta personalizzata che soddisfi le vostre esigenze specifiche.\n\n💬 Nel frattempo, se avete domande o necessità urgenti, non esitate a scrivermi qui nella chat!`,
           metadata: {
             type: 'expert_response',
             auto_reply: true
@@ -429,58 +464,7 @@ serve(async (req) => {
       const arrayBuffer = await pdfData.arrayBuffer();
       const pdfUint8Array = new Uint8Array(arrayBuffer);
 
-      const emailHtml = `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <div style="background: linear-gradient(135deg, #228B22 0%, #32CD32 100%); padding: 30px; text-align: center;">
-            <h1 style="color: white; margin: 0;">Dr.Plant - Nuova Richiesta Preventivo</h1>
-          </div>
-          
-          <div style="padding: 30px; background-color: #f9f9f9;">
-            <h2 style="color: #228B22;">Richiesta di Preventivo Professionale</h2>
-            
-            <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0;">
-              <h3 style="color: #333; margin-top: 0;">Informazioni Azienda</h3>
-              <p><strong>Azienda:</strong> ${formData.companyName}</p>
-              <p><strong>Contatto:</strong> ${formData.contactPerson}</p>
-              <p><strong>Email:</strong> ${formData.email}</p>
-              <p><strong>Telefono:</strong> ${formData.phone}</p>
-              <p><strong>Tipo di Business:</strong> ${formData.businessType}</p>
-            </div>
-
-            <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0;">
-              <h3 style="color: #333; margin-top: 0;">Piante di Interesse</h3>
-              <p>${formData.plantTypes.join(', ')}</p>
-            </div>
-
-            ${formData.currentChallenges ? `
-            <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0;">
-              <h3 style="color: #333; margin-top: 0;">Sfide Attuali</h3>
-              <p>${formData.currentChallenges}</p>
-            </div>
-            ` : ''}
-
-            <div style="background: #e8f5e9; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #228B22;">
-              <p style="margin: 0; color: #333;">
-                <strong>📎 Il PDF completo con tutti i dettagli è allegato a questa email.</strong>
-              </p>
-              <p style="margin: 10px 0 0 0; color: #666; font-size: 14px;">
-                Puoi anche visualizzare la richiesta nella chat della piattaforma Dr.Plant.
-              </p>
-            </div>
-
-            <div style="background: #fff3cd; padding: 15px; border-radius: 8px; margin: 20px 0;">
-              <p style="margin: 0; color: #856404; font-size: 14px;">
-                ⏰ <strong>Promemoria:</strong> Rispondi entro 2-3 giorni lavorativi
-              </p>
-            </div>
-          </div>
-
-          <div style="background: #333; padding: 20px; text-align: center; color: white; font-size: 12px;">
-            <p>Dr.Plant - Soluzione Professionale per Fitopatologo</p>
-            <p style="margin: 5px 0;">ID Richiesta: ${conversation.id.substring(0, 8)}</p>
-          </div>
-        </div>
-      `;
+      const emailHtml = `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;"><div style="background: linear-gradient(135deg, #228B22 0%, #32CD32 100%); padding: 30px; text-align: center;"><h1 style="color: white; margin: 0;">Dr.Plant - Nuova Richiesta Preventivo</h1></div><div style="padding: 30px; background-color: #f9f9f9;"><h2 style="color: #228B22;">Richiesta di Preventivo Professionale</h2><div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0;"><h3 style="color: #333; margin-top: 0;">Informazioni Azienda</h3><p><strong>Azienda:</strong> ${formData.companyName}</p><p><strong>Contatto:</strong> ${formData.contactPerson}</p><p><strong>Email:</strong> ${formData.email}</p><p><strong>Telefono:</strong> ${formData.phone}</p><p><strong>Tipo di Business:</strong> ${businessTypeItalian}</p></div><div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0;"><h3 style="color: #333; margin-top: 0;">Piante di Interesse</h3><p>${plantTypesItalian.join(', ')}</p></div>${formData.currentChallenges ? `<div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0;"><h3 style="color: #333; margin-top: 0;">Sfide Attuali</h3><p>${formData.currentChallenges}</p></div>` : ''}<div style="background: #e8f5e9; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #228B22;"><p style="margin: 0; color: #333;"><strong>📎 Il PDF completo con tutti i dettagli è allegato a questa email.</strong></p><p style="margin: 10px 0 0 0; color: #666; font-size: 14px;">Puoi anche visualizzare la richiesta nella chat della piattaforma Dr.Plant.</p></div><div style="background: #fff3cd; padding: 15px; border-radius: 8px; margin: 20px 0;"><p style="margin: 0; color: #856404; font-size: 14px;">⏰ <strong>Promemoria:</strong> Rispondi entro 2-3 giorni lavorativi</p></div></div><div style="background: #333; padding: 20px; text-align: center; color: white; font-size: 12px;"><p>Dr.Plant - Soluzione Professionale per Fitopatologo</p><p style="margin: 5px 0;">ID Richiesta: ${conversation.id.substring(0, 8)}</p></div></div>`;
 
       // Configura e invia email con SMTP Google
       const smtpUsername = Deno.env.get("SMTP_USER");
