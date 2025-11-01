@@ -50,7 +50,7 @@ function App() {
               <PlantInfoProvider>
                 <TooltipProvider>
                   <Toaster />
-                <Router>
+                <Router basename="/">
                   <Routes>
                     <Route path="/" element={<Index />} />
                     <Route path="/login" element={<Login />} />
@@ -68,6 +68,7 @@ function App() {
                     <Route path="/user-management" element={<UserManagement />} />
                     <Route path="/notification-settings" element={<NotificationSettings />} />
                     <Route path="/test-diagnosi" element={<TestDiagnosi />} />
+                    <Route path="/professional-quote" element={<PlanSubscriptionSelection />} />
                     <Route path="/404" element={<NotFound />} />
                     <Route path="*" element={<Navigate to="/404" replace />} />
                   </Routes>
