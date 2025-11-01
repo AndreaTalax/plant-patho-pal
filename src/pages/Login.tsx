@@ -82,7 +82,7 @@ const Login = () => {
           if (isTestAccount) {
             redirectPath = "/plan-selection";
           } else if (selectedPlanType && ['privati', 'business', 'professionisti'].includes(selectedPlanType)) {
-            redirectPath = "/plan-subscription";
+            redirectPath = "/plan-subscription-selection";
           } else if (isAdminEmail) {
             redirectPath = "/";
           } else {
