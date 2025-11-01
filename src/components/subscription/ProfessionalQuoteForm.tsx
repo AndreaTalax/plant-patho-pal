@@ -68,6 +68,8 @@ const ProfessionalQuoteForm = ({ onBack, onSubmit }: ProfessionalQuoteFormProps)
         return;
       }
 
+      console.log('📂 Opening conversation from professional quote:', data.conversationId);
+      
       toast.success(
         language === 'it' 
           ? '✅ Richiesta inviata! PDF generato e conversazione creata. Ti reindirizziamo alla chat...' 
@@ -76,9 +78,28 @@ const ProfessionalQuoteForm = ({ onBack, onSubmit }: ProfessionalQuoteFormProps)
 
       // Salva l'ID della conversazione per aprirla
       localStorage.setItem('openConversationId', data.conversationId);
+      localStorage.setItem('isProfessionalChat', 'true');
+
+      // Reset form
+      setFormData({
+        companyName: '',
+        contactPerson: '',
+        email: '',
+        phone: '',
+        businessType: '',
+        plantTypes: [],
+        currentChallenges: '',
+        expectedVolume: '',
+        preferredFeatures: [],
+        budget: '',
+        timeline: '',
+        additionalInfo: '',
+        privacyAccepted: false
+      });
 
       // Reindirizza alla chat dopo 2 secondi
       setTimeout(() => {
+        console.log('🔄 Triggering chat redirect with conversation:', data.conversationId);
         const event = new CustomEvent('switchTab', { detail: 'chat' });
         window.dispatchEvent(event);
       }, 2000);
