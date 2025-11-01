@@ -482,23 +482,30 @@ serve(async (req) => {
         </div>
       `;
 
-      // Configura e invia email con SMTP
+      // Configura e invia email con SMTP Google
+      const smtpUsername = Deno.env.get("SMTP_USER");
+      const smtpPassword = Deno.env.get("SMTP_PASS");
+      
+      if (!smtpUsername || !smtpPassword) {
+        throw new Error("SMTP_USER and SMTP_PASS environment variables are required");
+      }
+      
       const smtpClient = new SMTPClient({
         connection: {
           hostname: Deno.env.get("SMTP_HOSTNAME") ?? "smtp.gmail.com",
           port: 465,
           tls: true,
           auth: {
-            username: Deno.env.get("SMTP_USER") ?? "",
-            password: Deno.env.get("SMTP_PASS") ?? "",
+            username: smtpUsername,
+            password: smtpPassword,
           },
         },
       });
 
       await smtpClient.send({
-        from: Deno.env.get("SMTP_USERNAME") ?? "talaiaandrea@gmail.com",
+        from: smtpUsername,
         replyTo: formData.email,
-        to: "andre90t@gmail.com",
+        to: "agrotecnicomarconigro@gmail.com",
         subject: `🌱 Nuova richiesta preventivo da ${formData.companyName}`,
         html: emailHtml,
         attachments: [
