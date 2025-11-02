@@ -9,7 +9,7 @@ const ScanHeader = () => {
   return (
     <div className="text-center mb-8">
       <div className="flex justify-center mb-4">
-        <div className="bg-green-100 p-3 rounded-full">
+        <div className="bg-background/50 p-3 rounded-full">
           <img 
             src="/lovable-uploads/72d5a60c-404a-4167-9430-511af91c523b.png" 
             alt="Dr.Plant Logo" 
