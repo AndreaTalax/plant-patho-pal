@@ -1,13 +1,12 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
-import { Resend } from "npm:resend@4.0.0";
+import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 const MARCO_NIGRO_ID = "07c7fe19-33c3-4782-b9a0-4e87c8aa7044";
 
 serve(async (req) => {
@@ -192,38 +191,36 @@ serve(async (req) => {
       `;
     }
 
-    // Invia email
+    // Invia email con SMTP
     console.log(`📧 Sending email to: ${recipientEmail}`);
     
-   import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
+    try {
+      const smtpClient = new SMTPClient({
+        connection: {
+          hostname: Deno.env.get("SMTP_HOSTNAME") ?? "smtp.gmail.com",
+          port: 465,
+          tls: true,
+          auth: {
+            username: Deno.env.get("SMTP_USER"),
+            password: Deno.env.get("SMTP_PASS"),
+          },
+        },
+      });
 
-const smtpClient = new SMTPClient({
-  connection: {
-    hostname: Deno.env.get("SMTP_HOSTNAME") ?? "smtp.gmail.com",
-    port: 465,
-    tls: true,
-    auth: {
-      username: Deno.env.get("SMTP_USER"),
-      password: Deno.env.get("SMTP_PASS"),
-    },
-  },
-});
+      await smtpClient.send({
+        from: `Dr.Plant <${Deno.env.get("SMTP_USER")}>`,
+        to: recipientEmail,
+        subject: emailSubject,
+        html: emailBody,
+      });
 
-await smtpClient.send({
-  from: `Dr.Plant <${Deno.env.get("SMTP_USER")}>`,
-  to: recipientEmail,
-  subject: emailSubject,
-  html: emailBody,
-});
-
-await smtpClient.close();
-
-    if (emailError) {
+      await smtpClient.close();
+      
+      console.log('✅ Email sent successfully to:', recipientEmail);
+    } catch (emailError) {
       console.error('❌ Error sending email:', emailError);
-      throw emailError;
+      // Non bloccare l'esecuzione per l'email, continuiamo con la push notification
     }
-
-    console.log('✅ Email sent successfully:', emailData);
 
     // Invia notifica push
     console.log('📱 Sending push notification...');
@@ -261,7 +258,7 @@ await smtpClient.close();
 
     return new Response(JSON.stringify({
       success: true,
-      email: emailData,
+      email: { sent: true },
       push: pushResult
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
