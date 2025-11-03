@@ -54,6 +54,7 @@ export class ChatMessageService {
       const { data, error } = await supabase.functions.invoke('send-message', {
         body: {
           conversationId,
+          senderId,
           recipientId,
           text,
           imageUrl,
