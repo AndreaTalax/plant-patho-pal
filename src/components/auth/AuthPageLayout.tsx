@@ -23,7 +23,7 @@ export const AuthPageLayout = ({ children }: AuthPageLayoutProps) => {
         {/* Logo section with enhanced styling */}
         <div className="text-center mb-10">
           <div className="relative inline-block mb-6">
-            <div className="inline-flex items-center justify-center p-6 bg-white/90 backdrop-blur-sm rounded-3xl shadow-xl border border-drplant-green/20 relative">
+            <div className="inline-flex items-center justify-center p-6 bg-background/30 backdrop-blur-sm rounded-3xl shadow-xl border border-drplant-green/20 relative">
               <img 
                 src="/lovable-uploads/72d5a60c-404a-4167-9430-511af91c523b.png" 
                 alt="Dr.Plant Logo" 
@@ -52,7 +52,7 @@ export const AuthPageLayout = ({ children }: AuthPageLayoutProps) => {
 
         {/* Footer with improved styling */}
         <div className="mt-10 text-center">
-          <div className="inline-flex items-center gap-2 text-gray-600 text-sm bg-white/60 backdrop-blur-sm px-4 py-2 rounded-2xl">
+          <div className="inline-flex items-center gap-2 text-gray-600 text-sm bg-background/40 backdrop-blur-sm px-4 py-2 rounded-2xl">
             <img 
               src="/lovable-uploads/72d5a60c-404a-4167-9430-511af91c523b.png" 
               alt="Dr.Plant Logo" 

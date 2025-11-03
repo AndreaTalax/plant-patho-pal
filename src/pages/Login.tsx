@@ -124,11 +124,13 @@ const Login = () => {
             {/* Logo + Titolo integrati */}
             <div className="flex flex-col items-center gap-4 mb-2">
               <div className="flex items-center gap-3">
-                <img 
-                  src="/lovable-uploads/72d5a60c-404a-4167-9430-511af91c523b.png" 
-                  alt="Dr.Plant Logo" 
-                  className="h-16 w-auto"
-                />
+                <div className="bg-transparent">
+                  <img 
+                    src="/lovable-uploads/72d5a60c-404a-4167-9430-511af91c523b.png" 
+                    alt="Dr.Plant Logo" 
+                    className="h-16 w-auto"
+                  />
+                </div>
                 <div className="text-left">
                   <h1 className="text-3xl font-bold text-drplant-blue-dark">Dr.Plant</h1>
                   <p className="text-sm text-gray-600">{t("assistantMessage")}</p>
