@@ -1,12 +1,13 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
-import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
+import { Resend } from "npm:resend@4.0.0";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 const MARCO_NIGRO_ID = "07c7fe19-33c3-4782-b9a0-4e87c8aa7044";
 
 serve(async (req) => {
@@ -191,45 +192,22 @@ serve(async (req) => {
       `;
     }
 
-    // Invia email con SMTP
+    // Invia email
     console.log(`📧 Sending email to: ${recipientEmail}`);
     
-    try {
-      const smtpUser = Deno.env.get("SMTP_USER");
-      const smtpPass = Deno.env.get("SMTP_PASS");
-      
-      if (!smtpUser || !smtpPass) {
-        throw new Error("SMTP credentials not configured");
-      }
+    const { data: emailData, error: emailError } = await resend.emails.send({
+      from: 'Dr.Plant <agrotecnicomarconigro@gmail.com>',
+      to: [recipientEmail],
+      subject: emailSubject,
+      html: emailBody,
+    });
 
-      console.log(`🔧 SMTP Config: ${smtpUser}@smtp.gmail.com:465`);
-
-      const smtpClient = new SMTPClient({
-        connection: {
-          hostname: "smtp.gmail.com",
-          port: 465,
-          tls: true,
-          auth: {
-            username: smtpUser,
-            password: smtpPass,
-          },
-        },
-      });
-
-      await smtpClient.send({
-        from: `Dr.Plant <${Deno.env.get("SMTP_USER")}>`,
-        to: recipientEmail,
-        subject: emailSubject,
-        html: emailBody,
-      });
-
-      await smtpClient.close();
-      
-      console.log('✅ Email sent successfully to:', recipientEmail);
-    } catch (emailError) {
+    if (emailError) {
       console.error('❌ Error sending email:', emailError);
-      // Non bloccare l'esecuzione per l'email, continuiamo con la push notification
+      throw emailError;
     }
+
+    console.log('✅ Email sent successfully:', emailData);
 
     // Invia notifica push
     console.log('📱 Sending push notification...');
@@ -267,7 +245,7 @@ serve(async (req) => {
 
     return new Response(JSON.stringify({
       success: true,
-      email: { sent: true },
+      email: emailData,
       push: pushResult
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
