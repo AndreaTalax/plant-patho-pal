@@ -14,11 +14,10 @@ if (req.method === 'OPTIONS') {
 return new Response('ok', { headers: corsHeaders });
 }
 
-try {
-const { messageId } = await req.json();
+  try {
+    const { messageId } = await req.json();
 
-```
-console.log('📧 Processing notifications for message:', messageId);
+    console.log('📧 Processing notifications for message:', messageId);
 
 const supabaseClient = createClient(
   Deno.env.get('SUPABASE_URL') ?? '',
@@ -178,7 +177,6 @@ return new Response(JSON.stringify({
 }), {
   headers: { ...corsHeaders, "Content-Type": "application/json" },
 });
-```
 
 } catch (error) {
 console.error("❌ Notification error:", error);
