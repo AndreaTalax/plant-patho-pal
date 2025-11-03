@@ -195,14 +195,23 @@ serve(async (req) => {
     console.log(`📧 Sending email to: ${recipientEmail}`);
     
     try {
+      const smtpUser = Deno.env.get("SMTP_USER");
+      const smtpPass = Deno.env.get("SMTP_PASS");
+      
+      if (!smtpUser || !smtpPass) {
+        throw new Error("SMTP credentials not configured");
+      }
+
+      console.log(`🔧 SMTP Config: ${smtpUser}@smtp.gmail.com:465`);
+
       const smtpClient = new SMTPClient({
         connection: {
-          hostname: Deno.env.get("SMTP_HOSTNAME") ?? "smtp.gmail.com",
+          hostname: "smtp.gmail.com",
           port: 465,
           tls: true,
           auth: {
-            username: Deno.env.get("SMTP_USER"),
-            password: Deno.env.get("SMTP_PASS"),
+            username: smtpUser,
+            password: smtpPass,
           },
         },
       });
