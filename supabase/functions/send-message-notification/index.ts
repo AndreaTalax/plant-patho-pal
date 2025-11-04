@@ -61,18 +61,14 @@ const { data: recipientProfile } = await supabaseClient
 const emailNotificationsEnabled = recipientProfile?.email_notifications_enabled ?? true;
 const pushNotificationsEnabled = recipientProfile?.push_notifications_enabled ?? true;
 
-// Se il destinatario è Marco Nigro → salta l'invio email (gestito da send-specialist-notification)
-if (recipientId === MARCO_NIGRO_ID) {
-  console.log("📭 Destinatario è Marco Nigro — skip email (handled by send-specialist-notification)");
-} else {
-  // Recupera il profilo del mittente
-  const { data: senderProfile } = await supabaseClient
-    .from('profiles')
-    .select('first_name, last_name, email, role')
-    .eq('id', senderId)
-    .single();
+// Recupera il profilo del mittente
+const { data: senderProfile } = await supabaseClient
+  .from('profiles')
+  .select('first_name, last_name, email, role')
+  .eq('id', senderId)
+  .single();
 
-  const recipientEmail = recipientProfile?.email;
+const recipientEmail = recipientProfile?.email;
 
   if (recipientEmail && emailNotificationsEnabled) {
     const senderName = senderProfile
@@ -148,7 +144,6 @@ if (recipientId === MARCO_NIGRO_ID) {
   } else {
     console.log("⚠️ Recipient has no email, skipping email notification");
   }
-}
 
 // 🔔 Invia notifica push (solo se abilitata)
 if (pushNotificationsEnabled) {
