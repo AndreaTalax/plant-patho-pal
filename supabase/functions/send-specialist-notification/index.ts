@@ -116,11 +116,13 @@ serve(async (req) => {
 
     if (notificationError) console.error("⚠️ Errore salvataggio notifica:", notificationError);
 
-    // ✅ INVIO NOTIFICA PUSH (se esiste una sottoscrizione)
-    const { data: subscriptions } = await supabaseAdmin
+    // ✅ INVIO NOTIFICA PUSH (tabella con campo "subscription")
+    const { data: subscriptions, error: subsError } = await supabaseAdmin
       .from("push_subscriptions")
-      .select("endpoint, expirationTime, keys")
+      .select("subscription")
       .eq("user_id", recipient_id);
+
+    if (subsError) console.error("⚠️ Errore lettura sottoscrizioni:", subsError);
 
     if (subscriptions && subscriptions.length > 0) {
       console.log(`🔔 Invio notifica push a ${subscriptions.length} dispositivi`);
@@ -131,9 +133,12 @@ serve(async (req) => {
         data: { conversationId: conversation_id },
       });
 
-      for (const sub of subscriptions) {
+      for (const record of subscriptions) {
         try {
-          await webpush.sendNotification(sub, payload);
+          const subscription = typeof record.subscription === "string"
+            ? JSON.parse(record.subscription)
+            : record.subscription;
+          await webpush.sendNotification(subscription, payload);
           console.log("✅ Notifica push inviata");
         } catch (pushError) {
           console.error("❌ Errore invio push:", pushError);
