@@ -20,6 +20,8 @@ export interface UserProfile {
   avatar_url?: string;
   role?: string;
   subscription_plan?: string;
+  push_notifications_enabled?: boolean;
+  email_notifications_enabled?: boolean;
 }
 
 export interface AuthContextType {

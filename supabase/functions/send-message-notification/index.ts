@@ -51,26 +51,30 @@ if (conversationError || !conversation) {
 const senderId = message.sender_id;
 const recipientId = message.recipient_id;
 
+// Recupera il profilo del destinatario per controllare le preferenze di notifica
+const { data: recipientProfile } = await supabaseClient
+  .from('profiles')
+  .select('first_name, last_name, email, role, email_notifications_enabled, push_notifications_enabled')
+  .eq('id', recipientId)
+  .single();
+
+const emailNotificationsEnabled = recipientProfile?.email_notifications_enabled ?? true;
+const pushNotificationsEnabled = recipientProfile?.push_notifications_enabled ?? true;
+
 // Se il destinatario è Marco Nigro → salta l'invio email (gestito da send-specialist-notification)
 if (recipientId === MARCO_NIGRO_ID) {
   console.log("📭 Destinatario è Marco Nigro — skip email (handled by send-specialist-notification)");
 } else {
-  // Recupera i profili
+  // Recupera il profilo del mittente
   const { data: senderProfile } = await supabaseClient
     .from('profiles')
     .select('first_name, last_name, email, role')
     .eq('id', senderId)
     .single();
 
-  const { data: recipientProfile } = await supabaseClient
-    .from('profiles')
-    .select('first_name, last_name, email, role')
-    .eq('id', recipientId)
-    .single();
-
   const recipientEmail = recipientProfile?.email;
 
-  if (recipientEmail) {
+  if (recipientEmail && emailNotificationsEnabled) {
     const senderName = senderProfile
       ? `${senderProfile.first_name || ''} ${senderProfile.last_name || ''}`.trim()
       : 'Utente';
@@ -139,41 +143,46 @@ if (recipientId === MARCO_NIGRO_ID) {
     } catch (emailError) {
       console.error("❌ Error sending email:", emailError);
     }
+  } else if (recipientEmail && !emailNotificationsEnabled) {
+    console.log("⚠️ Email notifications disabled for recipient, skipping email");
   } else {
     console.log("⚠️ Recipient has no email, skipping email notification");
   }
 }
 
-// 🔔 Invia notifica push (sempre)
-console.log("📱 Sending push notification...");
+// 🔔 Invia notifica push (solo se abilitata)
+if (pushNotificationsEnabled) {
+  console.log("📱 Sending push notification...");
 
-const pushResponse = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/send-firebase-notification`, {
-  method: 'POST',
-  headers: {
-    'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
-    'Content-Type': 'application/json'
-  },
-  body: JSON.stringify({
-    recipientUserId: recipientId,
-    title: `💬 Nuovo messaggio`,
-    body: message.text ?? "Hai ricevuto un nuovo messaggio",
-    data: {
-      type: 'chat_message',
-      conversationId: message.conversation_id,
-      messageId: message.id,
-      senderId: senderId,
-      url: `/?conversation=${message.conversation_id}`
-    }
-  })
-});
+  const pushResponse = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/send-firebase-notification`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      recipientUserId: recipientId,
+      title: `💬 Nuovo messaggio`,
+      body: message.text ?? "Hai ricevuto un nuovo messaggio",
+      data: {
+        type: 'chat_message',
+        conversationId: message.conversation_id,
+        messageId: message.id,
+        senderId: senderId,
+        url: `/?conversation=${message.conversation_id}`
+      }
+    })
+  });
 
-const pushResult = await pushResponse.json();
-console.log("✅ Push notification result:", pushResult);
+  const pushResult = await pushResponse.json();
+  console.log("✅ Push notification result:", pushResult);
+} else {
+  console.log("⚠️ Push notifications disabled for recipient, skipping push notification");
+}
 
 return new Response(JSON.stringify({
   success: true,
-  message: "Notification sent (email skipped for Marco if applicable)",
-  push: pushResult,
+  message: "Notifications processed based on user preferences",
 }), {
   headers: { ...corsHeaders, "Content-Type": "application/json" },
 });
