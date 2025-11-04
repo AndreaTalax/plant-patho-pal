@@ -42,15 +42,20 @@ export function PushNotificationManager() {
     setupPushNotifications();
   }, [userProfile, isSupported, permission, requestPermission, subscribe, toast]);
 
-  // Listen for messages from service worker
+  // Listen for messages from service worker and handle notification clicks
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
       if (event.data?.type === 'NOTIFICATION_CLICKED') {
-        console.log('🔔 Notification clicked, navigating to chat:', event.data.data);
+        console.log('🔔 Notification clicked, data:', event.data.data);
         
         // Navigate to chat if conversation data is available
         if (event.data.data?.conversationId) {
-          window.location.href = `/?conversation=${event.data.data.conversationId}`;
+          const conversationId = event.data.data.conversationId;
+          console.log('🔔 Navigating to conversation:', conversationId);
+          window.location.href = `/?conversation=${conversationId}`;
+        } else if (event.data.data?.url) {
+          console.log('🔔 Navigating to URL:', event.data.data.url);
+          window.location.href = event.data.data.url;
         }
       }
     };

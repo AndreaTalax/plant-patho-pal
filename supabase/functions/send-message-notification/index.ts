@@ -147,9 +147,13 @@ const recipientEmail = recipientProfile?.email;
 
 // 🔔 Invia notifica push (solo se abilitata)
 if (pushNotificationsEnabled) {
-  console.log("📱 Sending push notification...");
+  console.log("📱 Sending Web Push notification...");
 
-  const pushResponse = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/send-firebase-notification`, {
+  const senderName = senderProfile
+    ? `${senderProfile.first_name || ''} ${senderProfile.last_name || ''}`.trim()
+    : 'Utente';
+
+  const pushResponse = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/send-web-push-notification`, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
@@ -157,8 +161,9 @@ if (pushNotificationsEnabled) {
     },
     body: JSON.stringify({
       recipientUserId: recipientId,
-      title: `💬 Nuovo messaggio`,
+      title: `💬 Nuovo messaggio da ${senderName}`,
       body: message.text ?? "Hai ricevuto un nuovo messaggio",
+      icon: '/lovable-uploads/72d5a60c-404a-4167-9430-511af91c523b.png',
       data: {
         type: 'chat_message',
         conversationId: message.conversation_id,
@@ -170,7 +175,7 @@ if (pushNotificationsEnabled) {
   });
 
   const pushResult = await pushResponse.json();
-  console.log("✅ Push notification result:", pushResult);
+  console.log("✅ Web Push notification result:", pushResult);
 } else {
   console.log("⚠️ Push notifications disabled for recipient, skipping push notification");
 }

@@ -52,16 +52,49 @@ self.addEventListener('notificationclick', (event) => {
 
   event.notification.close();
 
+  const notificationData = event.notification.data || {};
+  const urlToOpen = notificationData.url || 'https://drplant.lovable.app/';
+
   if (event.action === 'view') {
     event.waitUntil(
-      self.clients.openWindow('https://drplant.lovable.app/')
+      clients.openWindow(urlToOpen).then((windowClient) => {
+        // Invia messaggio al client per notificare il click
+        if (windowClient) {
+          windowClient.postMessage({
+            type: 'NOTIFICATION_CLICKED',
+            data: notificationData
+          });
+        }
+      })
     );
   } else if (event.action === 'dismiss') {
     // Non fare nulla, la notifica è già chiusa
+    console.log('🚫 Notifica ignorata');
   } else {
-    // Click principale sulla notifica
+    // Click principale sulla notifica - apri URL e invia messaggio
     event.waitUntil(
-      self.clients.openWindow('https://drplant.lovable.app/')
+      clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+        // Cerca una finestra già aperta
+        for (const client of clientList) {
+          if (client.url.includes(new URL(urlToOpen).origin) && 'focus' in client) {
+            client.focus();
+            client.postMessage({
+              type: 'NOTIFICATION_CLICKED',
+              data: notificationData
+            });
+            return;
+          }
+        }
+        // Se non c'è una finestra aperta, aprila
+        return clients.openWindow(urlToOpen).then((windowClient) => {
+          if (windowClient) {
+            windowClient.postMessage({
+              type: 'NOTIFICATION_CLICKED',
+              data: notificationData
+            });
+          }
+        });
+      })
     );
   }
 });
