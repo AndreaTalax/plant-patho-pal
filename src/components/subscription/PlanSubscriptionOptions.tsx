@@ -93,11 +93,17 @@ const PlanSubscriptionOptions = ({ planType, onSubscriptionSelect, onBack }: Pla
   const options = planType === 'privati' ? privatiOptions : businessOptions;
 
   const handleContinue = async () => {
-    if (!selectedOption) return;
+    if (!selectedOption) {
+      console.log("❌ Nessuna opzione selezionata");
+      return;
+    }
+    
+    console.log("🚀 Inizio processo di pagamento per:", selectedOption);
     
     // Avvia il processo di pagamento Stripe
     setIsLoading(true);
     try {
+      console.log("📞 Chiamata a create-checkout...");
       const { data, error } = await supabase.functions.invoke('create-checkout', {
         body: {
           successUrl: `${window.location.origin}/payment-success`,
@@ -105,18 +111,25 @@ const PlanSubscriptionOptions = ({ planType, onSubscriptionSelect, onBack }: Pla
         }
       });
       
+      console.log("📦 Risposta da create-checkout:", { data, error });
+      
       if (error || !data?.url) {
+        console.error("❌ Errore nella risposta:", error);
         throw new Error(error?.message || "Errore creazione sessione Stripe");
       }
       
+      console.log("✅ URL Stripe ricevuto:", data.url);
+      
       // Salva l'opzione selezionata per dopo il pagamento
       localStorage.setItem('selectedSubscriptionOption', selectedOption);
+      console.log("💾 Opzione salvata in localStorage");
       
       // Apri Stripe checkout
+      console.log("🔄 Reindirizzamento a Stripe...");
       window.location.href = data.url;
-    } catch (err) {
-      console.error("Errore pagamento:", err);
-      toast.error("Errore durante l'avvio del pagamento. Riprova.");
+    } catch (err: any) {
+      console.error("❌ Errore pagamento:", err);
+      toast.error(err?.message || "Errore durante l'avvio del pagamento. Riprova.");
       setIsLoading(false);
     }
   };
