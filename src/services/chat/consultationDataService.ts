@@ -126,13 +126,13 @@ export class ConsultationDataService {
       if (pdfError) {
         console.error('❌ Errore generazione PDF:', pdfError);
         // Fallback: invia i dati come messaggio testuale
-        return await this.sendTextualConsultationData(conversationId, plantData, userProfile, diagnosisResult);
+        return await this.sendTextualConsultationData(conversationId, plantData, userProfile, diagnosisResult, user.id);
       }
 
       if (!pdfResult?.success || !pdfResult?.pdfUrl) {
         console.error('❌ PDF function returned no success or no pdfUrl:', pdfResult);
         // Fallback: invia i dati come messaggio testuale
-        return await this.sendTextualConsultationData(conversationId, plantData, userProfile, diagnosisResult);
+        return await this.sendTextualConsultationData(conversationId, plantData, userProfile, diagnosisResult, user.id);
       }
 
       console.log('✅ PDF generato con successo:', pdfResult.fileName);
@@ -155,13 +155,14 @@ export class ConsultationDataService {
       console.log('📋 Messaggio PDF che verrà inviato:');
       console.log(pdfMessage);
 
-      // Invia il messaggio con il PDF come image_url per attivare il PDFDisplay
+      // ✅ FIX: Aggiungi senderId
       const { data: messageResult, error: messageError } = await supabase.functions.invoke('send-message', {
         body: {
           conversationId,
+          senderId: user.id,  // ✅ AGGIUNTO
           recipientId: MARCO_NIGRO_ID,
           text: pdfMessage,
-          imageUrl: pdfResult.pdfUrl, // Il PDF viene passato come imageUrl per essere rilevato
+          imageUrl: pdfResult.pdfUrl,
           products: null
         },
         headers: {
@@ -172,15 +173,17 @@ export class ConsultationDataService {
       if (messageError || !messageResult?.success) {
         console.error('❌ Errore invio messaggio PDF:', messageError);
         // Fallback con link diretto
-        return await this.sendPDFLinkMessage(conversationId, pdfResult.pdfUrl, pdfResult.fileName);
+        return await this.sendPDFLinkMessage(conversationId, pdfResult.pdfUrl, pdfResult.fileName, user.id);
       }
 
       // Se c'è un'immagine, inviala come messaggio separato
       if (plantData?.imageUrl) {
         console.log('📸 Invio immagine pianta...');
+        // ✅ FIX: Aggiungi senderId
         const { error: imageError } = await supabase.functions.invoke('send-message', {
           body: {
             conversationId,
+            senderId: user.id,  // ✅ AGGIUNTO
             recipientId: MARCO_NIGRO_ID,
             text: '📸 Foto della pianta in consulenza',
             imageUrl: plantData.imageUrl,
@@ -204,7 +207,11 @@ export class ConsultationDataService {
     } catch (error) {
       console.error('❌ ERRORE CRITICO INVIO PDF CONSULTAZIONE:', error);
       // Ultimo fallback: invia dati testuali
-      return await this.sendTextualConsultationData(conversationId, plantData, userProfile, diagnosisResult);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        return await this.sendTextualConsultationData(conversationId, plantData, userProfile, diagnosisResult, user.id);
+      }
+      return false;
     }
   }
 
@@ -214,11 +221,19 @@ export class ConsultationDataService {
   private static async sendPDFLinkMessage(
     conversationId: string, 
     pdfUrl: string, 
-    fileName?: string
+    fileName?: string,
+    senderId?: string  // ✅ AGGIUNTO parametro
   ): Promise<boolean> {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return false;
+
+      // ✅ FIX: Ottieni senderId se non passato
+      if (!senderId) {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return false;
+        senderId = user.id;
+      }
 
       const linkMessage = [
         "📋 **CONSULENZA PROFESSIONALE - PDF GENERATO**",
@@ -230,9 +245,11 @@ export class ConsultationDataService {
         "Il documento contiene tutti i dettagli necessari per la diagnosi professionale."
       ].join('\n');
 
+      // ✅ FIX: Aggiungi senderId
       const { data: result, error } = await supabase.functions.invoke('send-message', {
         body: {
           conversationId,
+          senderId,  // ✅ AGGIUNTO
           recipientId: MARCO_NIGRO_ID,
           text: linkMessage,
           imageUrl: null,
@@ -257,13 +274,21 @@ export class ConsultationDataService {
     conversationId: string,
     plantData: any,
     userProfile: any,
-    diagnosisResult?: any
+    diagnosisResult?: any,
+    senderId?: string  // ✅ AGGIUNTO parametro
   ): Promise<boolean> {
     try {
       console.log('📝 Invio dati consultazione come testo (fallback)');
       
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return false;
+
+      // ✅ FIX: Ottieni senderId se non passato
+      if (!senderId) {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return false;
+        senderId = user.id;
+      }
 
       const textualMessage = formatConsultationMessage(plantData, userProfile);
       
@@ -279,9 +304,11 @@ export class ConsultationDataService {
         ].join('\n');
       }
 
+      // ✅ FIX: Aggiungi senderId
       const { data: result, error } = await supabase.functions.invoke('send-message', {
         body: {
           conversationId,
+          senderId,  // ✅ AGGIUNTO
           recipientId: MARCO_NIGRO_ID,
           text: fullMessage,
           imageUrl: null,
