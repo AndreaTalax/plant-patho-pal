@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { SmtpClient } from "https://deno.land/x/smtp@v0.7.0/mod.ts";
-import webpush from "npm:web-push@3.6.0";
+import webpush from "npm:web-push@3.6.7";
 import { corsHeaders } from "../_shared/cors.ts";
 
 const supabaseAdmin = createClient(
