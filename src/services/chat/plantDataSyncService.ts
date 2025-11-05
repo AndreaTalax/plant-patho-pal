@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { MARCO_NIGRO_ID } from '@/components/phytopathologist';
 import { PlantInfo } from '@/context/PlantInfoContext';
@@ -35,9 +34,8 @@ export class PlantDataSyncService {
 
         if (storageError) {
           console.error('❌ Error uploading image to storage:', storageError);
-          finalImageUrl = undefined; // Continue without image if upload fails
+          finalImageUrl = undefined;
         } else {
-          // Get public URL
           const { data: urlData } = supabase.storage
             .from('plant-images')
             .getPublicUrl(filePath);
@@ -64,7 +62,6 @@ export class PlantDataSyncService {
       let conversationId: string;
 
       if (!conversations || conversations.length === 0) {
-        // Genera un nuovo ID di conversazione
         conversationId = crypto.randomUUID();
         console.log('🆕 Creating new conversation with ID:', conversationId);
       } else {
@@ -75,11 +72,12 @@ export class PlantDataSyncService {
       // Costruisce il messaggio con tutti i dati della pianta
       const plantDataMessage = this.buildPlantDataMessage(plantInfo, finalImageUrl);
 
-      // Invia il messaggio usando l'edge function send-message
+      // ✅ FIX: Aggiungi senderId
       console.log('📤 Sending plant data message via edge function...');
       const { data: messageResult, error: messageError } = await supabase.functions.invoke('send-message', {
         body: {
           conversationId,
+          senderId: userId,  // ✅ AGGIUNTO
           recipientId: MARCO_NIGRO_ID,
           text: plantDataMessage,
           imageUrl: null,
@@ -102,12 +100,14 @@ export class PlantDataSyncService {
         console.log('📸 Sending plant image...');
         const imageMessage = `📸 Immagine della pianta`;
         
+        // ✅ FIX: Aggiungi senderId
         const { data: imageResult, error: imageError } = await supabase.functions.invoke('send-message', {
           body: {
             conversationId,
+            senderId: userId,  // ✅ AGGIUNTO
             recipientId: MARCO_NIGRO_ID,
             text: imageMessage,
-            imageUrl: finalImageUrl, // Use the Supabase Storage URL
+            imageUrl: finalImageUrl,
             products: null
           },
           headers: {
@@ -125,7 +125,6 @@ export class PlantDataSyncService {
 
       console.log('✅ Plant data synced successfully to chat');
       
-      // Emetti evento per notificare che i dati sono stati sincronizzati
       window.dispatchEvent(new CustomEvent('plantDataSynced'));
       
       return { success: true, finalImageUrl };
@@ -176,7 +175,6 @@ export class PlantDataSyncService {
    */
   static async isPlantDataSynced(userId: string): Promise<boolean> {
     try {
-      // Prima trova la conversazione
       const { data: conversations, error: convError } = await supabase
         .from('conversations')
         .select('id')
@@ -189,7 +187,6 @@ export class PlantDataSyncService {
 
       const conversationId = conversations[0].id;
 
-      // Poi cerca i messaggi con metadata di sincronizzazione
       const { data: messages, error: msgError } = await supabase
         .from('messages')
         .select('metadata')
@@ -200,7 +197,6 @@ export class PlantDataSyncService {
         return false;
       }
 
-      // Controlla se esiste già un messaggio con dati della pianta sincronizzati
       const hasSyncedData = messages.some((msg: any) => 
         msg.metadata && 
         (msg.metadata.type === 'plant_data_sync' || msg.metadata.autoSynced === true)
