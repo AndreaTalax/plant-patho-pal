@@ -5,8 +5,10 @@
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
-  "theme_color": "#22c55e",
+  "theme_color": "#ffffff",
   "orientation": "portrait",
+  "prefer_related_applications": false,
+  "related_applications": [],
   "scope": "/",
   "gcm_sender_id": "103953800507",
   "icons": [
