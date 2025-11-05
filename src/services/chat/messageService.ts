@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { MARCO_NIGRO_ID } from '@/components/phytopathologist';
 import { toast } from 'sonner';
@@ -38,7 +37,6 @@ export class MessageService {
 
       if (dbError) {
         console.error('❌ MessageService: Errore caricamento messaggi (fallback)', dbError);
-        // Fallback: ritorna array vuoto invece di lanciare errore
         return [];
       }
 
@@ -47,13 +45,12 @@ export class MessageService {
 
     } catch (error: any) {
       console.error('❌ MessageService: Errore caricamento messaggi', error);
-      // Fallback silenzioso - non mostrare errore all'utente
       return [];
     }
   }
 
   /**
-   * Invia un messaggio usando inserimento diretto con fallback
+   * Invia un messaggio usando l'edge function
    */
   static async sendMessage(
     conversationId: string, 
@@ -71,7 +68,7 @@ export class MessageService {
         hasProducts: !!products
       });
 
-      // Verifica sessione con fallback
+      // Verifica sessione
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       if (sessionError || !session) {
         console.error('❌ MessageService: Sessione non valida', sessionError);
@@ -85,7 +82,7 @@ export class MessageService {
         return false;
       }
 
-      // Verifica che la conversazione esista prima di inviare
+      // Verifica che la conversazione esista e ottieni i partecipanti
       const { data: conversation, error: convError } = await supabase
         .from('conversations')
         .select('id, status, user_id, expert_id')
@@ -117,26 +114,31 @@ export class MessageService {
         return false;
       }
 
-      // Inserimento diretto nel database
-      const { error: insertError } = await supabase
-        .from('messages')
-        .insert({
-          conversation_id: conversationId,
-          sender_id: senderId,
-          recipient_id: recipientId,
-          content: content.trim(),
+      // USA L'EDGE FUNCTION invece di inserimento diretto
+      const { data, error } = await supabase.functions.invoke('send-message', {
+        body: {
+          conversationId,
+          senderId,
+          recipientId,
           text: content.trim(),
-          image_url: imageUrl,
-          sent_at: new Date().toISOString()
-        });
+          imageUrl: imageUrl || null,
+          products: products || null
+        }
+      });
 
-      if (insertError) {
-        console.error('❌ MessageService: Errore inserimento', insertError);
+      if (error) {
+        console.error('❌ MessageService: Errore edge function', error);
         toast.error('Errore nell\'invio del messaggio');
         return false;
       }
 
-      console.log('✅ MessageService: Messaggio inviato con successo');
+      if (!data?.success) {
+        console.error('❌ MessageService: Edge function ritornata senza successo', data);
+        toast.error('Errore nell\'invio del messaggio');
+        return false;
+      }
+
+      console.log('✅ MessageService: Messaggio inviato con successo', data);
       return true;
 
     } catch (error: any) {
