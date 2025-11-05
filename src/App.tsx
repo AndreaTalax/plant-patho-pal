@@ -21,6 +21,8 @@ import SavedArticles from "./pages/SavedArticles";
 import PlanSubscriptionSelection from "./pages/PlanSubscriptionSelection";
 import PlanSelection from "./pages/PlanSelection";
 import PlantIdentification from "./pages/PlantIdentification";
+import PaymentSuccess from "./pages/PaymentSuccess";
+import PaymentCanceled from "./pages/PaymentCanceled";
 import { CDCDashboard } from "./components/cdc/CDCDashboard";
 import { UserManagement } from "./components/admin/UserManagement";
 import { NotificationSettings } from "./components/notifications/NotificationSettings";
@@ -69,6 +71,8 @@ function App() {
                     <Route path="/notification-settings" element={<NotificationSettings />} />
                     <Route path="/test-diagnosi" element={<TestDiagnosi />} />
                     <Route path="/professional-quote" element={<PlanSubscriptionSelection />} />
+                    <Route path="/payment-success" element={<PaymentSuccess />} />
+                    <Route path="/payment-canceled" element={<PaymentCanceled />} />
                     <Route path="/404" element={<NotFound />} />
                     <Route path="*" element={<Navigate to="/404" replace />} />
                   </Routes>

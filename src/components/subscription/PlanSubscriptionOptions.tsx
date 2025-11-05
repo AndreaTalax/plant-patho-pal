@@ -6,6 +6,8 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Check, Clock, Calendar, CreditCard } from "lucide-react";
 import { useTheme } from "@/context/ThemeContext";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 export type PlanType = 'privati' | 'business' | 'professionisti';
 
@@ -18,6 +20,7 @@ interface PlanSubscriptionOptionsProps {
 const PlanSubscriptionOptions = ({ planType, onSubscriptionSelect, onBack }: PlanSubscriptionOptionsProps) => {
   const { language } = useTheme();
   const [selectedOption, setSelectedOption] = useState<string>('');
+  const [isLoading, setIsLoading] = useState(false);
 
   const privatiOptions = [
     {
@@ -89,9 +92,32 @@ const PlanSubscriptionOptions = ({ planType, onSubscriptionSelect, onBack }: Pla
 
   const options = planType === 'privati' ? privatiOptions : businessOptions;
 
-  const handleContinue = () => {
-    if (selectedOption) {
-      onSubscriptionSelect(selectedOption);
+  const handleContinue = async () => {
+    if (!selectedOption) return;
+    
+    // Avvia il processo di pagamento Stripe
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('create-checkout', {
+        body: {
+          successUrl: `${window.location.origin}/payment-success`,
+          cancelUrl: `${window.location.origin}/payment-canceled`
+        }
+      });
+      
+      if (error || !data?.url) {
+        throw new Error(error?.message || "Errore creazione sessione Stripe");
+      }
+      
+      // Salva l'opzione selezionata per dopo il pagamento
+      localStorage.setItem('selectedSubscriptionOption', selectedOption);
+      
+      // Apri Stripe checkout
+      window.location.href = data.url;
+    } catch (err) {
+      console.error("Errore pagamento:", err);
+      toast.error("Errore durante l'avvio del pagamento. Riprova.");
+      setIsLoading(false);
     }
   };
 
@@ -202,10 +228,13 @@ const PlanSubscriptionOptions = ({ planType, onSubscriptionSelect, onBack }: Pla
         </Button>
         <Button 
           onClick={handleContinue}
-          disabled={!selectedOption}
+          disabled={!selectedOption || isLoading}
           className="px-8 bg-gradient-to-r from-drplant-blue to-drplant-blue-dark hover:from-drplant-green hover:to-drplant-green-dark"
         >
-          {language === 'it' ? 'Continua' : 'Continue'}
+          {isLoading 
+            ? (language === 'it' ? 'Reindirizzamento al pagamento...' : 'Redirecting to payment...') 
+            : (language === 'it' ? 'Procedi al Pagamento' : 'Proceed to Payment')
+          }
         </Button>
       </div>
     </div>
