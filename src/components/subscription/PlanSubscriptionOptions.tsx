@@ -8,6 +8,7 @@ import { Check, Clock, Calendar, CreditCard } from "lucide-react";
 import { useTheme } from "@/context/ThemeContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useAuth } from "@/context/AuthContext";
 
 export type PlanType = 'privati' | 'business' | 'professionisti';
 
@@ -19,8 +20,13 @@ interface PlanSubscriptionOptionsProps {
 
 const PlanSubscriptionOptions = ({ planType, onSubscriptionSelect, onBack }: PlanSubscriptionOptionsProps) => {
   const { language } = useTheme();
+  const { user } = useAuth();
   const [selectedOption, setSelectedOption] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
+
+  // Account di test che non richiedono pagamento
+  const testAccounts = ['test@gmail.com', 'premium@gmail.com'];
+  const isTestAccount = user?.email && testAccounts.includes(user.email.toLowerCase());
 
   const privatiOptions = [
     {
@@ -98,9 +104,19 @@ const PlanSubscriptionOptions = ({ planType, onSubscriptionSelect, onBack }: Pla
       return;
     }
     
-    console.log("🚀 Inizio processo di pagamento per:", selectedOption);
+    console.log("🚀 Inizio processo per:", selectedOption);
+    console.log("👤 Account utente:", user?.email, "- Test account:", isTestAccount);
     
-    // Avvia il processo di pagamento Stripe
+    // Per account di test, salta il pagamento
+    if (isTestAccount) {
+      console.log("✅ Account di test rilevato - skip pagamento");
+      localStorage.setItem('selectedSubscriptionOption', selectedOption);
+      toast.success("Account di test - abbonamento attivato senza pagamento");
+      onSubscriptionSelect(selectedOption);
+      return;
+    }
+    
+    // Avvia il processo di pagamento Stripe per utenti normali
     setIsLoading(true);
     try {
       console.log("📞 Chiamata a create-checkout...");
@@ -246,6 +262,8 @@ const PlanSubscriptionOptions = ({ planType, onSubscriptionSelect, onBack }: Pla
         >
           {isLoading 
             ? (language === 'it' ? 'Reindirizzamento al pagamento...' : 'Redirecting to payment...') 
+            : isTestAccount
+            ? (language === 'it' ? 'Continua (Test)' : 'Continue (Test)')
             : (language === 'it' ? 'Procedi al Pagamento' : 'Proceed to Payment')
           }
         </Button>
