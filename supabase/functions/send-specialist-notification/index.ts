@@ -44,7 +44,7 @@ serve(async (req) => {
     if (sender_id) {
       const { data: profile } = await supabaseAdmin
         .from("profiles")
-        .select("first_name, last_name, email")
+        .select("first_name, last_name, email, role")
         .eq("id", sender_id)
         .single();
       senderProfile = profile;
@@ -58,51 +58,88 @@ serve(async (req) => {
         ? `${user_details.firstName} ${user_details.lastName}`
         : user_details?.email || "Utente sconosciuto";
 
+    // Recupera profilo del destinatario
+    let recipientProfile = null;
+    if (recipient_id) {
+      const { data: profile } = await supabaseAdmin
+        .from("profiles")
+        .select("first_name, last_name, email, role, email_notifications_enabled, push_notifications_enabled")
+        .eq("id", recipient_id)
+        .single();
+      recipientProfile = profile;
+    }
+
+    const recipientName = recipientProfile
+      ? `${recipientProfile.first_name || ""} ${recipientProfile.last_name || ""}`.trim() || recipientProfile.email
+      : "Utente";
+
+    const emailNotificationsEnabled = recipientProfile?.email_notifications_enabled ?? true;
+    const pushNotificationsEnabled = recipientProfile?.push_notifications_enabled ?? true;
+
+    const isExpert = senderProfile?.role === 'expert' || senderProfile?.role === 'admin';
+    const messagePreview = message_text && message_text.length > 200
+      ? message_text.substring(0, 197) + '...'
+      : message_text || 'Nuovo messaggio in chat';
+
     const emailSubject = expert_email
-      ? `Dr.Plant - Nuovo messaggio da ${senderName}`
-      : `Dr.Plant - Risposta dal Dr. Marco Nigro`;
+      ? `💬 Dr.Plant - Nuovo messaggio da ${senderName}`
+      : `💬 Dr.Plant - Risposta dall'esperto ${senderName}`;
 
-    const emailBody = `
-      <div style="font-family: Arial; max-width: 600px; margin: 0 auto; padding: 20px;">
-        <h2 style="color: #1e40af;">${emailSubject}</h2>
-        <p>${message_text}</p>
-        ${
-          image_url
-            ? `<img src="${image_url}" style="max-width:100%; border-radius:8px;" alt="Immagine">`
-            : ""
-        }
-        <p><a href="https://drplant.lovable.app/?conversation=${conversation_id}">Apri la chat</a></p>
-      </div>
-    `;
-
-    // ✅ INVIO EMAIL VIA SMTP
+    // ✅ INVIO EMAIL VIA SMTP (solo se abilitato)
     const targetEmail = expert_email || recipient_email;
-    try {
-      const SMTP_HOSTNAME = Deno.env.get("SMTP_HOSTNAME");
-      const SMTP_PORT = Number(Deno.env.get("SMTP_PORT") || 465);
-      const SMTP_USER = Deno.env.get("SMTP_USER");
-      const SMTP_PASS = Deno.env.get("SMTP_PASS");
+    if (targetEmail && emailNotificationsEnabled) {
+      const emailBody = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <div style="background-color: #22c55e; padding: 20px; text-align: center;">
+            <h1 style="color: white; margin: 0;">🌱 Dr.Plant</h1>
+          </div>
+          <div style="padding: 30px; background-color: #f9fafb;">
+            <h2 style="color: #1f2937;">Ciao ${recipientName}!</h2>
+            <p style="color: #4b5563; font-size: 16px;">${isExpert ? 'L\'esperto' : 'L\'utente'} <strong>${senderName}</strong> ti ha inviato un messaggio:</p>
+            <div style="background-color: white; padding: 20px; border-left: 4px solid #22c55e; margin: 20px 0;">
+              <p style="color: #1f2937; margin: 0; white-space: pre-wrap;">${messagePreview}</p>
+            </div>
+            <div style="text-align: center; margin-top: 30px;">
+              <a href="https://drplant.lovable.app/?tab=chat&conversation=${conversation_id}"
+                 style="background-color: #22c55e; color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold;">
+                💬 Apri chat
+              </a>
+            </div>
+          </div>
+        </div>
+      `;
 
-      const smtp = new SmtpClient();
-      await smtp.connectTLS({
-        hostname: SMTP_HOSTNAME,
-        port: SMTP_PORT,
-        username: SMTP_USER,
-        password: SMTP_PASS,
-      });
+      try {
+        const SMTP_HOSTNAME = Deno.env.get("SMTP_HOSTNAME");
+        const SMTP_PORT = Number(Deno.env.get("SMTP_PORT") || 465);
+        const SMTP_USER = Deno.env.get("SMTP_USER");
+        const SMTP_PASS = Deno.env.get("SMTP_PASS");
 
-      await smtp.send({
-        from: `Dr.Plant <${SMTP_USER}>`,
-        to: targetEmail,
-        subject: emailSubject,
-        content: emailBody,
-        html: emailBody,
-      });
+        const smtp = new SmtpClient();
+        await smtp.connectTLS({
+          hostname: SMTP_HOSTNAME,
+          port: SMTP_PORT,
+          username: SMTP_USER,
+          password: SMTP_PASS,
+        });
 
-      await smtp.close();
-      console.log(`✅ Email inviata a ${targetEmail}`);
-    } catch (emailError) {
-      console.error("❌ Errore invio email:", emailError);
+        await smtp.send({
+          from: `Dr.Plant <${SMTP_USER}>`,
+          to: targetEmail,
+          subject: emailSubject,
+          content: emailBody,
+          html: emailBody,
+        });
+
+        await smtp.close();
+        console.log(`✅ Email inviata a ${targetEmail}`);
+      } catch (emailError) {
+        console.error("❌ Errore invio email:", emailError);
+      }
+    } else if (targetEmail && !emailNotificationsEnabled) {
+      console.log("⚠️ Email notifications disabled for recipient, skipping email");
+    } else {
+      console.log("⚠️ Recipient has no email, skipping email notification");
     }
 
     // ✅ Salvataggio notifica nel DB
@@ -116,36 +153,40 @@ serve(async (req) => {
 
     if (notificationError) console.error("⚠️ Errore salvataggio notifica:", notificationError);
 
-    // ✅ INVIO NOTIFICA PUSH (tabella con campo "subscription")
-    const { data: subscriptions, error: subsError } = await supabaseAdmin
-      .from("push_subscriptions")
-      .select("subscription")
-      .eq("user_id", recipient_id);
+    // ✅ INVIO NOTIFICA PUSH (solo se abilitato)
+    if (pushNotificationsEnabled) {
+      const { data: subscriptions, error: subsError } = await supabaseAdmin
+        .from("push_subscriptions")
+        .select("subscription")
+        .eq("user_id", recipient_id);
 
-    if (subsError) console.error("⚠️ Errore lettura sottoscrizioni:", subsError);
+      if (subsError) console.error("⚠️ Errore lettura sottoscrizioni:", subsError);
 
-    if (subscriptions && subscriptions.length > 0) {
-      console.log(`🔔 Invio notifica push a ${subscriptions.length} dispositivi`);
+      if (subscriptions && subscriptions.length > 0) {
+        console.log(`🔔 Invio notifica push a ${subscriptions.length} dispositivi`);
 
-      const payload = JSON.stringify({
-        title: "💬 Nuovo messaggio su Dr.Plant",
-        body: message_text,
-        data: { conversationId: conversation_id },
-      });
+        const payload = JSON.stringify({
+          title: "💬 Nuovo messaggio su Dr.Plant",
+          body: message_text,
+          data: { conversationId: conversation_id },
+        });
 
-      for (const record of subscriptions) {
-        try {
-          const subscription = typeof record.subscription === "string"
-            ? JSON.parse(record.subscription)
-            : record.subscription;
-          await webpush.sendNotification(subscription, payload);
-          console.log("✅ Notifica push inviata");
-        } catch (pushError) {
-          console.error("❌ Errore invio push:", pushError);
+        for (const record of subscriptions) {
+          try {
+            const subscription = typeof record.subscription === "string"
+              ? JSON.parse(record.subscription)
+              : record.subscription;
+            await webpush.sendNotification(subscription, payload);
+            console.log("✅ Notifica push inviata");
+          } catch (pushError) {
+            console.error("❌ Errore invio push:", pushError);
+          }
         }
+      } else {
+        console.log("ℹ️ Nessuna sottoscrizione push trovata per l'utente");
       }
     } else {
-      console.log("ℹ️ Nessuna sottoscrizione push trovata per l’utente");
+      console.log("⚠️ Push notifications disabled for recipient, skipping push notification");
     }
 
     return new Response(

@@ -97,6 +97,15 @@ const ChatTab = () => {
 
     checkActiveConversations();
 
+    // Listener per aprire una conversazione specifica (da link email)
+    const handleOpenConversation = (event: CustomEvent) => {
+      const { conversationId } = event.detail;
+      console.log('📧 Opening conversation from email link:', conversationId);
+      setSelectedConversationId(conversationId);
+    };
+
+    window.addEventListener('openConversation', handleOpenConversation as EventListener);
+
     // Ascolta per aggiornamenti dopo la sincronizzazione dei dati della pianta
     const handlePlantDataSynced = () => {
       console.log('🔄 ChatTab: Ricontrollo conversazioni dopo sincronizzazione dati');
@@ -119,6 +128,7 @@ const ChatTab = () => {
     return () => {
       window.removeEventListener('plantDataSynced', handlePlantDataSynced);
       window.removeEventListener('switchTab', handleTabSwitch as EventListener);
+      window.removeEventListener('openConversation', handleOpenConversation as EventListener);
     };
   }, [isAuthenticated, user?.id]);
 

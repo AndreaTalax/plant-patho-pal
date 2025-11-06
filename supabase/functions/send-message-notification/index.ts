@@ -102,9 +102,9 @@ const recipientEmail = recipientProfile?.email;
             <p style="color: #1f2937; margin: 0; white-space: pre-wrap;">${messagePreview}</p>
           </div>
           <div style="text-align: center; margin-top: 30px;">
-            <a href="https://f9facd6a-d78c-457c-9293-2d4b03f009cd.lovableproject.com/?conversation=${message.conversation_id}"
+            <a href="https://drplant.lovable.app/?tab=chat&conversation=${message.conversation_id}"
                style="background-color: #22c55e; color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold;">
-              💬 Rispondi ora
+              💬 Apri chat
             </a>
           </div>
         </div>

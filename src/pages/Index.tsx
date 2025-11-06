@@ -49,11 +49,24 @@ const Index = () => {
     ensureStorageBuckets();
   }, []);
 
-  // Legge il tab dalla querystring (es. /?tab=diagnose) e lo applica con priorità
+  // Legge il tab e conversation dalla querystring (es. /?tab=chat&conversation=123)
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const tabParam = params.get('tab');
-    if (tabParam) {
+    const conversationParam = params.get('conversation');
+    
+    // Se c'è un parametro conversation, apri automaticamente la chat
+    if (conversationParam) {
+      setActiveTab('chat');
+      suppressAutoOpenRef.current = false;
+      
+      // Dispatch evento per aprire la conversazione specifica
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('openConversation', { 
+          detail: { conversationId: conversationParam } 
+        }));
+      }, 500);
+    } else if (tabParam) {
       if (isMasterAccount && tabParam === 'diagnose') {
         setActiveTab('expert');
       } else {
