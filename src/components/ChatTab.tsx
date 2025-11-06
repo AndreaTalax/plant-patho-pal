@@ -325,25 +325,8 @@ const ChatTab = () => {
             ))}
           </div>
 
-          <div className="mt-8 space-y-4">
-            {/* Pulsante per nuovo preventivo professionale */}
+          <div className="mt-8">
             <div className="text-center">
-              <Button
-                onClick={() => {
-                  window.location.href = '/professional-quote';
-                }}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 text-lg font-semibold shadow-lg"
-                size="lg"
-              >
-                <FileText className="h-5 w-5 mr-3" />
-                {t('newProfessionalQuote')}
-              </Button>
-              <p className="text-sm text-gray-600 mt-2">
-                {t('requestCustomQuote')}
-              </p>
-            </div>
-            
-            <div className="text-center space-x-4">
               <Button
                 onClick={() => {
                   const event = new CustomEvent('switchTab', { detail: 'diagnose' });
