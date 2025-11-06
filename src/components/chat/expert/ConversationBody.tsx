@@ -1,9 +1,11 @@
 
+import { useState, useEffect } from 'react';
 import { MessageSquare } from 'lucide-react';
 import MessageList from '../MessageList';
 import MessageInput from '../MessageInput';
 import { Message, Conversation } from '../types';
 import { MARCO_NIGRO_ID } from '@/components/phytopathologist';
+import { supabase } from '@/integrations/supabase/client';
 
 interface ConversationBodyProps {
   conversation: Conversation & { user_id?: string; expertId?: string };
@@ -18,6 +20,34 @@ const ConversationBody = ({
   onSendMessage,
   onOpenProductDialog
 }: ConversationBodyProps) => {
+  const [userProfile, setUserProfile] = useState<{ avatar_url?: string; first_name?: string; last_name?: string; username?: string } | null>(null);
+
+  // Load user profile for avatar
+  useEffect(() => {
+    const loadUserProfile = async () => {
+      if (!conversation.user_id) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('avatar_url, first_name, last_name, username')
+          .eq('id', conversation.user_id)
+          .single();
+        
+        if (error) {
+          console.error('Error loading user profile:', error);
+          return;
+        }
+        
+        setUserProfile(data);
+      } catch (error) {
+        console.error('Error loading user profile:', error);
+      }
+    };
+    
+    loadUserProfile();
+  }, [conversation.user_id]);
+
   // If there are no messages, show empty state
   if (conversation.messages.length === 0) {
     return (
@@ -33,6 +63,11 @@ const ConversationBody = ({
       <MessageList 
         messages={conversation.messages}
         isExpertView={true}
+        userAvatar={userProfile?.avatar_url}
+        userName={userProfile?.first_name && userProfile?.last_name 
+          ? `${userProfile.first_name} ${userProfile.last_name}` 
+          : userProfile?.username || 'Utente'}
+        currentUserId={conversation.expertId || MARCO_NIGRO_ID}
       />
       
       <div className="p-2 border-t bg-white">

@@ -11,9 +11,24 @@ interface MessageListProps {
   isExpertView?: boolean;
   isTyping?: boolean;
   typingUser?: string;
+  userAvatar?: string;
+  userName?: string;
+  currentUserId?: string;
+  onAddReaction?: (messageId: string, reactionType: string) => void;
+  onRemoveReaction?: (messageId: string, reactionType: string) => void;
 }
 
-const MessageList = ({ messages, isExpertView = false, isTyping = false, typingUser }: MessageListProps) => {
+const MessageList = ({ 
+  messages, 
+  isExpertView = false, 
+  isTyping = false, 
+  typingUser,
+  userAvatar,
+  userName,
+  currentUserId,
+  onAddReaction,
+  onRemoveReaction
+}: MessageListProps) => {
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll to bottom when new messages arrive
@@ -95,6 +110,11 @@ const MessageList = ({ messages, isExpertView = false, isTyping = false, typingU
                       <ChatMessage 
                         message={message}
                         isExpertView={isExpertView}
+                        userAvatar={userAvatar}
+                        userName={userName}
+                        currentUserId={currentUserId}
+                        onAddReaction={onAddReaction}
+                        onRemoveReaction={onRemoveReaction}
                       />
                     </div>
                   );
