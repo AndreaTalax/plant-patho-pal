@@ -12,6 +12,7 @@ import { RefreshCw, AlertCircle, FileText, ArrowLeft, Receipt } from 'lucide-rea
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { MARCO_NIGRO_ID } from '@/components/phytopathologist';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/context/AuthContext';
 
 interface UserChatViewRealtimeProps {
   userId: string;
@@ -27,6 +28,7 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({
   isProfessionalChat = false 
 }) => {
   const navigate = useNavigate();
+  const { userProfile } = useAuth();
   const [autoDataSent, setAutoDataSent] = useState(false);
   const [showComprehensiveData, setShowComprehensiveData] = useState(false);
   
@@ -280,8 +282,13 @@ export const UserChatViewRealtime: React.FC<UserChatViewRealtimeProps> = ({
       <div className="flex-1 overflow-hidden bg-white">
         <MessageList 
           messages={formatMessagesForDisplay(messages)}
-          isTyping={isSending}
+          isTyping={false}
           typingUser="Esperto"
+          userAvatar={userProfile?.avatar_url}
+          userName={userProfile?.first_name && userProfile?.last_name 
+            ? `${userProfile.first_name} ${userProfile.last_name}` 
+            : userProfile?.username || 'Utente'}
+          currentUserId={userId}
         />
       </div>
 
