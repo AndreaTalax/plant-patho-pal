@@ -60,7 +60,6 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
 
       if (error) throw error;
 
-      setEmailEnabled(enabled);
       await updateProfile({ email_notifications_enabled: enabled } as any);
       toast.success(enabled ? 'Notifiche email attivate' : 'Notifiche email disattivate');
     } catch (error) {
