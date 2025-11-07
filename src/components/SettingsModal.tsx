@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -7,9 +7,11 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-import { Moon, Sun, Globe, Bell, Smartphone } from "lucide-react";
+import { Moon, Sun, Globe, Bell, Smartphone, Mail } from "lucide-react";
 import { useTheme } from "@/context/ThemeContext";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
+import { useAuth } from "@/context/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 
 interface SettingsModalProps {
   open: boolean;
@@ -19,6 +21,16 @@ interface SettingsModalProps {
 const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
   const { mode, setMode, language, setLanguage, t } = useTheme();
   const { isSupported, permission, requestPermission, sendTestNotification } = usePushNotifications();
+  const { userProfile, updateProfile } = useAuth();
+  
+  const [emailEnabled, setEmailEnabled] = useState(userProfile?.email_notifications_enabled ?? true);
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    if (userProfile) {
+      setEmailEnabled(userProfile.email_notifications_enabled ?? true);
+    }
+  }, [userProfile]);
   
   const handleSave = () => {
     toast.success(t("settingsSaved"), {
@@ -33,6 +45,29 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
       if (!success) {
         toast.error('Impossibile attivare le notifiche push');
       }
+    }
+  };
+
+  const handleEmailToggle = async (enabled: boolean) => {
+    if (!userProfile) return;
+    
+    setIsSaving(true);
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ email_notifications_enabled: enabled } as any)
+        .eq('id', userProfile.id);
+
+      if (error) throw error;
+
+      setEmailEnabled(enabled);
+      await updateProfile({ email_notifications_enabled: enabled } as any);
+      toast.success(enabled ? 'Notifiche email attivate' : 'Notifiche email disattivate');
+    } catch (error) {
+      console.error('Error updating email notifications:', error);
+      toast.error('Errore durante l\'aggiornamento');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -94,6 +129,23 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
               {t("notifications")}
             </h3>
             
+            {/* Email Notifications */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Mail className="h-4 w-4" />
+                <Label htmlFor="email-notifications" className="text-gray-700">
+                  {t("emailNotifications") || "Notifiche Email"}
+                </Label>
+              </div>
+              <Switch
+                id="email-notifications"
+                checked={emailEnabled}
+                onCheckedChange={handleEmailToggle}
+                disabled={isSaving}
+              />
+            </div>
+            
+            {/* Push Notifications */}
             {isSupported ? (
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
