@@ -35,6 +35,16 @@ const Index = () => {
     if (!loading && isAuthenticated && !isProfileComplete && !isMasterAccount) {
       console.log('📝 Profilo incompleto, reindirizzamento al completamento profilo...');
       navigate('/complete-profile');
+      return;
+    }
+    
+    // Check if user has selected a plan (after profile completion)
+    if (!loading && isAuthenticated && isProfileComplete && !isMasterAccount) {
+      const selectedPlan = localStorage.getItem('selectedPlanType');
+      if (!selectedPlan) {
+        console.log('📋 Piano non selezionato, reindirizzamento alla selezione piano...');
+        navigate('/plan-selection');
+      }
     }
   }, [isAuthenticated, isProfileComplete, isMasterAccount, loading, navigate]);
 

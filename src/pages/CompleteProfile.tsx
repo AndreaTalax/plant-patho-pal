@@ -60,8 +60,8 @@ const CompleteProfile = () => {
         description: t("welcomeMessage"),
       });
       
-      // Redirect to home page with diagnose tab active
-      navigate("/?tab=diagnose");
+      // Redirect to plan selection
+      navigate("/plan-selection");
     } catch (error) {
       toast({
         variant: "destructive",
