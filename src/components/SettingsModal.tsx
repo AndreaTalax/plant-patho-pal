@@ -134,7 +134,7 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
               <div className="flex items-center gap-2">
                 <Mail className="h-4 w-4" />
                 <Label htmlFor="email-notifications" className="text-gray-700">
-                  {t("emailNotifications") || "Notifiche Email"}
+                  Notifiche Email
                 </Label>
               </div>
               <Switch
