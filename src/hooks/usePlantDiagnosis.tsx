@@ -194,22 +194,18 @@ export const usePlantDiagnosis = () => {
         duration: 3000
       });
 
-      // Se c'è una conversazione attiva con l'esperto (o creala se non esiste), genera e invia il PDF automaticamente
-      console.log('🔍 Controllo/creazione conversazione per invio PDF automatico...');
-      
-      // Importa il ConversationService per creare la conversazione se non esiste
-      const { ConversationService } = await import('@/services/chat/conversationService');
-      
-      // Trova o crea una conversazione
-      let activeConversation = await ConversationService.findOrCreateConversation(user.id);
-      
-      if (!activeConversation) {
-        console.warn('⚠️ Impossibile creare/trovare conversazione per invio PDF');
-      } else {
-        console.log('📄 Conversazione pronta, generazione PDF automatica...', {
-          conversationId: activeConversation.id,
-          status: activeConversation.status
-        });
+      // Se c'è una conversazione attiva con l'esperto, genera e invia il PDF automaticamente
+      console.log('🔍 Controllo conversazioni attive per invio PDF automatico...');
+      const { data: conversations } = await supabase
+        .from('conversations')
+        .select('id, conversation_type')
+        .eq('user_id', user.id)
+        .eq('status', 'active')
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (conversations && conversations.length > 0 && conversations[0].conversation_type !== 'professional_quote') {
+        console.log('📄 Trovata conversazione attiva, generazione PDF automatica...');
         
         const plantData = {
           plantName: plant?.plantName || 'Pianta non identificata',
@@ -237,7 +233,7 @@ export const usePlantDiagnosis = () => {
 
         const { ConsultationDataService } = await import('@/services/chat/consultationDataService');
         const pdfSent = await ConsultationDataService.sendInitialConsultationData(
-          activeConversation.id,
+          conversations[0].id,
           plantData,
           userData,
           true,

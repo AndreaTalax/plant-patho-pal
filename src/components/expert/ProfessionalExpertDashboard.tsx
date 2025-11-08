@@ -379,6 +379,24 @@ const ProfessionalExpertDashboard = () => {
     return true;
   });
 
+  // Get priority badge for conversation
+  const getPriorityBadge = (conversation: ConversationSummary) => {
+    const lastMessageTime = conversation.last_message_timestamp ? new Date(conversation.last_message_timestamp) : null;
+    const now = new Date();
+    const hoursDiff = lastMessageTime ? Math.abs(now.getTime() - lastMessageTime.getTime()) / (1000 * 60 * 60) : 0;
+    
+    if (!lastMessageTime) {
+      return <Badge variant="secondary" className="text-xs">Nuovo</Badge>;
+    }
+    
+    if (hoursDiff > 24) {
+      return <Badge variant="destructive" className="text-xs">Urgente</Badge>;
+    } else if (hoursDiff > 12) {
+      return <Badge variant="outline" className="text-xs border-yellow-500 text-yellow-700">Attesa risposta</Badge>;
+    }
+    
+    return <Badge variant="default" className="text-xs bg-green-100 text-green-700">Recente</Badge>;
+  };
 
   // Back to main dashboard
   const goBackToMain = () => {
@@ -662,6 +680,7 @@ if (selectedConversation) {
                                     <Badge variant="outline" className="bg-green-50 text-green-700 text-xs">
                                       Attiva
                                     </Badge>
+                                    {getPriorityBadge(conversation)}
                                   </div>
                                 </div>
                                 
