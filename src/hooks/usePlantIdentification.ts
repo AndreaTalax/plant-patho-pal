@@ -111,36 +111,47 @@ export const usePlantIdentification = () => {
         reader.readAsDataURL(imageFile);
       });
 
-      // Chiama l'API Plant.ID tramite Supabase Edge Function
-      const { data, error } = await supabase.functions.invoke('plant-id-diagnosis', {
+      // Usa il servizio con fallback PlantNet integrato
+      console.log('🌿 Avvio identificazione con Plant.ID e fallback PlantNet...');
+      const { data, error } = await supabase.functions.invoke('global-plant-identification', {
         body: { 
-          imageBase64: imageBase64
+          imageBase64: `data:image/jpeg;base64,${imageBase64}`
         }
       });
 
-      if (error) {
-        console.error('Errore identificazione Plant.ID:', error);
-        toast.error('Errore nell\'identificazione della pianta');
+      if (error || !data?.success) {
+        console.error('Errore identificazione:', error);
+        
+        // Messaggio più specifico basato sul tipo di errore
+        const errorMessage = data?.fallbackMessage || 'Errore nell\'identificazione della pianta';
+        toast.error(errorMessage);
         return null;
       }
 
-      // Processa i risultati
-      const topSuggestion = data.suggestions?.[0];
-      if (!topSuggestion) {
+      // Processa i risultati dal servizio globale
+      const bestPlant = data.plantIdentification?.[0];
+      if (!bestPlant) {
         toast.warning('Nessuna identificazione trovata per questa immagine');
         return null;
       }
 
       const result: PlantIdentificationResult = {
-        plantName: topSuggestion.plant_name || 'Pianta non identificata',
-        scientificName: topSuggestion.plant_details?.scientific_name || 'Specie sconosciuta',
-        confidence: Math.round((topSuggestion.probability || 0.7) * 100),
-        commonNames: topSuggestion.plant_details?.common_names || [],
-        probability: Math.round((topSuggestion.probability || 0.7) * 100),
-        familyName: topSuggestion.plant_details?.taxonomy?.family,
-        description: topSuggestion.plant_details?.wiki_description?.value,
-        images: topSuggestion.similar_images?.map((img: any) => img.url) || []
+        plantName: bestPlant.name || 'Pianta non identificata',
+        scientificName: bestPlant.scientificName || 'Specie sconosciuta',
+        confidence: Math.round(bestPlant.confidence || 50),
+        commonNames: [],
+        probability: Math.round(bestPlant.confidence || 50),
+        familyName: bestPlant.family,
+        description: data.gbifInfo?.vernacularName || undefined,
+        images: []
       };
+
+      // Mostra da quale fonte proviene l'identificazione
+      const sourceMessage = bestPlant.source === 'PlantNet' 
+        ? 'Identificata con PlantNet (fallback)'
+        : `Identificata con ${bestPlant.source}`;
+      
+      console.log(`✅ ${sourceMessage}`);
 
       setIdentificationResult(result);
       
