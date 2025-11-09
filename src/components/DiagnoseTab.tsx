@@ -35,6 +35,13 @@ const DiagnoseTab = () => {
   const { plantInfo, setPlantInfo } = usePlantInfo();
   const { hasAIAccess } = usePremiumStatus();
   
+  // Account di test che hanno accesso illimitato
+  const isTestAccount = () => {
+    const email = (userProfile?.email || '').toLowerCase();
+    const testEmails = ['test@gmail.com', 'agrotecnicomarconigro@gmail.com', 'premium@gmail.com'];
+    return testEmails.includes(email);
+  };
+  
   // Hook per gestione limiti diagnosi gratuite
   const {
     canUseFreeDiagnosis,
@@ -260,8 +267,8 @@ const DiagnoseTab = () => {
       return false;
     }
 
-    // 🔒 CONTROLLO ABBONAMENTO - Blocca se non abbonato
-    if (!hasActiveSubscription()) {
+    // 🔒 CONTROLLO ABBONAMENTO - Escludi account test
+    if (!isTestAccount() && !hasActiveSubscription()) {
       console.log('❌ Abbonamento richiesto per invio esperto');
       setShowPaymentModal(true);
       return false;
@@ -293,8 +300,8 @@ const DiagnoseTab = () => {
       return;
     }
 
-    // Controllo limiti diagnosi gratuite
-    if (!canUseFreeDiagnosis() && !hasActiveSubscription()) {
+    // Controllo limiti diagnosi gratuite (account test esclusi)
+    if (!isTestAccount() && !canUseFreeDiagnosis() && !hasActiveSubscription()) {
       const remaining = getRemainingFreeDiagnoses();
       toast.error(`Hai esaurito le tue ${FREE_DIAGNOSES_LIMIT} diagnosi gratuite!`, {
         description: 'Acquista un abbonamento per continuare ad usare la diagnosi AI.',
@@ -312,8 +319,8 @@ const DiagnoseTab = () => {
     try {
       console.log('🤖 Avvio diagnosi AI selezionata dall\'utente...');
       
-      // Incrementa il contatore di diagnosi usate (solo se non è abbonato)
-      if (!hasActiveSubscription()) {
+      // Incrementa il contatore di diagnosi usate (solo se non è abbonato e non è account test)
+      if (!isTestAccount() && !hasActiveSubscription()) {
         const incremented = await incrementDiagnosisUsage();
         if (!incremented) {
           toast.error('Errore nel tracciamento delle diagnosi. Riprova.');
@@ -357,8 +364,8 @@ const DiagnoseTab = () => {
   const handleSelectExpert = useCallback(async () => {
     console.log('🩺 Selezione consulenza esperto...');
     
-    // 🔒 CONTROLLO ABBONAMENTO - Blocca se non abbonato
-    if (!hasActiveSubscription()) {
+    // 🔒 CONTROLLO ABBONAMENTO - Escludi account test
+    if (!isTestAccount() && !hasActiveSubscription()) {
       console.log('❌ Abbonamento richiesto per consulenza esperto');
       setShowPaymentModal(true);
       return;

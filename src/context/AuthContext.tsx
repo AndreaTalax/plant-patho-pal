@@ -233,6 +233,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const hasActiveSubscription = () => {
+    // Account di test hanno sempre accesso
+    const email = (userProfile?.email || user?.email || '').toLowerCase();
+    const testEmails = ['test@gmail.com', 'agrotecnicomarconigro@gmail.com', 'premium@gmail.com'];
+    if (testEmails.includes(email)) {
+      return true;
+    }
+    
     return subscriptionStatus.subscribed;
   };
 

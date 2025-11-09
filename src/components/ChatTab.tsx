@@ -32,6 +32,13 @@ const ChatTab = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
 
+  // Account di test che hanno accesso completo
+  const isTestAccount = () => {
+    const email = (userProfile?.email || user?.email || '').toLowerCase();
+    const testEmails = ['test@gmail.com', 'agrotecnicomarconigro@gmail.com', 'premium@gmail.com'];
+    return testEmails.includes(email);
+  };
+
   // Determina se si tratta di una chat professionale dalla conversazione selezionata
   const selectedConversation = activeConversations.find(c => c.id === selectedConversationId);
   const isProfessionalChat = selectedConversation?.conversation_type === 'professional_quote';
@@ -197,8 +204,9 @@ const ChatTab = () => {
   }
 
   // Se l'utente non ha accesso premium E non ha conversazioni attive, mostra paywall
+  // ECCEZIONE: Account di test hanno sempre accesso
   // Le conversazioni esistenti (professionali o consulenze completate) bypassano il paywall
-  if (!hasExpertChatAccess && activeConversations.length === 0) {
+  if (!isTestAccount() && !hasExpertChatAccess && activeConversations.length === 0) {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-2xl mx-auto text-center">

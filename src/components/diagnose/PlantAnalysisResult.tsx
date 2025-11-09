@@ -44,6 +44,13 @@ const PlantAnalysisResultComponent: React.FC<PlantAnalysisResultComponentProps> 
   const [sendingToExpert, setSendingToExpert] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
 
+  // Account di test che hanno accesso illimitato
+  const isTestAccount = () => {
+    const email = (userProfile?.email || '').toLowerCase();
+    const testEmails = ['test@gmail.com', 'agrotecnicomarconigro@gmail.com', 'premium@gmail.com'];
+    return testEmails.includes(email);
+  };
+
   // Function to safely display probability percentages
   const getProbabilityDisplay = (probability: number | undefined | null): string => {
     if (probability === undefined || probability === null || isNaN(probability)) {
@@ -64,8 +71,8 @@ const PlantAnalysisResultComponent: React.FC<PlantAnalysisResultComponentProps> 
       return;
     }
 
-    // 🔒 CONTROLLO ABBONAMENTO - Blocca se non abbonato
-    if (!hasActiveSubscription()) {
+    // 🔒 CONTROLLO ABBONAMENTO - Escludi account test
+    if (!isTestAccount() && !hasActiveSubscription()) {
       setShowPaymentModal(true);
       return;
     }
