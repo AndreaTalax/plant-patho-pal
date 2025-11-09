@@ -38,19 +38,25 @@ export interface GlobalIdentificationResult {
 
 export class GlobalPlantIdentificationService {
   /**
-   * Identifica pianta usando servizi AI reali invece di fallback
+   * Identifica pianta usando servizi AI reali:
+   * 1. CLIP (Hugging Face) - validazione immagine
+   * 2. PlantNet API - identificazione pianta
+   * 3. Lovable AI (Gemini) - analisi visiva malattie (simile a ResNet-50)
+   * 4. EPPO database - arricchimento dati
+   * 5. iNaturalist - fallback
+   * 6. GBIF - fallback finale
    */
   static async identifyPlantGlobally(imageBase64: string): Promise<GlobalIdentificationResult> {
     try {
-      console.log('🌿 Avvio identificazione con API reali unificate...');
+      console.log('🌿 Avvio identificazione con API reali unificate (PlantNet, AI, EPPO)...');
       
       // Esegui in parallelo: API remote E modello locale browser
       const [realApiResult, localModelResult] = await Promise.allSettled([
-        // API remote (Plant.id, OpenAI, EPPO)
+        // API remote (PlantNet, Lovable AI/Gemini, EPPO)
         supabase.functions.invoke('real-plant-diagnosis', {
           body: { imageBase64 }
         }),
-        // Modello locale browser (Vision Transformer)
+        // Modello locale browser (Vision Transformer per validazione)
         detectPlantDiseases(imageBase64).catch(err => {
           console.warn("⚠️ Local model failed, continuing without it:", err);
           return null;
@@ -123,8 +129,8 @@ export class GlobalPlantIdentificationService {
         };
       }
 
-      // Fallback con PlantNet se Plant.ID fallisce
-      console.log('🔄 Tentativo con PlantNet...');
+      // Fallback con PlantNet se l'API principale fallisce
+      console.log('🔄 Tentativo con PlantNet come fallback...');
       const { data: plantNetData, error: plantNetError } = await supabase.functions.invoke('plantnet-identification', {
         body: { imageBase64 }
       });

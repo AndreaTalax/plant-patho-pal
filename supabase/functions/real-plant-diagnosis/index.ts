@@ -7,8 +7,6 @@ const corsHeaders = {
 };
 
 // Env vars
-const openaiApiKey = Deno.env.get("OPENAI_API_KEY");
-const plantIdApiKey = Deno.env.get("PLANT_ID_API_KEY");
 const plantNetApiKey = Deno.env.get("PLANTNET_API_KEY");
 const eppoAuthToken = Deno.env.get("EPPO_AUTH_TOKEN");
 
@@ -31,36 +29,7 @@ async function safeFetch<T>(fn: () => Promise<T>, label: string): Promise<T | nu
   }
 }
 
-// ---------- Identification (unchanged logic, mantenuto come prima) ----------
-
-// Plant.id identification
-async function identifyWithPlantId(imageBase64: string) {
-  if (!plantIdApiKey) return [];
-  return safeFetch(async () => {
-    const res = await fetch("https://api.plant.id/v2/identify", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Api-Key": plantIdApiKey,
-      },
-      body: JSON.stringify({
-        images: [imageBase64],
-        modifiers: ["crops_fast", "similar_images"],
-        plant_language: "it",
-        plant_details: ["common_names", "taxonomy"],
-      }),
-      signal: AbortSignal.timeout(10000),
-    });
-    if (!res.ok) throw new Error(`Plant.id error: ${res.status}`);
-    const data = await res.json();
-    return data.suggestions?.map((s: any) => ({
-      name: s.plant_details?.common_names?.[0] || s.plant_name,
-      scientificName: s.plant_name,
-      confidence: Math.round(s.probability * 100),
-      source: "Plant.id",
-    })) ?? [];
-  }, "Plant.id API");
-}
+// ---------- Identification - Only PlantNet ----------
 
 // PlantNet identification
 async function identifyWithPlantNet(imageBase64: string) {
@@ -112,133 +81,7 @@ async function identifyWithPlantNet(imageBase64: string) {
   }, "PlantNet API");
 }
 
-// Plant.id Health Assessment - diagnosi malattie specifiche
-async function assessPlantHealth(imageBase64: string) {
-  if (!plantIdApiKey) return [];
-  return safeFetch(async () => {
-    // Assicurati che l'immagine sia base64 pura senza prefisso data:image
-    let cleanBase64 = imageBase64;
-    if (imageBase64.includes("base64,")) {
-      cleanBase64 = imageBase64.split("base64,")[1];
-    }
-    
-    console.log("🏥 Chiamata Plant.id Health Assessment API...");
-    console.log(`📏 Dimensione immagine base64: ${cleanBase64.length} caratteri`);
-
-    const res = await fetch("https://api.plant.id/v3/health_assessment", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Api-Key": plantIdApiKey,
-      },
-      body: JSON.stringify({
-        images: [cleanBase64],
-        similar_images: true,
-        health: "all"
-        // Note: language non supportato in v3 Health API
-      }),
-      signal: AbortSignal.timeout(20000),
-    });
-
-    if (!res.ok) {
-      const errorText = await res.text();
-      console.error(`❌ Plant.id Health API error ${res.status}: ${errorText}`);
-      throw new Error(`Plant.id Health error: ${res.status}`);
-    }
-    const data = await res.json();
-
-    console.log("✅ Plant.id Health response ricevuta");
-    console.log("🔍 Raw response structure:", JSON.stringify(data, null, 2));
-
-    // Estrai dati seguendo la struttura corretta dell'API
-    const healthAssessment = data?.health_assessment || data?.result;
-    const diseasesData = healthAssessment?.diseases || healthAssessment?.disease?.suggestions || [];
-    
-    if (!healthAssessment) {
-      console.log("⚠️ Risposta Plant.id Health senza health_assessment");
-      return [];
-    }
-
-    // Verifica lo stato di salute
-    const isHealthy = healthAssessment?.is_healthy ?? healthAssessment?.is_healthy?.binary ?? true;
-    const healthProbability = healthAssessment?.is_healthy?.probability ?? 1.0;
-    
-    console.log(`🏥 Stato salute: ${isHealthy ? 'Sana' : 'Malata'} (confidenza: ${Math.round((typeof healthProbability === 'number' ? healthProbability : 1.0) * 100)}%)`);
-
-    // Estrai malattia principale come richiesto
-    const mainDisease = Array.isArray(diseasesData) && diseasesData.length > 0 ? diseasesData[0] : null;
-    
-    if (mainDisease) {
-      console.log(`🦠 Malattia principale: ${mainDisease?.name || 'Unknown'} (${Math.round((mainDisease?.probability || 0) * 100)}%)`);
-    }
-
-    // Estrai tutte le malattie
-    const diseases = [];
-    
-    if (Array.isArray(diseasesData) && diseasesData.length > 0) {
-      console.log(`🔍 Trovate ${diseasesData.length} possibili malattie`);
-      
-      for (const disease of diseasesData.slice(0, 15)) {
-        const probability = disease.probability || disease.confidence || 0;
-        if (probability < 0.01) continue; // Soglia minima 1%
-        
-        const diseaseName = disease.name || disease.disease_name || "Malattia non identificata";
-        
-        // Estrai sintomi
-        const symptoms = [];
-        if (disease.symptoms && Array.isArray(disease.symptoms)) {
-          symptoms.push(...disease.symptoms);
-        } else if (disease.description) {
-          symptoms.push(disease.description);
-        } else if (disease.details?.description) {
-          symptoms.push(disease.details.description);
-        }
-        
-        // Estrai trattamenti
-        const treatments = [];
-        if (disease.treatment && Array.isArray(disease.treatment)) {
-          treatments.push(...disease.treatment);
-        } else if (disease.recommendations && Array.isArray(disease.recommendations)) {
-          treatments.push(...disease.recommendations);
-        } else {
-          if (disease.details?.treatment?.biological) {
-            treatments.push(...disease.details.treatment.biological.map((t: string) => `BIOLOGICO: ${t}`));
-          }
-          if (disease.details?.treatment?.chemical) {
-            treatments.push(...disease.details.treatment.chemical.map((t: string) => `CHIMICO: ${t}`));
-          }
-          if (disease.details?.treatment?.prevention) {
-            treatments.push(...disease.details.treatment.prevention.map((t: string) => `PREVENZIONE: ${t}`));
-          }
-        }
-
-        diseases.push({
-          name: diseaseName,
-          scientificName: disease.scientific_name || disease.entity_name || disease.name,
-          confidence: Math.min(1, Math.max(0, probability)),
-          symptoms: symptoms.length > 0 ? symptoms : ["Consultare descrizione dettagliata"],
-          treatments: treatments.length > 0 ? treatments : ["Consultare fitopatologo per trattamenti specifici"],
-          cause: disease.cause || disease.details?.cause || "Analisi Plant.id",
-          source: "Plant.id Health",
-          severity: probability > 0.7 ? "high" : probability > 0.4 ? "medium" : "low",
-          details: {
-            description: disease.description || disease.details?.description,
-            url: disease.url || disease.details?.url,
-            prevention: disease.prevention || []
-          }
-        });
-      }
-      
-      console.log(`✅ ${diseases.length} malattie aggiunte da Plant.id Health`);
-    } else {
-      console.log("⚠️ Nessuna malattia rilevata da Plant.id Health");
-    }
-
-    return diseases;
-  }, "Plant.id Health API");
-}
-
-// Lovable AI (Gemini) analysis - sostituisce OpenAI
+// Lovable AI (Gemini) analysis - Used for visual disease detection (similar to ResNet-50)
 async function analyzeWithAI(imageBase64: string) {
   const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
   if (!LOVABLE_API_KEY) {
@@ -247,7 +90,7 @@ async function analyzeWithAI(imageBase64: string) {
   }
   
   return safeFetch(async () => {
-    console.log("🤖 Chiamata Lovable AI (Gemini 2.5 Flash)...");
+    console.log("🤖 Chiamata Lovable AI (Gemini 2.5 Flash) per analisi visiva malattie...");
     
     const cleanBase64 = imageBase64.replace(/^data:image\/[a-z]+;base64,/, '');
     
@@ -262,7 +105,7 @@ async function analyzeWithAI(imageBase64: string) {
         messages: [
           {
             role: "system",
-            content: `Sei un esperto fitopatologo. Analizza con ESTREMA attenzione le immagini di piante.
+            content: `Sei un esperto fitopatologo con competenze in computer vision. Analizza l'immagine come un modello CNN (Convolutional Neural Network) per rilevare malattie delle piante.
 
 IMPORTANTE: Cerca QUALSIASI segno di problema, anche minimo:
 - Macchie, punti, decolorazioni (anche piccole)
@@ -532,34 +375,26 @@ serve(async (req) => {
     console.log("🔄 Running parallel analysis with real APIs...");
 
     // Esegui analisi in parallelo
-    console.log("🌿 Calling Plant.id identification API...");
-    console.log("🏥 Calling Plant.id health assessment API...");
-    console.log("🌍 Calling PlantNet API...");
-    console.log("🤖 Calling Lovable AI (Gemini)...");
+    console.log("🌍 Calling PlantNet API for identification...");
+    console.log("🤖 Calling Lovable AI (Gemini) for visual analysis...");
 
-    const [plantIdResults, healthResults, plantNetResults, aiResults] = await Promise.all([
-      identifyWithPlantId(imageBase64),
-      assessPlantHealth(imageBase64),
+    const [plantNetResults, aiResults] = await Promise.all([
       identifyWithPlantNet(imageBase64),
       analyzeWithAI(imageBase64),
     ]);
 
-    console.log("✅ Plant.id response received:", plantIdResults?.length ?? 0, "suggestions");
-    console.log("✅ Plant.id health response received");
     if (plantNetResults?.length) console.log("✅ PlantNet response received:", plantNetResults.length, "results");
     else console.log("❌ PlantNet identification error or no results");
     if (aiResults?.plants?.length || aiResults?.diseases?.length) console.log("✅ AI analysis received");
     else console.log("❌ AI analysis error or no results");
 
     const allPlants = [
-      ...(plantIdResults ?? []),
       ...(plantNetResults ?? []),
       ...(aiResults?.plants ?? []),
     ];
 
-    // Prioritizza Plant.id Health per le malattie
+    // Use AI (Gemini) for disease detection
     const allDiseases = [
-      ...(healthResults ?? []),
       ...(aiResults?.diseases ?? []),
     ];
 
@@ -600,8 +435,7 @@ serve(async (req) => {
 
     // Filtra malattie generiche se abbiamo diagnosi specifiche
     const specificDiseases = allDiseases.filter(d =>
-      d.source === "Plant.id Health" ||
-      (d.source === "Lovable AI (Gemini)" && d.confidence > 0.5) ||
+      (d.source === "Lovable AI (Gemini)" && d.confidence > 0.3) ||
       d.source === "EPPO Database" ||
       d.source === "Local mapping"
     );
@@ -629,8 +463,6 @@ serve(async (req) => {
       analysisDetails: {
         timestamp: new Date().toISOString(),
         apiServicesUsed: [
-          ...(plantIdResults?.length ? ["Plant.id"] : []),
-          ...(healthResults?.length ? ["Plant.id Health"] : []),
           ...(plantNetResults?.length ? ["PlantNet"] : []),
           ...(aiResults?.plants?.length || aiResults?.diseases?.length ? ["Lovable AI (Gemini)"] : []),
           ...(finalDiseases.some(d => d.source === "EPPO Database") ? ["EPPO Database"] : []),

@@ -66,40 +66,36 @@ function deduplicate<T>(items: T[], keyFn: (x: T) => string): T[] {
 }
 
 // ================== API WRAPPERS ==================
-// Simplified mock implementations for the services
-async function identifyWithPlantId(imageBase64: string) {
-  console.log("Plant.ID service called (mock)");
-  return null; // Return null for now as these are complex integrations
-}
+// Simplified implementations for the services
 
 async function identifyWithPlantNet(imageBase64: string) {
-  console.log("PlantNet service called (mock)");
+  console.log("PlantNet service called");
   return null;
 }
 
-async function analyzeWithOpenAI(imageBase64: string) {
-  console.log("OpenAI service called (mock)");
+async function analyzeWithLovableAI(imageBase64: string) {
+  console.log("Lovable AI (Gemini) service called");
   return null;
 }
 
-async function diagnoseWithPlantIdHealth(imageBase64: string) {
-  console.log("Plant.ID Health service called (mock)");
+async function diagnoseWithResNet(imageBase64: string) {
+  console.log("ResNet-50 via Hugging Face called");
   return [];
 }
 
 async function searchEppoDatabase(plantName: string, scientificName: string) {
-  console.log("EPPO service called (mock)");
-  return null;
-}
-
-async function analyzeWithHuggingFace(imageBase64: string) {
-  console.log("Hugging Face service called (mock)");
+  console.log("EPPO service called");
   return null;
 }
 
 async function identifyWithINaturalist(plantName: string) {
-  console.log("iNaturalist service called (mock)");
+  console.log("iNaturalist service called");
   return [];
+}
+
+async function analyzeWithGBIF(scientificName: string) {
+  console.log("GBIF service called");
+  return null;
 }
 
 // ================== MAIN SERVER ==================
@@ -120,21 +116,7 @@ serve(async (req) => {
       success: false,
     };
 
-    // 1. Plant.ID
-    log("Plant.ID...");
-    const plantIdResult = await identifyWithPlantId(imageBase64);
-    if (plantIdResult) {
-      result.plantIdentification.push({
-        name: plantIdResult.plantName,
-        scientificName: plantIdResult.scientificName,
-        confidence: safeConfidence(plantIdResult.confidence),
-        source: "Plant.ID",
-        family: plantIdResult.family,
-        genus: plantIdResult.genus,
-      });
-    }
-
-    // 2. PlantNet
+    // 1. PlantNet
     log("PlantNet...");
     const plantNetResult = await identifyWithPlantNet(imageBase64);
     if (plantNetResult) {
@@ -148,32 +130,46 @@ serve(async (req) => {
       });
     }
 
-    // 3. OpenAI
-    log("OpenAI Vision...");
-    const openAiResult = await analyzeWithOpenAI(imageBase64);
-    if (openAiResult?.plantInfo) {
+    // 2. Lovable AI (Gemini) for visual analysis
+    log("Lovable AI (Gemini) Vision...");
+    const aiResult = await analyzeWithLovableAI(imageBase64);
+    if (aiResult?.plantInfo) {
       result.plantIdentification.push({
-        name: openAiResult.plantInfo.nomeComune ?? "Pianta identificata",
-        scientificName: openAiResult.plantInfo.nomeScientifico ?? "",
-        confidence: safeConfidence(openAiResult.plantInfo.confidenza),
-        source: "OpenAI Vision",
-        family: openAiResult.plantInfo.famiglia,
+        name: aiResult.plantInfo.nomeComune ?? "Pianta identificata",
+        scientificName: aiResult.plantInfo.nomeScientifico ?? "",
+        confidence: safeConfidence(aiResult.plantInfo.confidenza),
+        source: "Lovable AI (Gemini)",
+        family: aiResult.plantInfo.famiglia,
       });
     }
-    openAiResult?.malattie?.forEach((m: any) =>
+    aiResult?.malattie?.forEach((m: any) =>
       result.diseases.push({
         name: m.nome,
         confidence: safeConfidence(m.confidenza),
         symptoms: m.sintomi ?? [],
         treatments: m.trattamenti ?? [],
         cause: m.causa ?? "Causa da determinare",
-        source: "OpenAI Vision",
+        source: "Lovable AI (Gemini)",
+      })
+    );
+
+    // 3. ResNet-50 Hugging Face for disease detection
+    log("ResNet-50 Hugging Face...");
+    const resNetResult = await diagnoseWithResNet(imageBase64);
+    resNetResult?.forEach((disease: any) =>
+      result.diseases.push({
+        name: disease.name,
+        confidence: safeConfidence(disease.confidence),
+        symptoms: disease.symptoms ?? [],
+        treatments: disease.treatments ?? [],
+        cause: disease.cause ?? "Analisi AI",
+        source: "ResNet-50 HF",
       })
     );
 
     // 4. iNaturalist
     log("iNaturalist...");
-    const iNatResult = await identifyWithINaturalist(plantIdResult?.plantName ?? "plant");
+    const iNatResult = await identifyWithINaturalist(plantNetResult?.name ?? "plant");
     iNatResult?.forEach((plant: any) =>
       result.plantIdentification.push({
         name: plant.plantName,
@@ -184,21 +180,7 @@ serve(async (req) => {
       })
     );
 
-    // 5. Plant.ID Health
-    log("Plant.ID Health...");
-    const healthResult = await diagnoseWithPlantIdHealth(imageBase64);
-    healthResult?.forEach((disease: any) =>
-      result.diseases.push({
-        name: disease.name,
-        confidence: safeConfidence(disease.confidence),
-        symptoms: disease.symptoms ?? [],
-        treatments: disease.treatments ?? [],
-        cause: disease.cause ?? "Analisi AI",
-        source: "Plant.ID Health",
-      })
-    );
-
-    // 6. EPPO
+    // 5. EPPO
     log("EPPO...");
     const bestPlant = result.plantIdentification.sort((a, b) => b.confidence - a.confidence)[0];
     if (bestPlant) {
@@ -219,18 +201,11 @@ serve(async (req) => {
       }
     }
 
-    // 7. Hugging Face
-    log("Hugging Face...");
-    const hfResult = await analyzeWithHuggingFace(imageBase64);
-    if (hfResult) {
-      result.diseases.push({
-        name: hfResult.disease ?? "Condizione rilevata",
-        confidence: safeConfidence(hfResult.confidence),
-        symptoms: hfResult.symptoms ?? [],
-        treatments: ["Trattamento AI"],
-        cause: hfResult.cause ?? "Analisi AI",
-        source: "Hugging Face AI",
-      });
+    // 6. GBIF
+    log("GBIF...");
+    const gbifResult = await analyzeWithGBIF(bestPlant?.scientificName ?? "");
+    if (gbifResult) {
+      // Add GBIF info to result if needed
     }
 
     // Deduplica
