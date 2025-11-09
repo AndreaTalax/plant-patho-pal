@@ -4,9 +4,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 const FREE_DIAGNOSES_LIMIT = 2;
+const TEST_ACCOUNTS = ['test@gmail.com', 'agrotecnicomarconigro@gmail.com', 'premium@gmail.com'];
 
 export const useDiagnosisLimits = () => {
-  const { user } = useAuth();
+  const { user, userProfile } = useAuth();
   const [diagnosesUsed, setDiagnosesUsed] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -35,6 +36,12 @@ export const useDiagnosisLimits = () => {
   // Incrementa il contatore di diagnosi utilizzate
   const incrementDiagnosisUsage = async () => {
     if (!user?.id) return false;
+
+    // Gli account di test non hanno limiti
+    const userEmail = userProfile?.email || user?.email;
+    if (userEmail && TEST_ACCOUNTS.includes(userEmail.toLowerCase())) {
+      return true;
+    }
 
     setIsLoading(true);
     try {
@@ -81,11 +88,21 @@ export const useDiagnosisLimits = () => {
 
   // Verifica se l'utente può usare la diagnosi AI gratuita
   const canUseFreeDiagnosis = () => {
+    // Gli account di test hanno accesso illimitato
+    const userEmail = userProfile?.email || user?.email;
+    if (userEmail && TEST_ACCOUNTS.includes(userEmail.toLowerCase())) {
+      return true;
+    }
     return diagnosesUsed < FREE_DIAGNOSES_LIMIT;
   };
 
   // Ottiene il numero di diagnosi gratuite rimanenti
   const getRemainingFreeDiagnoses = () => {
+    // Gli account di test hanno accesso illimitato
+    const userEmail = userProfile?.email || user?.email;
+    if (userEmail && TEST_ACCOUNTS.includes(userEmail.toLowerCase())) {
+      return 999;
+    }
     return Math.max(0, FREE_DIAGNOSES_LIMIT - diagnosesUsed);
   };
 
