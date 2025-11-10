@@ -62,26 +62,8 @@ export class PlantDataSyncService {
       let conversationId: string;
 
       if (!conversations || conversations.length === 0) {
-        console.log('🆕 Creating new conversation...');
-        
-        const { data: newConversation, error: createError } = await supabase
-          .from('conversations')
-          .insert({
-            user_id: userId,
-            expert_id: MARCO_NIGRO_ID,
-            status: 'active',
-            title: `Consulenza per ${plantInfo.name || 'pianta'}`
-          })
-          .select()
-          .single();
-
-        if (createError) {
-          console.error('❌ Error creating conversation:', createError);
-          return { success: false };
-        }
-
-        conversationId = newConversation.id;
-        console.log('✅ New conversation created:', conversationId);
+        conversationId = crypto.randomUUID();
+        console.log('🆕 Creating new conversation with ID:', conversationId);
       } else {
         conversationId = conversations[0].id;
         console.log('✅ Using existing conversation:', conversationId);
