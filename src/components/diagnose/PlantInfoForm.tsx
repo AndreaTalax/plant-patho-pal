@@ -10,68 +10,68 @@ import { HelpCircle } from 'lucide-react';
 import { PlantInfo } from './types';
 import { useTheme } from '@/context/ThemeContext';
 
-// Comprehensive plant symptoms list
+// Comprehensive plant symptoms list with technical names
 const plantSymptoms = [
-  // Foglie - Colore
-  { value: 'foglie-gialle', label: 'Foglie gialle', emoji: '🍂' },
-  { value: 'foglie-marroni', label: 'Foglie marroni', emoji: '🍁' },
-  { value: 'foglie-rosse', label: 'Foglie rosse', emoji: '🔴' },
-  { value: 'foglie-nere', label: 'Foglie nere', emoji: '⚫' },
-  { value: 'foglie-bianche', label: 'Foglie bianche/sbiancate', emoji: '⚪' },
-  { value: 'foglie-pallide', label: 'Foglie pallide/scolorite', emoji: '💛' },
+  // Foglie - Alterazioni cromatiche
+  { value: 'clorosi', label: 'Clorosi (ingiallimento fogliare)', emoji: '🍂' },
+  { value: 'necrosi-fogliare', label: 'Necrosi fogliare (imbrunimento)', emoji: '🍁' },
+  { value: 'antocianosi', label: 'Antocianosi (arrossamento foglie)', emoji: '🔴' },
+  { value: 'necrosi', label: 'Necrosi (annerimento tessuti)', emoji: '⚫' },
+  { value: 'clorosi-ferrica', label: 'Clorosi ferrica (sbiancamento)', emoji: '⚪' },
+  { value: 'etiolamento', label: 'Etiolamento (pallore/scolorimento)', emoji: '💛' },
   
-  // Foglie - Texture e forma
-  { value: 'foglie-secche', label: 'Foglie secche/croccanti', emoji: '🥀' },
-  { value: 'foglie-appassite', label: 'Foglie appassite', emoji: '😢' },
-  { value: 'foglie-arricciate', label: 'Foglie arricciate', emoji: '🌀' },
-  { value: 'foglie-cadenti', label: 'Foglie che cadono', emoji: '🍃' },
-  { value: 'foglie-bucate', label: 'Foglie bucate/perforate', emoji: '🕳️' },
-  { value: 'foglie-deformate', label: 'Foglie deformate', emoji: '🌿' },
+  // Foglie - Alterazioni strutturali
+  { value: 'disseccamento', label: 'Disseccamento fogliare', emoji: '🥀' },
+  { value: 'appassimento', label: 'Appassimento', emoji: '😢' },
+  { value: 'accartocciamento', label: 'Accartocciamento fogliare', emoji: '🌀' },
+  { value: 'defogliazione', label: 'Defogliazione (caduta foglie)', emoji: '🍃' },
+  { value: 'filloptosi', label: 'Filloptosi (perforazione foglie)', emoji: '🕳️' },
+  { value: 'bollosita', label: 'Bollosità (deformazione foglie)', emoji: '🌿' },
   
-  // Macchie e pattern
-  { value: 'macchie-marroni', label: 'Macchie marroni sulle foglie', emoji: '🟤' },
-  { value: 'macchie-nere', label: 'Macchie nere sulle foglie', emoji: '⚫' },
-  { value: 'macchie-gialle', label: 'Macchie gialle sulle foglie', emoji: '🟡' },
-  { value: 'macchie-bianche', label: 'Macchie bianche sulle foglie', emoji: '⚪' },
-  { value: 'alone-giallo', label: 'Alone giallo intorno alle macchie', emoji: '🟨' },
-  { value: 'striature', label: 'Striature o linee anomale', emoji: '〰️' },
+  // Macchie e maculature
+  { value: 'maculatura-fogliare', label: 'Maculatura fogliare (macchie marroni)', emoji: '🟤' },
+  { value: 'antracnosi', label: 'Antracnosi (macchie nere necrotiche)', emoji: '⚫' },
+  { value: 'septoriosi', label: 'Septoriosi (macchie con alone)', emoji: '🟡' },
+  { value: 'oidio-maculato', label: 'Maculatura bianca', emoji: '⚪' },
+  { value: 'clorosi-internervale', label: 'Clorosi internervale (alone giallo)', emoji: '🟨' },
+  { value: 'striatura-virale', label: 'Striatura virale', emoji: '〰️' },
   
-  // Crescite e presenze anomale
-  { value: 'muffa-bianca', label: 'Muffa bianca (oidio)', emoji: '🤍' },
-  { value: 'muffa-grigia', label: 'Muffa grigia', emoji: '🩶' },
-  { value: 'peluria-bianca', label: 'Peluria bianca', emoji: '🫧' },
-  { value: 'puntini-bianchi', label: 'Puntini bianchi', emoji: '🔘' },
-  { value: 'polvere-bianca', label: 'Polvere bianca sulle foglie', emoji: '💨' },
+  // Patologie fungine
+  { value: 'oidio', label: 'Oidio (mal bianco)', emoji: '🤍' },
+  { value: 'botrite', label: 'Botrite (muffa grigia)', emoji: '🩶' },
+  { value: 'peronospora', label: 'Peronospora (peluria bianca)', emoji: '🫧' },
+  { value: 'ruggine', label: 'Ruggine (pustole)', emoji: '🔘' },
+  { value: 'oidio-polverulento', label: 'Oidio polverulento', emoji: '💨' },
   
-  // Insetti e parassiti
-  { value: 'insetti-visibili', label: 'Insetti visibili', emoji: '🐛' },
-  { value: 'ragnatele', label: 'Ragnatele', emoji: '🕸️' },
-  { value: 'cocciniglie', label: 'Cocciniglie (puntini bianchi)', emoji: '🦗' },
-  { value: 'afidi', label: 'Afidi (piccoli insetti)', emoji: '🐜' },
-  { value: 'mosche-bianche', label: 'Mosche bianche', emoji: '🪰' },
+  // Parassiti animali
+  { value: 'infestazione-insetti', label: 'Infestazione da insetti', emoji: '🐛' },
+  { value: 'ragnetto-rosso', label: 'Ragnetto rosso (ragnatele)', emoji: '🕸️' },
+  { value: 'cocciniglia', label: 'Cocciniglia', emoji: '🦗' },
+  { value: 'afidi', label: 'Afidi', emoji: '🐜' },
+  { value: 'aleurodidi', label: 'Aleurodidi (mosche bianche)', emoji: '🪰' },
   
   // Stelo e rami
-  { value: 'stelo-molle', label: 'Stelo molle/marcio', emoji: '💀' },
-  { value: 'stelo-nero', label: 'Stelo annerito', emoji: '⚫' },
-  { value: 'rami-secchi', label: 'Rami secchi', emoji: '🪵' },
-  { value: 'crescita-anomala', label: 'Crescita anomala/stentata', emoji: '📉' },
+  { value: 'marciume-colletto', label: 'Marciume del colletto', emoji: '💀' },
+  { value: 'cancro-rameale', label: 'Cancro rameale (annerimento)', emoji: '⚫' },
+  { value: 'disseccamento-rami', label: 'Disseccamento rami', emoji: '🪵' },
+  { value: 'nanismo', label: 'Nanismo (crescita stentata)', emoji: '📉' },
   
-  // Radici e terra
-  { value: 'marciume-radici', label: 'Marciume delle radici', emoji: '🦴' },
-  { value: 'terreno-troppo-umido', label: 'Terreno sempre umido', emoji: '💧' },
-  { value: 'terreno-troppo-secco', label: 'Terreno sempre secco', emoji: '🏜️' },
-  { value: 'odore-cattivo', label: 'Odore cattivo dal terreno', emoji: '👃' },
+  // Apparato radicale
+  { value: 'marciume-radicale', label: 'Marciume radicale', emoji: '🦴' },
+  { value: 'asfissia-radicale', label: 'Asfissia radicale (eccesso umidità)', emoji: '💧' },
+  { value: 'stress-idrico', label: 'Stress idrico (carenza acqua)', emoji: '🏜️' },
+  { value: 'putrefazione', label: 'Putrefazione (odore sgradevole)', emoji: '👃' },
   
   // Fiori e frutti
-  { value: 'fiori-cadenti', label: 'Fiori che cadono', emoji: '🌸' },
-  { value: 'fiori-deformati', label: 'Fiori deformati', emoji: '🥀' },
-  { value: 'frutti-macchiati', label: 'Frutti con macchie', emoji: '🍎' },
-  { value: 'mancata-fioritura', label: 'Mancata fioritura', emoji: '🚫' },
+  { value: 'cascola', label: 'Cascola (caduta fiori/frutti)', emoji: '🌸' },
+  { value: 'aborto-fiorale', label: 'Aborto fiorale (deformazione)', emoji: '🥀' },
+  { value: 'marciume-frutto', label: 'Marciume del frutto', emoji: '🍎' },
+  { value: 'aborto-gemmario', label: 'Aborto gemmario (mancata fioritura)', emoji: '🚫' },
   
-  // Crescita generale
-  { value: 'crescita-lenta', label: 'Crescita molto lenta', emoji: '🐌' },
-  { value: 'perdita-vigore', label: 'Perdita di vigore generale', emoji: '😴' },
-  { value: 'pianta-inclinata', label: 'Pianta inclinata/instabile', emoji: '📐' },
+  // Alterazioni fisiologiche
+  { value: 'stentata-crescita', label: 'Crescita stentata', emoji: '🐌' },
+  { value: 'senescenza-precoce', label: 'Senescenza precoce (perdita vigore)', emoji: '😴' },
+  { value: 'lodging', label: 'Allettamento (inclinazione)', emoji: '📐' },
 ];
 
 interface PlantInfoFormProps {
