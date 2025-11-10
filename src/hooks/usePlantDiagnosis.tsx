@@ -198,10 +198,11 @@ export const usePlantDiagnosis = () => {
       console.log('🔍 Controllo/creazione conversazione per invio PDF automatico...');
       
       // Importa il ConversationService per creare la conversazione se non esiste
-      const { ConversationService } = await import('@/services/chat/conversationService');
-      
-      // Trova o crea una conversazione
-      let activeConversation = await ConversationService.findOrCreateConversation(user.id);
+      const { ChatConversationService } = await import('@/services/chat/chatConversationService');
+
+// ✅ Crea o trova la conversazione in modo sicuro
+const activeConversation = await ChatConversationService.findOrCreateConversation(user.id, 'fitopatologo');
+
       
       if (!activeConversation) {
         console.warn('⚠️ Impossibile creare/trovare conversazione per invio PDF');
