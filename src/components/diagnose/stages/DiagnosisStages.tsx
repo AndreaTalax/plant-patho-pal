@@ -75,18 +75,54 @@ const DiagnosisStages: React.FC<DiagnosisStagesProps> = ({
       return;
     }
 
-    console.log("🩺 Avvio consulenza esperto con invio automatico dati via PDF...");
+    console.log("🩺 Avvio consulenza esperto con invio automatico dati...");
     
     try {
-      // I dati verranno inviati automaticamente dal sistema PDF
-      console.log('✅ Dati verranno sincronizzati automaticamente via PDF');
-      
-      // Se ci sono risultati dell'analisi AI, saranno inclusi nel PDF
-      console.log('✅ AI diagnosis results will be included in PDF');
+      // Se ci sono risultati dell'analisi AI, usa il servizio di notifica esperto
+      if (diagnosedDisease && uploadedImage) {
+        console.log('📨 Invio diagnosi AI all\'esperto...');
+        
+        const diagnosisData = {
+          plantType: plantInfo.name || 'Pianta non identificata',
+          plantVariety: '',
+          symptoms: plantInfo.symptoms.join(', '),
+          imageUrl: uploadedImage,
+          analysisResult: {
+            plantName: diagnosedDisease.name,
+            scientificName: diagnosedDisease.scientificName,
+            diseases: diagnosedDisease.disease ? [diagnosedDisease.disease] : [],
+            recommendations: diagnosedDisease.treatments || []
+          },
+          confidence: diagnosedDisease.confidence || 0,
+          isHealthy: diagnosedDisease.healthy || false
+        };
+
+        const success = await AutoExpertNotificationService.sendDiagnosisToExpert(
+          userProfile.id,
+          diagnosisData
+        );
+
+        if (!success) {
+          throw new Error('Errore nell\'invio della diagnosi');
+        }
+      } else {
+        // Altrimenti, usa il servizio di sincronizzazione dati base
+        console.log('📤 Invio dati pianta all\'esperto...');
+        
+        const result = await PlantDataSyncService.syncPlantDataToChat(
+          userProfile.id,
+          plantInfo,
+          uploadedImage || undefined
+        );
+
+        if (!result.success) {
+          throw new Error('Errore nella sincronizzazione dati');
+        }
+      }
 
       toast.success('Consultazione avviata!', {
-        description: 'I dati della pianta sono stati inviati all\'esperto via PDF',
-        duration: 4000
+        description: 'I dati della pianta sono stati inviati all\'esperto',
+        duration: 3000
       });
 
       navigate('/', { replace: true });
