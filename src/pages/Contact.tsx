@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import Header from '@/components/Header';
 import { useTheme } from '@/context/ThemeContext';
@@ -8,6 +7,26 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Mail, Phone, Globe } from 'lucide-react';
 import { toast } from '@/components/ui/sonner';
+import { z } from 'zod';
+
+const contactSchema = z.object({
+  name: z.string()
+    .trim()
+    .min(1, { message: "Il nome è obbligatorio" })
+    .max(100, { message: "Il nome deve essere meno di 100 caratteri" }),
+  email: z.string()
+    .trim()
+    .email({ message: "Email non valida" })
+    .max(255, { message: "L'email deve essere meno di 255 caratteri" }),
+  subject: z.string()
+    .trim()
+    .min(1, { message: "L'oggetto è obbligatorio" })
+    .max(200, { message: "L'oggetto deve essere meno di 200 caratteri" }),
+  message: z.string()
+    .trim()
+    .min(1, { message: "Il messaggio è obbligatorio" })
+    .max(2000, { message: "Il messaggio deve essere meno di 2000 caratteri" })
+});
 
 /**
  * Handles form submission for sending a contact message.
@@ -45,6 +64,16 @@ const Contact = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Validate input with zod
+    try {
+      contactSchema.parse({ name, email, subject, message });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        toast.error(error.errors[0].message);
+        return;
+      }
+    }
+    
     if (!name || !email || !subject || !message) {
       toast.error(t("fillAllFields"));
       return;
@@ -53,14 +82,25 @@ const Contact = () => {
     setIsSending(true);
     
     try {
-      // Log the email that would be sent
-      console.log(`Sending email to: agrotecnicomarconigro@gmail.com`);
-      console.log(`From: ${name} (${email})`);
-      console.log(`Subject: ${subject}`);
-      console.log(`Message: ${message}`);
-      
-      // In a real app, this would be a backend API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Call edge function to send email
+      const response = await fetch('https://otdmqmpxukifoxjlgzmq.supabase.co/functions/v1/send-contact-email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im90ZG1xbXB4dWtpZm94amxnem1xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDY2NDQ5ODksImV4cCI6MjA2MjIyMDk4OX0.re4vu-banv0K-hBFNRYZGy5VucPkk141Pa--x-QiGr4'}`
+        },
+        body: JSON.stringify({
+          name: name.trim(),
+          email: email.trim(),
+          subject: subject.trim(),
+          message: message.trim()
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to send email');
+      }
       
       toast.success(t("messageSent"));
       
@@ -102,10 +142,10 @@ const Contact = () => {
                     <div>
                       <h3 className="font-medium">{t("emailUs")}</h3>
                       <a 
-                        href="mailto:agrotecnicomarconigro@gmail.com" 
+                        href="mailto:talaiaandrea@gmail.com" 
                         className="text-sm text-drplant-blue hover:underline"
                       >
-                        agrotecnicomarconigro@gmail.com
+                        talaiaandrea@gmail.com
                       </a>
                     </div>
                   </div>
@@ -152,6 +192,7 @@ const Contact = () => {
                           value={name}
                           onChange={(e) => setName(e.target.value)}
                           placeholder={t("enterYourName")}
+                          maxLength={100}
                         />
                       </div>
                       
@@ -162,6 +203,7 @@ const Contact = () => {
                           value={email}
                           onChange={(e) => setEmail(e.target.value)}
                           placeholder={t("enterYourEmail")}
+                          maxLength={255}
                         />
                       </div>
                     </div>
@@ -172,6 +214,7 @@ const Contact = () => {
                         value={subject}
                         onChange={(e) => setSubject(e.target.value)}
                         placeholder={t("enterSubject")}
+                        maxLength={200}
                       />
                     </div>
                     
@@ -182,6 +225,7 @@ const Contact = () => {
                         onChange={(e) => setMessage(e.target.value)}
                         placeholder={t("enterMessage")}
                         rows={6}
+                        maxLength={2000}
                       />
                     </div>
                     
