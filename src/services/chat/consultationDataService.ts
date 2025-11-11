@@ -179,6 +179,39 @@ export class ConsultationDataService {
       // Se c'è un'immagine, inviala come messaggio separato
       if (plantData?.imageUrl) {
         console.log('📸 Invio immagine pianta...');
+        
+        let finalImageUrl = plantData.imageUrl;
+        
+        // Se è un blob URL, caricalo prima su Storage
+        if (plantData.imageUrl.startsWith('blob:')) {
+          console.log('⚠️ L\'immagine è un blob URL, caricamento su Storage...');
+          try {
+            const response = await fetch(plantData.imageUrl);
+            const blob = await response.blob();
+            const fileName = `${user.id}/${Date.now()}.jpg`;
+            
+            const { data: uploadData, error: uploadError } = await supabase.storage
+              .from('plant-images')
+              .upload(fileName, blob, {
+                cacheControl: '3600',
+                upsert: false,
+                contentType: 'image/jpeg'
+              });
+            
+            if (uploadError) {
+              console.error('❌ Errore upload immagine su Storage:', uploadError);
+            } else {
+              const { data: { publicUrl } } = supabase.storage
+                .from('plant-images')
+                .getPublicUrl(fileName);
+              finalImageUrl = publicUrl;
+              console.log('✅ Immagine caricata su Storage:', finalImageUrl);
+            }
+          } catch (error) {
+            console.error('❌ Errore conversione blob a Storage:', error);
+          }
+        }
+        
         // ✅ FIX: Aggiungi senderId
         const { error: imageError } = await supabase.functions.invoke('send-message', {
           body: {
@@ -186,7 +219,7 @@ export class ConsultationDataService {
             senderId: user.id,  // ✅ AGGIUNTO
             recipientId: MARCO_NIGRO_ID,
             text: '📸 Foto della pianta in consulenza',
-            imageUrl: plantData.imageUrl,
+            imageUrl: finalImageUrl,
             products: null
           },
           headers: {

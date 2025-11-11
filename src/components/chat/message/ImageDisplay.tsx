@@ -30,8 +30,8 @@ export const ImageDisplay = ({ imageUrl }: ImageDisplayProps) => {
   return (
     <div className="mt-3">
       {imageLoading && (
-        <div className="max-w-xs h-48 bg-gray-200 rounded-lg animate-pulse flex items-center justify-center">
-          <div className="text-gray-500 text-sm">Caricamento immagine...</div>
+        <div className="max-w-xs h-48 bg-muted rounded-lg animate-pulse flex items-center justify-center">
+          <div className="text-muted-foreground text-sm">Caricamento immagine...</div>
         </div>
       )}
       
@@ -50,19 +50,19 @@ export const ImageDisplay = ({ imageUrl }: ImageDisplayProps) => {
           </div>
         </div>
       ) : (
-        <div className="max-w-xs p-4 border-2 border-dashed border-gray-300 rounded-lg text-center">
-          <div className="text-gray-500 mb-2">
+        <div className="max-w-xs p-4 border-2 border-dashed border-border rounded-lg text-center bg-muted/30">
+          <div className="text-muted-foreground mb-2">
             <span className="text-sm">Impossibile caricare l'immagine</span>
           </div>
           <div className="space-y-2">
             <button
               onClick={openImageInNewTab}
-              className="text-blue-500 hover:underline text-xs flex items-center gap-1 mx-auto"
+              className="text-primary hover:underline text-xs flex items-center gap-1 mx-auto"
             >
               <ExternalLink className="h-3 w-3" />
               Apri in una nuova scheda
             </button>
-            <div className="text-xs text-gray-400 break-all">
+            <div className="text-xs text-muted-foreground/70 break-all">
               {imageUrl?.substring(0, 50)}...
             </div>
           </div>
