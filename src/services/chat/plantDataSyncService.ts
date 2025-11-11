@@ -2,6 +2,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { MARCO_NIGRO_ID } from '@/components/phytopathologist';
 import { PlantInfo } from '@/context/PlantInfoContext';
 import { toast } from 'sonner';
+import { ConversationService } from './conversationService';
 
 export class PlantDataSyncService {
   /**
@@ -45,29 +46,18 @@ export class PlantDataSyncService {
         }
       }
 
-      // Trova la conversazione esistente
-      const { data: conversations, error: findError } = await supabase
-        .from('conversations')
-        .select('id')
-        .eq('user_id', userId)
-        .eq('expert_id', MARCO_NIGRO_ID)
-        .order('created_at', { ascending: false })
-        .limit(1);
-
-      if (findError) {
-        console.error('❌ Error finding conversation:', findError);
+      // Trova o crea la conversazione
+      console.log('🔍 Finding or creating conversation...');
+      const conversation = await ConversationService.findOrCreateConversation(userId);
+      
+      if (!conversation) {
+        console.error('❌ Failed to find or create conversation');
+        toast.error('Errore nella creazione della conversazione');
         return { success: false };
       }
 
-      let conversationId: string;
-
-      if (!conversations || conversations.length === 0) {
-        conversationId = crypto.randomUUID();
-        console.log('🆕 Creating new conversation with ID:', conversationId);
-      } else {
-        conversationId = conversations[0].id;
-        console.log('✅ Using existing conversation:', conversationId);
-      }
+      const conversationId = conversation.id;
+      console.log('✅ Conversation ready:', conversationId);
 
       // Costruisce il messaggio con tutti i dati della pianta
       const plantDataMessage = this.buildPlantDataMessage(plantInfo, finalImageUrl);
