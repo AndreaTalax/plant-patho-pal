@@ -11,6 +11,29 @@ import { useTheme } from "@/context/ThemeContext";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
+const PHONE_PREFIXES = [
+  { code: '+39', country: 'Italia', flag: '🇮🇹' },
+  { code: '+1', country: 'USA/Canada', flag: '🇺🇸' },
+  { code: '+44', country: 'UK', flag: '🇬🇧' },
+  { code: '+33', country: 'France', flag: '🇫🇷' },
+  { code: '+49', country: 'Germany', flag: '🇩🇪' },
+  { code: '+34', country: 'Spain', flag: '🇪🇸' },
+  { code: '+31', country: 'Netherlands', flag: '🇳🇱' },
+  { code: '+41', country: 'Switzerland', flag: '🇨🇭' },
+  { code: '+43', country: 'Austria', flag: '🇦🇹' },
+  { code: '+32', country: 'Belgium', flag: '🇧🇪' },
+  { code: '+351', country: 'Portugal', flag: '🇵🇹' },
+  { code: '+30', country: 'Greece', flag: '🇬🇷' },
+  { code: '+7', country: 'Russia', flag: '🇷🇺' },
+  { code: '+86', country: 'China', flag: '🇨🇳' },
+  { code: '+81', country: 'Japan', flag: '🇯🇵' },
+  { code: '+91', country: 'India', flag: '🇮🇳' },
+  { code: '+55', country: 'Brazil', flag: '🇧🇷' },
+  { code: '+61', country: 'Australia', flag: '🇦🇺' },
+  { code: '+27', country: 'South Africa', flag: '🇿🇦' },
+  { code: '+52', country: 'Mexico', flag: '🇲🇽' },
+];
+
 interface ProfessionalQuoteFormProps {
   onBack: () => void;
   onSubmit: (data: any) => void;
@@ -23,6 +46,7 @@ const ProfessionalQuoteForm = ({ onBack, onSubmit }: ProfessionalQuoteFormProps)
     companyName: '',
     contactPerson: '',
     email: '',
+    phonePrefix: '+39',
     phone: '',
     businessType: '',
     plantTypes: [] as string[],
@@ -205,12 +229,27 @@ const ProfessionalQuoteForm = ({ onBack, onSubmit }: ProfessionalQuoteFormProps)
                 <Phone className="h-4 w-4" />
                 {language === 'it' ? 'Telefono *' : 'Phone *'}
               </Label>
-              <Input
-                id="phone"
-                placeholder="+39 xxx xxx xxxx"
-                value={formData.phone}
-                onChange={(e) => handleInputChange('phone', e.target.value)}
-              />
+              <div className="flex gap-2">
+                <Select value={formData.phonePrefix} onValueChange={(value) => handleInputChange('phonePrefix', value)}>
+                  <SelectTrigger className="w-[140px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PHONE_PREFIXES.map((prefix) => (
+                      <SelectItem key={prefix.code} value={prefix.code}>
+                        {prefix.flag} {prefix.code}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Input
+                  id="phone"
+                  placeholder="xxx xxx xxxx"
+                  value={formData.phone}
+                  onChange={(e) => handleInputChange('phone', e.target.value)}
+                  className="flex-1"
+                />
+              </div>
             </div>
           </div>
 

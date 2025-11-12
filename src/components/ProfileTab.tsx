@@ -20,6 +20,7 @@ import {
   Camera
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
@@ -28,6 +29,29 @@ import SettingsModal from "./SettingsModal";
 import ChangeCredentialsModal from "./ChangeCredentialsModal";
 import { DiagnosisHistory } from "./diagnose/DiagnosisHistory";
 import { supabase } from "@/integrations/supabase/client";
+
+const PHONE_PREFIXES = [
+  { code: '+39', country: 'Italia', flag: '🇮🇹' },
+  { code: '+1', country: 'USA/Canada', flag: '🇺🇸' },
+  { code: '+44', country: 'UK', flag: '🇬🇧' },
+  { code: '+33', country: 'France', flag: '🇫🇷' },
+  { code: '+49', country: 'Germany', flag: '🇩🇪' },
+  { code: '+34', country: 'Spain', flag: '🇪🇸' },
+  { code: '+31', country: 'Netherlands', flag: '🇳🇱' },
+  { code: '+41', country: 'Switzerland', flag: '🇨🇭' },
+  { code: '+43', country: 'Austria', flag: '🇦🇹' },
+  { code: '+32', country: 'Belgium', flag: '🇧🇪' },
+  { code: '+351', country: 'Portugal', flag: '🇵🇹' },
+  { code: '+30', country: 'Greece', flag: '🇬🇷' },
+  { code: '+7', country: 'Russia', flag: '🇷🇺' },
+  { code: '+86', country: 'China', flag: '🇨🇳' },
+  { code: '+81', country: 'Japan', flag: '🇯🇵' },
+  { code: '+91', country: 'India', flag: '🇮🇳' },
+  { code: '+55', country: 'Brazil', flag: '🇧🇷' },
+  { code: '+61', country: 'Australia', flag: '🇦🇺' },
+  { code: '+27', country: 'South Africa', flag: '🇿🇦' },
+  { code: '+52', country: 'Mexico', flag: '🇲🇽' },
+];
 
 interface Order {
   id: string;
@@ -58,6 +82,7 @@ const ProfileTab = () => {
   const [showDiagnosisHistory, setShowDiagnosisHistory] = useState(false);
   const [editingPhone, setEditingPhone] = useState(false);
   const [editingAddress, setEditingAddress] = useState(false);
+  const [phonePrefix, setPhonePrefix] = useState("+39");
   const [phoneValue, setPhoneValue] = useState("");
   const [addressValue, setAddressValue] = useState("");
   const [uploading, setUploading] = useState(false);
@@ -106,7 +131,8 @@ const ProfileTab = () => {
 
   const handleSavePhone = async () => {
     try {
-      await updateProfile("phone", phoneValue);
+      const fullPhone = `${phonePrefix} ${phoneValue}`;
+      await updateProfile("phone", fullPhone);
       setEditingPhone(false);
       toast("Phone number updated");
     } catch (error) {
@@ -336,10 +362,22 @@ const ProfileTab = () => {
             <Phone className="h-5 w-5 flex-shrink-0" />
             {editingPhone ? (
               <div className="flex-grow flex gap-2">
+                <Select value={phonePrefix} onValueChange={setPhonePrefix}>
+                  <SelectTrigger className="w-[120px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PHONE_PREFIXES.map((prefix) => (
+                      <SelectItem key={prefix.code} value={prefix.code}>
+                        {prefix.flag} {prefix.code}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <Input 
                   value={phoneValue} 
                   onChange={(e) => setPhoneValue(e.target.value)}
-                  placeholder="Enter phone number"
+                  placeholder="xxx xxx xxxx"
                   className="flex-grow"
                 />
                 <Button size="icon" onClick={handleSavePhone}>
@@ -348,7 +386,7 @@ const ProfileTab = () => {
               </div>
             ) : (
               <>
-                <span className="flex-grow">{phoneValue || "Not specified"}</span>
+                <span className="flex-grow">{getField("phone") || "Not specified"}</span>
                 <Button variant="ghost" size="icon" onClick={() => setEditingPhone(true)}>
                   <Edit className="h-4 w-4" />
                 </Button>
