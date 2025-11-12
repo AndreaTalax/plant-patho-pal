@@ -38,6 +38,14 @@ const PhotoInstructions = () => {
                 <p className="text-sm text-gray-600">Scatta in condizioni di buona illuminazione, possibilmente naturale</p>
               </div>
             </div>
+            
+            <div className="flex items-start gap-2">
+              <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="font-medium text-green-800">Sfondo visibile</p>
+                <p className="text-sm text-gray-600">Posiziona la pianta in modo che si veda anche il pavimento o lo sfondo per un contesto migliore</p>
+              </div>
+            </div>
           </div>
           
           <div className="space-y-3">

@@ -211,7 +211,7 @@ const PlantInfoForm = ({ onComplete, initialData }: PlantInfoFormProps) => {
                 <SelectValue placeholder={t('selectFrequency')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="acquatica">🌊 {t('aquatic') || 'Pianta Acquatica'}</SelectItem>
+                <SelectItem value="acquatica">🌊 Pianta Acquatica</SelectItem>
                 <SelectItem value="quotidiana">{t('daily')}</SelectItem>
                 <SelectItem value="ogni-2-giorni">{t('every2Days')}</SelectItem>
                 <SelectItem value="2-volte-settimana">{t('twiceWeek')}</SelectItem>

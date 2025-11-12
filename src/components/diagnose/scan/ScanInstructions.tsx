@@ -29,8 +29,8 @@ const ScanInstructions = () => {
     },
     {
       icon: Camera,
-      title: "Close-up Shot",
-      description: "Get close enough to show details but keep the whole leaf/stem visible"
+      title: "Show Background",
+      description: "Position the plant so the floor or background is visible for better context"
     },
     {
       icon: CheckCircle,
