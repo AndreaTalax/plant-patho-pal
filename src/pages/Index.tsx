@@ -14,6 +14,7 @@ import { ensureStorageBuckets } from "@/utils/storageSetup";
 import { usePlantInfo } from "@/context/PlantInfoContext";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+
 const Index = () => {
   const { isMasterAccount, isAuthenticated, isProfileComplete, loading, userProfile, subscriptionStatus } = useAuth();
   const { plantInfo } = usePlantInfo();
@@ -47,16 +48,19 @@ const Index = () => {
       }
       
       const selectedPlan = localStorage.getItem('selectedPlanType');
-      if (!selectedPlan) {
+      const isOnPaymentPage = location.pathname === '/plan-subscription';
+      
+      if (!selectedPlan && !isOnPaymentPage) {
         console.log('📋 Piano non selezionato, reindirizzamento alla selezione piano...');
         navigate('/plan-selection');
-      } else {
+      } else if (selectedPlan && !isOnPaymentPage) {
         // Piano selezionato ma non abbonamento attivo -> reindirizza a pagamento
+        // SOLO se non è già sulla pagina di pagamento
         console.log('💳 Piano selezionato ma abbonamento non attivo, reindirizzamento al pagamento...');
         navigate('/plan-subscription');
       }
     }
-  }, [isAuthenticated, isProfileComplete, isMasterAccount, loading, navigate, subscriptionStatus]);
+  }, [isAuthenticated, isProfileComplete, isMasterAccount, loading, navigate, subscriptionStatus, location.pathname]);
 
   const hasFirstDiagnosis =
     typeof window !== 'undefined' && (
