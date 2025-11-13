@@ -15,7 +15,7 @@ import { usePlantInfo } from "@/context/PlantInfoContext";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 const Index = () => {
-  const { isMasterAccount, isAuthenticated, isProfileComplete, loading, userProfile } = useAuth();
+  const { isMasterAccount, isAuthenticated, isProfileComplete, loading, userProfile, subscriptionStatus } = useAuth();
   const { plantInfo } = usePlantInfo();
   const { toast } = useToast();
   const { t } = useTheme();
@@ -38,15 +38,25 @@ const Index = () => {
       return;
     }
     
-    // Check if user has selected a plan (after profile completion)
+    // Check if user has selected a plan and paid (after profile completion)
     if (!loading && isAuthenticated && isProfileComplete && !isMasterAccount) {
+      // Se l'utente ha già un abbonamento attivo, non reindirizzare alla selezione piano
+      if (subscriptionStatus.subscribed) {
+        console.log('✅ Utente con abbonamento attivo, accesso consentito');
+        return;
+      }
+      
       const selectedPlan = localStorage.getItem('selectedPlanType');
       if (!selectedPlan) {
         console.log('📋 Piano non selezionato, reindirizzamento alla selezione piano...');
         navigate('/plan-selection');
+      } else {
+        // Piano selezionato ma non abbonamento attivo -> reindirizza a pagamento
+        console.log('💳 Piano selezionato ma abbonamento non attivo, reindirizzamento al pagamento...');
+        navigate('/plan-subscription');
       }
     }
-  }, [isAuthenticated, isProfileComplete, isMasterAccount, loading, navigate]);
+  }, [isAuthenticated, isProfileComplete, isMasterAccount, loading, navigate, subscriptionStatus]);
 
   const hasFirstDiagnosis =
     typeof window !== 'undefined' && (

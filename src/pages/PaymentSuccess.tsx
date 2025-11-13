@@ -9,7 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 const PaymentSuccess = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, checkSubscription } = useAuth();
   const [isVerifying, setIsVerifying] = useState(true);
   const [paymentVerified, setPaymentVerified] = useState(false);
 
@@ -28,6 +28,12 @@ const PaymentSuccess = () => {
 
         if (data?.subscribed) {
           setPaymentVerified(true);
+          
+          // Aggiorna lo stato dell'abbonamento nel contesto
+          if (checkSubscription) {
+            await checkSubscription();
+          }
+          
           toast.success("Pagamento completato con successo!");
           
           // Dopo 2 secondi, reindirizza alla home
