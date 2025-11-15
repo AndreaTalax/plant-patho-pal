@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 import { useAuth } from '@/context/AuthContext';
 import { usePlantInfo } from '@/context/PlantInfoContext';
 import { usePlantAnalysis } from '@/hooks/usePlantAnalysis';
-import { useSaveDiagnosis } from '@/hooks/useSaveDiagnosis';
+import { useSaveDiagnosis, type DiagnosisResult as DiagnosisData } from '@/hooks/useSaveDiagnosis';
 import { StructuredDiagnosisDisplay } from '@/components/diagnose/StructuredDiagnosisDisplay';
 import PlantInfoForm from '@/components/diagnose/PlantInfoForm';
 import DiagnosisResult from '@/components/diagnose/result/DiagnosisResult';
@@ -94,7 +94,7 @@ const EnhancedDiagnoseTab = () => {
         plant_variety: '', // Non presente nell'interfaccia PlantInfo
         symptoms: plantInfo?.symptoms || [],
         image_url: uploadedImage || '',
-        diagnosis_result: structuredResults || results,
+        diagnosis_result: (structuredResults || results) as unknown as DiagnosisData,
         status: 'completed'
       });
     } catch (error) {

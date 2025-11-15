@@ -2,12 +2,28 @@ import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
+export interface DiagnosisResult {
+  diseases?: Array<{
+    name: string;
+    confidence: number;
+    symptoms?: string[];
+    treatments?: string[];
+  }>;
+  healthAssessment?: string | { generalDiseaseCategory?: { category: string; confidence: number; description: string; } };
+  plantIdentification?: string | string[] | unknown;
+  primaryDisease?: {
+    name: string;
+    confidence: number;
+  };
+  [key: string]: unknown;
+}
+
 export interface DiagnosisToSave {
   plant_type?: string;
   plant_variety?: string;
   symptoms: string[];
   image_url?: string;
-  diagnosis_result: any;
+  diagnosis_result: DiagnosisResult;
   status?: string;
 }
 

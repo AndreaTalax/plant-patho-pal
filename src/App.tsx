@@ -6,6 +6,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-d
 import { AuthProvider } from "@/context/AuthContext";
 import { PlantInfoProvider } from "@/context/PlantInfoContext";
 import { ThemeProvider } from "@/context/ThemeContext";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { useUserPresence } from "@/hooks/useUserPresence";
 import { usePostPaymentDiagnosis } from "@/hooks/usePostPaymentDiagnosis";
 import Index from "./pages/Index";
@@ -42,48 +43,50 @@ const AppWithPresence = ({ children }: { children: React.ReactNode }) => {
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <ThemeProvider>
-        <AuthProvider>
-          <NotificationProvider>
-            <PushNotificationManager />
-            <CookieConsent />
-            <AppWithPresence>
-              <PlantInfoProvider>
-                <TooltipProvider>
-                  <Toaster />
-                <Router basename="/">
-                  <Routes>
-                    <Route path="/" element={<Index />} />
-                    <Route path="/login" element={<Login />} />
-                    <Route path="/plan-selection" element={<PlanSelection />} />
-                    <Route path="/plan-subscription" element={<PlanSubscriptionSelection />} />
-                    <Route path="/plant-identification" element={<PlantIdentification />} />
-                    <Route path="/signup" element={<SignUp />} />
-                    <Route path="/complete-profile" element={<CompleteProfile />} />
-                    <Route path="/reset-password" element={<ResetPassword />} />
-                    <Route path="/about" element={<AboutUs />} />
-                    <Route path="/services" element={<Services />} />
-                    <Route path="/contact" element={<Contact />} />
-                    <Route path="/saved-articles" element={<SavedArticles />} />
-                    <Route path="/cdc-dashboard" element={<CDCDashboard />} />
-                    <Route path="/user-management" element={<UserManagement />} />
-                    <Route path="/notification-settings" element={<NotificationSettings />} />
-                    <Route path="/test-diagnosi" element={<TestDiagnosi />} />
-                    <Route path="/professional-quote" element={<PlanSubscriptionSelection />} />
-                    <Route path="/payment-success" element={<PaymentSuccess />} />
-                    <Route path="/payment-canceled" element={<PaymentCanceled />} />
-                    <Route path="/404" element={<NotFound />} />
-                    <Route path="*" element={<Navigate to="/404" replace />} />
-                  </Routes>
-                </Router>
-                </TooltipProvider>
-              </PlantInfoProvider>
-            </AppWithPresence>
-          </NotificationProvider>
-        </AuthProvider>
-      </ThemeProvider>
-    </QueryClientProvider>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider>
+          <AuthProvider>
+            <NotificationProvider>
+              <PushNotificationManager />
+              <CookieConsent />
+              <AppWithPresence>
+                <PlantInfoProvider>
+                  <TooltipProvider>
+                    <Toaster />
+                    <Router basename="/">
+                      <Routes>
+                        <Route path="/" element={<Index />} />
+                        <Route path="/login" element={<Login />} />
+                        <Route path="/plan-selection" element={<PlanSelection />} />
+                        <Route path="/plan-subscription" element={<PlanSubscriptionSelection />} />
+                        <Route path="/plant-identification" element={<PlantIdentification />} />
+                        <Route path="/signup" element={<SignUp />} />
+                        <Route path="/complete-profile" element={<CompleteProfile />} />
+                        <Route path="/reset-password" element={<ResetPassword />} />
+                        <Route path="/about" element={<AboutUs />} />
+                        <Route path="/services" element={<Services />} />
+                        <Route path="/contact" element={<Contact />} />
+                        <Route path="/saved-articles" element={<SavedArticles />} />
+                        <Route path="/cdc-dashboard" element={<CDCDashboard />} />
+                        <Route path="/user-management" element={<UserManagement />} />
+                        <Route path="/notification-settings" element={<NotificationSettings />} />
+                        <Route path="/test-diagnosi" element={<TestDiagnosi />} />
+                        <Route path="/professional-quote" element={<PlanSubscriptionSelection />} />
+                        <Route path="/payment-success" element={<PaymentSuccess />} />
+                        <Route path="/payment-canceled" element={<PaymentCanceled />} />
+                        <Route path="/404" element={<NotFound />} />
+                        <Route path="*" element={<Navigate to="/404" replace />} />
+                      </Routes>
+                    </Router>
+                  </TooltipProvider>
+                </PlantInfoProvider>
+              </AppWithPresence>
+            </NotificationProvider>
+          </AuthProvider>
+        </ThemeProvider>
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 }
 
