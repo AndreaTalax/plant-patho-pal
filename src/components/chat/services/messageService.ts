@@ -38,7 +38,7 @@ export class ChatMessageService {
     recipientId: string,
     text: string,
     imageUrl?: string,
-    products?: any
+    products?: Array<{ id: string; name: string; description?: string; price?: number }>
   ): Promise<boolean> {
     try {
       console.log('📤 Sending message via edge function:', {
