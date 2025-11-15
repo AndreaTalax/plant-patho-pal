@@ -542,14 +542,17 @@ export type Database = {
           birth_place: string | null
           created_at: string | null
           email: string | null
+          email_notifications_enabled: boolean
           first_name: string | null
           id: string
           is_online: boolean | null
           last_name: string | null
           last_seen_at: string | null
           phone: string | null
+          push_notifications_enabled: boolean
           role: string | null
           subscription_plan: string | null
+          subscription_type: string | null
           updated_at: string | null
           username: string | null
         }
@@ -560,14 +563,17 @@ export type Database = {
           birth_place?: string | null
           created_at?: string | null
           email?: string | null
+          email_notifications_enabled?: boolean
           first_name?: string | null
           id: string
           is_online?: boolean | null
           last_name?: string | null
           last_seen_at?: string | null
           phone?: string | null
+          push_notifications_enabled?: boolean
           role?: string | null
           subscription_plan?: string | null
+          subscription_type?: string | null
           updated_at?: string | null
           username?: string | null
         }
@@ -578,14 +584,17 @@ export type Database = {
           birth_place?: string | null
           created_at?: string | null
           email?: string | null
+          email_notifications_enabled?: boolean
           first_name?: string | null
           id?: string
           is_online?: boolean | null
           last_name?: string | null
           last_seen_at?: string | null
           phone?: string | null
+          push_notifications_enabled?: boolean
           role?: string | null
           subscription_plan?: string | null
+          subscription_type?: string | null
           updated_at?: string | null
           username?: string | null
         }
