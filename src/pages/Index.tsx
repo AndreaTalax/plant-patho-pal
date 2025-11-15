@@ -14,9 +14,8 @@ import { ensureStorageBuckets } from "@/utils/storageSetup";
 import { usePlantInfo } from "@/context/PlantInfoContext";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-
 const Index = () => {
-  const { isMasterAccount, isAuthenticated, isProfileComplete, loading, userProfile, subscriptionStatus } = useAuth();
+  const { isMasterAccount, isAuthenticated, isProfileComplete, loading, userProfile } = useAuth();
   const { plantInfo } = usePlantInfo();
   const { toast } = useToast();
   const { t } = useTheme();
@@ -39,28 +38,15 @@ const Index = () => {
       return;
     }
     
-    // Check if user has selected a plan and paid (after profile completion)
+    // Check if user has selected a plan (after profile completion)
     if (!loading && isAuthenticated && isProfileComplete && !isMasterAccount) {
-      // Se l'utente ha già un abbonamento attivo, non reindirizzare alla selezione piano
-      if (subscriptionStatus.subscribed) {
-        console.log('✅ Utente con abbonamento attivo, accesso consentito');
-        return;
-      }
-      
       const selectedPlan = localStorage.getItem('selectedPlanType');
-      const isOnPaymentPage = location.pathname === '/plan-subscription';
-      
-      if (!selectedPlan && !isOnPaymentPage) {
+      if (!selectedPlan) {
         console.log('📋 Piano non selezionato, reindirizzamento alla selezione piano...');
         navigate('/plan-selection');
-      } else if (selectedPlan && !isOnPaymentPage) {
-        // Piano selezionato ma non abbonamento attivo -> reindirizza a pagamento
-        // SOLO se non è già sulla pagina di pagamento
-        console.log('💳 Piano selezionato ma abbonamento non attivo, reindirizzamento al pagamento...');
-        navigate('/plan-subscription');
       }
     }
-  }, [isAuthenticated, isProfileComplete, isMasterAccount, loading, navigate, subscriptionStatus, location.pathname]);
+  }, [isAuthenticated, isProfileComplete, isMasterAccount, loading, navigate]);
 
   const hasFirstDiagnosis =
     typeof window !== 'undefined' && (

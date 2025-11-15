@@ -20,7 +20,7 @@ interface PlanSubscriptionOptionsProps {
 
 const PlanSubscriptionOptions = ({ planType, onSubscriptionSelect, onBack }: PlanSubscriptionOptionsProps) => {
   const { language } = useTheme();
-  const { user, checkSubscription } = useAuth();
+  const { user } = useAuth();
   const [selectedOption, setSelectedOption] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
 
@@ -107,51 +107,12 @@ const PlanSubscriptionOptions = ({ planType, onSubscriptionSelect, onBack }: Pla
     console.log("🚀 Inizio processo per:", selectedOption);
     console.log("👤 Account utente:", user?.email, "- Test account:", isTestAccount);
     
-    // Per account di test, salta il pagamento e attiva l'abbonamento
+    // Per account di test, salta il pagamento
     if (isTestAccount) {
       console.log("✅ Account di test rilevato - skip pagamento");
-      setIsLoading(true);
-      
-      try {
-        // Aggiorna il database subscribers per l'account di test
-        const { error: updateError } = await supabase
-          .from('subscribers')
-          .upsert({
-            email: user.email!,
-            user_id: user.id,
-            stripe_customer_id: null,
-            subscribed: true,
-            subscription_tier: planType,
-            subscription_end: null, // Account di test senza scadenza
-            updated_at: new Date().toISOString()
-          }, {
-            onConflict: 'email'
-          });
-
-        if (updateError) {
-          console.error("❌ Errore aggiornamento subscribers:", updateError);
-          throw updateError;
-        }
-
-        console.log("✅ Database subscribers aggiornato per account di test");
-        
-        // Aggiorna lo stato dell'abbonamento nel contesto
-        if (checkSubscription) {
-          await checkSubscription();
-        }
-        
-        localStorage.setItem('selectedSubscriptionOption', selectedOption);
-        toast.success("Account di test - abbonamento attivato senza pagamento");
-        
-        // Piccolo ritardo per permettere al contesto di aggiornarsi
-        setTimeout(() => {
-          onSubscriptionSelect(selectedOption);
-        }, 500);
-      } catch (err: any) {
-        console.error("❌ Errore attivazione account test:", err);
-        toast.error("Errore durante l'attivazione dell'abbonamento");
-        setIsLoading(false);
-      }
+      localStorage.setItem('selectedSubscriptionOption', selectedOption);
+      toast.success("Account di test - abbonamento attivato senza pagamento");
+      onSubscriptionSelect(selectedOption);
       return;
     }
     
