@@ -45,6 +45,26 @@ serve(async (req) => {
       // Inizializza jsPDF
       const doc = new jsPDF();
       let yPosition = 20;
+      const pageWidth = 210; // A4 width in mm
+      const marginLeft = 25;
+      const marginRight = 15;
+      const maxWidth = pageWidth - marginLeft - marginRight; // 170mm
+      
+      // Helper function to add wrapped text
+      const addWrappedText = (text: string, x: number, fontSize: number = 12, isBold: boolean = false) => {
+        doc.setFontSize(fontSize);
+        doc.setFont("helvetica", isBold ? "bold" : "normal");
+        const lines = doc.splitTextToSize(text, maxWidth - (x - marginLeft));
+        
+        lines.forEach((line: string) => {
+          if (yPosition > 270) {
+            doc.addPage();
+            yPosition = 20;
+          }
+          doc.text(line, x, yPosition);
+          yPosition += fontSize * 0.5; // Line height proportional to font size
+        });
+      };
 
       // Aggiungi il logo Hortives
       try {
@@ -108,8 +128,7 @@ serve(async (req) => {
       ];
 
       personalData.forEach(line => {
-        doc.text(line, 25, yPosition);
-        yPosition += 7;
+        addWrappedText(line, 25, 12, false);
       });
 
       yPosition += 10;
@@ -144,12 +163,7 @@ serve(async (req) => {
       ];
 
       plantInfo.forEach(line => {
-        if (yPosition > 250) {
-          doc.addPage();
-          yPosition = 20;
-        }
-        doc.text(line, 25, yPosition);
-        yPosition += 7;
+        addWrappedText(line, 25, 12, false);
       });
 
         yPosition += 10;
@@ -191,22 +205,16 @@ serve(async (req) => {
               doc.setFont("helvetica", "normal");
 
               if (disease.symptoms && disease.symptoms.length > 0) {
-                doc.text(`   Sintomi: ${disease.symptoms.slice(0, 3).join(', ')}`, 30, yPosition);
-                yPosition += 7;
+                const symptomsText = `   Sintomi: ${disease.symptoms.slice(0, 3).join(', ')}`;
+                addWrappedText(symptomsText, 30, 12, false);
               }
 
               if (disease.treatments && disease.treatments.length > 0) {
-                doc.text(`   Trattamenti suggeriti:`, 30, yPosition);
-                yPosition += 7;
+                addWrappedText(`   Trattamenti suggeriti:`, 30, 12, false);
                 disease.treatments.slice(0, 2).forEach((treatment: any) => {
-                  if (yPosition > 270) {
-                    doc.addPage();
-                    yPosition = 20;
-                  }
                   const treatmentText = typeof treatment === 'string' ? treatment : treatment.name || treatment.description || '';
                   if (treatmentText) {
-                    doc.text(`     - ${treatmentText.substring(0, 60)}`, 30, yPosition);
-                    yPosition += 6;
+                    addWrappedText(`     - ${treatmentText}`, 30, 12, false);
                   }
                 });
               }
@@ -223,16 +231,12 @@ serve(async (req) => {
 
           if (diagnosisResult.healthAssessment) {
             yPosition += 5;
-            doc.setFont("helvetica", "bold");
-            doc.text(`Valutazione generale: ${diagnosisResult.healthAssessment}`, 25, yPosition);
-            yPosition += 7;
-            doc.setFont("helvetica", "normal");
+            addWrappedText(`Valutazione generale: ${diagnosisResult.healthAssessment}`, 25, 12, true);
           }
 
           if (diagnosisResult.plantIdentification) {
             yPosition += 5;
-            doc.text(`Identificazione pianta: ${diagnosisResult.plantIdentification}`, 25, yPosition);
-            yPosition += 7;
+            addWrappedText(`Identificazione pianta: ${diagnosisResult.plantIdentification}`, 25, 12, false);
           }
 
           if (diagnosisResult.primaryDisease && diagnosisResult.primaryDisease.name) {
@@ -274,8 +278,7 @@ serve(async (req) => {
         if (note === "") {
           yPosition += 3;
         } else {
-          doc.text(note, 25, yPosition);
-          yPosition += 6;
+          addWrappedText(note, 25, 12, false);
         }
       });
 
