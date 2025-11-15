@@ -2,6 +2,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { ChatMessage, SendMessageParams } from '@/types/chat';
 import { logger } from '@/utils/logger';
 import { toast } from 'sonner';
+import { conversationCache, CacheKeys, invalidateOnNewMessage } from '@/services/cache/conversationCache';
 
 /**
  * Unified Message Service
@@ -9,9 +10,18 @@ import { toast } from 'sonner';
  */
 export class UnifiedMessageService {
   /**
-   * Load messages for a conversation
+   * Load messages for a conversation (with caching)
    */
   static async loadMessages(conversationId: string): Promise<ChatMessage[]> {
+    const cacheKey = CacheKeys.messages(conversationId);
+    
+    // Try cache first
+    const cached = conversationCache.get<ChatMessage[]>(cacheKey);
+    if (cached) {
+      logger.log('✅ Returning cached messages');
+      return cached;
+    }
+
     try {
       logger.log('📚 Loading messages for conversation:', conversationId);
       
@@ -28,8 +38,11 @@ export class UnifiedMessageService {
       if (error) {
         logger.warn('⚠️ Edge function failed, falling back to direct query', error);
       } else if (data?.messages) {
-      logger.log('✅ Messages loaded via edge function', data.messages.length);
-        return data.messages as ChatMessage[];
+        logger.log('✅ Messages loaded via edge function', data.messages.length);
+        const messages = data.messages as ChatMessage[];
+        // Cache for 2 minutes
+        conversationCache.set(cacheKey, messages, 2 * 60 * 1000);
+        return messages;
       }
 
       // Fallback: direct DB query
@@ -51,6 +64,9 @@ export class UnifiedMessageService {
         ...msg,
         products: msg.products ? (typeof msg.products === 'string' ? JSON.parse(msg.products) : msg.products) : undefined
       })) as ChatMessage[];
+      
+      // Cache for 2 minutes
+      conversationCache.set(cacheKey, parsedMessages, 2 * 60 * 1000);
       
       return parsedMessages;
 
@@ -122,6 +138,9 @@ export class UnifiedMessageService {
         logger.error('❌ Error calling send-message function', error);
         throw error;
       }
+
+      // Invalidate message cache after sending
+      invalidateOnNewMessage(params.conversationId);
 
       logger.log('✅ Message sent successfully');
       return true;

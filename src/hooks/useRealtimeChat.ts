@@ -4,6 +4,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { RealtimeChannel } from '@supabase/supabase-js';
 import { DatabaseMessage, DatabaseConversation } from '@/services/chat/types';
 import { toast } from 'sonner';
+import { invalidateOnNewMessage, invalidateConversationCache } from '@/services/cache/conversationCache';
+import { logger } from '@/utils/logger';
 
 interface UseRealtimeChatProps {
   conversationId?: string;
@@ -54,8 +56,11 @@ export const useRealtimeChat = ({
         },
         (payload) => {
           try {
-            console.log('📨 New message received:', payload.new);
+            logger.log('📨 New message received:', payload.new);
             const newMsg = payload.new as DatabaseMessage;
+            
+            // Invalidate cache for this conversation
+            invalidateOnNewMessage(newMsg.conversation_id);
             
             // Show toast for messages from others, but also process all messages
             if (newMsg.sender_id !== userId) {
@@ -65,14 +70,14 @@ export const useRealtimeChat = ({
               });
             } else {
               // Log own messages for debugging
-              console.log('📤 Own message received via realtime:', newMsg.id);
+              logger.log('📤 Own message received via realtime:', newMsg.id);
             }
             
             if (onNewMessage) {
               onNewMessage(newMsg);
             }
           } catch (error) {
-            console.error('❌ Error handling new message:', error);
+            logger.error('❌ Error handling new message:', error);
           }
         }
       )
@@ -88,27 +93,31 @@ export const useRealtimeChat = ({
         },
         (payload) => {
           try {
-            console.log('💬 Conversation updated:', payload.new);
+            logger.log('💬 Conversation updated:', payload.new);
             const updatedConversation = payload.new as DatabaseConversation;
+            
+            // Invalidate conversation cache
+            invalidateConversationCache(updatedConversation.id, updatedConversation.user_id);
+            
             if (onConversationUpdate) {
               onConversationUpdate(updatedConversation);
             }
           } catch (error) {
-            console.error('❌ Error handling conversation update:', error);
+            logger.error('❌ Error handling conversation update:', error);
           }
         }
       )
       .subscribe((status, err) => {
-        console.log('🔗 Subscription status:', status, err);
+        logger.log('🔗 Subscription status:', status, err);
         setIsConnected(status === 'SUBSCRIBED');
         
         if (status === 'SUBSCRIBED') {
-          console.log('✅ Real-time connected successfully');
+          logger.log('✅ Real-time connected successfully');
         } else if (status === 'CHANNEL_ERROR') {
-          console.error('❌ Real-time connection failed:', err);
+          logger.error('❌ Real-time connection failed:', err);
           toast.error('Connessione real-time fallita');
         } else if (status === 'TIMED_OUT') {
-          console.error('⏰ Real-time connection timed out');
+          logger.error('⏰ Real-time connection timed out');
           setIsConnected(false);
         }
       });
