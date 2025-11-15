@@ -83,7 +83,7 @@ const Header = () => {
                 <button
                   key={item.name}
                   onClick={() => handleMenuClick(item)}
-                  className="flex items-center space-x-1 text-gray-600 hover:text-drplant-green transition-colors duration-200"
+                  className="flex items-center space-x-1 text-muted-foreground hover:text-drplant-green transition-colors duration-200"
                 >
                   <item.icon className="h-4 w-4" />
                   <span>{item.name}</span>
@@ -92,7 +92,7 @@ const Header = () => {
                 <Link
                   key={item.name}
                   to={item.path}
-                  className="flex items-center space-x-1 text-gray-600 hover:text-drplant-green transition-colors duration-200"
+                  className="flex items-center space-x-1 text-muted-foreground hover:text-drplant-green transition-colors duration-200"
                 >
                   <item.icon className="h-4 w-4" />
                   <span>{item.name}</span>
@@ -105,7 +105,7 @@ const Header = () => {
           <div className="hidden md:flex items-center space-x-4">
             {isAuthenticated ? (
               <div className="flex items-center space-x-3">
-                <div className="flex items-center space-x-2 text-gray-700">
+                <div className="flex items-center space-x-2 text-foreground">
                   <User className="h-5 w-5" />
                   <span className="text-sm font-medium">
                     {userProfile?.first_name || userProfile?.firstName || 'Utente'}
@@ -115,7 +115,7 @@ const Header = () => {
                   onClick={handleLogout}
                   variant="outline"
                   size="sm"
-                  className="flex items-center space-x-2 border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400"
+                  className="flex items-center space-x-2 border-destructive/50 text-destructive hover:bg-destructive/10 hover:border-destructive"
                 >
                   <LogOut className="h-4 w-4" />
                   <span>Esci</span>
@@ -124,7 +124,7 @@ const Header = () => {
             ) : (
               <Button
                 onClick={handleLogin}
-                className="bg-drplant-green hover:bg-drplant-green/90 text-white"
+                className="bg-drplant-green hover:bg-drplant-green/90 text-primary-foreground"
               >
                 Accedi
               </Button>
@@ -145,7 +145,7 @@ const Header = () => {
 
       {/* Mobile Menu */}
       {isMenuOpen && (
-        <div className="md:hidden bg-white border-t border-gray-200 shadow-lg">
+        <div className="md:hidden bg-background border-t border-border shadow-lg">
           <div className="container mx-auto px-4 py-4">
             <nav className="flex flex-col space-y-4">
               {menuItems.map((item) => (
@@ -153,7 +153,7 @@ const Header = () => {
                   <button
                     key={item.name}
                     onClick={() => handleMenuClick(item)}
-                    className="flex items-center space-x-3 text-gray-600 hover:text-drplant-green transition-colors duration-200 py-2 text-left"
+                    className="flex items-center space-x-3 text-muted-foreground hover:text-drplant-green transition-colors duration-200 py-2 text-left"
                   >
                     <item.icon className="h-5 w-5" />
                     <span>{item.name}</span>
@@ -163,7 +163,7 @@ const Header = () => {
                     key={item.name}
                     to={item.path}
                     onClick={() => setIsMenuOpen(false)}
-                    className="flex items-center space-x-3 text-gray-600 hover:text-drplant-green transition-colors duration-200 py-2"
+                    className="flex items-center space-x-3 text-muted-foreground hover:text-drplant-green transition-colors duration-200 py-2"
                   >
                     <item.icon className="h-5 w-5" />
                     <span>{item.name}</span>
@@ -172,10 +172,10 @@ const Header = () => {
               ))}
               
               
-              <div className="border-t border-gray-200 pt-4">
+              <div className="border-t border-border pt-4">
                 {isAuthenticated ? (
                   <div className="space-y-3">
-                    <div className="flex items-center space-x-3 text-gray-700 py-2">
+                    <div className="flex items-center space-x-3 text-foreground py-2">
                       <User className="h-5 w-5" />
                       <span className="font-medium">
                         {userProfile?.first_name || userProfile?.firstName || 'Utente'}
@@ -184,7 +184,7 @@ const Header = () => {
                     <Button
                       onClick={handleLogout}
                       variant="outline"
-                      className="w-full flex items-center justify-center space-x-2 border-red-300 text-red-600 hover:bg-red-50"
+                      className="w-full flex items-center justify-center space-x-2 border-destructive/50 text-destructive hover:bg-destructive/10"
                     >
                       <LogOut className="h-4 w-4" />
                       <span>Esci</span>
@@ -193,7 +193,7 @@ const Header = () => {
                 ) : (
                   <Button
                     onClick={handleLogin}
-                    className="w-full bg-drplant-green hover:bg-drplant-green/90 text-white"
+                    className="w-full bg-drplant-green hover:bg-drplant-green/90 text-primary-foreground"
                   >
                     Accedi
                   </Button>

@@ -255,8 +255,8 @@ export const ExpertRealTimeChat: React.FC = () => {
             conversations.map((conv) => (
               <div
                 key={conv.id}
-                className={`p-4 border-b border-gray-100 hover:bg-white transition-colors ${
-                  selectedConversationId === conv.id ? 'bg-white border-l-4 border-l-drplant-green' : ''
+                className={`p-4 border-b border-border hover:bg-accent transition-colors ${
+                  selectedConversationId === conv.id ? 'bg-accent border-l-4 border-l-drplant-green' : ''
                 }`}
               >
                 <div className="flex items-start justify-between">
